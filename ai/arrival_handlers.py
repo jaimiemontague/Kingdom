@@ -29,6 +29,7 @@ from game.sim.direct_prompt_targets import resolve_explore_direction_target
 from game.sim.timebase import now_ms as sim_now_ms
 
 from ai.behaviors.task_durations import roll_duration_seconds
+from ai.behaviors.view_compat import as_ai_view, view_to_legacy_context
 from ai.contracts import HeroTask, TargetType, coerce_task
 
 # WK50 R18: sovereign explore legs chained from the initial compass commit
@@ -94,15 +95,18 @@ def _find_safety_building_for_arrival(hero: Any, buildings: list[Any]) -> Any | 
     return rest_b
 
 
-def handle_direct_prompt_arrival(ai: Any, hero: Any, task: HeroTask, game_state: dict) -> bool:
+def handle_direct_prompt_arrival(ai: Any, hero: Any, task: HeroTask, view: Any) -> bool:
     """Direct-prompt sovereign arrival dispatch (all sub_intents).
 
     Moved verbatim from bounty_pursuit.handle_moving lines 365-470. Reads the
     sub_intent and any other keys from ``hero.target`` (still a dict). Always
     returns True (it fully handles the arrival, including its own fall-through
     to IDLE for unknown sub-intents).
+
+    WK67 Move 5: consumes the read-only :class:`AiGameView` (``view.buildings``/
+    ``view.world``).
     """
-    buildings = game_state.get("buildings", [])
+    buildings = view.buildings
     sub = str(hero.target.get("sub_intent") or "")
     if sub == "return_home":
         rest_b = _find_safety_building_for_arrival(hero, buildings)
@@ -115,7 +119,7 @@ def handle_direct_prompt_arrival(ai: Any, hero: Any, task: HeroTask, game_state:
         return True
     if sub == "buy_potions":
         shop = None
-        for building in game_state.get("buildings", []):
+        for building in view.buildings:
             if building.building_type in ("marketplace", "blacksmith"):
                 if hero.distance_to(building.center_x, building.center_y) < TILE_SIZE * 2:
                     shop = building
@@ -178,7 +182,7 @@ def handle_direct_prompt_arrival(ai: Any, hero: Any, task: HeroTask, game_state:
     if sub == "explore_direction":
         cont = int(getattr(hero, "_dp_explore_extensions", 0))
         vec = getattr(hero, "_dp_explore_leg_vec", None)
-        world = game_state.get("world")
+        world = view.world
         if (
             cont < _DIRECT_PROMPT_EXPLORE_MAX_EXTENSIONS
             and vec is not None
@@ -186,9 +190,11 @@ def handle_direct_prompt_arrival(ai: Any, hero: Any, task: HeroTask, game_state:
         ):
             dirn = _compass_from_vec(float(vec[0]), float(vec[1]))
             if dirn:
+                # resolve_explore_direction_target (game/sim) reads the world from
+                # its mapping arg; hand it the bridge dict carrying the WorldView.
                 dest = resolve_explore_direction_target(
                     hero,
-                    game_state,
+                    view_to_legacy_context(view),
                     dirn,
                     tiles_ahead=_DIRECT_PROMPT_EXPLORE_EXTENSION_TILES,
                 )
@@ -210,7 +216,7 @@ def handle_direct_prompt_arrival(ai: Any, hero: Any, task: HeroTask, game_state:
     return True
 
 
-def handle_visit_poi_arrival(ai: Any, hero: Any, task: HeroTask, game_state: dict) -> bool:
+def handle_visit_poi_arrival(ai: Any, hero: Any, task: HeroTask, view: Any) -> bool:
     """WK55: Arrived at POI -- hero naturally discovers/interacts via proximity system.
 
     Moved verbatim from bounty_pursuit.handle_moving lines 473-477.
@@ -221,7 +227,7 @@ def handle_visit_poi_arrival(ai: Any, hero: Any, task: HeroTask, game_state: dic
     return True
 
 
-def handle_going_home_arrival(ai: Any, hero: Any, task: HeroTask, game_state: dict) -> bool:
+def handle_going_home_arrival(ai: Any, hero: Any, task: HeroTask, view: Any) -> bool:
     """Arrived home: transfer taxes, start resting, clear target.
 
     Moved verbatim from bounty_pursuit.handle_moving lines 480-485.
@@ -233,7 +239,7 @@ def handle_going_home_arrival(ai: Any, hero: Any, task: HeroTask, game_state: di
     return True
 
 
-def handle_shopping_arrival(ai: Any, hero: Any, task: HeroTask, game_state: dict) -> bool:
+def handle_shopping_arrival(ai: Any, hero: Any, task: HeroTask, view: Any) -> bool:
     """Arrived shopping (WK11: deferred -- purchase on exit).
 
     Moved verbatim from bounty_pursuit.handle_moving lines 488-505. Reads the
@@ -258,7 +264,7 @@ def handle_shopping_arrival(ai: Any, hero: Any, task: HeroTask, game_state: dict
     return True
 
 
-def handle_rest_inn_arrival(ai: Any, hero: Any, task: HeroTask, game_state: dict) -> bool:
+def handle_rest_inn_arrival(ai: Any, hero: Any, task: HeroTask, view: Any) -> bool:
     """Rest at Inn (WK11): enter and heal inside; finalize on exit.
 
     Moved verbatim from bounty_pursuit.handle_moving lines 508-518.
@@ -275,7 +281,7 @@ def handle_rest_inn_arrival(ai: Any, hero: Any, task: HeroTask, game_state: dict
     return True
 
 
-def handle_buy_meal_arrival(ai: Any, hero: Any, task: HeroTask, game_state: dict) -> bool:
+def handle_buy_meal_arrival(ai: Any, hero: Any, task: HeroTask, view: Any) -> bool:
     """WK61-R10: buy meal at food stand when arrival waypoint reached.
 
     Delegates to the hunger behavior, exactly as the old code did
@@ -284,12 +290,12 @@ def handle_buy_meal_arrival(ai: Any, hero: Any, task: HeroTask, game_state: dict
     (matching the pre-extraction fall-through).
     """
     hunger_behavior = getattr(ai, "hunger_behavior", None)
-    if hunger_behavior is not None and hunger_behavior.handle_meal_arrival(ai, hero, game_state):
+    if hunger_behavior is not None and hunger_behavior.handle_meal_arrival(ai, hero, view):
         return True
     return False
 
 
-def handle_get_drink_arrival(ai: Any, hero: Any, task: HeroTask, game_state: dict) -> bool:
+def handle_get_drink_arrival(ai: Any, hero: Any, task: HeroTask, view: Any) -> bool:
     """Get a drink at Inn (WK11): enter, pay on exit.
 
     Moved verbatim from bounty_pursuit.handle_moving lines 527-538.
@@ -307,7 +313,7 @@ def handle_get_drink_arrival(ai: Any, hero: Any, task: HeroTask, game_state: dic
     return True
 
 
-ARRIVAL_HANDLERS: dict[TargetType, Callable[[Any, Any, HeroTask, dict], bool]] = {
+ARRIVAL_HANDLERS: dict[TargetType, Callable[[Any, Any, HeroTask, Any], bool]] = {
     TargetType.DIRECT_PROMPT: handle_direct_prompt_arrival,
     TargetType.VISIT_POI: handle_visit_poi_arrival,
     TargetType.GOING_HOME: handle_going_home_arrival,
@@ -318,7 +324,7 @@ ARRIVAL_HANDLERS: dict[TargetType, Callable[[Any, Any, HeroTask, dict], bool]] =
 }
 
 
-def dispatch_arrival(ai: Any, hero: Any, game_state: dict) -> bool:
+def dispatch_arrival(ai: Any, hero: Any, view: Any) -> bool:
     """Look up and run the arrival handler for the hero's current task.
 
     Returns True if a handler ran and handled it (caller should ``return``).
@@ -327,11 +333,14 @@ def dispatch_arrival(ai: Any, hero: Any, game_state: dict) -> bool:
     "arrived, go IDLE" logic. This preserves the pre-extraction behavior where a
     ``bounty`` dict (no arrival handler) and live-entity targets fell through to
     the default IDLE branch.
+
+    WK67 Move 5: ``view`` is the read-only :class:`AiGameView`.
     """
+    view = as_ai_view(view)
     task = coerce_task(getattr(hero, "target", None))
     if task is None:
         return False
     handler = ARRIVAL_HANDLERS.get(task.type)
     if handler is None:
         return False
-    return handler(ai, hero, task, game_state)
+    return handler(ai, hero, task, view)

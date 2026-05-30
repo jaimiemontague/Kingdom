@@ -1374,6 +1374,28 @@ URSINA_CAPTURE_SCENARIOS: dict[str, dict[str, object]] = {
             "KINGDOM_URSINA_CAM_FOCUS_SPAN": "32",
         },
     },
+    # WK67 Round A-2 (Wave 5): the primary (Ursina) renderer had NO registered
+    # melee-combat capture scenario — thin coverage of the unit-render/anim boundary.
+    # This spawns a warrior hero adjacent to a goblin near the castle, forces a melee
+    # strike + hurt one-shot, and holds the pose for a byte-reproducible capture under
+    # DETERMINISTIC_SIM (fixed castle-focus camera at blend=0; FPS/frame-time debug
+    # overlay disabled by the patch so only the deterministic scene is in the PNG).
+    "ursina_melee_combat": {
+        # ~8s warmup (480 ticks at 60 Hz) so terrain/models/shaders are fully loaded
+        # before the grab — the held strike pose is tick-independent, but the scene
+        # must have rendered. A shorter warmup can capture a pre-render (blank) frame
+        # on a cold model cache.
+        "patch_path": "tools/wk67_combat_capture_patch.py",
+        "default_ticks": 480,
+        "default_out_subdir": "wk67_combat",
+        "stem": "ursina_melee_combat",
+        "env": {
+            "KINGDOM_URSINA_REVEAL_ON_START": "1",
+            "KINGDOM_URSINA_EDITORCAMERA": "0",
+            "KINGDOM_URSINA_CAM_FOCUS_BUILDING_TYPE": "castle",
+            "KINGDOM_URSINA_CAM_FOCUS_SPAN": "16",
+        },
+    },
 }
 
 
@@ -1560,6 +1582,76 @@ def scenario_wk61_hero_menu_chat(engine, *, seed: int) -> list[Shot]:
     ]
 
 
+def scenario_ursina_melee_combat(engine, *, seed: int) -> list[Shot]:
+    """WK67 Round A-2 (Wave 5): hero strikes an adjacent enemy (strike + hurt one-shot).
+
+    Mirrors ``tools/wk67_combat_capture_patch.py`` (the registered Ursina capture
+    scenario) for the pygame render path: a warrior hero on a tile adjacent to a goblin
+    near the castle, with the hero in FIGHTING state targeting the enemy and the
+    strike/hurt one-shot anim triggers stamped so the captured frame shows a melee pose.
+    """
+    from game.entities.hero import HeroState
+
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    _reveal_all(engine.world)
+
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        gx = MAP_WIDTH // 2 - 1
+        gy = MAP_HEIGHT // 2 - 1
+        castle = _place_building(engine, "castle", gx, gy)
+
+    cgx = int(getattr(castle, "grid_x", MAP_WIDTH // 2))
+    cgy = int(getattr(castle, "grid_y", MAP_HEIGHT // 2))
+
+    hero_x, hero_y = _tile_center_px(cgx + 2, cgy + 3)
+    enemy_x, enemy_y = _tile_center_px(cgx + 3, cgy + 3)  # one tile east → melee range
+
+    hero = _place_hero(engine, "warrior", hero_x, hero_y)
+    hero.name = "Sir Aldric"
+    enemy = _place_enemy(engine, "goblin", enemy_x, enemy_y)
+
+    if hasattr(hero, "state"):
+        hero.state = HeroState.FIGHTING
+    hero.target = enemy
+    enemy.target = hero
+
+    def _force_strike(eng: Any) -> None:
+        eng.screenshot_hide_ui = True
+        eng.selected_hero = None
+        eng.selected_peasant = None
+        eng.selected_building = None
+        if hasattr(eng, "debug_panel"):
+            eng.debug_panel.visible = False
+        # Stamp the one-shot triggers so the renderer plays strike + hurt this frame.
+        hero._render_anim_trigger = "attack"
+        hero._anim_trigger_seq = int(getattr(hero, "_anim_trigger_seq", 0) or 0) + 1
+        enemy._render_anim_trigger = "hurt"
+        enemy._anim_trigger_seq = int(getattr(enemy, "_anim_trigger_seq", 0) or 0) + 1
+
+    mid_x = (hero_x + enemy_x) / 2.0
+    mid_y = (hero_y + enemy_y) / 2.0
+
+    return [
+        Shot(
+            filename="ursina_melee_combat.png",
+            label="WK67 W5: hero melee strike + enemy hurt (adjacent)",
+            center_x=mid_x,
+            center_y=mid_y,
+            zoom=3.0,
+            ticks=0,
+            apply=_force_strike,
+            meta={
+                "scenario": "ursina_melee_combat",
+                "seed": int(seed),
+                "hero": "warrior",
+                "enemy": "goblin",
+            },
+        ),
+    ]
+
+
 def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
     scenario_name = str(scenario_name).strip()
     if scenario_name == "building_catalog":
@@ -1598,6 +1690,8 @@ def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
         return scenario_wk61_guardhouse_hp_panel(engine, seed=int(seed))
     if scenario_name == "wk61_hero_menu_chat":
         return scenario_wk61_hero_menu_chat(engine, seed=int(seed))
+    if scenario_name == "ursina_melee_combat":
+        return scenario_ursina_melee_combat(engine, seed=int(seed))
     raise ValueError(f"Unknown scenario: {scenario_name}")
 
 

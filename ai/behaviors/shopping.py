@@ -8,7 +8,9 @@ from config import TILE_SIZE
 from game.entities.hero import HeroState
 from game.systems.navigation import best_adjacent_tile
 
+from ai.behaviors.view_compat import as_ai_view, view_to_legacy_context
 from ai.contracts import HeroTask, TargetType, assign_hero_task
+from game.sim.hero_commands import HeroPurchaseCommand
 
 
 def find_marketplace_with_potions(buildings: list[Any]) -> Any | None:
@@ -30,10 +32,11 @@ def find_blacksmith(buildings: list[Any], hero: Any = None) -> object | None:
     return None
 
 
-def go_shopping(ai: Any, hero: Any, item_name: str, game_state: dict) -> None:
+def go_shopping(ai: Any, hero: Any, item_name: str, view: Any) -> None:
     """Send hero to marketplace or blacksmith to buy an item."""
-    buildings = game_state.get("buildings", [])
-    world = game_state.get("world")
+    view = as_ai_view(view)
+    buildings = view.buildings
+    world = view.world
 
     target_building = None
     item_lower = (item_name or "").lower()
@@ -78,9 +81,26 @@ def go_shopping(ai: Any, hero: Any, item_name: str, game_state: dict) -> None:
         assign_hero_task(hero, task)
 
 
-def do_shopping(ai: Any, hero: Any, building: Any, game_state: dict) -> bool:
-    """Actually perform shopping at a marketplace or blacksmith."""
-    economy = game_state.get("economy")
+def do_shopping(ai: Any, hero: Any, building: Any, view: Any) -> bool:
+    """Actually perform shopping at a marketplace or blacksmith.
+
+    WK67 Move 6 (Wave 3): the hero/economy write is no longer performed here.
+    Each priority branch proposes a :class:`~game.sim.hero_commands.HeroPurchaseCommand`
+    to the sim-owned, SYNCHRONOUS command sink (``view.commands``). The sink
+    applies the purchase immediately (``hero.buy_item`` + ``economy.hero_purchase``
+    inside the sim-owned applier) and returns whether it succeeded, so
+    ``hero.gold`` updates before the next priority branch's affordability check —
+    byte-identical to the original inline ``hero.buy_item`` + ``economy.hero_purchase``
+    sequence (priority order and between-purchase gold gating unchanged). The AI
+    no longer holds ``economy`` and never mutates hero/economy state directly.
+
+    ``view`` is the :class:`~game.sim.ai_view.AiGameView` threaded from the
+    Move-5 migration (it carries ``view.commands``). The post-shopping journey
+    trigger still consumes the legacy/bridge context mapping, projected from the
+    view via :func:`~ai.behaviors.view_compat.view_to_legacy_context`.
+    """
+    view = as_ai_view(view)
+    sink = view.commands
     # Support both marketplace and blacksmith (both have get_available_items).
     if not hasattr(building, "get_available_items"):
         return False
@@ -91,20 +111,16 @@ def do_shopping(ai: Any, hero: Any, building: Any, game_state: dict) -> bool:
     if hero.potions == 0 and hero.gold >= 20:
         for item in items:
             if item["type"] == "potion":
-                if hero.buy_item(item):
+                if sink.propose(HeroPurchaseCommand(hero.hero_id, item)):
                     purchased_types.add("potion")
-                    if economy:
-                        economy.hero_purchase(hero.name, item["name"], item["price"])
                     break
 
     # Priority 2: Buy extra potions if rich.
     if hero.gold >= 50 and hero.potions < 2:
         for item in items:
             if item["type"] == "potion" and hero.gold >= item["price"]:
-                if hero.buy_item(item):
+                if sink.propose(HeroPurchaseCommand(hero.hero_id, item)):
                     purchased_types.add("potion")
-                    if economy:
-                        economy.hero_purchase(hero.name, item["name"], item["price"])
                     break
 
     # Priority 3: Weapon upgrade.
@@ -112,10 +128,8 @@ def do_shopping(ai: Any, hero: Any, building: Any, game_state: dict) -> bool:
         if item["type"] == "weapon" and hero.gold >= item["price"]:
             current_attack = hero.weapon.get("attack", 0) if hero.weapon else 0
             if item["attack"] > current_attack:
-                if hero.buy_item(item):
+                if sink.propose(HeroPurchaseCommand(hero.hero_id, item)):
                     purchased_types.add("weapon")
-                    if economy:
-                        economy.hero_purchase(hero.name, item["name"], item["price"])
                     break
 
     # Priority 4: Armor upgrade.
@@ -123,11 +137,11 @@ def do_shopping(ai: Any, hero: Any, building: Any, game_state: dict) -> bool:
         if item["type"] == "armor" and hero.gold >= item["price"]:
             current_defense = hero.armor.get("defense", 0) if hero.armor else 0
             if item["defense"] > current_defense:
-                if hero.buy_item(item):
+                if sink.propose(HeroPurchaseCommand(hero.hero_id, item)):
                     purchased_types.add("armor")
-                    if economy:
-                        economy.hero_purchase(hero.name, item["name"], item["price"])
                     break
 
     # Post-shopping journey trigger (full health + recent purchase).
-    return ai.journey_behavior._maybe_start_journey(ai, hero, game_state, purchased_types)
+    return ai.journey_behavior._maybe_start_journey(
+        ai, hero, view_to_legacy_context(view), purchased_types
+    )

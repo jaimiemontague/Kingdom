@@ -56,7 +56,11 @@ from game.engine_facades.camera_display import EngineCameraDisplay
 from game.engine_facades.render_coordinator import EngineRenderCoordinator
 
 if TYPE_CHECKING:
-    from game.sim.snapshot import SimStateSnapshot
+    from game.sim.snapshot import (
+        PresentationFrameState,
+        RenderSnapshot,
+        SimStateSnapshot,
+    )
 
 class GameEngine:
     """
@@ -1484,8 +1488,15 @@ class GameEngine:
         gs["engine"] = self
         return gs
 
-    def build_snapshot(self) -> "SimStateSnapshot":
-        """Build a frozen snapshot of current sim state for renderers (read-only)."""
+    def build_snapshot(self) -> "RenderSnapshot":
+        """Build a frozen snapshot of current SIM TRUTH for renderers (read-only).
+
+        WK67 Move 4 / L6: this returns a ``RenderSnapshot`` carrying sim truth ONLY
+        (entities/world/fog/economy/effects). Per-frame presentation state
+        (camera/zoom/screen/paused/running/pause-menu/selection/blend/tick) is built
+        separately by :meth:`build_presentation_frame` and the two are passed together
+        to the renderer as ``renderer.update(render_snapshot, frame)``.
+        """
         vfx_projectiles: tuple = ()
         if self.vfx_system is not None:
             # VFXSystem exposes get_active_projectiles() — there is no .active_projectiles attr;
@@ -1496,18 +1507,30 @@ class GameEngine:
             else:
                 vfx_projectiles = tuple(getattr(self.vfx_system, "active_projectiles", ()))
 
+        return self.sim.build_snapshot(vfx_projectiles=vfx_projectiles)
+
+    def build_presentation_frame(self) -> "PresentationFrameState":
+        """Build the per-frame presentation state from engine-owned state (WK67 Move 4).
+
+        Camera/zoom/screen/pause/selection/blend/tick are presentation, not sim
+        truth — they live here, not on the sim snapshot. Selection comes from the
+        presentation-owned ``SelectionState`` (``self.selected_*``), exactly as the
+        UI dict path resolves it (see :meth:`get_game_state`). Renderers read these
+        via the ``frame`` arg of ``renderer.update(render_snapshot, frame)``.
+        """
+        from game.sim.snapshot import PresentationFrameState
+
         blend = 0.0
         if self._FIXED_SIM_DT > 0:
             blend = max(0.0, min(1.0, self._sim_accumulator / self._FIXED_SIM_DT))
 
-        return self.sim.build_snapshot(
-            vfx_projectiles=vfx_projectiles,
-            screen_w=int(getattr(self, "window_width", 0) or 0),
-            screen_h=int(getattr(self, "window_height", 0) or 0),
+        return PresentationFrameState(
             camera_x=float(getattr(self, "camera_x", 0.0) or 0.0),
             camera_y=float(getattr(self, "camera_y", 0.0) or 0.0),
             zoom=float(getattr(self, "zoom", 1.0) or 1.0),
             default_zoom=float(getattr(self, "default_zoom", 1.0) or 1.0),
+            screen_w=int(getattr(self, "window_width", 0) or 0),
+            screen_h=int(getattr(self, "window_height", 0) or 0),
             paused=bool(getattr(self, "paused", False)),
             running=bool(getattr(self, "running", True)),
             pause_menu_visible=bool(getattr(getattr(self, "pause_menu", None), "visible", False)),
@@ -1516,7 +1539,7 @@ class GameEngine:
             selected_hero=self.selected_hero,
             selected_building=self.selected_building,
         )
-    
+
     def render(self):
         """Render the game."""
         return self._render_coordinator.render()

@@ -37,7 +37,6 @@ import argparse
 import math
 import os
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +45,19 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from tools.kenney_pack_scale import apply_kenney_pack_color_tint_to_entity, pack_max_extent_for_rel
+
+# WK67 Round A-2 (L9): the Kenney material/shader helpers moved verbatim into
+# ``game.graphics.kenney_material`` (sever game/graphics -> tools runtime import).
+# Re-export them here so existing tools consumers (model_assembler_kenney,
+# wall_flush_pair_kenney, …) keep importing them from this module unchanged.
+# tools -> game is the allowed (non-circular) direction.
+from game.graphics.kenney_material import (  # noqa: F401
+    MaterialDebugStats,
+    _FACTOR_LIT_FRAG,
+    _FACTOR_LIT_VERT,
+    _apply_gltf_color_and_shading,
+    _get_factor_lit_shader,
+)
 # We strictly exclude .obj, .dae, .fbx because Kenney distributes copies in every format.
 # .glb natively embeds all textures cleanly without raw material errors.
 MODEL_EXTS = {".glb", ".gltf"}
@@ -80,30 +92,6 @@ LABEL_Y = 0.08
 TEXT_SCALE = 19.5
 PACK_TITLE_SCALE = 30.0
 EMPTY_PACK_NOTE_SCALE = 16.5
-
-
-@dataclass
-class MaterialDebugStats:
-    geoms_total: int = 0
-    branch_textured: int = 0
-    branch_textured_vertex: int = 0
-    branch_vertex: int = 0
-    branch_flat: int = 0
-    ambiguous_textured: int = 0
-    errors: int = 0
-
-    def add_branch(self, branch: str, *, ambiguous: bool) -> None:
-        self.geoms_total += 1
-        if branch == "textured":
-            self.branch_textured += 1
-        elif branch == "textured_vertex":
-            self.branch_textured_vertex += 1
-        elif branch == "vertex":
-            self.branch_vertex += 1
-        elif branch == "flat":
-            self.branch_flat += 1
-        if ambiguous:
-            self.ambiguous_textured += 1
 
 
 def _collect_gltf_under(root: Path) -> list[Path]:
@@ -244,193 +232,10 @@ def _setup_scene_lighting(*, center_x: float, center_z: float, span: float) -> N
     _dir(Vec3(center_x, lift * 1.35, center_z), color.rgba(soft * 1.1, soft * 1.1, soft * 1.05, 1.0))
 
 
-_FACTOR_LIT_VERT = """
-#version 150
-uniform mat4 p3d_ModelViewProjectionMatrix;
-uniform mat3 p3d_NormalMatrix;
-in vec4 p3d_Vertex;
-in vec3 p3d_Normal;
-in vec4 p3d_Color;
-out vec3 vNormal;
-out vec4 vColor;
-void main() {
-    gl_Position = p3d_ModelViewProjectionMatrix * p3d_Vertex;
-    vNormal = normalize(p3d_NormalMatrix * p3d_Normal);
-    vColor = p3d_Color;
-}
-"""
-
-_FACTOR_LIT_FRAG = """
-#version 150
-uniform vec4 p3d_ColorScale;
-in vec3 vNormal;
-in vec4 vColor;
-out vec4 fragColor;
-void main() {
-    vec3 N = normalize(vNormal);
-    vec3 keyDir  = normalize(vec3( 0.4,  0.7, -0.5));
-    vec3 fillDir = normalize(vec3(-0.3,  0.4,  0.6));
-    float key  = max(dot(N, keyDir),  0.0);
-    float fill = max(dot(N, fillDir), 0.0);
-    float shade = 0.38 + 0.48 * key + 0.18 * fill;
-    fragColor = vec4(vColor.rgb * p3d_ColorScale.rgb * shade, vColor.a * p3d_ColorScale.a);
-}
-"""
-
-_factor_lit_shader_cache: list[Any] = []
-
-
-def _get_factor_lit_shader() -> Any:
-    if _factor_lit_shader_cache:
-        return _factor_lit_shader_cache[0]
-    from panda3d.core import Shader
-    s = Shader.make(Shader.SL_GLSL, vertex=_FACTOR_LIT_VERT, fragment=_FACTOR_LIT_FRAG)
-    _factor_lit_shader_cache.append(s)
-    return s
-
-
-def _apply_gltf_color_and_shading(
-    root: Any,
-    *,
-    debug_materials: bool = False,
-    model_label: str = "",
-    aggregate_stats: MaterialDebugStats | None = None,
-) -> bool:
-    """Classify each geom and select the correct shading path.
-
-    Textured geoms keep Ursina's default unlit shader (textures carry visual detail).
-
-    Non-textured geoms (``baseColorFactor`` or vertex colors, with no texture) get
-    a lightweight custom lit shader that reads ``p3d_Color`` (from ``ColorAttrib``)
-    and applies key+fill Lambert lighting via vertex normals.  This avoids both the
-    flat-unlit look **and** the ``setShaderAuto`` black-silhouette regression.
-
-    Returns True if any geom was factor-only (i.e. lit shading was enabled).
-    """
-    try:
-        from panda3d.core import (
-            ColorAttrib,
-            GeomNode,
-            InternalName,
-            LColor,
-            MaterialAttrib,
-            TextureAttrib,
-        )
-
-        if root is None or root.isEmpty():
-            return False
-
-        def state_has_base_texture(state: Any) -> tuple[bool, str]:
-            ta = state.get_attrib(TextureAttrib.get_class_type())
-            if not ta:
-                return False, "no-texture-attrib"
-            for j in range(ta.get_num_on_stages()):
-                st = ta.get_on_stage(j)
-                tex = ta.get_on_texture(st)
-                if tex is not None:
-                    return True, st.get_name() or "<unnamed>"
-            return False, "no-stages-with-texture"
-
-        def material_base_color(mat: Any) -> Any:
-            if mat is None:
-                return LColor(1, 1, 1, 1)
-            try:
-                if mat.has_base_color():
-                    return mat.get_base_color()
-            except Exception:
-                pass
-            try:
-                return mat.get_diffuse()
-            except Exception:
-                return LColor(1, 1, 1, 1)
-
-        factor_shader = _get_factor_lit_shader()
-
-        local = {
-            "geoms": 0,
-            "textured": 0,
-            "textured_vertex": 0,
-            "vertex": 0,
-            "flat": 0,
-        }
-
-        def walk(np: Any) -> None:
-            node = np.node()
-            node_needs_lit_shader = False
-
-            if isinstance(node, GeomNode):
-                for gi in range(node.get_num_geoms()):
-                    local["geoms"] += 1
-                    geom = node.get_geom(gi)
-                    state = node.get_geom_state(gi)
-                    vdata = geom.get_vertex_data()
-                    fmt = vdata.get_format() if vdata else None
-                    has_vcolor = bool(fmt and fmt.has_column(InternalName.get_color()))
-
-                    ma = state.get_attrib(MaterialAttrib.get_class_type())
-                    mat = ma.get_material() if ma else None
-                    has_tex, tex_reason = state_has_base_texture(state)
-                    branch = "flat"
-
-                    if has_tex:
-                        if has_vcolor:
-                            new_state = state.set_attrib(ColorAttrib.make_vertex())
-                            branch = "textured_vertex"
-                            local["textured_vertex"] += 1
-                        else:
-                            new_state = state
-                            branch = "textured"
-                            local["textured"] += 1
-                    else:
-                        if has_vcolor:
-                            new_state = state.set_attrib(ColorAttrib.make_vertex())
-                            branch = "vertex"
-                            local["vertex"] += 1
-                            node_needs_lit_shader = True
-                        else:
-                            bc = material_base_color(mat)
-                            new_state = state.set_attrib(ColorAttrib.make_flat(bc))
-                            branch = "flat"
-                            local["flat"] += 1
-                            node_needs_lit_shader = True
-
-                    if aggregate_stats is not None:
-                        aggregate_stats.add_branch(branch, ambiguous=False)
-
-                    node.set_geom_state(gi, new_state)
-                    if debug_materials:
-                        model_hdr = model_label or "<unknown>"
-                        print(
-                            f"[materials] {model_hdr} geom={gi}"
-                            f" branch={branch} tex={tex_reason}"
-                            f" vcolor={has_vcolor}"
-                        )
-
-                if node_needs_lit_shader and factor_shader is not None:
-                    np.setShader(factor_shader)
-
-            for i in range(np.getNumChildren()):
-                walk(np.getChild(i))
-
-        walk(root)
-        if debug_materials:
-            model_hdr = model_label or "<unknown>"
-            print(
-                f"[materials][summary] {model_hdr}"
-                f" geoms={local['geoms']}"
-                f" textured={local['textured']}"
-                f" textured_vertex={local['textured_vertex']}"
-                f" vertex={local['vertex']}"
-                f" flat={local['flat']}"
-            )
-        return (local["flat"] + local["vertex"]) > 0
-    except Exception as exc:
-        if aggregate_stats is not None:
-            aggregate_stats.errors += 1
-        if debug_materials:
-            model_hdr = model_label or "<unknown>"
-            print(f"[materials][error] {model_hdr} {exc!r}")
-        return False
+# NOTE: ``MaterialDebugStats``, ``_FACTOR_LIT_VERT`` / ``_FACTOR_LIT_FRAG``,
+# ``_get_factor_lit_shader`` and ``_apply_gltf_color_and_shading`` were moved
+# verbatim to ``game.graphics.kenney_material`` (WK67 L9) and are re-exported at the
+# top of this module. The viewer-only loaders/lighting below stay here.
 
 
 def _rel_for_label(assets_models: Path, fpath: Path) -> str:

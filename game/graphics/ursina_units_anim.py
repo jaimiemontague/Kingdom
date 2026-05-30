@@ -2,10 +2,38 @@
 
 from __future__ import annotations
 
+import time
+
 from game.graphics.animation import AnimationClip
 from game.graphics.worker_sprites import WorkerSpriteLibrary
 
 import config
+
+# WK67 Round A-2 (Wave 5): the sim advances one ``_sim_tick_counter`` per fixed
+# sim tick (``GameEngine._FIXED_SIM_DT`` seconds). Under DETERMINISTIC_SIM/capture
+# we derive the within-clip anim clock from that tick id instead of wall-clock, so
+# a given sim tick ALWAYS selects the same frame index → byte-reproducible captures.
+# Keep this in sync with ``GameEngine._FIXED_SIM_DT`` (20 Hz sim rate).
+_SIM_TICK_SECONDS = 1.0 / 20.0
+
+
+def anim_clock_seconds(frame_tick_id: int) -> float:
+    """Return the monotonic clock (seconds) the unit anim FSM uses for elapsed math.
+
+    Single source of truth for the tick basis, shared by both unit renderers
+    (``UrsinaRenderer._compute_anim_frame`` and
+    ``InstancedUnitRenderer._resolve_unit_anim_clip_frame``) so they animate from
+    the IDENTICAL clock.
+
+    - Normal play: wall-clock ``time.perf_counter()`` (live animation stays smooth;
+      this is the EXACT value the renderers used before WK67 Wave 5).
+    - DETERMINISTIC_SIM/capture: ``frame_tick_id * _SIM_TICK_SECONDS`` — a
+      deterministic, monotonically increasing sim time. The same sim tick yields the
+      same elapsed within every clip, so dynamic captures are byte-reproducible.
+    """
+    if config.DETERMINISTIC_SIM:
+        return float(int(frame_tick_id)) * _SIM_TICK_SECONDS
+    return time.perf_counter()
 
 
 def _frame_index_for_clip(clip: AnimationClip, elapsed: float) -> tuple[int, bool]:

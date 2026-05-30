@@ -36,8 +36,8 @@ from game.paths import ASSETS_DIR
 from game.graphics.ursina_renderer import UrsinaRenderer, SCALE, sim_px_to_world_xz
 from game.input_manager import InputEvent
 from game.ursina_input_manager import UrsinaInputManager, ursina_key_to_input_event
-from tools.ursina_input_debug import is_ursina_debug_input_enabled, print_wk20_input_line
-from tools.ursina_screenshot import save_ursina_window_screenshot
+from game.graphics.ursina_input_debug import is_ursina_debug_input_enabled, print_wk20_input_line
+from game.graphics.ursina_screenshot import save_ursina_window_screenshot
 
 
 def _flip_surface_bytes_vertical(raw_rgba: bytes, width: int, height: int) -> bytes:
@@ -226,7 +226,7 @@ class UrsinaApp:
         #   KINGDOM_URSINA_AUTO_EXIT_SEC=<float>       — seconds after first update before exit.
         #   KINGDOM_URSINA_AUTO_SCREENSHOT_PATH=<path> — if set, save screenshot to this path
         #                                                just before quitting (overrides F12 dir).
-        #   KINGDOM_URSINA_AUTO_SCREENSHOT=1           — if PATH empty, use tools.ursina_screenshot
+        #   KINGDOM_URSINA_AUTO_SCREENSHOT=1           — if PATH empty, use game.graphics.ursina_screenshot
         #                                                naming (KINGDOM_SCREENSHOT_SUBDIR / STEM).
         # CLI: python tools/run_ursina_capture_once.py
         try:
@@ -246,7 +246,7 @@ class UrsinaApp:
             and os.environ.get("KINGDOM_URSINA_AUTO_SCREENSHOT", "").strip().lower()
             in ("1", "true", "yes", "on")
         ):
-            from tools.ursina_screenshot import next_auto_screenshot_path
+            from game.graphics.ursina_screenshot import next_auto_screenshot_path
 
             self._auto_screenshot_path = next_auto_screenshot_path()
         self._auto_exit_elapsed = 0.0
@@ -1395,7 +1395,10 @@ class UrsinaApp:
 
             _stage_t0 = pytime.perf_counter()
             snapshot = self.engine.build_snapshot()
-            self.renderer.update(snapshot)
+            # WK67 Move 4 / L6: presentation timing/camera/selection are no longer on
+            # the sim snapshot — build the per-frame presentation state and pass both.
+            frame = self.engine.build_presentation_frame()
+            self.renderer.update(snapshot, frame)
             self._record_fps_probe_stage_ms("ursina_renderer", _stage_t0)
 
             # WK58 Agent 10 (cross-domain, scoped): auto-reveal hook for perf_render_benchmark

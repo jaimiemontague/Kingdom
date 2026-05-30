@@ -14,6 +14,7 @@ WK46 Stage 3 adds a local "lumberjack" loop:
 from __future__ import annotations
 
 from enum import Enum, auto
+from typing import Any, Protocol
 
 from config import (
     TILE_SIZE,
@@ -26,6 +27,31 @@ from config import (
 )
 from game.entities.peasant import Peasant, PeasantState
 from game.world import Visibility
+
+
+class LumberOps(Protocol):
+    """WK67 Move 6 (L3b): typed sim accessor the BuilderPeasant uses to chop/
+    harvest, replacing ``game_state.get("sim")``.
+
+    The builder is a *sim entity* (not AI), so this is a typed sim-internal
+    accessor — NOT a HeroCommand. ``SimEngine`` implements these methods and
+    exposes itself as ``lumber_ops`` through the sim-built peasant update context
+    (the sim-internal context dict, not the UI ``get_game_state()`` dict).
+    """
+
+    def find_nearest_choppable_tree_for_builder(
+        self, from_tx: int, from_ty: int
+    ) -> tuple[int, int, float] | None: ...
+
+    def chop_tree_at(self, tx: int, ty: int) -> float | None: ...
+
+    def harvest_log_at(self, tx: int, ty: int) -> int: ...
+
+
+def _resolve_lumber_ops(game_state: dict) -> Any | None:
+    """Return the typed :class:`LumberOps` accessor from the sim-built peasant
+    context. Falls back to ``None`` when absent (minimal test harnesses)."""
+    return game_state.get("lumber_ops")
 
 
 class BuilderPeasantPhase(Enum):
@@ -185,7 +211,7 @@ class BuilderPeasant(Peasant):
                 # Compatibility: some tests/harnesses pass a minimal game_state without world/sim.
                 # In that case, skip the wood loop so neutral building construction can still progress.
                 if required > 0 and int(self.wood_inventory) < int(required) and (
-                    game_state.get("world") is not None or game_state.get("sim") is not None
+                    game_state.get("world") is not None or _resolve_lumber_ops(game_state) is not None
                 ):
                     self.phase = BuilderPeasantPhase.FIND_TREE
                 else:
@@ -202,18 +228,18 @@ class BuilderPeasant(Peasant):
                 return
 
             world = game_state.get("world")
-            sim = game_state.get("sim")
-            if world is None and sim is None:
-                # Minimal harness: no world/sim means no tree loop possible; proceed to build.
+            lumber_ops = _resolve_lumber_ops(game_state)
+            if world is None and lumber_ops is None:
+                # Minimal harness: no world/lumber means no tree loop possible; proceed to build.
                 self.phase = BuilderPeasantPhase.BUILDING
                 return
 
             found: tuple[int, int] | None = None
             found_growth: float | None = None
-            if sim is not None and hasattr(sim, "find_nearest_choppable_tree_for_builder"):
+            if lumber_ops is not None and hasattr(lumber_ops, "find_nearest_choppable_tree_for_builder"):
                 try:
                     gx, gy = (0, 0) if world is None else world.world_to_grid(float(self.x), float(self.y))
-                    res = sim.find_nearest_choppable_tree_for_builder(int(gx), int(gy))
+                    res = lumber_ops.find_nearest_choppable_tree_for_builder(int(gx), int(gy))
                     if res is not None:
                         tx, ty, growth = res
                         found = (int(tx), int(ty))
@@ -285,10 +311,10 @@ class BuilderPeasant(Peasant):
             self.state = PeasantState.WORKING
             self._chop_timer_s += float(dt)
             if self._chop_timer_s >= float(BUILDER_CHOP_DURATION_S):
-                sim = game_state.get("sim")
-                if sim is not None and hasattr(sim, "chop_tree_at"):
+                lumber_ops = _resolve_lumber_ops(game_state)
+                if lumber_ops is not None and hasattr(lumber_ops, "chop_tree_at"):
                     try:
-                        res = sim.chop_tree_at(int(ttx), int(tty))
+                        res = lumber_ops.chop_tree_at(int(ttx), int(tty))
                         if res is not None:
                             self._tree_growth_at_chop = float(res)
                     except Exception:
@@ -312,11 +338,11 @@ class BuilderPeasant(Peasant):
             self.state = PeasantState.WORKING
             self._harvest_timer_s += float(dt)
             if self._harvest_timer_s >= float(BUILDER_HARVEST_DURATION_S):
-                sim = game_state.get("sim")
+                lumber_ops = _resolve_lumber_ops(game_state)
                 gained: int
-                if sim is not None and hasattr(sim, "harvest_log_at"):
+                if lumber_ops is not None and hasattr(lumber_ops, "harvest_log_at"):
                     try:
-                        gained = int(sim.harvest_log_at(int(ttx), int(tty)))
+                        gained = int(lumber_ops.harvest_log_at(int(ttx), int(tty)))
                     except Exception:
                         # If the log pile is missing (or integration isn't present),
                         # still award wood based on the growth captured at chop time.

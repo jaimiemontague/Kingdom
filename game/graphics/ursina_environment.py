@@ -235,7 +235,7 @@ def _building_occupied_tiles(buildings) -> set[tuple[int, int]]:
 def _apply_kenney_scatter_mesh_shading_only(ent: Entity, model_rel: str) -> None:
     """Fix factor-only / flat materials on env meshes without changing ``entity.color``."""
     try:
-        from tools.model_viewer_kenney import _apply_gltf_color_and_shading
+        from game.graphics.kenney_material import _apply_gltf_color_and_shading
 
         if getattr(ent, "model", None) is None:
             return
@@ -251,7 +251,7 @@ def _finalize_kenney_scatter_entity(
 ) -> None:
     """Grass/rock/tree/doodad scatter: same material path as path_stone + optional pack tint."""
     try:
-        from tools.kenney_pack_scale import apply_kenney_pack_color_tint_to_entity
+        from game.graphics.kenney_material import apply_kenney_pack_color_tint_to_entity
 
         _apply_kenney_scatter_mesh_shading_only(ent, model_rel)
         if apply_pack_tint:

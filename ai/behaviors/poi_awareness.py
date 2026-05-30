@@ -116,16 +116,21 @@ def _is_tile_in_seen_fog(world: Any, gx: int, gy: int) -> bool:
 # Context builder: get_nearby_pois_for_hero
 # ---------------------------------------------------------------------------
 
-def get_nearby_pois_for_hero(hero: Any, game_state: dict) -> list[dict]:
+def get_nearby_pois_for_hero(hero: Any, context: dict) -> list[dict]:
     """Build a list of nearby POI context dicts for LLM consumption.
 
     Returns up to MAX_CONTEXT_POIS entries, sorted by distance.
     Includes:
       - Discovered POIs within DISCOVERED_POI_RADIUS_TILES
       - Undiscovered POIs whose tile is in SEEN fog within UNDISCOVERED_SEEN_POI_RADIUS_TILES
+
+    WK67 Move 5: ``context`` is the LLM-context mapping built by
+    :func:`ai.behaviors.view_compat.view_to_legacy_context` (a fresh dict carrying
+    the read-only ``WorldView`` under ``world`` and the POI tuple under ``pois``).
+    The AI no longer reaches a live sim service here.
     """
-    pois = _get_pois_from_game_state(game_state)
-    world = game_state.get("world")
+    pois = _get_pois_from_context(context)
+    world = context.get("world")
     hx, hy = _hero_world_pos(hero)
 
     results: list[dict] = []
@@ -260,17 +265,21 @@ def score_poi_for_personality(
 # Behavior: maybe_visit_poi (for idle exploration)
 # ---------------------------------------------------------------------------
 
-def maybe_visit_poi(ai: Any, hero: Any, game_state: dict) -> bool:
+def maybe_visit_poi(ai: Any, hero: Any, view: Any) -> bool:
     """If a personality-relevant POI is nearby, set hero target toward it.
 
     Returns True if a POI target was set (hero should move toward it),
     False if no suitable POI was found.
 
     Called from exploration idle behavior as an alternative to random wander.
+
+    WK67 Move 5: reads ``view.pois`` (the AiGameView POI tuple) directly.
     """
     from game.entities.hero import HeroState
+    from ai.behaviors.view_compat import as_ai_view
 
-    pois = _get_pois_from_game_state(game_state)
+    view = as_ai_view(view)
+    pois = list(view.pois or [])
     if not pois:
         return False
 
@@ -325,15 +334,16 @@ def maybe_visit_poi(ai: Any, hero: Any, game_state: dict) -> bool:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _get_pois_from_game_state(game_state: dict) -> list:
-    """Extract POI list from game_state (handles multiple source locations)."""
-    pois = game_state.get("pois")
+def _get_pois_from_context(context: dict) -> list:
+    """Extract the POI list from the LLM-context mapping.
+
+    WK67 Move 5: the context dict built by
+    :func:`ai.behaviors.view_compat.view_to_legacy_context` always carries the
+    AiGameView POI tuple under ``pois`` (the same tuple the AI previously reached
+    through the live ``sim.pois`` fallback). The live-``sim`` fallback is gone —
+    the AI no longer holds a sim service.
+    """
+    pois = context.get("pois")
     if pois:
         return list(pois)
-    # Fallback: POIs may be accessible via sim reference.
-    sim = game_state.get("sim")
-    if sim is not None:
-        pois = getattr(sim, "pois", None)
-        if pois:
-            return list(pois)
     return []

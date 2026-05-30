@@ -22,6 +22,42 @@ class _AI:
         self.journey_behavior = _JourneyBehavior()
 
 
+class _SimStub:
+    """Minimal sim the real ``SimCommandSink`` resolves the purchase against.
+
+    WK67 Move 6 routes the shopping write through a sim-owned synchronous
+    ``SimCommandSink``: ``do_shopping`` proposes ``HeroPurchaseCommand`` and the
+    sink runs ``apply_hero_command`` → ``find_hero_by_id(id).buy_item(item)`` +
+    ``economy.hero_purchase(...)``. The BUILDING tax deposit still happens inside
+    ``hero.buy_item`` (resolved via the hero's pending shop), so routing through
+    the applier preserves ``marketplace.stored_tax_gold`` exactly as before.
+    """
+
+    def __init__(self, hero, economy) -> None:
+        self._hero = hero
+        self.economy = economy
+
+    def find_hero_by_id(self, hero_id):
+        return self._hero if str(getattr(self._hero, "hero_id", "")) == str(hero_id) else None
+
+
+def _sink_view(hero, economy):
+    """AiGameView-shaped object whose ``.commands`` is a real ``SimCommandSink``."""
+    from game.sim.hero_commands import SimCommandSink
+
+    return SimpleNamespace(
+        commands=SimCommandSink(_SimStub(hero, economy)),
+        world=None,
+        buildings=[],
+        enemies=[],
+        heroes=[hero],
+        bounties=[],
+        pois=[],
+        player_gold=0,
+        castle=None,
+    )
+
+
 def test_food_stand_passive_tax_accrual_r10_rate() -> None:
     """FoodStand at 10/min should accrue >= 9g after 60 sim seconds."""
     stand = FoodStand(5, 5)
@@ -56,7 +92,7 @@ def test_marketplace_potion_purchase_still_deposits_tax() -> None:
         ai,
         hero,
         marketplace,
-        {"economy": economy},
+        _sink_view(hero, economy),
     )
 
     assert started_journey is False

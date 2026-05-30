@@ -45,9 +45,12 @@ class EngineRenderCoordinator:
 
         pr = getattr(e, "pygame_renderer", None)
         if pr is not None and e.screen is not None and e._scaled_surface is not None:
+            # WK67 Move 4 / L6: forward the presentation frame (camera/zoom) alongside
+            # the sim snapshot — render_world reads camera/zoom off ``frame`` now.
             pr.render_world(
                 e.screen,
                 snapshot,
+                ctx.frame,
                 skip_pygame_world=skip_pygame_world,
                 window_width=int(e.window_width),
                 window_height=int(e.window_height),

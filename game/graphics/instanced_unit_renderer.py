@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import math
 import struct
-import time
 from typing import TYPE_CHECKING, Sequence
 
 from panda3d.core import Geom
@@ -27,6 +26,7 @@ from game.graphics.unit_atlas import FRAME_SIZE, UnitAtlasBuilder
 from game.graphics.ursina_coords import sim_px_to_world_xz
 from game.graphics.ursina_texture_bridge import pygame_surface_to_ursina_texture
 from game.graphics.ursina_units_anim import (
+    anim_clock_seconds,
     _enemy_base_clip,
     _frame_index_for_clip,
     _guard_base_clip,
@@ -96,6 +96,7 @@ class InstancedUnitRenderer:
         "_geom",
         "_unit_anim_state",
         "_visual_pos_by_id",
+        "_frame_tick_id",
     )
 
     def __init__(self) -> None:
@@ -108,9 +109,13 @@ class InstancedUnitRenderer:
         self._shadow_geom_node: NodePath | None = None
         self._geom: Geom | None = None
         self._initialized = False
-        # Mirror ``UrsinaRenderer._compute_anim_frame`` triggers + locomotion timing (wall clock).
+        # Mirror ``UrsinaRenderer._compute_anim_frame`` triggers + locomotion timing.
+        # Wall-clock in normal play; sim-tick-derived under DETERMINISTIC_SIM (WK67 Wave 5).
         self._unit_anim_state: dict[int, dict] = {}
         self._visual_pos_by_id: dict[int, tuple[float, float, float]] = {}
+        # WK67 Wave 5: the current frame's sim tick id (set in ``update``); the anim
+        # clock derives from it under DETERMINISTIC_SIM so captures are byte-reproducible.
+        self._frame_tick_id: int = 0
 
     def _ensure_initialized(self) -> None:
         if self._initialized:
@@ -226,6 +231,9 @@ class InstancedUnitRenderer:
             entity, "_render_anim_trigger", None
         )
         trigger_seq = int(getattr(entity, "_anim_trigger_seq", 0) or 0)
+        # WK67 Wave 5: wall-clock perf_counter in normal play; sim-tick-derived under
+        # DETERMINISTIC_SIM (byte-reproducible captures). Same clock as the legacy path.
+        now = anim_clock_seconds(self._frame_tick_id)
         st = self._unit_anim_state.get(obj_id)
         last_seq = st.get("last_seq", -1) if st is not None else -1
         if trigger and trigger_seq != last_seq:
@@ -235,7 +243,7 @@ class InstancedUnitRenderer:
                 oc = clips[tname]
                 self._unit_anim_state[obj_id] = {
                     "clip": tname,
-                    "t0": time.time(),
+                    "t0": now,
                     "base": base,
                     "oneshot": not oc.loop,
                     "last_seq": trigger_seq,
@@ -249,7 +257,7 @@ class InstancedUnitRenderer:
         if st is None:
             self._unit_anim_state[obj_id] = {
                 "clip": base,
-                "t0": time.time(),
+                "t0": now,
                 "base": base,
                 "oneshot": False,
                 "last_seq": trigger_seq,
@@ -259,20 +267,20 @@ class InstancedUnitRenderer:
             st["base"] = base
             if st.get("oneshot"):
                 oc_done = clips[st["clip"]]
-                elapsed_done = time.time() - st["t0"]
+                elapsed_done = now - st["t0"]
                 _, finished = _frame_index_for_clip(oc_done, elapsed_done)
                 if finished:
                     st["clip"] = st["base"]
-                    st["t0"] = time.time()
+                    st["t0"] = now
                     st["oneshot"] = False
             if not st.get("oneshot"):
                 if st["clip"] != base:
                     st["clip"] = base
-                    st["t0"] = time.time()
+                    st["t0"] = now
 
         clip_name = st["clip"]
         clip_obj = clips[clip_name]
-        elapsed = time.time() - st["t0"]
+        elapsed = now - st["t0"]
         idx, _ = _frame_index_for_clip(clip_obj, elapsed)
         return clip_name, idx
 
@@ -303,10 +311,17 @@ class InstancedUnitRenderer:
         self._visual_pos_by_id[obj_id] = new_pos
         return new_pos
 
-    def update(self, snapshot: "SimStateSnapshot") -> set:
-        """Pack snapshot units into outside + inside buffers; return active sim object ids for cleanup."""
+    def update(self, snapshot: "SimStateSnapshot", frame_tick_id: int = 0) -> set:
+        """Pack snapshot units into outside + inside buffers; return active sim object ids for cleanup.
+
+        ``frame_tick_id`` is the current sim tick (``PresentationFrameState.sim_tick_id``,
+        forwarded by ``UrsinaRenderer.update``). Under DETERMINISTIC_SIM the anim FSM
+        derives its within-clip clock from it (WK67 Wave 5) so captures are
+        byte-reproducible; in normal play wall-clock timing is used and this is unused.
+        """
         from ursina import time as ursina_time
 
+        self._frame_tick_id = int(frame_tick_id)
         self._ensure_initialized()
         assert self._instance_buffer is not None
         assert self._instance_buffer_inside is not None

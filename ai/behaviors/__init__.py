@@ -8,6 +8,7 @@ from . import journey
 from . import llm_bridge
 from . import shopping
 from . import stuck_recovery
+from . import view_compat
 
 __all__ = [
     "bounty_pursuit",
@@ -18,4 +19,5 @@ __all__ = [
     "llm_bridge",
     "shopping",
     "stuck_recovery",
+    "view_compat",
 ]

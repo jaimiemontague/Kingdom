@@ -8,6 +8,7 @@ from config import FOOD_MEAL_COST_GOLD, TILE_SIZE
 from game.entities.hero import HeroState
 from game.systems.navigation import best_adjacent_tile
 
+from ai.behaviors.view_compat import as_ai_view
 from ai.contracts import HeroTask, TargetType, assign_hero_task
 
 # Target types hunger may interrupt (discretionary movement only).
@@ -73,10 +74,11 @@ def should_seek_meal(hero: Any) -> bool:
     return True
 
 
-def go_to_food_stand(ai: Any, hero: Any, food_stand: Any, game_state: dict) -> None:
+def go_to_food_stand(ai: Any, hero: Any, food_stand: Any, view: Any) -> None:
     """Route hero toward the nearest reachable tile beside a food stand."""
-    buildings = game_state.get("buildings", [])
-    world = game_state.get("world")
+    view = as_ai_view(view)
+    buildings = view.buildings
+    world = view.world
 
     if world:
         adj = best_adjacent_tile(world, buildings, food_stand, hero.x, hero.y)
@@ -135,12 +137,13 @@ def try_buy_meal(ai: Any, hero: Any, food_stand: Any) -> bool:
     return False
 
 
-def maybe_seek_meal_idle(ai: Any, hero: Any, game_state: dict) -> bool:
+def maybe_seek_meal_idle(ai: Any, hero: Any, view: Any) -> bool:
     """Idle hook: buy in range or path to the nearest food stand."""
+    view = as_ai_view(view)
     if not should_seek_meal(hero):
         return False
 
-    food_stand = find_nearest_food_stand(hero, game_state.get("buildings", []))
+    food_stand = find_nearest_food_stand(hero, view.buildings)
     if food_stand is None:
         _log_no_food_stand_once(ai, hero)
         return False
@@ -153,12 +156,13 @@ def maybe_seek_meal_idle(ai: Any, hero: Any, game_state: dict) -> bool:
             return True
         return False
 
-    go_to_food_stand(ai, hero, food_stand, game_state)
+    go_to_food_stand(ai, hero, food_stand, view)
     return True
 
 
-def maybe_redirect_for_meal(ai: Any, hero: Any, game_state: dict) -> bool:
+def maybe_redirect_for_meal(ai: Any, hero: Any, view: Any) -> bool:
     """Interrupt discretionary movement when hunger becomes urgent."""
+    view = as_ai_view(view)
     if hero.state != HeroState.MOVING:
         return False
     if not should_seek_meal(hero):
@@ -172,17 +176,18 @@ def maybe_redirect_for_meal(ai: Any, hero: Any, game_state: dict) -> bool:
         if target_type not in _INTERRUPTIBLE_TARGET_TYPES:
             return False
 
-    food_stand = find_nearest_food_stand(hero, game_state.get("buildings", []))
+    food_stand = find_nearest_food_stand(hero, view.buildings)
     if food_stand is None:
         _log_no_food_stand_once(ai, hero)
         return False
 
-    go_to_food_stand(ai, hero, food_stand, game_state)
+    go_to_food_stand(ai, hero, food_stand, view)
     return True
 
 
-def maybe_interrupt_shopping_for_meal(ai: Any, hero: Any, game_state: dict) -> bool:
+def maybe_interrupt_shopping_for_meal(ai: Any, hero: Any, view: Any) -> bool:
     """Leave marketplace shopping when hunger is urgent and hero can afford a meal."""
+    view = as_ai_view(view)
     if hero.state != HeroState.SHOPPING:
         return False
     if not should_seek_meal(hero):
@@ -193,50 +198,53 @@ def maybe_interrupt_shopping_for_meal(ai: Any, hero: Any, game_state: dict) -> b
         setattr(hero, "pending_task", None)
         setattr(hero, "pending_task_building", None)
 
-    food_stand = find_nearest_food_stand(hero, game_state.get("buildings", []))
+    food_stand = find_nearest_food_stand(hero, view.buildings)
     if food_stand is None:
         _log_no_food_stand_once(ai, hero)
         return False
 
-    go_to_food_stand(ai, hero, food_stand, game_state)
+    go_to_food_stand(ai, hero, food_stand, view)
     return True
 
 
-def tick_meal_hunger(ai: Any, hero: Any, game_state: dict) -> bool:
+def tick_meal_hunger(ai: Any, hero: Any, view: Any) -> bool:
     """Run hunger meal logic when HP is not critical. Returns True if hero was redirected."""
+    view = as_ai_view(view)
     if float(getattr(hero, "health_percent", 1.0)) <= _CRITICAL_HP_FRACTION:
         return False
 
     st = hero.state
     if st == HeroState.IDLE:
-        return maybe_seek_meal_idle(ai, hero, game_state)
+        return maybe_seek_meal_idle(ai, hero, view)
     if st == HeroState.MOVING:
-        return maybe_redirect_for_meal(ai, hero, game_state)
+        return maybe_redirect_for_meal(ai, hero, view)
     if st == HeroState.SHOPPING:
-        return maybe_interrupt_shopping_for_meal(ai, hero, game_state)
+        return maybe_interrupt_shopping_for_meal(ai, hero, view)
     return False
 
 
-def maybe_apply_meal_before_llm_action(ai: Any, hero: Any, game_state: dict, action: str) -> bool:
+def maybe_apply_meal_before_llm_action(ai: Any, hero: Any, view: Any, action: str) -> bool:
     """If LLM/fallback chose explore or shop while hungry, redirect to food stand."""
+    view = as_ai_view(view)
     if action not in ("explore", "buy_item", "seek_meal"):
         return False
     if action == "seek_meal":
-        return tick_meal_hunger(ai, hero, game_state)
+        return tick_meal_hunger(ai, hero, view)
     if not should_seek_meal(hero):
         return False
-    return tick_meal_hunger(ai, hero, game_state)
+    return tick_meal_hunger(ai, hero, view)
 
 
-def handle_meal_arrival(ai: Any, hero: Any, game_state: dict) -> bool:
+def handle_meal_arrival(ai: Any, hero: Any, view: Any) -> bool:
     """Called when hero reaches a buy_meal waypoint; purchase if possible."""
+    view = as_ai_view(view)
     target = getattr(hero, "target", None)
     if not isinstance(target, dict) or target.get("type") != "buy_meal":
         return False
 
     food_stand = target.get("food_stand")
     if food_stand is None:
-        food_stand = find_nearest_food_stand(hero, game_state.get("buildings", []))
+        food_stand = find_nearest_food_stand(hero, view.buildings)
 
     if food_stand is not None and try_buy_meal(ai, hero, food_stand):
         hero.target = None

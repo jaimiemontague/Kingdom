@@ -9,6 +9,11 @@ Stage 2 refactor: split the former GameEngine "god object" into:
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # type-only; avoids a runtime import cycle with game.entities
+    from game.entities.builder_peasant import LumberOps
+    from game.sim.ai_view import AiGameView
 
 from game.world import Visibility, World
 from game.events import EventBus, GameEventType
@@ -70,6 +75,19 @@ class SimEngine:
         # Determinism knobs (future multiplayer enablement).
         # Seed early so world gen + initial lairs are reproducible when enabled.
         set_sim_seed(SIM_SEED)
+        # WK67 Round A-2 (Wave 5, fog-revision determinism): reset the class-level
+        # `Peasant._spawn_counter` at build time, next to the seed reset, so two
+        # same-seed in-process GameEngine builds produce identical peasant idle
+        # offsets. This counter is module/class-global and otherwise carries over
+        # between builds: peasant idle positions then differ across builds, which
+        # shifts a fog revealer's grid tile and makes `_fog_revision` drift ±1
+        # cross-instance (the visibility grid / discovery stay byte-stable; only
+        # the increment COUNT drifted because the revealer moved). Resetting it
+        # here makes the fog-revision sequence reproducible without changing what
+        # is revealed. NOTE: this is the SAME family as the WK67-W0-DET-001
+        # global-state isolation leaks; the entity-ID counters (`_next_*_id`) are
+        # a related but fog-neutral follow-up (IDs are labels, not positions).
+        Peasant._spawn_counter = 0
         self._sim_now_ms = 0
         # wk12 Chronos: 5-tier speed control; default NORMAL (0.5x).
         set_time_multiplier(DEFAULT_SPEED_TIER)
@@ -132,12 +150,10 @@ class SimEngine:
         # WK61-FEAT-004: Rubble records for destroyed buildings.
         self.rubble_records: list = []
 
-        # Selection: WK63 moved to GameEngine.selection (SelectionState).
-        # Kept as None stubs so any remaining sim-side reads don't crash.
-        self.selected_building = None
-        self.selected_peasant = None
-        self.selected_hero = None
-        self.selected_enemy = None
+        # Selection: WK63 moved to GameEngine.selection (SelectionState); WK67
+        # Move 5 deleted the dead sim-side `selected_*` stubs. The live selection
+        # is owned by presentation/selection_state.py and the GameEngine wrapper
+        # overrides gs["selected_*"] from SelectionState (engine.py:1475-1479).
 
         # WK57: Underground areas keyed by area_id
         self.underground_areas = {}
@@ -399,9 +415,9 @@ class SimEngine:
             if _hid is None:
                 continue
             hero_profiles_by_id[str(_hid)] = build_hero_profile_snapshot(_h, self, now_ms=_ms)
-        _sel = getattr(self, "selected_hero", None)
-        _sel_id = str(getattr(_sel, "hero_id", "")) if _sel is not None else ""
-        selected_hero_profile = hero_profiles_by_id.get(_sel_id) if _sel_id else None
+        # WK67 Move 5: dead sim-side selection reads removed. Selection is
+        # presentation-owned; the GameEngine wrapper overrides these keys from
+        # SelectionState and recomputes selected_hero_profile (engine.py:1475-1486).
 
         castle = next((b for b in self.buildings if getattr(b, "building_type", None) == "castle"), None)
         return {
@@ -421,11 +437,15 @@ class SimEngine:
             "bounties": self.bounty_system.get_unclaimed_bounties(),
             "bounty_system": self.bounty_system,
             "wave": self.spawner.wave_number,
-            "selected_hero": self.selected_hero,
+            # WK67 Move 5: sim no longer owns selection. These keys are placeholders
+            # the GameEngine wrapper overrides from the presentation SelectionState
+            # (engine.py:1475-1486); a direct (unwrapped) get_game_state() call gets
+            # None selection, which is correct — the sim has no selection truth.
+            "selected_hero": None,
             "hero_profiles_by_id": hero_profiles_by_id,
-            "selected_hero_profile": selected_hero_profile,
-            "selected_building": getattr(self, "selected_building", None),
-            "selected_peasant": getattr(self, "selected_peasant", None),
+            "selected_hero_profile": None,
+            "selected_building": None,
+            "selected_peasant": None,
             "castle": castle,
             "economy": self.economy,
             "world": self.world,
@@ -442,25 +462,78 @@ class SimEngine:
             "ui_cursor_pos": ui_cursor_pos,
         }
 
+    def build_ai_view(self) -> "AiGameView":
+        """Build the read-only AI-facing view of sim state (WK67 Move 5 / L3).
+
+        This is the AI consumer path — separate from :meth:`get_game_state` (the
+        UI dict). It exposes a read-only :class:`WorldView` and immutable facts
+        (``player_gold``, ``wave``, read-only ``castle``); it carries NO
+        ``economy``/``sim``/``engine``, so the AI can no longer hold or mutate a
+        live sim service through it. Entity lists stay live (AI reads, never
+        writes — AI-side DTOs are deferred).
+        """
+        from game.sim.ai_view import AiGameView, WorldView
+        from game.sim.hero_commands import SimCommandSink
+
+        castle = next(
+            (b for b in self.buildings if getattr(b, "building_type", None) == "castle"),
+            None,
+        )
+        return AiGameView(
+            world=WorldView(self.world),
+            heroes=tuple(self.heroes),
+            enemies=tuple(self.enemies),
+            buildings=tuple(self.buildings),
+            bounties=tuple(self.bounty_system.get_unclaimed_bounties()),
+            pois=tuple(self.pois),
+            player_gold=int(self.economy.player_gold),
+            castle=castle,
+            wave=int(self.spawner.wave_number),
+            # WK67 Move 6 (L3b): the AI proposes the shopping purchase through this
+            # sim-owned synchronous sink; the sim applies it immediately.
+            commands=SimCommandSink(self),
+        )
+
+    @property
+    def lumber_ops(self) -> "LumberOps":
+        """Typed lumber accessor for sim entities (WK67 Move 6 / L3b).
+
+        ``SimEngine`` already implements ``find_nearest_choppable_tree_for_builder``
+        / ``chop_tree_at`` / ``harvest_log_at`` (the :class:`LumberOps` surface), so
+        it is its own facade. The BuilderPeasant receives this through the
+        sim-internal peasant update context instead of pulling the live ``sim`` out
+        of the UI ``game_state`` dict.
+        """
+        return self
+
+    def find_hero_by_id(self, hero_id: str):
+        """Resolve a live hero by its stable ``hero_id`` (WK67 Move 6).
+
+        The hero-command applier (``game.sim.hero_commands.apply_hero_command``)
+        uses this to resolve the proposing hero before mutating it; the AI never
+        gets the hero object, only proposes a command carrying the id.
+        Returns the hero or ``None`` if no live hero matches.
+        """
+        if hero_id is None:
+            return None
+        target = str(hero_id)
+        for hero in self.heroes:
+            if str(getattr(hero, "hero_id", "")) == target:
+                return hero
+        return None
+
     def build_snapshot(
         self,
         *,
         vfx_projectiles: tuple,
-        screen_w: int,
-        screen_h: int,
-        camera_x: float,
-        camera_y: float,
-        zoom: float,
-        default_zoom: float,
-        paused: bool,
-        running: bool,
-        pause_menu_visible: bool,
-        sim_blend_fraction: float = 0.0,
-        sim_tick_id: int = 0,
-        selected_hero=None,
-        selected_building=None,
     ):
-        from game.sim.snapshot import SimStateSnapshot
+        # WK67 Move 4 / L6: the sim snapshot is SIM TRUTH only — it no longer
+        # accepts any presentation kwargs (camera/zoom/screen/paused/running/
+        # pause_menu_visible/selected_*/sim_blend_fraction/sim_tick_id). Those are
+        # engine-owned presentation state built into PresentationFrameState by
+        # GameEngine.build_presentation_frame. ``vfx_projectiles`` stays a passed-in
+        # kwarg (sim-effect data the sim doesn't store on itself frame-to-frame).
+        from game.sim.snapshot import RenderSnapshot
         from game.sim.render_dto import (
             unit_dto_from,
             building_dto_from,
@@ -476,7 +549,7 @@ class SimEngine:
         _world_vis = getattr(_world, "is_tile_visible_at", None)
         _bounties = self.bounty_system.get_unclaimed_bounties()
         _tax = getattr(self, "tax_collector", None)
-        return SimStateSnapshot(
+        return RenderSnapshot(
             buildings=tuple(self.buildings),
             heroes=tuple(self.heroes),
             enemies=tuple(self.enemies),
@@ -493,22 +566,9 @@ class SimEngine:
             buildings_construction_progress=tuple(
                 float(getattr(b, "construction_progress", 1.0)) for b in self.buildings
             ),
-            selected_hero=selected_hero,
-            selected_building=selected_building,
             castle=castle,
             tax_collector=getattr(self, "tax_collector", None),
             vfx_projectiles=tuple(vfx_projectiles or ()),
-            screen_w=int(screen_w),
-            screen_h=int(screen_h),
-            camera_x=float(camera_x),
-            camera_y=float(camera_y),
-            zoom=float(zoom) if zoom else 1.0,
-            default_zoom=float(default_zoom) if default_zoom else 1.0,
-            paused=bool(paused),
-            running=bool(running),
-            pause_menu_visible=bool(pause_menu_visible),
-            sim_blend_fraction=float(sim_blend_fraction),
-            sim_tick_id=int(sim_tick_id),
             underground_areas=getattr(self, 'underground_areas', None),
             rubble_records=tuple(getattr(self, 'rubble_records', ())),
             # WK66 Round A-1: frozen render DTOs (additive; consumers flip in W2).
@@ -698,8 +758,14 @@ class SimEngine:
                     pass
 
         # AI + hero updates
+        # WK67 Move 5 (L3): the AI consumes a read-only AiGameView built from sim
+        # state — NOT the live UI dict (which still carries world/economy/sim/engine
+        # for the UI/HUD/hero paths). Agent 06 migrates BasicAI.update + behaviors to
+        # read the view in the immediately-following task; until then the AI path is
+        # transitionally broken (BasicAI still expects the dict). The full-suite + AI
+        # digest gate is AFTER Agent 06.
         if self.ai_controller:
-            self.ai_controller.update(dt, self.heroes, game_state)
+            self.ai_controller.update(dt, self.heroes, self.build_ai_view())
 
         from game.entities.hero import HeroState
         for hero in self.heroes:
@@ -740,8 +806,15 @@ class SimEngine:
         ):
             self.peasant_spawn_timer = 0.0
             self.peasants.append(Peasant(castle.center_x, castle.center_y))
+        # WK67 Move 6 (L3b): build the sim-internal peasant update context. It
+        # carries the typed lumber accessor (``lumber_ops``) so BuilderPeasant no
+        # longer fishes the live ``sim`` out of the UI ``game_state`` dict. We
+        # extend the existing dict rather than the UI dict in place so the UI
+        # contract is untouched and the typed accessor is sim-owned.
+        peasant_ctx = dict(game_state)
+        peasant_ctx["lumber_ops"] = self.lumber_ops
         for peasant in self.peasants:
-            peasant.update(dt, game_state)
+            peasant.update(dt, peasant_ctx)
 
         # Enemies + ranged events
         enemy_ranged_events: list[dict] = []

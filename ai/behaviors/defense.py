@@ -9,10 +9,13 @@ from game.entities.hero import HeroState
 from game.sim.hero_guardrails_tunables import TARGET_COMMIT_WINDOW_S
 from game.sim.timebase import now_ms as sim_now_ms
 
+from ai.behaviors.view_compat import as_ai_view
 
-def defend_castle(ai: Any, hero: Any, game_state: dict, castle: Any) -> None:
+
+def defend_castle(ai: Any, hero: Any, view: Any, castle: Any) -> None:
     """Send hero to defend the castle when it's damaged."""
-    enemies = game_state.get("enemies", [])
+    view = as_ai_view(view)
+    enemies = view.enemies
 
     # WK2 anti-oscillation: if currently committed to a valid combat target, don't thrash.
     now_ms = int(sim_now_ms())
@@ -54,9 +57,10 @@ def defend_castle(ai: Any, hero: Any, game_state: dict, castle: Any) -> None:
         hero.state = HeroState.IDLE
 
 
-def defend_home_building(ai: Any, hero: Any, game_state: dict) -> None:
+def defend_home_building(ai: Any, hero: Any, view: Any) -> None:
     """Hero defends their damaged home building."""
-    enemies = game_state.get("enemies", [])
+    view = as_ai_view(view)
+    enemies = view.enemies
 
     # WK2 anti-oscillation: if currently committed to a valid combat target, don't thrash.
     now_ms = int(sim_now_ms())
@@ -107,13 +111,14 @@ def defend_home_building(ai: Any, hero: Any, game_state: dict) -> None:
 ECONOMIC_NEUTRAL_TYPES = ("farm", "food_stand")
 
 
-def defend_economic_building_warrior(ai: Any, hero: Any, game_state: dict) -> bool:
+def defend_economic_building_warrior(ai: Any, hero: Any, view: Any) -> bool:
     """
     Warriors prioritize moving to defend nearby economic buildings (farm, food_stand) under attack.
     Runs only for warrior class; no randomness (always respond if in range).
     """
-    buildings = game_state.get("buildings", [])
-    enemies = game_state.get("enemies", [])
+    view = as_ai_view(view)
+    buildings = view.buildings
+    enemies = view.enemies
 
     if not getattr(hero, "hero_class", "") == "warrior":
         return False
@@ -181,13 +186,14 @@ def defend_economic_building_warrior(ai: Any, hero: Any, game_state: dict) -> bo
     return True
 
 
-def defend_neutral_building_if_visible(ai: Any, hero: Any, game_state: dict) -> bool:
+def defend_neutral_building_if_visible(ai: Any, hero: Any, view: Any) -> bool:
     """
     If a neutral building is under attack within the hero's "visible" radius,
     the hero may choose to defend it depending on class.
     """
-    buildings = game_state.get("buildings", [])
-    enemies = game_state.get("enemies", [])
+    view = as_ai_view(view)
+    buildings = view.buildings
+    enemies = view.enemies
 
     # Don't interrupt explicit activities like shopping/going_home.
     if hero.target and isinstance(hero.target, dict):
@@ -266,10 +272,11 @@ def defend_neutral_building_if_visible(ai: Any, hero: Any, game_state: dict) -> 
     return True
 
 
-def start_retreat(ai: Any, hero: Any, game_state: dict) -> None:
+def start_retreat(ai: Any, hero: Any, view: Any) -> None:
     """Start retreating to safety."""
+    view = as_ai_view(view)
     hero.state = HeroState.RETREATING
-    buildings = game_state.get("buildings", [])
+    buildings = view.buildings
 
     for building in buildings:
         if building.building_type in ["castle", "marketplace"]:

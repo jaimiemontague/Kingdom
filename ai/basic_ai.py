@@ -15,6 +15,7 @@ from ai.behaviors import (
     shopping,
     stuck_recovery,
 )
+from ai.behaviors.view_compat import as_ai_view, view_to_legacy_context
 from ai.context_builder import ContextBuilder
 from ai.prompt_templates import get_fallback_decision
 from config import TILE_SIZE
@@ -105,7 +106,7 @@ class BasicAI:
     # Intent + decision helpers
     # -----------------------
 
-    def refresh_intent(self, hero, game_state: dict | None = None) -> None:
+    def refresh_intent(self, hero, view=None) -> None:
         """
         Keep hero.intent non-empty and update hero.last_decision on meaningful changes.
 
@@ -114,7 +115,9 @@ class BasicAI:
         """
         try:
             if hasattr(hero, "_update_intent_and_decision"):
-                hero._update_intent_and_decision(game_state)
+                # hero._update_intent_and_decision ignores its argument (it reads
+                # only hero attributes), so threading the typed view is harmless.
+                hero._update_intent_and_decision(view)
                 return
         except Exception:
             # Best-effort only; never crash the sim due to intent plumbing.
@@ -186,31 +189,40 @@ class BasicAI:
                 # Older signature (without named args).
                 hero.record_decision(str(action), str(reason))
 
-    def update(self, dt: float, heroes: list, game_state: dict):
-        """Update AI for all heroes."""
+    def update(self, dt: float, heroes: list, view):
+        """Update AI for all heroes.
+
+        WK67 Move 5 (L3): ``view`` is a read-only :class:`AiGameView` built by
+        ``SimEngine.build_ai_view`` — NOT the live UI ``game_state`` dict. The AI
+        no longer holds ``world``/``economy``/``sim``/``engine``; it reads the
+        typed view (``view.world`` is a read-only ``WorldView``).
+        """
         for hero in heroes:
             if not hero.is_alive:
                 continue
-            self.update_hero(hero, dt, game_state)
+            self.update_hero(hero, dt, view)
 
-    def update_hero(self, hero, dt: float, game_state: dict):
+    def update_hero(self, hero, dt: float, view):
         """Update AI for a single hero."""
+        # WK67 Move 5: the sim drives this with an AiGameView. A few callers/tests
+        # may still pass the legacy game_state dict; normalize to the view surface.
+        view = as_ai_view(view)
         # Keep intent non-empty even if we make no decision this tick.
-        self.refresh_intent(hero, game_state)
+        self.refresh_intent(hero, view)
         expire_direct_prompt_commit_if_timed_out(hero)
 
         # WK2 Build A: stuck detection + deterministic recovery.
-        self.stuck_recovery_behavior._update_stuck_and_recover(self, hero, game_state)
+        self.stuck_recovery_behavior._update_stuck_and_recover(self, hero, view)
 
         # WK15: Castle under attack — urgent priority: drop everything (including popping out) and defend.
-        castle = game_state.get("castle")
+        castle = view.castle
         if castle and getattr(castle, "is_under_attack", False):
             clear_direct_prompt_commit(hero)
             if getattr(hero, "is_inside_building", False):
                 hero.pop_out_of_building()
                 setattr(hero, "pending_task", None)
                 setattr(hero, "pending_task_building", None)
-            self.defense_behavior.defend_castle(self, hero, game_state, castle)
+            self.defense_behavior.defend_castle(self, hero, view, castle)
             return
 
         # WK11: Finalize deferred task when hero just left a building (pending_task set, not inside).
@@ -218,39 +230,39 @@ class BasicAI:
             pending = getattr(hero, "pending_task", None)
             pending_building = getattr(hero, "pending_task_building", None)
             if pending and pending_building:
-                self._finalize_deferred_task(hero, game_state)
+                self._finalize_deferred_task(hero, view)
                 return
 
         # Handle resting state first (doesn't need LLM).
         if hero.state == HeroState.RESTING:
-            self.handle_resting(hero, dt, game_state)
+            self.handle_resting(hero, dt, view)
             return
 
         # Priority: defend castle if damaged or under attack (unless already fighting).
-        castle = game_state.get("castle")
+        castle = view.castle
         if castle and (castle.is_damaged or getattr(castle, "is_under_attack", False)) and hero.state != HeroState.FIGHTING:
             clear_direct_prompt_commit(hero)
-            self.defense_behavior.defend_castle(self, hero, game_state, castle)
+            self.defense_behavior.defend_castle(self, hero, view, castle)
             return
 
         # WK15: Warriors prioritize defending economic buildings (farm, food_stand) under attack.
         if hero.state != HeroState.FIGHTING and getattr(hero, "hero_class", "") == "warrior":
-            if self.defense_behavior.defend_economic_building_warrior(self, hero, game_state):
+            if self.defense_behavior.defend_economic_building_warrior(self, hero, view):
                 return
 
         # Priority: defend home building if it's damaged.
         if hero.home_building and hero.home_building.is_damaged and hero.state != HeroState.FIGHTING:
-            self.defense_behavior.defend_home_building(self, hero, game_state)
+            self.defense_behavior.defend_home_building(self, hero, view)
             return
 
         # Priority: defend nearby neutral buildings if under attack.
         if hero.state != HeroState.FIGHTING:
-            if self.defense_behavior.defend_neutral_building_if_visible(self, hero, game_state):
+            if self.defense_behavior.defend_neutral_building_if_visible(self, hero, view):
                 return
 
         # WK61-R12: hunger meals for all non-retreating heroes (including FIGHTING when HP > critical).
         if hero.state not in (HeroState.RETREATING, HeroState.DEAD):
-            if self.hunger_behavior.tick_meal_hunger(self, hero, game_state):
+            if self.hunger_behavior.tick_meal_hunger(self, hero, view):
                 target = getattr(hero, "target", None)
                 if isinstance(target, dict) and target.get("type") == "buy_meal":
                     return
@@ -260,7 +272,7 @@ class BasicAI:
             if hero.can_rest_at_home():
                 # Bugfix v1.3.4: don't route to Inn/home to rest if enemies are nearby
                 # and the hero isn't critically low HP. Let the state machine engage instead.
-                enemies = game_state.get("enemies", [])
+                enemies = view.enemies
                 combat_guard_radius = TILE_SIZE * 5  # ~5 tiles / 160px
                 enemies_nearby = any(
                     getattr(e, "is_alive", False) and hero.distance_to(e.x, e.y) <= combat_guard_radius
@@ -272,25 +284,25 @@ class BasicAI:
                         throttle_key=f"{hero.name}_skip_rest_enemy",
                     )
                 else:
-                    self.send_home_to_rest(hero, game_state)
+                    self.send_home_to_rest(hero, view)
                     return
 
         # WK17: Intent conviction — do not consult or apply LLM when hero is committed to a destination.
         if not self._is_committed_destination(hero):
             # Check if we need an LLM decision.
-            if self.llm_bridge_behavior.should_consult_llm(self, hero, game_state):
+            if self.llm_bridge_behavior.should_consult_llm(self, hero, view):
                 # If no LLM brain is wired, still choose via deterministic fallback so
                 # the no-LLM path produces stable intent/decision logging.
                 if self.llm_brain:
-                    self.llm_bridge_behavior.request_llm_decision(self, hero, game_state)
+                    self.llm_bridge_behavior.request_llm_decision(self, hero, view)
                 else:
-                    context = ContextBuilder.build_hero_context(hero, game_state)
+                    context = ContextBuilder.build_hero_context(hero, view_to_legacy_context(view))
                     decision = get_fallback_decision(context)
                     self.llm_bridge_behavior.apply_llm_decision(
                         self,
                         hero,
                         decision,
-                        game_state,
+                        view,
                         source="fallback",
                         context=context,
                     )
@@ -299,10 +311,10 @@ class BasicAI:
             if hero.pending_llm_decision and self.llm_brain:
                 decision = self.llm_brain.get_decision(hero.name)
                 if decision:
-                    context = ContextBuilder.build_hero_context(hero, game_state)
+                    context = ContextBuilder.build_hero_context(hero, view_to_legacy_context(view))
                     src = "mock" if getattr(self.llm_brain, "provider_name", None) == "mock" else "llm"
                     self.llm_bridge_behavior.apply_llm_decision(
-                        self, hero, decision, game_state, source=src, context=context
+                        self, hero, decision, view, source=src, context=context
                     )
                     hero.pending_llm_decision = False
         else:
@@ -312,23 +324,23 @@ class BasicAI:
 
         # State machine behavior.
         if hero.state == HeroState.IDLE:
-            self.handle_idle(hero, game_state)
+            self.handle_idle(hero, view)
         elif hero.state == HeroState.MOVING:
-            self.handle_moving(hero, game_state)
+            self.handle_moving(hero, view)
         elif hero.state == HeroState.FIGHTING:
-            self.handle_fighting(hero, game_state)
+            self.handle_fighting(hero, view)
         elif hero.state == HeroState.RETREATING:
-            self.handle_retreating(hero, game_state)
+            self.handle_retreating(hero, view)
         elif hero.state == HeroState.SHOPPING:
-            self.handle_shopping(hero, game_state)
+            self.handle_shopping(hero, view)
 
-    def handle_idle(self, hero, game_state: dict):
-        self.exploration_behavior.handle_idle(self, hero, game_state)
+    def handle_idle(self, hero, view):
+        self.exploration_behavior.handle_idle(self, hero, view)
 
-    def handle_moving(self, hero, game_state: dict):
-        self.bounty_behavior.handle_moving(self, hero, game_state)
+    def handle_moving(self, hero, view):
+        self.bounty_behavior.handle_moving(self, hero, view)
 
-    def handle_fighting(self, hero, game_state: dict):
+    def handle_fighting(self, hero, view):
         """Handle fighting state."""
         # V1.3 extension: prefer using potions before health gets too low.
         if hero.health_percent < 0.6 and hero.potions > 0:
@@ -353,8 +365,8 @@ class BasicAI:
             dist = hero.distance_to(hero.target.x, hero.target.y)
             if dist > hero.attack_range:
                 # Move towards target (for lairs/buildings, approach adjacent tile to avoid unreachable goals).
-                buildings = game_state.get("buildings", [])
-                world = game_state.get("world")
+                buildings = view.buildings
+                world = view.world
 
                 def _chase_goal_unchanged(nx: float, ny: float) -> bool:
                     """Avoid rewriting target_position every tick when the goal tile is stable (WK22 path churn)."""
@@ -390,9 +402,9 @@ class BasicAI:
             # Find new target.
             hero.state = HeroState.IDLE
 
-    def handle_retreating(self, hero, game_state: dict):
+    def handle_retreating(self, hero, view):
         """Handle retreating state - flee to safety."""
-        buildings = game_state.get("buildings", [])
+        buildings = view.buildings
 
         # V1.3 extension: use potion during retreat if available and health is low.
         if hero.health_percent < 0.7 and hero.potions > 0:
@@ -415,14 +427,18 @@ class BasicAI:
             else:
                 hero.target_position = (nearest_safe.center_x, nearest_safe.center_y)
 
-    def _finalize_deferred_task(self, hero, game_state: dict) -> None:
+    def _finalize_deferred_task(self, hero, view) -> None:
         """Run deferred task on pop-out (WK11): shopping purchase, get_drink payment, or clear rest_inn."""
         pending = getattr(hero, "pending_task", None)
         pending_building = getattr(hero, "pending_task_building", None)
         if not pending or not pending_building:
             return
         if pending == "shopping":
-            self.shopping_behavior.do_shopping(self, hero, pending_building, game_state)
+            # WK67 Move 6: do_shopping proposes the purchase through the sim-owned
+            # synchronous command sink (view.commands), so it takes the AiGameView
+            # directly now (it projects its own legacy context for the journey
+            # trigger). The view carries no economy/sim/engine.
+            self.shopping_behavior.do_shopping(self, hero, pending_building, view)
         elif pending == "get_drink":
             rng = get_rng("ai_basic")
             cost = int(rng.randint(5, 10))
@@ -435,11 +451,11 @@ class BasicAI:
         setattr(hero, "pending_task_building", None)
         hero.state = HeroState.IDLE
 
-    def handle_shopping(self, hero, game_state: dict):
+    def handle_shopping(self, hero, view):
         """Handle shopping state - wait inside or buy at marketplace/blacksmith (WK11: deferred purchase on exit)."""
         if hero.is_inside_building:
             return  # Wait for inside_timer to expire; finalize_deferred_task runs on pop-out
-        buildings = game_state.get("buildings", [])
+        buildings = view.buildings
 
         shop = None
         for building in buildings:
@@ -453,15 +469,15 @@ class BasicAI:
             hero.state = HeroState.IDLE
             return
 
-        started_journey = self.shopping_behavior.do_shopping(self, hero, shop, game_state)
+        started_journey = self.shopping_behavior.do_shopping(self, hero, shop, view)
         if started_journey:
             return
         hero.state = HeroState.IDLE
 
-    def send_home_to_rest(self, hero, game_state: dict):
+    def send_home_to_rest(self, hero, view):
         """Send hero home to rest and heal; prefer Inn if closer (WK11)."""
-        buildings = game_state.get("buildings", [])
-        world = game_state.get("world")
+        buildings = view.buildings
+        world = view.world
 
         # WK11: Prefer Inn when closer than home guild.
         inns = [b for b in buildings if getattr(b, "building_type", None) == BuildingType.INN and getattr(b, "is_constructed", True)]
@@ -496,7 +512,7 @@ class BasicAI:
             hero.state = HeroState.MOVING
             hero.target = {"type": "going_home"}
 
-    def handle_resting(self, hero, dt: float, game_state: dict):
+    def handle_resting(self, hero, dt: float, view):
         """Handle hero resting at home or inn."""
         rest_building = hero.inside_building or hero.home_building
         if rest_building and getattr(rest_building, "is_damaged", False):

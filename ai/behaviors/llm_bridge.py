@@ -6,6 +6,7 @@ from typing import Any
 
 from config import LLM_DECISION_COOLDOWN, TILE_SIZE
 from ai.behaviors import hunger
+from ai.behaviors.view_compat import as_ai_view, view_to_legacy_context
 from ai.context_builder import ContextBuilder
 from ai.decision_moments import (
     consult_suppressed_by_request_state,
@@ -16,12 +17,13 @@ from game.entities.hero import HeroState
 from game.sim.timebase import now_ms as sim_now_ms
 
 
-def _resolve_move_target(target: str, game_state: dict, hero: Any) -> tuple[float, float] | None:
+def _resolve_move_target(target: str, view: Any, hero: Any) -> tuple[float, float] | None:
     """Resolve LLM move_to target string to world (x, y). WK18: used to hook move_to into physical engine."""
     if not target or not isinstance(target, str):
         return None
+    view = as_ai_view(view)
     t = target.strip().lower()
-    buildings = game_state.get("buildings", []) or []
+    buildings = view.buildings or []
     # Map common names to building_type.
     type_map = {
         "castle": "castle",
@@ -49,10 +51,11 @@ def _resolve_move_target(target: str, game_state: dict, hero: Any) -> tuple[floa
     return (float(getattr(best, "center_x", 0)), float(getattr(best, "center_y", 0)))
 
 
-def should_consult_llm(ai: Any, hero: Any, game_state: dict) -> bool:
+def should_consult_llm(ai: Any, hero: Any, view: Any) -> bool:
     """Determine if we should ask the LLM for a decision (WK50: named decision moments)."""
+    view = as_ai_view(view)
     current_time = sim_now_ms()
-    moment = determine_decision_moment(hero, game_state, now_ms=current_time)
+    moment = determine_decision_moment(hero, view_to_legacy_context(view), now_ms=current_time)
     if moment is None:
         return False
     cooldown_ms = max(LLM_DECISION_COOLDOWN, moment.cooldown_ms)
@@ -61,15 +64,17 @@ def should_consult_llm(ai: Any, hero: Any, game_state: dict) -> bool:
     return True
 
 
-def request_llm_decision(ai: Any, hero: Any, game_state: dict) -> None:
+def request_llm_decision(ai: Any, hero: Any, view: Any) -> None:
     """Request a decision from the LLM brain."""
     if ai.llm_brain:
+        view = as_ai_view(view)
         now = sim_now_ms()
-        moment = determine_decision_moment(hero, game_state, now_ms=now)
+        legacy = view_to_legacy_context(view)
+        moment = determine_decision_moment(hero, legacy, now_ms=now)
         if moment is None:
             return
-        base_context = ContextBuilder.build_hero_context(hero, game_state)
-        autonomous = build_llm_context_for_moment(hero, game_state, moment, now_ms=now)
+        base_context = ContextBuilder.build_hero_context(hero, legacy)
+        autonomous = build_llm_context_for_moment(hero, legacy, moment, now_ms=now)
         context = {**base_context, "wk50_autonomous": autonomous}
         ai.llm_brain.request_decision(hero.name, context)
         hero.pending_llm_decision = True
@@ -88,12 +93,19 @@ def apply_llm_decision(
     ai: Any,
     hero: Any,
     decision: dict,
-    game_state: dict,
+    view: Any,
     *,
     source: str = "llm",
     context: dict | None = None,
 ) -> None:
-    """Apply an LLM decision to the hero (WK18: supports obey_defy and tool_action)."""
+    """Apply an LLM decision to the hero (WK18: supports obey_defy and tool_action).
+
+    WK67 Move 5: ``view`` is normally the read-only ``AiGameView`` (AI path). The
+    direct-prompt chat path (``game.sim.direct_prompt_exec``) still drives this
+    with the legacy UI ``game_state`` dict; :func:`as_ai_view` normalizes either
+    form to the view surface the migrated behaviors read.
+    """
+    view = as_ai_view(view)
     action = decision.get("action", "")
     target = decision.get("target", "")
     tool_action = decision.get("tool_action") or action
@@ -102,13 +114,13 @@ def apply_llm_decision(
     hero.last_llm_action = decision
 
     if context is None:
-        context = ContextBuilder.build_hero_context(hero, game_state)
+        context = ContextBuilder.build_hero_context(hero, view_to_legacy_context(view))
     inputs_summary = ContextBuilder.build_inputs_summary(context)
     reason = decision.get("reasoning", "")
     if not isinstance(reason, str):
         reason = ""
 
-    if hunger.maybe_apply_meal_before_llm_action(ai, hero, game_state, action):
+    if hunger.maybe_apply_meal_before_llm_action(ai, hero, view, action):
         return
 
     if action == "retreat":
@@ -121,7 +133,7 @@ def apply_llm_decision(
             inputs_summary=inputs_summary,
             source=source,
         )
-        ai.defense_behavior.start_retreat(ai, hero, game_state)
+        ai.defense_behavior.start_retreat(ai, hero, view)
     elif action == "fight":
         ai.set_intent(hero, "engaging_enemy")
         ai.record_decision(
@@ -143,7 +155,7 @@ def apply_llm_decision(
             inputs_summary=inputs_summary,
             source=source,
         )
-        ai.shopping_behavior.go_shopping(ai, hero, target, game_state)
+        ai.shopping_behavior.go_shopping(ai, hero, target, view)
     elif action == "use_potion":
         ai.record_decision(
             hero,
@@ -164,7 +176,7 @@ def apply_llm_decision(
             inputs_summary=inputs_summary,
             source=source,
         )
-        ai.exploration_behavior.explore(ai, hero, game_state)
+        ai.exploration_behavior.explore(ai, hero, view)
     elif action == "accept_bounty":
         pass
     elif tool_action == "leave_building" or action == "leave_building":
@@ -184,7 +196,7 @@ def apply_llm_decision(
         hero.state = HeroState.IDLE
     elif tool_action == "move_to" or action == "move_to":
         # WK18: Resolve target to (x,y) and set llm_move_request; engine drains into physical state.
-        dest = _resolve_move_target(target or "", game_state, hero)
+        dest = _resolve_move_target(target or "", view, hero)
         if dest is not None:
             hero.llm_move_request = dest
             ai.set_intent(hero, "moving_to_destination")
@@ -206,7 +218,7 @@ def apply_llm_decision(
                 inputs_summary=inputs_summary,
                 source=source,
             )
-            ai.exploration_behavior.explore(ai, hero, game_state)
+            ai.exploration_behavior.explore(ai, hero, view)
     else:
         ai._debug_log(
             f"{hero.name} received unknown LLM action={action!r}; ignoring",

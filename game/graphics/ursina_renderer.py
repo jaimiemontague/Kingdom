@@ -65,7 +65,11 @@ from game.graphics.worker_sprites import WorkerSpriteLibrary
 from game.world import TileType, Visibility
 
 if TYPE_CHECKING:
-    from game.sim.snapshot import SimStateSnapshot
+    from game.sim.snapshot import (
+        PresentationFrameState,
+        RenderSnapshot,
+        SimStateSnapshot,
+    )
 
 # Fallback tint when hero class is unresolved or texture upload fails — match Warrior shirt (HeroSpriteSpec).
 COLOR_HERO = color.rgb(180 / 255.0, 45 / 255.0, 45 / 255.0)
@@ -405,6 +409,7 @@ from game.graphics.ursina_prefabs import (
     _load_prefab_instance,
 )
 from game.graphics.ursina_units_anim import (
+    anim_clock_seconds,
     _frame_index_for_clip,
     _guard_base_clip,
     _hero_base_clip,
@@ -556,7 +561,12 @@ class UrsinaRenderer:
         return self._clips_cache[cache_key]
 
     def _compute_anim_frame(self, obj_id, entity, unit_type: str, class_key: str, base_clip_fn) -> tuple:
-        """Compute current animation clip name and frame index. Uses perf_counter for precision."""
+        """Compute current animation clip name and frame index.
+
+        The within-clip elapsed uses :func:`anim_clock_seconds` — wall-clock
+        ``perf_counter`` in normal play, sim-tick-derived under DETERMINISTIC_SIM
+        (WK67 Wave 5) so dynamic-scene captures are byte-reproducible.
+        """
         # WK66 Move 1a: read the one-shot trigger + the sim's monotonic
         # anim_trigger_seq and play when the seq advances vs our renderer-owned
         # last-seen value, instead of clearing the trigger on the entity. The
@@ -568,7 +578,9 @@ class UrsinaRenderer:
 
         base = base_clip_fn(entity)
         st = self._unit_anim_state.get(obj_id)
-        now = time.perf_counter()
+        # WK67 Wave 5: under DETERMINISTIC_SIM/capture this is sim-tick-derived
+        # (byte-reproducible); otherwise wall-clock perf_counter (live play unchanged).
+        now = anim_clock_seconds(getattr(self, "_frame_tick_id", 0))
         last_seq = st.get("last_seq", -1) if st is not None else -1
 
         if trigger and trigger_seq != last_seq:
@@ -890,8 +902,20 @@ class UrsinaRenderer:
         rect = self._frame_visible_rect
         return rect[0] <= tx <= rect[2] and rect[1] <= ty <= rect[3]
 
-    def update(self, snapshot: "SimStateSnapshot"):
-        """Called every frame by the Ursina app loop."""
+    def update(self, snapshot: "RenderSnapshot", frame: "PresentationFrameState | None" = None):
+        """Called every frame by the Ursina app loop.
+
+        WK67 Move 4 / L6: presentation timing (``sim_blend_fraction``/``sim_tick_id``)
+        is no longer on the sim ``snapshot`` — it arrives on ``frame`` (a
+        :class:`~game.sim.snapshot.PresentationFrameState`). ``frame`` defaults to a
+        neutral ``PresentationFrameState()`` so callers that don't drive interpolation
+        keep working; the real Ursina app loop always passes the engine-built frame.
+        """
+        if frame is None:
+            from game.sim.snapshot import PresentationFrameState
+
+            frame = PresentationFrameState()
+
         try:
             from game.types import HeroClass
         except Exception:
@@ -916,9 +940,10 @@ class UrsinaRenderer:
         self._ensure_shadow_bounds_once()
         if _stage_profile: _rec("01_ensure_shadow_bounds_once", _t0); _t0 = time.perf_counter()
 
-        # R4: cache sim interpolation state for this frame
-        self._frame_blend = float(getattr(snapshot, 'sim_blend_fraction', 0.0))
-        self._frame_tick_id = int(getattr(snapshot, 'sim_tick_id', 0))
+        # R4: cache sim interpolation state for this frame.
+        # WK67 Move 4 / L6: these are presentation timing — read from ``frame``, not snapshot.
+        self._frame_blend = float(getattr(frame, 'sim_blend_fraction', 0.0))
+        self._frame_tick_id = int(getattr(frame, 'sim_tick_id', 0))
 
         # WK59 perf: cache visible tile rect for frustum culling this frame
         self._frame_visible_rect = self._get_visible_tile_rect()
@@ -957,7 +982,10 @@ class UrsinaRenderer:
             active_ids: set[int] = set()
             self._sync_snapshot_buildings(snapshot, world, active_ids)
             self._sync_underground_meshes(snapshot, world)
-            unit_ids = self._instanced_unit_renderer.update(snapshot)
+            # WK67 Wave 5: forward the sim tick so the instanced anim FSM uses the
+            # SAME tick basis as the legacy path (deterministic captures under
+            # DETERMINISTIC_SIM; wall-clock otherwise).
+            unit_ids = self._instanced_unit_renderer.update(snapshot, self._frame_tick_id)
             active_ids.update(unit_ids)
             # Projectiles draw inside ``InstancedUnitRenderer`` (wk48); skip legacy Entities.
             self._update_debug_status_text(snapshot)

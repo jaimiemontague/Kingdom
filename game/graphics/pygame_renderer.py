@@ -35,7 +35,7 @@ from game.logging import get_logger
 from game.world import Visibility
 
 if TYPE_CHECKING:
-    from game.sim.snapshot import SimStateSnapshot
+    from game.sim.snapshot import PresentationFrameState, SimStateSnapshot
 
 
 _log = get_logger(__name__)
@@ -154,6 +154,7 @@ class PygameRenderer:
         self,
         screen: pygame.Surface,
         snapshot: SimStateSnapshot,
+        frame: "PresentationFrameState | None" = None,
         *,
         skip_pygame_world: bool,
         window_width: int,
@@ -166,11 +167,22 @@ class PygameRenderer:
         When ``skip_pygame_world`` is True (Ursina compositing), fills are handled by
         the caller; this method only runs bounty ``update_ui_metrics`` so HUD/minimap
         stay consistent — same ordering as pre-extraction ``GameEngine.render``.
+
+        WK67 Move 4 / L6: camera/zoom are *presentation* state and now arrive on
+        ``frame`` (a :class:`~game.sim.snapshot.PresentationFrameState`), not on the
+        sim ``snapshot``. ``frame`` defaults to a neutral ``PresentationFrameState()``
+        so smoke/metrics-only callers that don't drive a camera keep working; the real
+        engine render path always passes ``ctx.frame``.
         """
-        zoom = float(snapshot.zoom) if snapshot.zoom else 1.0
+        if frame is None:
+            from game.sim.snapshot import PresentationFrameState
+
+            frame = PresentationFrameState()
+
+        zoom = float(frame.zoom) if frame.zoom else 1.0
 
         # Pixel art: quantize camera to integer pixels to reduce shimmer.
-        camera_offset = (int(snapshot.camera_x), int(snapshot.camera_y))
+        camera_offset = (int(frame.camera_x), int(frame.camera_y))
 
         # Render-only context (do not affect simulation determinism).
         try:

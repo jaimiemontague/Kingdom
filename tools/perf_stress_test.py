@@ -100,21 +100,11 @@ def _spawn_heroes_and_enemies(sim: SimEngine, guild: WarriorGuild, total: int) -
 
 
 def _make_snapshot(sim: SimEngine):
-    castle = next(b for b in sim.buildings if getattr(b, "building_type", None) == "castle")
-    cx = float(castle.center_x) - float(WINDOW_WIDTH) * 0.5
-    cy = float(castle.center_y) - float(WINDOW_HEIGHT) * 0.5
-    return sim.build_snapshot(
-        vfx_projectiles=(),
-        screen_w=int(WINDOW_WIDTH),
-        screen_h=int(WINDOW_HEIGHT),
-        camera_x=cx,
-        camera_y=cy,
-        zoom=1.0,
-        default_zoom=1.0,
-        paused=False,
-        running=True,
-        pause_menu_visible=False,
-    )
+    # WK67 Move 4 / L6: build_snapshot returns sim truth only and no longer takes
+    # presentation kwargs (camera/screen/zoom/paused). This perf harness only needs
+    # a RenderSnapshot to time the build/draw path — presentation state is irrelevant
+    # here, so we drop the (now-invalid) presentation kwargs.
+    return sim.build_snapshot(vfx_projectiles=())
 
 
 def _pct_index(n: int, p: float) -> int:

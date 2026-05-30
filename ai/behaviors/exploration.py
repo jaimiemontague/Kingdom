@@ -18,6 +18,8 @@ from game.sim.timebase import now_ms as sim_now_ms
 from game.systems.navigation import best_adjacent_tile
 from game.world import Visibility
 
+from ai.behaviors.view_compat import as_ai_view
+
 
 def _is_live_enemy_target(target: Any) -> bool:
     """True only for living enemy entities (not buildings/lairs with ``is_alive``)."""
@@ -28,13 +30,14 @@ def _is_live_enemy_target(target: Any) -> bool:
     return bool(getattr(target, "is_alive", False))
 
 
-def assign_patrol_zone(ai: Any, hero: Any, game_state: dict) -> tuple[float, float]:
+def assign_patrol_zone(ai: Any, hero: Any, view: Any) -> tuple[float, float]:
     """Assign a unique patrol zone to a hero based on their index."""
     if hero.name in ai.hero_zones:
         return ai.hero_zones[hero.name]
 
+    view = as_ai_view(view)
     # Get castle position as reference.
-    castle = game_state.get("castle")
+    castle = view.castle
     if castle:
         base_x, base_y = castle.center_x, castle.center_y
     else:
@@ -44,7 +47,7 @@ def assign_patrol_zone(ai: Any, hero: Any, game_state: dict) -> tuple[float, flo
         base_y = (MAP_HEIGHT // 2) * TILE_SIZE
 
     # Assign zones in a circle around the castle.
-    heroes = [h for h in game_state.get("heroes", []) if h.is_alive]
+    heroes = [h for h in view.heroes if h.is_alive]
     try:
         idx = heroes.index(hero)
     except ValueError:
@@ -133,13 +136,14 @@ def _find_black_fog_frontier_tiles(
     return candidates[:max_candidates]
 
 
-def explore(ai: Any, hero: Any, game_state: dict) -> None:
+def explore(ai: Any, hero: Any, view: Any) -> None:
     """Send hero to explore within their zone. Rangers prefer black-fog frontiers."""
-    zone_x, zone_y = assign_patrol_zone(ai, hero, game_state)
+    view = as_ai_view(view)
+    zone_x, zone_y = assign_patrol_zone(ai, hero, view)
 
     # WK6: Rangers have exploration bias toward black fog frontiers.
     if getattr(hero, "hero_class", None) == "ranger":
-        world = game_state.get("world")
+        world = view.world
         if world:
             # Check commitment window (prevent rapid re-targeting).
             now_ms = sim_now_ms()
@@ -187,10 +191,11 @@ def explore(ai: Any, hero: Any, game_state: dict) -> None:
     hero.target = {"type": "patrol"}
 
 
-def handle_idle(ai: Any, hero: Any, game_state: dict) -> None:
+def handle_idle(ai: Any, hero: Any, view: Any) -> None:
     """Handle idle state - heroes patrol their assigned zone."""
-    enemies = game_state.get("enemies", [])
-    buildings = game_state.get("buildings", [])
+    view = as_ai_view(view)
+    enemies = view.enemies
+    buildings = view.buildings
 
     ai._debug_log(f"{hero.name} is IDLE at ({hero.x:.0f}, {hero.y:.0f})", throttle_key=f"{hero.name}_idle")
 
@@ -200,12 +205,12 @@ def handle_idle(ai: Any, hero: Any, game_state: dict) -> None:
         hero.target_position = None
 
     # Majesty-style indirect control: bounties should be a primary lever.
-    if ai.bounty_behavior.maybe_take_bounty(ai, hero, game_state):
+    if ai.bounty_behavior.maybe_take_bounty(ai, hero, view):
         return
 
     # WK61-R10: hungry heroes seek food stands before discretionary explore/shopping.
     hunger_behavior = getattr(ai, "hunger_behavior", None)
-    if hunger_behavior is not None and hunger_behavior.maybe_seek_meal_idle(ai, hero, game_state):
+    if hunger_behavior is not None and hunger_behavior.maybe_seek_meal_idle(ai, hero, view):
         return
 
     # Check if hero wants to go shopping (full health, has gold, needs potions).
@@ -214,7 +219,7 @@ def handle_idle(ai: Any, hero: Any, game_state: dict) -> None:
         marketplace = ai.shopping_behavior.find_marketplace_with_potions(buildings)
         if marketplace and hero.wants_to_shop(marketplace.can_sell_potions()):
             ai._debug_log(f"{hero.name} -> going shopping")
-            world = game_state.get("world")
+            world = view.world
             if world:
                 adj = best_adjacent_tile(world, buildings, marketplace, hero.x, hero.y)
                 if adj:
@@ -237,7 +242,7 @@ def handle_idle(ai: Any, hero: Any, game_state: dict) -> None:
         blacksmith = ai.shopping_behavior.find_blacksmith(buildings, hero)
         if blacksmith and hero.gold >= 50:  # Assume upgrades cost at least 50 gold.
             ai._debug_log(f"{hero.name} -> going to Blacksmith for upgrades")
-            world = game_state.get("world")
+            world = view.world
             if world:
                 adj = best_adjacent_tile(world, buildings, blacksmith, hero.x, hero.y)
                 if adj:
@@ -291,7 +296,7 @@ def handle_idle(ai: Any, hero: Any, game_state: dict) -> None:
         ]
         if inns and ai._ai_rng.random() < 0.12:  # ~12% chance
             inn = min(inns, key=lambda b: hero.distance_to(b.center_x, b.center_y))
-            world = game_state.get("world")
+            world = view.world
             if world:
                 adj = best_adjacent_tile(world, buildings, inn, hero.x, hero.y)
                 if adj:
@@ -310,12 +315,12 @@ def handle_idle(ai: Any, hero: Any, game_state: dict) -> None:
     # WK55: Personality-driven POI visit (chance-gated to avoid constant POI chasing).
     from ai.behaviors.poi_awareness import maybe_visit_poi
     if ai._ai_rng.random() < 0.08:  # ~8% per idle tick
-        if maybe_visit_poi(ai, hero, game_state):
+        if maybe_visit_poi(ai, hero, view):
             ai._debug_log(f"{hero.name} -> visiting personality-matched POI")
             return
 
     # Get this hero's patrol zone.
-    zone_x, zone_y = assign_patrol_zone(ai, hero, game_state)
+    zone_x, zone_y = assign_patrol_zone(ai, hero, view)
 
     ai._debug_log(
         f"{hero.name} zone=({zone_x:.0f}, {zone_y:.0f}), hero at ({hero.x:.0f}, {hero.y:.0f})",
@@ -343,8 +348,8 @@ def handle_idle(ai: Any, hero: Any, game_state: dict) -> None:
         frontier_commit_until = int(getattr(hero, "_frontier_commit_until_ms", 0) or 0)
         if getattr(hero, "hero_class", None) == "ranger":
             if now_ms >= frontier_commit_until or not hero.target_position:
-                explore(ai, hero, game_state)
+                explore(ai, hero, view)
         elif not hero.target_position:
-            explore(ai, hero, game_state)
+            explore(ai, hero, view)
         elif ai._ai_rng.random() < 0.15:
-            explore(ai, hero, game_state)
+            explore(ai, hero, view)

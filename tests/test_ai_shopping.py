@@ -10,6 +10,7 @@ from game.entities.hero import HeroState
 class _Hero:
     def __init__(self, *, name: str = "Shopper", x: float = 0.0, y: float = 0.0) -> None:
         self.name = name
+        self.hero_id = f"shop_test_{name}"
         self.x = float(x)
         self.y = float(y)
         self.state = HeroState.IDLE
@@ -63,6 +64,52 @@ class _AI:
         self.journey_behavior = _JourneyBehavior(return_value=journey_returns)
 
 
+class _SimStub:
+    """Minimal sim the real ``SimCommandSink`` resolves writes against.
+
+    WK67 Move 6 routes the shopping write through a sim-owned, synchronous
+    ``SimCommandSink``: ``do_shopping`` proposes a ``HeroPurchaseCommand`` and the
+    sink calls ``apply_hero_command(sim, cmd)``, which does
+    ``sim.find_hero_by_id(cmd.hero_id).buy_item(item)`` and (on success)
+    ``sim.economy.hero_purchase(name, item_name, price)`` — the SAME effect the old
+    inline ``do_shopping`` had. This stub exposes exactly those two surfaces over
+    the test's own hero + economy so the original assertions hold through the
+    command path unchanged.
+    """
+
+    def __init__(self, hero, economy) -> None:
+        self._hero = hero
+        self.economy = economy
+
+    def find_hero_by_id(self, hero_id):
+        return self._hero if str(getattr(self._hero, "hero_id", "")) == str(hero_id) else None
+
+
+def _sink_view(hero, economy):
+    """An AiGameView-shaped object whose ``.commands`` is a real ``SimCommandSink``.
+
+    ``do_shopping`` first normalizes ``view`` via ``as_ai_view`` (which passes
+    non-dict objects straight through), reads ``view.commands`` to propose, and
+    later projects the view through ``view_to_legacy_context`` for the journey
+    trigger — so the view must carry ``.commands`` plus the legacy-context read
+    fields. It carries NO economy/sim/engine (the closed L3 leak); the economy is
+    reached only inside the sim-owned applier.
+    """
+    from game.sim.hero_commands import SimCommandSink
+
+    return SimpleNamespace(
+        commands=SimCommandSink(_SimStub(hero, economy)),
+        world=None,
+        buildings=[],
+        enemies=[],
+        heroes=[hero],
+        bounties=[],
+        pois=[],
+        player_gold=0,
+        castle=None,
+    )
+
+
 def test_find_marketplace_with_potions_returns_only_researched_market() -> None:
     without_potions = SimpleNamespace(building_type="marketplace", potions_researched=False)
     with_potions = SimpleNamespace(building_type="marketplace", potions_researched=True)
@@ -97,7 +144,7 @@ def test_do_shopping_buys_potion_and_records_economy_purchase() -> None:
         ai,
         hero,
         marketplace,
-        {"economy": economy},
+        _sink_view(hero, economy),
     )
 
     assert started_journey is False
@@ -121,7 +168,7 @@ def test_do_shopping_passes_purchased_types_to_journey_and_returns_value() -> No
         ai,
         hero,
         blacksmith,
-        {"economy": economy},
+        _sink_view(hero, economy),
     )
 
     assert started_journey is True

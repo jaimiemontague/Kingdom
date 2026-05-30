@@ -1791,6 +1791,348 @@
           ]
         }
       }
+    },
+    "wk67_round_a2_ai_boundary": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk67_round_a2_ai_boundary.plan.md",
+        "created_utc": "2026-05-29T00:00:00Z",
+        "notes": "Round A-2 AI boundary. Agent 03 Wave 1 (Move 4 / L6) = presentation split ONLY: define RenderSnapshot (sim truth) + PresentationFrameState (engine-built presentation); SimEngine.build_snapshot drops all presentation kwargs; GameEngine builds the frame. Renderer 2-arg pairing is Agent 10's immediately-following task (transitional 1-arg state expected after this wave). Waves 2/3/5 are SEPARATE later activations."
+      },
+      "rounds": {
+        "wk67_w1_move4": {
+          "sprint_id": "wk67_round_a2_ai_boundary",
+          "round_id": "wk67_w1_move4",
+          "status": "done",
+          "intelligence": "HIGH",
+          "wave": "Wave 1 (Move 4 / L6) - presentation split only; cheap/structural half of Move 4. Behavior-preserving.",
+          "summary": "Split presentation state out of the sim snapshot. snapshot.py now defines RenderSnapshot (sim truth: live entity tuples + WK66 DTO tuples + world/fog/gold/wave/construction/castle/tax/vfx/underground/rubble) and PresentationFrameState (camera/zoom/screen/paused/running/pause_menu_visible/blend/tick/selection). SimEngine.build_snapshot drops ALL presentation kwargs and returns RenderSnapshot (only vfx_projectiles kwarg remains). GameEngine.build_snapshot returns RenderSnapshot; new GameEngine.build_presentation_frame builds the frame. SimStateSnapshot kept as a thin back-compat alias (= RenderSnapshot). AI-decision digest byte-identical. Live entity tuples KEPT (Ursina still reads them); DTO read-migration + live-tuple deletion is the deferred render last-mile (Round B).",
+          "dataclass_field_lists": {
+            "RenderSnapshot": [
+              "buildings",
+              "heroes",
+              "enemies",
+              "peasants",
+              "guards",
+              "bounties",
+              "world",
+              "trees",
+              "pois",
+              "log_stacks",
+              "fog_revision",
+              "gold",
+              "wave",
+              "buildings_construction_progress",
+              "castle",
+              "tax_collector",
+              "vfx_projectiles",
+              "underground_areas",
+              "rubble_records",
+              "hero_dtos",
+              "enemy_dtos",
+              "peasant_dtos",
+              "guard_dtos",
+              "tax_collector_dto",
+              "building_dtos",
+              "bounty_dtos"
+            ],
+            "RenderSnapshot_removed_vs_old_SimStateSnapshot": [
+              "selected_hero",
+              "selected_building",
+              "screen_w",
+              "screen_h",
+              "camera_x",
+              "camera_y",
+              "zoom",
+              "default_zoom",
+              "paused",
+              "running",
+              "pause_menu_visible",
+              "sim_blend_fraction",
+              "sim_tick_id"
+            ],
+            "PresentationFrameState": [
+              "camera_x",
+              "camera_y",
+              "zoom",
+              "default_zoom",
+              "screen_w",
+              "screen_h",
+              "paused",
+              "running",
+              "pause_menu_visible",
+              "sim_blend_fraction",
+              "sim_tick_id",
+              "selected_hero",
+              "selected_building"
+            ]
+          },
+          "renderer_update_contract": {
+            "contract": "renderer.update(render_snapshot: RenderSnapshot, frame: PresentationFrameState)",
+            "for_agent_10": "Ursina: ursina_app.py:1397-1398 builds frame (engine.build_presentation_frame()) and calls self.renderer.update(snapshot, frame); UrsinaRenderer.update + instanced_unit_renderer.update take (snapshot, frame); move snapshot.sim_blend_fraction/sim_tick_id reads (ursina_renderer.py:920-921) to frame.*. Pygame: pygame_renderer.render_world(...) reads snapshot.zoom/snapshot.camera_x at :170/:173 -> move to frame.zoom/frame.camera_x and add a frame param; EngineRenderCoordinator (render_coordinator.py:48-55) forwards ctx.frame alongside ctx.snapshot. FrameContext already carries ctx.frame (added this wave) so the forward is a 1-line read.",
+            "blend_tick_decision": "sim_blend_fraction + sim_tick_id moved to PresentationFrameState (presentation timing), per PM prompt + DoD Goal A. vfx_projectiles stays a build_snapshot kwarg and a RenderSnapshot field (sim-effect data)."
+          },
+          "build_snapshot_caller_grep": {
+            "command": "rg -n \"build_snapshot\\(\" game ai tools tests",
+            "callers_and_handling": [
+              "game/engine.py:1503 (GameEngine.build_snapshot wrapper) - OWNED, updated: returns RenderSnapshot via self.sim.build_snapshot(vfx_projectiles=...); presentation moved to new build_presentation_frame().",
+              "game/presentation/frame_context.py:41 (FrameContext.build) - OWNED-adjacent, updated: now also builds frame=engine.build_presentation_frame(); added required FrameContext.frame field (additive; factory is the only constructor).",
+              "game/graphics/ursina_app.py:1397 (snapshot = engine.build_snapshot()) - Agent 10 lane: still 1-arg; calls renderer.update(snapshot). TRANSITIONAL until Agent 10 pairs to 2-arg. Not touched.",
+              "tools/perf_stress_test.py:106 (_make_snapshot) - passed presentation kwargs to sim.build_snapshot -> UPDATED by me: dropped now-invalid presentation kwargs, call sim.build_snapshot(vfx_projectiles=()). Manual perf tool, not collected by pytest; does not read presentation off the snapshot.",
+              "tests/* (test_engine, test_wk66_render_boundary, test_wk65_snapshot_no_mutation, test_renderer_snapshot_contract, test_pygame_renderer_wk39, test_wk67_ai_boundary) - Agent 11 lane: all call engine.build_snapshot() zero-arg; pass via the SimStateSnapshot alias (= RenderSnapshot). Not touched by me."
+            ]
+          },
+          "simstatesnapshot_grep": {
+            "command": "rg -n \"SimStateSnapshot\" game ai tools tests",
+            "decision": "KEEP SimStateSnapshot as a thin back-compat ALIAS: SimStateSnapshot = RenderSnapshot in game/sim/snapshot.py. Rationale: non-renderer consumers (test_engine.py:180, test_renderer_snapshot_contract.py:64/77, test_pygame_renderer_wk39.py:31, frame_context type hints, render_coordinator/pygame_renderer/ursina_renderer/instanced_unit_renderer type hints) reference the name. The frame-state pin (test_wk67) asserts build_snapshot() returns RenderSnapshot AND has no presentation attrs; since alias IS RenderSnapshot, isinstance(snap, SimStateSnapshot) stays True for the old tests too. Verified: no surviving consumer constructs SimStateSnapshot WITH presentation kwargs (test_renderer_snapshot_contract.py:64 passes no presentation kwargs) and no graphics/tools consumer reads presentation fields off the snapshot EXCEPT pygame_renderer.py:170/173 (Agent 10 lane) and ursina_renderer.py:920-921 (Agent 10 lane, via getattr-with-default so it degrades gracefully in the transitional state).",
+            "owner_handoffs": "None needed outside graphics/tests: only perf_stress_test.py (tools) required a build_snapshot-caller fix and I made it. The renderer presentation-field reads (pygame_renderer.py, ursina_renderer.py, render_coordinator.py forward) are Agent 10's Wave-1 task."
+          },
+          "gates": {
+            "import_smoke": "PASS - python -c 'import game.sim.snapshot; import game.sim_engine; import game.engine' clean; SimStateSnapshot is RenderSnapshot == True.",
+            "wk67_pins": "tests/test_wk67_ai_boundary.py: 3 passed (AI-decision digest STABLE/byte-identical to recorded b73961340cd681e5..., shopping parity GREEN, wk66 cross-check), 1 xfailed (purity pin = Wave 2 as designed), 1 XPASSED (frame_state_split pin now passes; strict=False so not a failure - Agent 11 flips its xfail to expected-pass).",
+            "ai_decision_digest": "BYTE-IDENTICAL. test_ai_decision_digest_is_stable PASSED (asserts subprocess digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded). Move 4 did not change AI decisions.",
+            "targeted_suites": "tests/test_engine.py + test_wk66_render_boundary.py + test_wk65_snapshot_no_mutation.py + test_renderer_snapshot_contract.py: all GREEN. test_pygame_renderer_wk39.py: 1 FAIL (test_skip_pygame_world_render_world_smoke) = PURELY the renderer 1-arg/2-arg pairing (pygame_renderer.py:170 reads snapshot.zoom which moved to frame). Agent 10's half; NOT fixed in graphics per lane rules.",
+            "full_suite": "1 failed, 595 passed, 4 skipped, 1 xfailed, 1 xpassed. The ONLY failure is test_pygame_renderer_wk39.py::test_skip_pygame_world_render_world_smoke (renderer pairing, Agent 10). Suite goes fully green after Agent 10 pairs render_world/update to (snapshot, frame).",
+            "determinism_guard_my_files": "FAIL: 1 violation at game/engine.py:1137 [wall_clock_time] pygame.time.get_ticks() in send_player_message (LLM chat cooldown). PRE-EXISTING (git-stash baseline shows the same violation at engine.py:1133 before my change; my +4-line build_presentation_frame method shifted the line number). NOT introduced by Move 4, NOT in sim logic, out of WK67 scope. Recorded for PM, not masked.",
+            "determinism_guard_repo_wide": "PASS (exit 0) - qa_smoke default-scope determinism_guard returned exit_code=0; the engine.py:1137 chat-cooldown hit only surfaces under explicit --paths game/engine.py.",
+            "qa_smoke_quick": "FAIL only via the same single renderer-pairing pytest failure; qa_smoke determinism_guard sub-step PASS (exit 0). No other regression."
+          },
+          "constraints_honored": [
+            "Behavior-preserving: AI-decision digest byte-identical; only structural data-shape change.",
+            "Did NOT edit game/graphics/** or ai/**.",
+            "Did NOT delete the live entity tuples (Ursina still reads them).",
+            "DID NOT COMMIT. DID NOT PUSH."
+          ],
+          "findings_for_pm": [
+            "Pre-existing determinism violation surfaced when targeting engine.py: game/engine.py send_player_message uses pygame.time.get_ticks() for the LLM conversation cooldown (now line ~1137). Pre-existing (confirmed via git stash), UI/LLM path not sim logic, out of WK67 scope. Candidate follow-up: route through game.sim.timebase or a presentation clock.",
+            "Single transitional suite failure (test_pygame_renderer_wk39.py::test_skip_pygame_world_render_world_smoke) is the renderer 1-arg/2-arg pairing and is Agent 10's immediately-following Wave-1 task; it also requires Agent 11 to pass frame into the test's render_world call. Suite is otherwise fully green.",
+            "Agent 11: the test_frame_state_split pin now XPASSES (strict=False) - flip its xfail to expected-pass; the RenderSnapshot/PresentationFrameState names + the asserted absent presentation fields (camera_x/camera_y/zoom/paused/selected_hero/selected_building) match the pin exactly."
+          ],
+          "follow_ups": [
+            "Agent 10 (Wave 1): pair renderer entries to update(render_snapshot, frame) - read camera/zoom/paused/screen/selection/blend/tick from frame; FrameContext already exposes ctx.frame; render_coordinator forwards it.",
+            "Render last-mile (Round B, deferred): migrate Ursina + instanced_unit_renderer to read the DTO tuples, then DELETE the live entity tuples from RenderSnapshot/build_snapshot.",
+            "Optional cleanup: tools/perf_stress_test.py now has unused WINDOW_WIDTH/WINDOW_HEIGHT imports after dropping the presentation kwargs (harmless; left to avoid churn)."
+          ]
+        },
+        "wk67_w2_move5": {
+          "sprint_id": "wk67_round_a2_ai_boundary",
+          "round_id": "wk67_w2_move5",
+          "status": "done",
+          "intelligence": "HIGH",
+          "wave": "Wave 2 (Move 5 / L3 read side) - AiGameView + read-only WorldView. The AI stops holding the live mutable world/economy/sim/engine. Behavior-preserving (AI path transitionally broken until Agent 06 migrates consumers - expected).",
+          "summary": "Created game/sim/ai_view.py (WorldView + frozen AiGameView). Added SimEngine.build_ai_view() (separate from get_game_state). Switched the sim->AI call in SimEngine.update() to pass build_ai_view() instead of the UI dict. Deleted the dead selected_* stubs in SimEngine.__init__ and the selection reads in get_game_state() (now None placeholders the GameEngine wrapper overrides). AiGameView carries NO economy/sim/engine; world is a read-only WorldView. Purity pin (test_ai_view_purity) XPASSES. Full suite 594 passed; only the 2 AI-decision-digest tests fail, both with 'AiGameView has no attribute get' = Agent 06's pending BasicAI/behavior migration.",
+          "worldview_read_surface_grep": {
+            "command": "rg -n 'world.[a-zA-Z_]+(|world.visibility|world.width|world.height' ai game/entities/hero.py + best_adjacent_tile/compute_path/find_path usage in ai/",
+            "verified_surface": [
+              "world.width  -- exploration.py:96,111; bounty_pursuit.py:130; poi_awareness.py:109; hero.py:912",
+              "world.height -- exploration.py:96,111; bounty_pursuit.py:130; poi_awareness.py:109; hero.py:912",
+              "world.visibility[gy][gx] (read-only index) -- exploration.py:100,112; bounty_pursuit.py:131; poi_awareness.py:111; hero.py:913",
+              "world.world_to_grid(wx,wy) -- basic_ai.py:364,365; stuck_recovery.py:127; hero.py:908,923",
+              "world.is_walkable(gx,gy) -- stuck_recovery.py:151 directly + via navigation.best_adjacent_tile(world,...) which EVERY behavior calls (basic_ai/hunger/exploration/bounty_pursuit/journey/shopping)"
+            ],
+            "NOT_used_by_ai_so_NOT_on_worldview": [
+              "world.grid_to_world (zero hits in ai/)",
+              "world.is_buildable (zero hits in ai/)",
+              "find_path / compute_path_worldpoints (zero direct ai/ calls; hero.py passes world straight through; find_path internally needs only is_walkable/world_to_grid/dims, all present on WorldView)"
+            ],
+            "note": "Followed the grep (authoritative), not the plan example code which also listed grid_to_world/is_buildable. Per task: 'WorldView exposes that set and nothing else' - do not over-expose."
+          },
+          "worldview_contract_for_agent_06": {
+            "class": "game.sim.ai_view.WorldView",
+            "slots": [
+              "_world",
+              "width",
+              "height"
+            ],
+            "attrs": [
+              "width:int",
+              "height:int"
+            ],
+            "property": [
+              "visibility -> live World.visibility grid (read-only access; AI indexes [gy][gx])"
+            ],
+            "methods": [
+              "world_to_grid(wx,wy) -> (gx,gy)",
+              "is_walkable(gx,gy) -> bool"
+            ],
+            "duck_type_dropin": "Accepted as the `world` arg to navigation.best_adjacent_tile(world,...) (uses world.is_walkable only). Drop-in for `world` at every ai/ read site."
+          },
+          "aigameview_field_list_for_agent_06": [
+            "world: WorldView",
+            "heroes: tuple (live Hero entities; AI reads, never writes)",
+            "enemies: tuple",
+            "buildings: tuple",
+            "bounties: tuple (= bounty_system.get_unclaimed_bounties())",
+            "pois: tuple (= sim.pois)",
+            "player_gold: int (= economy.player_gold; was the live economy)",
+            "castle: Any (read-only castle building ref, or None)",
+            "wave: int (= spawner.wave_number)"
+          ],
+          "aigameview_purity": "frozen dataclass; NO economy, NO sim, NO engine attributes. Move 6 (Wave 3) will ADD a `commands: CommandSink` field for the shopping write path.",
+          "agent_06_migration_map": {
+            "note": "06 swaps the dict-source for the view-source at these AI read sites (semantics identical):",
+            "game_state.get('world') -> view.world": [
+              "arrival_handlers.py:181",
+              "basic_ai.py:357,464",
+              "bounty_pursuit.py:88,189,271",
+              "exploration.py:142,217,240,294",
+              "hunger.py:79",
+              "poi_awareness.py:128",
+              "journey.py:99,152",
+              "stuck_recovery.py:115",
+              "shopping.py:36",
+              "game/entities/hero.py:897,913 (06 owns these 2 hero sites this wave)"
+            ],
+            "game_state.get('castle') -> view.castle": [
+              "basic_ai.py:206 (the current crash site),230",
+              "exploration.py:37"
+            ],
+            "game_state.get('sim') -> view.pois": [
+              "poi_awareness.py:334 (sim.pois)"
+            ],
+            "entity_lists -> view.buildings/enemies/heroes/bounties/player_gold": [
+              "buildings/enemies/heroes/bounties/gold dict reads"
+            ],
+            "DO_NOT_touch_this_wave": "game_state.get('economy') in shopping.py (that is the Move 6 write path, Wave 3)"
+          },
+          "call_site_changed": "game/sim_engine.py SimEngine.update(): self.ai_controller.update(dt, self.heroes, game_state) -> self.ai_controller.update(dt, self.heroes, self.build_ai_view()). hero.update(dt, game_state) and peasant/enemy/guard updates STILL receive the UI dict (unchanged - they are not the AI consumer; hero.py world-reads are migrated by 06).",
+          "stub_removal": {
+            "init_stubs_removed": "sim_engine.py SimEngine.__init__ - deleted self.selected_building/selected_peasant/selected_hero/selected_enemy (were None stubs)",
+            "get_game_state_reads_removed": "deleted _sel/_sel_id/selected_hero_profile resolution block; dict keys selected_hero/selected_hero_profile/selected_building/selected_peasant now literal None (GameEngine wrapper engine.py:1475-1486 overrides them from SelectionState)",
+            "confirm_grep": "rg -n 'self.selected_(hero|building|peasant|enemy)' game/sim_engine.py game/sim -> ZERO matches. No sim-internal reader remains.",
+            "test_impact": "No direct-sim test asserts a selected_* key (full suite 594 passed). No Agent 11 test adjustment needed."
+          },
+          "verify": {
+            "import": "python -c 'import game.sim.ai_view; import game.sim_engine' -> clean",
+            "purity_construct": "build_ai_view(): not hasattr economy/sim/engine; isinstance(view.world, WorldView); view.world is not engine.world; world has width/height/world_to_grid/is_walkable; player_gold int; wave int -> ALL PASS (matches test_wk67_ai_boundary.py::test_ai_view_purity)",
+            "purity_pin": "test_ai_view_purity XPASSES (was xfail; 06 removes the xfail marker to flip GREEN)",
+            "determinism_guard": "--paths game/sim_engine.py game/sim/ai_view.py -> PASS: no violations",
+            "full_suite": "594 passed, 4 skipped, 2 xpassed (purity + frame-state), 2 FAILED",
+            "qa_smoke_quick": "determinism_guard(static) exit 0 PASS; pytest portion rc=1 (the same 2 AI-digest fails)"
+          },
+          "tests_pass_vs_pending_06": {
+            "pass_now": [
+              "test_shopping_purchase_parity",
+              "test_ai_view_purity (XPASS)",
+              "test_frame_state_split (XPASS)",
+              "all 594 other suite tests incl WK66/WK65 cross-checks"
+            ],
+            "pending_agent_06": [
+              "test_ai_decision_digest_is_stable",
+              "test_ai_decision_digest_is_reproducible"
+            ],
+            "pending_root_cause": "BOTH fail with 'AiGameView object has no attribute get' at ai/basic_ai.py:206 (game_state.get('castle')) - BasicAI/behaviors still expect the dict. This is purely Agent 06's consumer migration (Move 5 second half). Once 06 reads view.castle/view.world/etc., the digest must return to byte-identical b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (gated AFTER 06 per plan Gate 2).",
+            "transitional_break_expected": "YES - plan Wave 2 task note: 'after your change the AI path is TRANSITIONALLY BROKEN ... that is expected; the full-suite + digest gate is AFTER Agent 06.'"
+          },
+          "files_touched": [
+            "game/sim/ai_view.py (NEW)",
+            "game/sim_engine.py (add build_ai_view; switch AI call; delete selected_* stubs + get_game_state selection reads)"
+          ],
+          "constraints": "Did NOT edit ai/** or tests/**. Behavior-preserving (digest gated post-06). DID NOT COMMIT. DID NOT PUSH.",
+          "ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (DETERMINISTIC_SIM=1, SIM_SEED=3, 300 ticks, subprocess) - to be confirmed byte-identical by Agent 06 after migration."
+        },
+        "wk67_w3_move6": {
+          "sprint_id": "wk67_round_a2_ai_boundary",
+          "round_id": "wk67_w3_move6",
+          "status": "done",
+          "intelligence": "HIGH",
+          "wave": "Wave 3 (Move 6 / L3b write side) - HeroCommand: establish the AI-proposes/sim-applies pattern on the one real cross-boundary WRITE (the shopping purchase). Restores economy.hero_purchase logging on the live AI path inside a sim-owned applier. Behavior-preserving.",
+          "summary": "Created game/sim/hero_commands.py (HeroPurchaseCommand frozen dataclass; CommandSink Protocol; apply_hero_command sim applier; SimCommandSink synchronous sink). Added commands field (default None) to AiGameView and populated it with SimCommandSink(self) in SimEngine.build_ai_view(). Added SimEngine.find_hero_by_id(hero_id) (match by stable hero.hero_id). Rehomed builder_peasant lumber access off game_state.get(\"sim\") onto a typed LumberOps accessor handed through the sim-internal peasant update context (peasant_ctx[\"lumber_ops\"]=self.lumber_ops); SimEngine.lumber_ops property returns self (it already implements the three methods). Did NOT touch ai/** (Agent 06 wires shopping to view.commands.propose). Full suite 596 passed, 4 skipped, 2 xpassed, 0 failed; AI-decision digest byte-identical; determinism guard PASS.",
+          "hero_command_shapes": {
+            "HeroPurchaseCommand": "@dataclass(frozen=True): hero_id: str; item: dict  (item is the shop dict do_shopping passes to hero.buy_item: name/price/type[/attack/defense/effect])",
+            "CommandSink": "Protocol: def propose(self, command: object) -> bool  (True iff applied; shopping loop branches on this to gate the next priority purchase)",
+            "apply_hero_command": "def apply_hero_command(sim, command) -> bool: if HeroPurchaseCommand: hero = sim.find_hero_by_id(command.hero_id); if hero is None: return False; if hero.buy_item(command.item): sim.economy.hero_purchase(hero.name, command.item[\"name\"], command.item[\"price\"]); return True; return False. Mirrors original do_shopping EXACTLY (buy_item called WITHOUT shop_building, same as do_shopping; shop-tax deposit resolves inside buy_item).",
+            "SimCommandSink": "class SimCommandSink: __init__(self, sim); def propose(self, command) -> bool: return apply_hero_command(self._sim, command). SYNCHRONOUS - applies in the proposing tick so hero.gold updates before the next priority branch (Critical Rule 4)."
+          },
+          "agent_06_call_shape": "In do_shopping, replace each branch's if hero.buy_item(item): ...; if economy: economy.hero_purchase(hero.name, item[\"name\"], item[\"price\"]) with a single: if view.commands.propose(HeroPurchaseCommand(hero.hero_id, item)): purchased_types.add(...). Import: from game.sim.hero_commands import HeroPurchaseCommand. The sink applies synchronously so between-purchase gold gating (potion -> extra potion -> weapon -> armor priority) is byte-identical. Remove the economy = context.get(\"economy\") line and all four economy.hero_purchase + hero.buy_item calls.",
+          "aigameview_commands_wiring": {
+            "field": "commands: \"CommandSink | None\" = None  (LAST field, defaulted so the frozen dataclass stays constructible without a live sink; TYPE_CHECKING import of CommandSink avoids a runtime cycle)",
+            "build_ai_view": "AiGameView(..., commands=SimCommandSink(self))  -- always supplies a live synchronous sink on the real sim path"
+          },
+          "find_hero_by_id": "SimEngine.find_hero_by_id(self, hero_id: str): returns the live hero whose str(hero.hero_id) == str(hero_id), else None (None for hero_id is None). Iterates self.heroes; matches the existing stable-id contract.",
+          "builder_accessor": {
+            "change": "builder_peasant.py: added LumberOps Protocol (find_nearest_choppable_tree_for_builder/chop_tree_at/harvest_log_at) + _resolve_lumber_ops(game_state)->game_state.get(\"lumber_ops\"). Replaced all code uses of game_state.get(\"sim\") (the presence check + FIND_TREE find_nearest_choppable + CHOPPING chop_tree_at + HARVESTING harvest_log_at) with the typed lumber_ops accessor. SimEngine.update builds peasant_ctx = dict(game_state); peasant_ctx[\"lumber_ops\"] = self.lumber_ops and passes peasant_ctx to peasant.update (sim-internal context, NOT the UI dict). SimEngine.lumber_ops property returns self.",
+            "grep_after": "rg -n \"game_state.get\\(.sim.\\)\" game/entities/builder_peasant.py -> ZERO code matches (single remaining hit is a docstring reference on line 34, not code)."
+          },
+          "applier_self_test": "Built GameEngine(headless), appended a WARRIOR hero (gold=200, potions=0, id=selftest_hero_1). view = sim.build_ai_view(); view.commands is not None == True; find_hero_by_id(id) resolves the hero. propose(HeroPurchaseCommand(id, {name:Health Potion, price:20, type:potion, effect:50})) returned True; hero.gold 200->180; hero.potions 0->1; economy.total_spent_by_heroes 0->20; transaction_log +1 entry = {type:hero_purchase, hero:Gareth, item:Health Potion, price:20, tax:5} (TAX_RATE 0.25 -> tax 5). Unknown hero_id propose -> False, no mutation. CONFIRMS the applier restores economy logging on the live path.",
+          "verify": {
+            "import_smoke": "python -c \"import game.sim.hero_commands; import game.sim.ai_view; import game.sim_engine; import game.entities.builder_peasant\" -> IMPORTS OK",
+            "builder_grep": "rg -n game_state.get(.sim.) game/entities/builder_peasant.py -> ZERO code (docstring-only)",
+            "wk67_pins": "python -m pytest tests/test_wk67_ai_boundary.py -q -> 3 passed, 2 xpassed (purity+frame-state pins green post W1/W2), 0 failed; AI-decision digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical)",
+            "full_suite": "python -m pytest -q -> 596 passed, 4 skipped, 2 xpassed, 0 failed (106.77s)",
+            "determinism_guard": "python tools/determinism_guard.py --paths game/sim_engine.py game/sim/hero_commands.py game/sim/ai_view.py game/entities/builder_peasant.py -> PASS: no violations found"
+          },
+          "ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical; keystone unchanged)",
+          "files_touched": [
+            "game/sim/hero_commands.py (NEW)",
+            "game/sim/ai_view.py (added commands field + TYPE_CHECKING CommandSink import)",
+            "game/sim_engine.py (build_ai_view wires SimCommandSink; new find_hero_by_id; new lumber_ops property; peasant_ctx injects lumber_ops; TYPE_CHECKING imports)",
+            "game/entities/builder_peasant.py (LumberOps Protocol + _resolve_lumber_ops; 4 game_state.get(\"sim\") code sites -> lumber_ops)"
+          ],
+          "constraints": "Behavior-preserving (digest + parity byte-identical). Did NOT edit ai/** or tests/**. DID NOT COMMIT. DID NOT PUSH.",
+          "completion_receipt": "Wave 3 (Move 6) done. HeroCommand pattern established on the shopping write; economy logging restored inside the sim-owned synchronous applier; builder-peasant rehomed onto a typed LumberOps accessor (zero game_state.get(\"sim\") in code). All gates green; AI-decision digest byte-identical. Handoff to Agent 06: switch do_shopping to view.commands.propose(HeroPurchaseCommand(hero.hero_id, item))."
+        },
+        "wk67_w5_determinism": {
+          "sprint_id": "wk67_round_a2_ai_boundary",
+          "round_id": "wk67_w5_determinism",
+          "status": "done",
+          "intelligence": "MEDIUM",
+          "wave": "Wave 5 (item 5b) - _fog_revision determinism: make two same-seed in-process GameEngine builds produce the identical _fog_revision sequence without changing fog behavior (visibility grid / is_discovered / both digests byte-identical).",
+          "root_cause": {
+            "finding": "The drift is NOT in the fog code. game/sim_engine.py _update_fog_of_war faithfully increments _fog_revision whenever a revealer crosses a grid tile (dirty-check at sim_engine.py:1373-1377). The cross-instance ±1 drift comes from a leaked CLASS-LEVEL global: Peasant._spawn_counter (game/entities/peasant.py:34, incremented in __init__ at :65). It is never reset between in-process builds, so the second build's peasants pick a different _idle_offset slot (peasant.py:64-66, % over 8 fixed offsets) -> a peasant stands/wanders to a different idle position -> its revealer grid tile differs across builds -> the fog dirty-check triggers a different NUMBER of times -> _fog_revision diverges.",
+            "repro": "DETERMINISTIC_SIM=1 SIM_SEED=3, two back-to-back in-process GameEngine(headless=True) builds, 2000 ticks each. BEFORE: build A _fog_revision final=54, build B final=76; first divergence at tick 406 (A=4, B=3). At that tick heroes=0/guards=0; the single regular Peasant differed: revealer grid (126,125,6) in A vs (124,125,6) in B. Peasant world-position first diverged at tick 300 (A x=4019.6 vs B x=4012.4, both PeasantState.MOVING).",
+            "family": "SAME family as WK67-W0-DET-001 (module/class-level global-state isolation leaks not reset per build). Reseeding the DET-001 globals (_AI_RNG, RESEARCH_UNLOCKS) did NOT change the fog drift (still diverged at tick 406, 4 vs 3) -- this is a distinct, separate global (Peasant._spawn_counter), confirming it is its own sub-cause, not entangled with the _AI_RNG/RESEARCH_UNLOCKS/SIM_SEED-env leaks. A clean fog-only-safe fix was therefore possible (did NOT need to touch the entangled DET-001 leaks).",
+            "not_entangled_decision": "A real (not masked) fix: reset the leaked counter at the per-build determinism reset point, not a tolerant pin. The counter reset only changes peasant idle positions ACROSS builds (so build 2 matches build 1); a single fresh build is unchanged, so both digests stay byte-identical."
+          },
+          "fix": {
+            "file": "game/sim_engine.py",
+            "location": "SimEngine.__init__, immediately after set_sim_seed(SIM_SEED) (the existing per-build determinism reset point)",
+            "change": "Added the line  Peasant._spawn_counter = 0  (Peasant already imported at sim_engine.py:60). Stays strictly in my Wave-5 lane (game/sim_engine.py); did NOT edit game/entities/peasant.py, graphics/**, ai/**, tools/**, or tests/**.",
+            "why_in_lane": "The sim owns entity construction and already resets determinism state here (set_sim_seed). Resetting the leaked class-global at the same point is the in-lane, behavior-preserving fix; the symptom is fog but the leak is the peasant idle-offset counter, so the reset belongs at sim build, not in fog code.",
+            "behavior_preserving_proof": "Resetting ONLY _spawn_counter (NOT the _next_peasant_id label counter) fully stabilises the fog sequence. _spawn_counter only selects which of 8 fixed idle offsets a peasant uses; it does not change WHAT is revealed (visibility grid / is_discovered unaffected within a fresh build)."
+          },
+          "before_after_fog_revision": {
+            "before_2000_ticks": {
+              "A_final": 54,
+              "B_final": 76,
+              "equal": false,
+              "first_divergence_tick": 406
+            },
+            "after_2000_ticks": {
+              "A_final": 54,
+              "B_final": 54,
+              "C_final": 54,
+              "A==B": true,
+              "B==C": true
+            },
+            "after_300_ticks": {
+              "equal": true
+            },
+            "note": "After the fix, NO external/manual reset is needed -- the sim resets the counter itself in __init__, so plain back-to-back GameEngine builds are reproducible."
+          },
+          "gate_results": {
+            "ai_decision_digest": "BYTE-IDENTICAL: WK67_AI_DECISION_DIGEST=b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (== pinned value)",
+            "wk67_ai_boundary_pin": "tests/test_wk67_ai_boundary.py -> passed (part of 11 passed, 1 skipped with wk66)",
+            "wk66_render_boundary_pin": "tests/test_wk66_render_boundary.py -> GREEN (fog/discovery digest unchanged)",
+            "full_suite": "598 passed, 4 skipped (baseline; no regression)",
+            "determinism_guard": "PASS: no violations found"
+          },
+          "follow_ups_for_pm": [
+            "Related fog-neutral hygiene (NOT fixed here, out of Wave-5 scope): the module-level entity-ID counters _next_peasant_id (peasant.py:17), _next_enemy_id (enemy.py:8), _next_guard_id (guard.py:11), _next_building_id (buildings/base.py:8), _next_rubble_id (rubble.py:27) also carry over between in-process builds. They affect entity ID LABELS only (not positions), so they do not affect fog/AI digests, but they belong to the same global-isolation family as WK67-W0-DET-001. Recommend folding all module/class-level entity counters into the per-build reset in a determinism-hygiene follow-up round (ideally a single sim-owned reset_entity_counters() called from SimEngine.__init__).",
+            "Carry-from-plan: pair with WK65 test_spawner global-rebind item if the determinism-hygiene round happens."
+          ],
+          "constraints_honored": {
+            "files_edited": [
+              "game/sim_engine.py"
+            ],
+            "no_graphics_ai_tools_tests_edited": true,
+            "fog_behavior_preserved": true,
+            "both_digests_byte_identical": true,
+            "no_commit": true,
+            "no_push": true
+          },
+          "completion_receipt": "WK67 Wave 5 (item 5b) COMPLETE. Root cause: leaked class-global Peasant._spawn_counter (not fog code, not entangled with the _AI_RNG/RESEARCH_UNLOCKS DET-001 leaks). Fix: reset it in SimEngine.__init__ next to set_sim_seed (game/sim_engine.py, in-lane). _fog_revision now identical across in-process same-seed builds (54==54==54). AI digest byte-identical (b73961...); WK66 fog pin GREEN; full suite 598 passed/4 skipped; determinism_guard PASS. No commit/push."
+        }
+      }
     }
   }
 }

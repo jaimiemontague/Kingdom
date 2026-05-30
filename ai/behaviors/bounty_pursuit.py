@@ -13,6 +13,8 @@ from game.sim.timebase import now_ms as sim_now_ms
 from game.systems.navigation import best_adjacent_tile
 from game.world import Visibility
 
+from ai.behaviors.view_compat import as_ai_view
+
 # WK64 (audit item 17): the reached-destination arrival dispatch (and its private
 # helpers _clear_direct_prompt_explore_meta / _compass_from_vec /
 # _pick_building_at_arrival / _find_safety_building_for_arrival, plus the
@@ -51,9 +53,10 @@ def _resolve_bounty_from_target(target_dict: dict[str, Any], bounties: list[Any]
     return None
 
 
-def maybe_take_bounty(ai: Any, hero: Any, game_state: dict) -> bool:
+def maybe_take_bounty(ai: Any, hero: Any, view: Any) -> bool:
     """Pick and start pursuing a bounty if it makes sense."""
-    bounties = game_state.get("bounties", [])
+    view = as_ai_view(view)
+    bounties = view.bounties
     if not bounties:
         return False
 
@@ -71,8 +74,8 @@ def maybe_take_bounty(ai: Any, hero: Any, game_state: dict) -> bool:
     if hero.health_percent < 0.65:
         return False
 
-    buildings = game_state.get("buildings", [])
-    enemies = game_state.get("enemies", [])
+    buildings = view.buildings
+    enemies = view.enemies
 
     best = None
     best_score = -1e9
@@ -85,7 +88,7 @@ def maybe_take_bounty(ai: Any, hero: Any, game_state: dict) -> bool:
         if hasattr(bounty, "is_valid") and not bounty.is_valid(buildings):
             continue
 
-        world = game_state.get("world")
+        world = view.world
         score = score_bounty(ai, hero, bounty, buildings, enemies, world=world)
         if score > best_score:
             best_score = score
@@ -96,7 +99,7 @@ def maybe_take_bounty(ai: Any, hero: Any, game_state: dict) -> bool:
         hero._last_bounty_pick_ms = now_ms
         return False
 
-    start_bounty_pursuit(ai, hero, best, game_state)
+    start_bounty_pursuit(ai, hero, best, view)
     hero._last_bounty_pick_ms = now_ms
     return True
 
@@ -183,10 +186,11 @@ def score_bounty(
     return base
 
 
-def start_bounty_pursuit(ai: Any, hero: Any, bounty: Any, game_state: dict) -> None:
+def start_bounty_pursuit(ai: Any, hero: Any, bounty: Any, view: Any) -> None:
     """Set hero to pursue the bounty."""
-    buildings = game_state.get("buildings", [])
-    world = game_state.get("world")
+    view = as_ai_view(view)
+    buildings = view.buildings
+    world = view.world
 
     # Assign the bounty so others generally avoid it for a short while.
     if hasattr(bounty, "assign"):
@@ -220,14 +224,15 @@ def start_bounty_pursuit(ai: Any, hero: Any, bounty: Any, game_state: dict) -> N
     hero.state = HeroState.MOVING
 
 
-def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
+def handle_moving(ai: Any, hero: Any, view: Any) -> None:
     """Handle moving-state behaviors including bounty claim/abandon and arrivals."""
-    buildings = game_state.get("buildings", [])
+    view = as_ai_view(view)
+    buildings = view.buildings
     _seed_direct_prompt_explore_bearing(hero)
 
     # Bounty pursuit: claim/abandon logic while walking.
     if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "bounty":
-        bounty = _resolve_bounty_from_target(hero.target, game_state.get("bounties", []))
+        bounty = _resolve_bounty_from_target(hero.target, view.bounties)
         if bounty is None:
             # Bounty vanished (claimed/cleaned up).
             hero.target = None
@@ -268,7 +273,7 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
                 lair = getattr(bounty, "target", None)
                 if getattr(lair, "is_lair", False) and getattr(lair, "hp", 0) > 0:
                     hero.target = lair
-                    world = game_state.get("world")
+                    world = view.world
                     if world:
                         adj = best_adjacent_tile(world, buildings, lair, hero.x, hero.y)
                         if adj:
@@ -312,7 +317,7 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
             # "arrived -> go IDLE" branch below (identical to pre-extraction).
             from ai.arrival_handlers import dispatch_arrival
 
-            if dispatch_arrival(ai, hero, game_state):
+            if dispatch_arrival(ai, hero, view):
                 return
             # Default: arrived with no special handler -> go idle.
             hero.target_position = None
@@ -343,7 +348,7 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
     # WK61-FIX: exclude lair/building targets — only zone-limit enemy chases.
     # Buildings now have is_alive (WK61-BUG-003), so hasattr alone is too broad.
     if hero.target and hasattr(hero.target, "is_alive") and not getattr(hero.target, "is_lair", False) and not hasattr(hero.target, "building_type"):
-        zone_x, zone_y = ai.exploration_behavior.assign_patrol_zone(ai, hero, game_state)
+        zone_x, zone_y = ai.exploration_behavior.assign_patrol_zone(ai, hero, view)
         dist_to_zone = math.sqrt((hero.x - zone_x) ** 2 + (hero.y - zone_y) ** 2)
         max_chase_dist = TILE_SIZE * 8
 

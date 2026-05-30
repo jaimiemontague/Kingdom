@@ -12,26 +12,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_01_ExecutiveProducer_PM.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk60_v159_gameplay_fun`
 - `wk61_playtest_polish`
 - `wk62_architecture_cleanup_baseline`
 - `wk63_engine_boundary_cleanup`
 - `wk64_ai_contracts_and_system_runner`
 - `wk65_round0_deslop_foundation`
 - `wk66_round_a1_render_boundary`
+- `wk67_round_a2_ai_boundary`
 
-**Archived sprints:** 53
+**Archived sprints:** 54
 - `wk7-ui-polish`
 - `v1.3-visual-polish-journey-ai`
 - `wk6-audio-buildmenu-fogbounties-explorexp`
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `…`
-- `wk60_v16_perf_optimization`
 - `v16_r5_hud_perf_worldspace_ui`
 - `wk57_underground_vertical_stacking`
 - `wk58_ursina_entities_overload`
 - `wk59_lair_diagnostic`
+- `wk60_v159_gameplay_fun`
 
 ### 02 — GameDirector_ProductOwner
 
@@ -282,19 +282,20 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_12_ToolsDevEx_Lead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk5-demolition-projectiles-workers` — Added scenario_building_debris() function to tools/screenshot_scenarios.py; Registered building_debris in get_scenario() registry
 - `v1.3-visual-polish-journey-ai`
 - `wk8-engine-entities-refactor`
 - `wk9-sim-render-tests-ui`
 - `wk47_unit_instancing_core`
 - `wk61_playtest_polish`
 - `wk65_round0_deslop_foundation`
+- `tooling_roll_agent_logs_fix`
 
-**Archived sprints:** 4
+**Archived sprints:** 5
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
+- `wk5-demolition-projectiles-workers`
 
 ### 13 — SteamRelease_Ops_Marketing
 

@@ -10,7 +10,8 @@ eliminating redundant dict/snapshot construction.
 Usage in GameEngine / EngineRenderCoordinator::
 
     ctx = FrameContext.build(engine)
-    # ctx.snapshot  — SimStateSnapshot for world/entity rendering
+    # ctx.snapshot  — RenderSnapshot (sim truth) for world/entity rendering
+    # ctx.frame     — PresentationFrameState (camera/zoom/paused/selection) [WK67 Move 4]
     # ctx.game_state — dict for HUD / debug panel / pause menu
 """
 
@@ -21,15 +22,19 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from game.engine import GameEngine
-    from game.sim.snapshot import SimStateSnapshot
+    from game.sim.snapshot import PresentationFrameState, RenderSnapshot
 
 
 @dataclass(slots=True)
 class FrameContext:
     """Immutable-by-convention container for one frame's derived state."""
 
-    snapshot: SimStateSnapshot
+    snapshot: RenderSnapshot
     game_state: dict[str, Any]
+    # WK67 Move 4 / L6: per-frame presentation state, split out of the sim
+    # snapshot. The renderer entry takes ``(snapshot, frame)``; callers that
+    # forward to a renderer pass ``ctx.frame`` alongside ``ctx.snapshot``.
+    frame: PresentationFrameState
 
     # ------------------------------------------------------------------
     # Factory
@@ -40,4 +45,5 @@ class FrameContext:
         return FrameContext(
             snapshot=engine.build_snapshot(),
             game_state=engine.get_game_state(),
+            frame=engine.build_presentation_frame(),
         )

@@ -12,7 +12,7 @@ from game.systems.navigation import best_adjacent_tile
 def _maybe_start_journey(
     ai: Any,
     hero: Any,
-    game_state: dict,
+    context: dict,
     purchased_types: set[str] | None,
 ) -> bool:
     """Start a post-shopping journey if conditions are met."""
@@ -45,12 +45,12 @@ def _maybe_start_journey(
     if hero_class == "warrior":
         # Prefer fighting: attack lair more often, else explore deeper fog.
         if ai._ai_rng.random() < 0.65:
-            started = _start_journey_attack_lair(ai, hero, game_state)
+            started = _start_journey_attack_lair(ai, hero, context)
         if not started:
             started = _start_journey_explore(
                 ai,
                 hero,
-                game_state,
+                context,
                 min_tiles=10,
                 max_tiles=30,
                 prefer_far=True,
@@ -61,20 +61,20 @@ def _maybe_start_journey(
         started = _start_journey_explore(
             ai,
             hero,
-            game_state,
+            context,
             min_tiles=6,
             max_tiles=None,
             prefer_far=True,
             scan_radius=40,
         )
         if not started and ai._ai_rng.random() < 0.25:
-            started = _start_journey_attack_lair(ai, hero, game_state)
+            started = _start_journey_attack_lair(ai, hero, context)
     else:
         # Rogue: short, cautious fog step.
         started = _start_journey_explore(
             ai,
             hero,
-            game_state,
+            context,
             min_tiles=2,
             max_tiles=6,
             prefer_far=False,
@@ -89,14 +89,14 @@ def _maybe_start_journey(
 def _start_journey_explore(
     ai: Any,
     hero: Any,
-    game_state: dict,
+    context: dict,
     *,
     min_tiles: float | None,
     max_tiles: float | None,
     prefer_far: bool,
     scan_radius: int,
 ) -> bool:
-    world = game_state.get("world")
+    world = context.get("world")
     if not world:
         return False
     candidates = ai.exploration_behavior._find_black_fog_frontier_tiles(
@@ -147,9 +147,9 @@ def _start_journey_explore(
     return True
 
 
-def _start_journey_attack_lair(ai: Any, hero: Any, game_state: dict) -> bool:
-    buildings = game_state.get("buildings", [])
-    world = game_state.get("world")
+def _start_journey_attack_lair(ai: Any, hero: Any, context: dict) -> bool:
+    buildings = context.get("buildings", [])
+    world = context.get("world")
     if not buildings:
         return False
     best = None

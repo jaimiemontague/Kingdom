@@ -1,8 +1,25 @@
 """
-Read-only simulation state snapshot for renderers and external consumers.
+Read-only render snapshot for renderers and external consumers.
 
-Built once per frame by the engine; consumed by UrsinaRenderer.update(snapshot).
-Immutable so renderers cannot accidentally mutate simulation state.
+WK67 Round A-2 (Move 4 / L6 — presentation split): split into two frozen
+value objects so the **sim snapshot carries only sim truth**:
+
+- :class:`RenderSnapshot` — sim truth (live entity tuples + WK66 frozen DTO
+  tuples + world/fog/economy/effects). Built by ``SimEngine.build_snapshot``.
+  It carries NO camera/zoom/screen/pause/selection/blend/tick state — those are
+  *presentation*, not sim, and now live on ``PresentationFrameState``.
+- :class:`PresentationFrameState` — engine-built per-frame presentation state
+  (camera, zoom, screen size, paused/running, pause-menu visibility, selection,
+  and the interpolation blend/tick). Built by ``GameEngine.build_presentation_frame``.
+
+Both are passed to the renderer entry: ``renderer.update(render_snapshot, frame)``.
+
+``SimStateSnapshot`` is kept as a **thin back-compat alias** for ``RenderSnapshot``
+so existing non-renderer consumers (tests, FrameContext type hints) that reference
+the old name keep working. New code should reference ``RenderSnapshot``.
+
+Built once per frame by the engine; consumed by renderers. Immutable so renderers
+cannot accidentally mutate simulation state.
 """
 
 from __future__ import annotations
@@ -12,13 +29,20 @@ from typing import Any
 
 
 @dataclass(frozen=True)
-class SimStateSnapshot:
+class RenderSnapshot:
     """
-    Everything a renderer needs to draw one frame.
+    Sim truth for one rendered frame — NO presentation state.
 
-    Entity lists are shallow copies of the engine's live lists.
-    Individual entities are still mutable (the renderer reads but must
-    not write to them), but the list membership is frozen.
+    Entity lists are shallow copies of the engine's live lists. Individual
+    entities are still mutable (the renderer reads but must not write to them),
+    but the list membership is frozen.
+
+    WK67 Move 4: presentation fields (camera/zoom/screen/paused/running/
+    pause_menu_visible/selected_*/sim_blend_fraction/sim_tick_id) were removed
+    from this object and moved to :class:`PresentationFrameState`. The live
+    entity tuples are deliberately KEPT alongside the WK66 DTO tuples — Ursina
+    still reads the live tuples; the DTO read-migration + live-tuple deletion is
+    the deferred render last-mile (Round B), not this sprint.
     """
 
     # --- Core entity lists (shallow-copied from engine) ---
@@ -43,35 +67,12 @@ class SimStateSnapshot:
     # --- Construction progress (parallel to buildings tuple) ---
     buildings_construction_progress: tuple = ()
 
-    # --- Selection state (for UI highlights in 3D) ---
-    selected_hero: Any = None
-    selected_building: Any = None
-
     # --- Special entities ---
     castle: Any = None
     tax_collector: Any = None
 
-    # --- VFX / projectiles ---
+    # --- VFX / projectiles (sim-effect data; stays sim truth) ---
     vfx_projectiles: tuple = ()
-
-    # --- Display ---
-    screen_w: int = 1920
-    screen_h: int = 1080
-
-    # --- Camera (needed by UrsinaApp for coordinate mapping) ---
-    camera_x: float = 0.0
-    camera_y: float = 0.0
-    zoom: float = 1.0
-    default_zoom: float = 1.0
-
-    # --- UI state (needed by UrsinaApp for HUD/menu gating) ---
-    paused: bool = False
-    running: bool = True
-    pause_menu_visible: bool = False
-
-    # --- Interpolation (R4: blend fraction and tick counter for smooth rendering) ---
-    sim_blend_fraction: float = 0.0
-    sim_tick_id: int = 0
 
     # --- WK57: Underground areas (dict[str, UndergroundArea]) ---
     underground_areas: Any = None
@@ -80,10 +81,10 @@ class SimStateSnapshot:
     rubble_records: tuple = ()
 
     # --- WK66 Round A-1: frozen render DTOs (ADDITIVE) ---
-    # Built alongside the live entity tuples above. Wave 2 migrates the renderers
-    # to read these instead of the live entities; Wave 3 removes the live tuples.
-    # Value-type only (see game/sim/render_dto.py) so the renderer cannot mutate
-    # sim state through them.
+    # Built alongside the live entity tuples above. The render last-mile (Round B)
+    # migrates the renderers to read these instead of the live entities, then
+    # removes the live tuples. Value-type only (see game/sim/render_dto.py) so the
+    # renderer cannot mutate sim state through them.
     hero_dtos: tuple = ()
     enemy_dtos: tuple = ()
     peasant_dtos: tuple = ()
@@ -92,3 +93,47 @@ class SimStateSnapshot:
     building_dtos: tuple = ()
     bounty_dtos: tuple = ()
 
+
+@dataclass(frozen=True)
+class PresentationFrameState:
+    """
+    Engine-built per-frame presentation state — NOT sim truth.
+
+    WK67 Move 4 / L6: these fields used to be stuffed into the sim snapshot via
+    ``SimEngine.build_snapshot``'s presentation kwargs. The sim does not know
+    about cameras, zoom, screen size, pause, selection, or render interpolation,
+    so they now live here, built by ``GameEngine.build_presentation_frame`` from
+    engine-owned state, and are passed to the renderer alongside the
+    :class:`RenderSnapshot`.
+    """
+
+    # --- Camera (needed by renderers for coordinate mapping) ---
+    camera_x: float = 0.0
+    camera_y: float = 0.0
+    zoom: float = 1.0
+    default_zoom: float = 1.0
+
+    # --- Display ---
+    screen_w: int = 1920
+    screen_h: int = 1080
+
+    # --- UI/run state (HUD/menu gating) ---
+    paused: bool = False
+    running: bool = True
+    pause_menu_visible: bool = False
+
+    # --- Interpolation (R4: blend fraction + tick counter for smooth rendering) ---
+    sim_blend_fraction: float = 0.0
+    sim_tick_id: int = 0
+
+    # --- Selection (for UI highlights in 3D) ---
+    selected_hero: Any = None
+    selected_building: Any = None
+
+
+# --- Back-compat alias -------------------------------------------------------
+# WK67 Move 4: ``RenderSnapshot`` is the canonical sim-truth render snapshot.
+# Pre-WK67 code/tests reference ``SimStateSnapshot``; it is now exactly the same
+# class. New code should use ``RenderSnapshot``. (The presentation fields that
+# used to live on ``SimStateSnapshot`` now live on ``PresentationFrameState``.)
+SimStateSnapshot = RenderSnapshot

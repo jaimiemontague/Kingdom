@@ -2464,6 +2464,491 @@
           }
         }
       }
+    },
+    "wk67_round_a2_ai_boundary": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk67_round_a2_ai_boundary.plan.md",
+        "created_utc": "2026-05-29T00:00:00Z",
+        "notes": "WK67 Round A-2 = AI boundary (Moves 4 presentation-split, 5 AiGameView/WorldView, 6 HeroCommand + L9 + determinism), behavior-preserving. Agent 11 owns Wave 0 (full before-baseline + AI-decision-digest keystone + parity/purity/frame-state pins) + every gate round + the W5 determinism pins. QA writes NO production code."
+      },
+      "rounds": {
+        "wk67_w0_baseline": {
+          "sprint_id": "wk67_round_a2_ai_boundary",
+          "round_id": "wk67_w0_baseline",
+          "status": "done",
+          "round_meta": {
+            "wave": "Wave 0 (baseline + characterization net)",
+            "intelligence": "HIGH",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false
+          },
+          "prompt_text": "WK67 Wave 0: establish full-suite baseline; create tests/test_wk67_ai_boundary.py with AI-decision digest (keystone, GREEN), shopping-purchase parity (GREEN), AiGameView-purity (xfail until W2), frame-state (xfail until W1); capture BEFORE baselines into docs/screenshots/wk67_baseline/; confirm wk66/wk65 pins still pass. DO NOT COMMIT/PUSH.",
+          "baseline_pytest_counts": {
+            "before_new_file": "593 passed, 4 skipped, 0 failed (drift UP from WK66-recorded 582/4/0 -- more tests added since WK66; no failures)",
+            "after_new_file": "596 passed, 4 skipped, 2 xfailed, 0 failed (confirmed stable across two consecutive full-suite runs)",
+            "new_tests_added": "3 passing (ai_decision_digest_is_stable, ai_decision_digest_is_reproducible, shopping_purchase_parity) + 2 xfail (ai_view_purity W2, frame_state_split W1)",
+            "wk66_wk65_pins": "8 passed, 1 skipped (fog DETERMINISTIC_SIM golden skipped without env) -- still GREEN"
+          },
+          "ai_decision_digest": {
+            "value": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded",
+            "algo": "sha256",
+            "config": "DETERMINISTIC_SIM=1, SIM_SEED=3, 300 ticks, 3 seeded heroes (warrior/ranger/cleric near castle), BasicAI(llm_brain=None)",
+            "shape_per_tick": "per hero sorted by hero_id: (hero_id, round(x,3), round(y,3), str(state), str(current_intent), target-type, int(gold)); plus (len(economy.transaction_log), total_spent_by_heroes, spawner.wave_number)",
+            "keystone_note": "MUST stay byte-identical through Move 5 (AiGameView) and Move 6 (HeroCommand). Computed in a FRESH SUBPROCESS (python -m tests.test_wk67_ai_boundary) so it is byte-stable regardless of pytest suite ordering. 03/06 reproduce verbatim by running that module line."
+          },
+          "shopping_parity_reference": {
+            "scenario": "real Hero(warrior) gold=200 at a marketplace offering potion(20,effect50), weapon Iron Sword(80,attack6), armor Leather Armor(60,defense4); real EconomySystem; do_shopping priority loop",
+            "hero_gold_after": 20,
+            "hero_potions_after": 2,
+            "hero_weapon_after": {
+              "name": "Iron Sword",
+              "attack": 6
+            },
+            "hero_armor_after": {
+              "name": "Leather Armor",
+              "defense": 4
+            },
+            "total_spent_by_heroes": 180,
+            "transaction_log": [
+              {
+                "type": "hero_purchase",
+                "hero": "Buyer",
+                "item": "Healing Potion",
+                "price": 20,
+                "tax": 5
+              },
+              {
+                "type": "hero_purchase",
+                "hero": "Buyer",
+                "item": "Healing Potion",
+                "price": 20,
+                "tax": 5
+              },
+              {
+                "type": "hero_purchase",
+                "hero": "Buyer",
+                "item": "Iron Sword",
+                "price": 80,
+                "tax": 20
+              },
+              {
+                "type": "hero_purchase",
+                "hero": "Buyer",
+                "item": "Leather Armor",
+                "price": 60,
+                "tax": 15
+              }
+            ],
+            "tax_rate": 0.25,
+            "gating_note": "Exercises all 4 do_shopping priority branches (P1 potion, P2 second potion since gold>=50 & potions<2, P3 weapon beats attack 0, P4 armor beats defense 0) with between-purchase gold gating. Move 6 synchronous applier must reproduce exactly. do_shopping calls hero.buy_item WITHOUT shop_building=, so the shop tax-stash branch is not hit (tax lands only in economy log) -- current behavior pinned as-is."
+          },
+          "scenario_enumeration": {
+            "pygame_capture_screenshots": [
+              "base_overview",
+              "building_catalog",
+              "enemy_catalog",
+              "ui_panels",
+              "ui_pause_menu",
+              "ui_build_catalog",
+              "ui_audio_blacksmith",
+              "ui_polish_after",
+              "world_variation",
+              "worker_catalog",
+              "ranged_projectiles",
+              "building_debris",
+              "bounty_in_black_fog",
+              "building_menu_open",
+              "wk52_pin_alerts",
+              "wk61_hold_g_tax_overlay",
+              "wk61_guardhouse_hp_panel",
+              "wk61_hero_menu_chat"
+            ],
+            "ursina_run_ursina_capture_once_registered_scenarios": [
+              "wk61_hold_g_tax_overlay"
+            ],
+            "ursina_note": "run_ursina_capture_once.py with NO --scenario launches the live Ursina game (the base_overview equivalent); the URSINA_CAPTURE_SCENARIOS registry only has wk61_hold_g_tax_overlay. Plan Wave-0 command --scenario base_overview FAILS for Ursina (ValueError: Unknown Ursina capture scenario base_overview). Used no-scenario live capture + --reveal-map for the Kenney-material scene instead."
+          },
+          "baseline_captures": [
+            {
+              "name": "ursina_base_overview",
+              "cmd": "python tools/run_ursina_capture_once.py --ticks 480 --out docs/screenshots/wk67_baseline/ursina_base --no-llm",
+              "out": "docs/screenshots/wk67_baseline/ursina_base/ursina_20260529_145059_213.png",
+              "verdict": "VALID baseline -- castle/buildings/terrain/fog/HUD all rendering (viewed)"
+            },
+            {
+              "name": "ursina_kenney_material",
+              "cmd": "python tools/run_ursina_capture_once.py --ticks 600 --reveal-map --out docs/screenshots/wk67_baseline/ursina_kenney_material --no-llm",
+              "out": "docs/screenshots/wk67_baseline/ursina_kenney_material/ursina_20260529_145125_108.png",
+              "verdict": "VALID Kenney-material baseline for L9 gate -- castle/house/blacksmith/marketplace + props render with material tints; fog-disabled, 32 POIs revealed (viewed)"
+            },
+            {
+              "name": "pygame_base_overview",
+              "cmd": "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk67_baseline/pyg_base --size 1920x1080 --ticks 480",
+              "out": "docs/screenshots/wk67_baseline/pyg_base/ (4 PNGs: base_overview__Z1/Z2__ui_default/world_clean + manifest.json)",
+              "verdict": "captured OK"
+            },
+            {
+              "name": "pygame_ui_panels",
+              "cmd": "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk67_baseline/pyg_panels --size 1920x1080 --ticks 480",
+              "out": "docs/screenshots/wk67_baseline/pyg_panels/ (7 PNGs: ui_panels_building/debug/hero/hidden/marketplace_tax/sidebar_split/tax_collector + manifest.json)",
+              "verdict": "captured OK"
+            }
+          ],
+          "pins": [
+            {
+              "name": "test_ai_decision_digest_is_stable",
+              "status": "GREEN",
+              "marker": "none (runs in both parent env modes via subprocess that forces DETERMINISTIC_SIM=1+SIM_SEED=3)",
+              "note": "keystone; asserts digest == b73961... Removed original @skipif(DETERMINISTIC_SIM) since the subprocess forces it."
+            },
+            {
+              "name": "test_ai_decision_digest_is_reproducible",
+              "status": "GREEN",
+              "marker": "none",
+              "note": "two fresh subprocesses must agree -- regression net for scenario determinism and the global-state leaks"
+            },
+            {
+              "name": "test_shopping_purchase_parity",
+              "status": "GREEN",
+              "marker": "none",
+              "note": "pins Move 6 multi-item gating + economy log"
+            },
+            {
+              "name": "test_ai_view_purity",
+              "status": "XFAIL",
+              "marker": "@pytest.mark.xfail(strict=False)",
+              "flips_green": "Wave 2 (Move 5) when game.sim.ai_view (AiGameView/WorldView) + SimEngine.build_ai_view land; remove xfail then"
+            },
+            {
+              "name": "test_frame_state_split",
+              "status": "XFAIL",
+              "marker": "@pytest.mark.xfail(strict=False)",
+              "flips_green": "Wave 1 (Move 4) when RenderSnapshot + PresentationFrameState land + build_snapshot drops presentation kwargs; remove xfail then"
+            }
+          ],
+          "commands_run": [
+            "python -m pytest -q  (baseline: 593p/4s; after file: 596p/4s/2xf; x2 stable)",
+            "DETERMINISTIC_SIM=1 python -m pytest tests/test_wk67_ai_boundary.py -q  -> 3 passed, 2 xfailed",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q  -> 3 passed, 2 xfailed (subprocess keystone forces DET_SIM)",
+            "python -m pytest tests/test_wk66_render_boundary.py tests/test_wk65_snapshot_no_mutation.py -q  -> 8 passed, 1 skipped",
+            "DETERMINISTIC_SIM=1 python -m tests.test_wk67_ai_boundary  -> prints WK67_AI_DECISION_DIGEST=b73961...",
+            "python tools/run_ursina_capture_once.py --help ; python tools/capture_screenshots.py --help (scenario enumeration)"
+          ],
+          "blockers_and_preexisting_flakiness": [
+            {
+              "id": "WK67-W0-DET-001",
+              "severity": "medium",
+              "title": "AI-decision digest drifts across in-process GameEngine builds (pre-existing global-state carry-over)",
+              "detail": "With seeded heroes the digest is NOT reproducible across repeated in-process builds: 3 root causes found, same family as WK66 _fog_revision and WK65 test_spawner global-rebind. (1) ai/basic_ai.py _AI_RNG = get_rng('ai_basic') is module-level, shared by every BasicAI, never re-seeded per build (drives patrol/wander via ai._ai_rng.uniform). (2) game/entities/buildings/base.py RESEARCH_UNLOCKS module-level dict mutated by unlock_research() and never reset between tests -- changes blacksmith catalogue -> hero shopping/decisions. (3) tests/perf_ursina_stress.py:24 + tests/perf_stress_test.py:22 set os.environ['SIM_SEED']='42' at IMPORT time; pytest collection mutates the parent-process env, and config.SIM_SEED (read at import, re-applied by SimEngine) then overrides in-test set_sim_seed. This third one is what broke the keystone in the FULL suite while it passed in isolation.",
+              "mitigation_in_test": "Keystone + reproducibility pins compute the digest in a FRESH SUBPROCESS whose env pins SIM_SEED=3 + DETERMINISTIC_SIM=1; _build_digest_engine additionally re-seeds set_sim_seed(3), basic_ai._AI_RNG, controller._ai_rng, and resets RESEARCH_UNLOCKS to all-False. All mitigation lives in the test; NO production code touched.",
+              "pm_followups": "(a) re-seed _AI_RNG per BasicAI build; (b) per-engine research state or a research-reset fixture; (c) move SIM_SEED env writes in perf_*stress*.py into fixtures/tests, not module top. All latent test-isolation gaps, independent of the WK67 boundary moves."
+            },
+            {
+              "id": "WK67-W0-CAP-001",
+              "severity": "low",
+              "title": "Plan Wave-0 Ursina command --scenario base_overview is invalid",
+              "detail": "python tools/run_ursina_capture_once.py --scenario base_overview raises ValueError: Unknown Ursina capture scenario base_overview (known: wk61_hold_g_tax_overlay). The Ursina capture tool only registers wk61_hold_g_tax_overlay; base_overview is a pygame-only scenario. Captured the Ursina base overview via the no-scenario live-game path instead, and the Kenney-material scene via --reveal-map. W1/G1 Ursina re-capture should use the same no-scenario form, not --scenario base_overview."
+            }
+          ],
+          "follow_ups": [
+            "Move 4 (W1): remove the @xfail on test_frame_state_split once RenderSnapshot + PresentationFrameState land; re-capture all 4 baseline paths into wk67_after_w1 and diff vs wk67_baseline (use Ursina no-scenario form).",
+            "Move 5 (W2): remove the @xfail on test_ai_view_purity once game.sim.ai_view lands; verify AI-decision digest IDENTICAL (b73961...).",
+            "Move 6 (W3): verify AI-decision digest AND shopping-parity reference IDENTICAL.",
+            "PM: triage WK67-W0-DET-001 (3 global-state isolation gaps) and WK67-W0-CAP-001 (plan command fix)."
+          ],
+          "constraints_honored": {
+            "no_production_code_edited": true,
+            "files_touched": [
+              "tests/test_wk67_ai_boundary.py (new)",
+              "docs/screenshots/wk67_baseline/** (captures)",
+              ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json (this log)"
+            ],
+            "no_commit": true,
+            "no_push": true,
+            "screenshot_verified": "both Ursina baselines opened + visually confirmed valid (not blank)"
+          },
+          "completion_receipt": "WK67 Wave 0 COMPLETE. AI-decision digest keystone recorded (b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded) and GREEN, made byte-stable across arbitrary suite ordering via a fresh-subprocess + pinned SIM_SEED. Shopping-parity reference recorded + GREEN. AiGameView-purity and frame-state pins written and xfail-as-designed (flip at W2/W1). 4 BEFORE baselines captured into docs/screenshots/wk67_baseline/ (2 Ursina viewed + valid, 2 pygame). Full suite 596p/4s/2xf/0fail (x2 stable); wk66/wk65 pins 8p/1s GREEN. 3 pre-existing global-state isolation leaks surfaced + recorded for PM (NOT masked). No production code edited; no commit/push."
+        },
+        "wk67_g3": {
+          "sprint_id": "wk67_round_a2_ai_boundary",
+          "round_id": "wk67_g3",
+          "round_meta": {
+            "wave": 3,
+            "build_target": "Wave 3 / Gate 3 test reconciliation after Move 6 (HeroCommand) landed. Update the 5 tests that pinned the OLD direct-write do_shopping contract to drive the NEW sim-owned command path (SimCommandSink), preserving every original assertion; remove the 2 now-satisfied xfail pins (Move 5 / Move 4); run the full Gate 3 (boundary file, shopping/tax files, full suite, AI-decision digest, determinism_guard, qa_smoke).",
+            "created_utc": "2026-05-29T00:00:00Z",
+            "depends_on": "wk67_w3_move6_herocommand"
+          },
+          "prompt_summary": "Move 6 moved the shopping write from a direct economy.hero_purchase + hero.buy_item inside do_shopping to a sim-owned synchronous SimCommandSink (do_shopping now proposes a HeroPurchaseCommand to view.commands; apply_hero_command does the same effect). 5 tests in tests/** failed because they called do_shopping with a plain {'economy': economy} dict that has no .commands sink (as_ai_view wraps a dict in _DictGameStateView, which has no .commands -> AttributeError). They are NOT a regression. Update all 5 to drive the command path preserving original assertions; flip the 2 XPASSing xfail pins (test_ai_view_purity from Move 5, test_frame_state_split from Move 4) to normal passing tests. Only edit tests/**; do NOT weaken assertions; do NOT touch game/** or ai/**; DO NOT COMMIT/PUSH.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Updated 5 tests to route the shopping write through a REAL game.sim.hero_commands.SimCommandSink (approach (b): minimal sim stub exposing find_hero_by_id + economy, wrapped in a genuine SimCommandSink, passed on an AiGameView-shaped SimpleNamespace whose .commands is that sink and which also carries the legacy-context read fields do_shopping projects for the journey trigger). Every test keeps its ORIGINAL hero/economy/marketplace objects and its ORIGINAL assertions verbatim (same gold/inventory/tax/economy-log values) -- the parity guarantee now holds THROUGH the command path. Removed the 2 @pytest.mark.xfail markers (test_ai_view_purity, test_frame_state_split) that were XPASSing post Move-5/Move-4, making them normal passing tests, and updated their section comments from 'xfail until Wave N' to 'GREEN -- Move N landed'.",
+            "files_modified": [
+              "tests/test_wk67_ai_boundary.py",
+              "tests/test_ai_shopping.py",
+              "tests/test_wk61_r10_economy_tax_accrual.py",
+              "tests/test_wk61_r8_marketplace_potion_tax.py"
+            ],
+            "files_created": []
+          },
+          "per_test_update_approach": {
+            "tests/test_wk67_ai_boundary.py::test_shopping_purchase_parity": {
+              "approach": "(b) minimal sink stub. Added _ParitySimStub(hero, economy) [find_hero_by_id returns the parity Hero by hero_id 'wk67_shop_hero'; economy is the real EconomySystem] and _parity_sink_view() returning a SimpleNamespace(commands=SimCommandSink(_ParitySimStub(...)), world=None, buildings=[], enemies=[], heroes=[hero], bounties=[], pois=[], player_gold=0, castle=None). do_shopping call changed from {'economy': economy} to _parity_sink_view(hero, economy).",
+              "assertions_preserved": "UNCHANGED: hero.gold==20, hero.potions==2, hero.weapon=={'name':'Iron Sword','attack':6}, hero.armor=={'name':'Leather Armor','defense':4}, economy.total_spent_by_heroes==180, tuple(economy.transaction_log)==the recorded 4-row _SHOP_REF_TXN_LOG (potion x2 @20 tax5, sword @80 tax20, armor @60 tax15), started_journey is False. The synchronous SimCommandSink updates hero.gold between purchases, so the multi-item priority gating reproduces identically."
+            },
+            "tests/test_ai_shopping.py::test_do_shopping_buys_potion_and_records_economy_purchase": {
+              "approach": "(b) minimal sink stub. Added hero_id to _Hero (f'shop_test_{name}'), a _SimStub(hero, economy), and a module-level _sink_view(hero, economy) -> SimpleNamespace(commands=SimCommandSink(_SimStub(...)), + legacy-context fields). do_shopping call changed from {'economy': economy} to _sink_view(hero, economy).",
+              "assertions_preserved": "UNCHANGED: started_journey is False, hero.potions >= 1, economy.calls == [('PotionBuyer','Healing Potion',20)]."
+            },
+            "tests/test_ai_shopping.py::test_do_shopping_passes_purchased_types_to_journey_and_returns_value": {
+              "approach": "(b) same _sink_view helper. do_shopping call changed from {'economy': economy} to _sink_view(hero, economy).",
+              "assertions_preserved": "UNCHANGED: started_journey is True, ai.journey_behavior.received_purchased_types is not None and contains 'weapon', economy.calls == [('Upgrader','Iron Sword',80)]."
+            },
+            "tests/test_wk61_r10_economy_tax_accrual.py::test_marketplace_potion_purchase_still_deposits_tax": {
+              "approach": "(b) minimal sink stub. Added _SimStub(hero, economy) [find_hero_by_id by real Hero hero_id; economy is the SimpleNamespace with the tax-returning hero_purchase] and _sink_view(...). do_shopping call changed from {'economy': economy} to _sink_view(hero, economy). The BUILDING tax deposit still happens inside hero.buy_item (resolved via the hero's pending shop) -> routing through apply_hero_command preserves marketplace.stored_tax_gold.",
+              "assertions_preserved": "UNCHANGED: started_journey is False, hero.potions == 1, marketplace.stored_tax_gold == int(potion_price * TAX_RATE)."
+            },
+            "tests/test_wk61_r8_marketplace_potion_tax.py::test_marketplace_potion_purchase_via_do_shopping_deposits_tax": {
+              "approach": "(b) minimal sink stub, same shape as r10. do_shopping call changed from {'economy': economy} to _sink_view(hero, economy).",
+              "assertions_preserved": "UNCHANGED: started_journey is False, hero.potions == 1, economy.calls == [('PotionBuyer','Healing Potion',20)], marketplace.stored_tax_gold == int(potion_price*TAX_RATE), marketplace.get_overlay_tax_gold() == expected_tax."
+            }
+          },
+          "xfail_removals": {
+            "test_ai_view_purity": "REMOVED @pytest.mark.xfail(reason='Move 5 (Wave 2)...'); was XPASSing because Move 5 landed game.sim.ai_view (AiGameView/WorldView) + SimEngine.build_ai_view. Now a normal passing test. Section comment updated to 'GREEN -- Move 5 landed'.",
+            "test_frame_state_split": "REMOVED @pytest.mark.xfail(reason='Move 4 (Wave 1)...'); was XPASSing because Move 4 landed RenderSnapshot + PresentationFrameState and build_snapshot dropped its presentation kwargs. Now a normal passing test. Section comment updated to 'GREEN -- Move 4 landed'."
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_ai_shopping.py tests/test_wk61_r10_economy_tax_accrual.py tests/test_wk61_r8_marketplace_potion_tax.py tests/test_wk67_ai_boundary.py -q  (BEFORE edits)",
+              "exit_code": 1,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "Baseline confirm: 5 failed, 8 passed, 2 xpassed. All 5 failures = AttributeError: '_DictGameStateView' object has no attribute 'commands' at ai/behaviors/shopping.py:103 (NOT a regression -- the tests pinned the pre-Move-6 dict contract)."
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q -rA  (AFTER edits)",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "5 passed, 0 xfail, 0 xpass. PASSED: test_ai_decision_digest_is_stable (== golden b73961...), test_ai_decision_digest_is_reproducible, test_shopping_purchase_parity, test_ai_view_purity, test_frame_state_split."
+            },
+            {
+              "cmd": "python -m pytest tests/test_ai_shopping.py tests/test_wk61_r10_economy_tax_accrual.py tests/test_wk61_r8_marketplace_potion_tax.py -q  (AFTER edits)",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "All GREEN (included in the combined 15-passed run with the boundary file)."
+            },
+            {
+              "cmd": "python -m pytest -q  (full suite, AFTER edits)",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "598 passed, 4 skipped, 0 failed in 104.53s. Was 5 failed pre-edit; now 0 failed. No xfail/xpass remaining in the WK67 boundary file."
+            },
+            {
+              "cmd": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[determinism_guard] PASS: no violations found."
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "DONE: PASS. Embedded pytest step now green (598 passed, 4 skipped, exit_code=0); determinism_guard PASS; all observe_sync profiles (speed_scaling 0.1/0.25/0.5/1.0, interior_view, quest_panel, conversation, direct_prompt_integration) exit 0."
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "Log JSON validated after this round was appended."
+            }
+          ],
+          "evidence": {
+            "gate3_results": {
+              "boundary_file": "tests/test_wk67_ai_boundary.py -> 5 passed, 0 xfail, 0 xpass",
+              "shopping_tax_files": "tests/test_ai_shopping.py + tests/test_wk61_r10_economy_tax_accrual.py + tests/test_wk61_r8_marketplace_potion_tax.py -> all GREEN",
+              "ai_decision_digest": "test_ai_decision_digest_is_stable PASS -> digest == golden b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (BYTE-IDENTICAL through Move 6; live AI path unchanged)",
+              "full_suite": "598 passed, 4 skipped, 0 failed (was 5 failed pre-edit)",
+              "determinism_guard": "PASS",
+              "qa_smoke_quick": "DONE: PASS (embedded pytest step green: 598 passed, 4 skipped)"
+            },
+            "before_after_failure_counts": {
+              "before": "5 failed (all AttributeError 'commands') + 2 xpassed (xfail pins satisfied by Moves 4/5)",
+              "after": "0 failed, 0 xpassed, 0 xfailed in the affected files"
+            },
+            "assertion_strength_preserved": true,
+            "weakened_any_assertion": false,
+            "notes": [
+              "Root cause of the 5 failures was purely the test harness, not a behavior regression: do_shopping calls as_ai_view(view) then reads view.commands. A plain dict gets wrapped in ai.behaviors.view_compat._DictGameStateView, which exposes no .commands -> AttributeError. The fix passes a non-dict view (as_ai_view passes non-dicts through) carrying a REAL SimCommandSink.",
+              "Approach (b) (minimal sim stub + real SimCommandSink) was chosen over (a) (full headless GameEngine) for all 5 because it keeps each test's existing hero/economy/Marketplace objects and therefore its exact recorded assertions, while still exercising the genuine production write path (apply_hero_command -> hero.buy_item + economy.hero_purchase). No production code imported beyond game.sim.hero_commands.SimCommandSink.",
+              "The WK61 tax tests (#4,#5) confirm the BUILDING tax deposit, which happens inside hero.buy_item (resolved via the hero's pending shop), so routing through apply_hero_command preserves marketplace.stored_tax_gold exactly -- those assertions are untouched.",
+              "test_ai_shopping.py::_Hero gained a hero_id attribute (f'shop_test_{name}') because do_shopping now builds HeroPurchaseCommand(hero.hero_id, item); the real Hero already has hero_id, so the two WK61 tests and the parity test needed no hero-id change.",
+              "The 4 skips in the full suite are pre-existing (unchanged from the Wave-0 baseline of 4 skipped)."
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "PM: the 3 pre-existing global-state isolation leaks from WK67-W0-DET-001 (_AI_RNG non-reseed, RESEARCH_UNLOCKS, perf_*stress* SIM_SEED at import) remain open and independent of WK67; triage as a follow-up determinism-hygiene round."
+          ],
+          "constraints_honored": {
+            "only_tests_edited": true,
+            "no_game_or_ai_code_edited": true,
+            "assertions_preserved_same_values": true,
+            "no_weakened_assertions": true,
+            "no_commit": true,
+            "no_push": true
+          },
+          "completion_receipt": "WK67 Gate 3 COMPLETE. 5 do_shopping tests reconciled to the Move-6 SimCommandSink path (real sink + minimal sim stub) with every original gold/inventory/tax/economy-log assertion preserved verbatim. 2 satisfied xfail pins (test_ai_view_purity [Move 5], test_frame_state_split [Move 4]) flipped to normal passing tests. AI-decision digest BYTE-IDENTICAL to golden b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded. Full suite 598 passed / 4 skipped / 0 failed (was 5 failed). determinism_guard PASS; qa_smoke --quick PASS (embedded pytest green). Only tests/** edited; no game/** or ai/** changes; no commit/push."
+        },
+        "wk67_g5_final": {
+          "sprint_id": "wk67_round_a2_ai_boundary",
+          "round_id": "wk67_g5_final",
+          "round_meta": {
+            "wave": 5,
+            "build_target": "Gate 5 (FINAL): add the 3 Wave-5 determinism/capture pins to tests/test_wk67_ai_boundary.py (anim->tick reproducibility, fog_revision stability, combat-capture registration guard), run the full final gate (boundary file, AI-decision digest, full suite, determinism_guard, qa_smoke, validate_assets), and certify WK67 against its Definition of Done.",
+            "created_utc": "2026-05-29T00:00:00Z",
+            "depends_on": "wk67_w5_determinism_capture"
+          },
+          "prompt_summary": "Wave 5 landed 3 determinism/capture items: 5a anim->tick (Agent 10, anim_clock_seconds), 5b fog_revision (Agent 03, Peasant._spawn_counter reset in SimEngine.__init__), 5c combat scenario (Agent 12, ursina_melee_combat capture, byte-identical SHA256 2DE5D5F4...). Agent 11 adds the 3 corresponding headless-safe pins, runs the FULL final gate, and writes the sprint Definition-of-Done certification. Edit only tests/**; do not weaken assertions; no game/ai/tools edits; DO NOT COMMIT/PUSH.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Added 3 new headless-safe determinism/capture pins to tests/test_wk67_ai_boundary.py (no Ursina display required) and extended the module __main__ to also print the deterministic _fog_revision sequence (for the Pin 5b subprocess). No assertions weakened; no production code touched.",
+            "files_modified": [
+              "tests/test_wk67_ai_boundary.py"
+            ],
+            "files_created": [],
+            "new_tests": [
+              "test_anim_clock_is_tick_derived_under_deterministic_sim (Pin 5a)",
+              "test_fog_revision_sequence_is_stable_across_builds (Pin 5b)",
+              "test_combat_capture_scenario_is_registered (Pin 5c)"
+            ],
+            "new_helpers": [
+              "_representative_clips() — display-independent AnimationClip set (looping idle 4f/0.15s, looping walk 6f/0.08s, NON-looping attack 3f/0.06s)",
+              "_anim_frame_pass(clips, ticks) — per-(tick,clip,frame) selection the renderers would pick, via anim_clock_seconds + _frame_index_for_clip",
+              "_run_fog_revision_sequence(ticks) — scripted ranger two-leg reveal (mirrors WK66 fog scenario), returns per-tick _fog_revision tuple",
+              "_compute_fog_sequence_in_subprocess() — fresh-process fog sequence with pinned DETERMINISTIC_SIM=1/SIM_SEED=3 env (same bulletproofing as the keystone digest subprocess)",
+              "__main__ extended: `python -m tests.test_wk67_ai_boundary --fog-revision` prints WK67_FOG_REVISION_SEQ=<tuple repr>; default still prints WK67_AI_DECISION_DIGEST=<sha256>"
+            ]
+          },
+          "new_pins_detail": {
+            "pin_5a_anim_to_tick": {
+              "test": "test_anim_clock_is_tick_derived_under_deterministic_sim",
+              "wave_item": "5a (Agent 10) — game/graphics/ursina_units_anim.py::anim_clock_seconds(frame_tick_id); under config.DETERMINISTIC_SIM returns int(frame_tick_id)*(1/20), else time.perf_counter(); both unit renderers read it.",
+              "what_it_pins": "Forces config.DETERMINISTIC_SIM=True via monkeypatch and asserts the anim clock is a PURE FUNCTION of the sim tick: (a) same tick -> same value across calls; (b) strictly monotonic increasing with tick (0..200); (c) equals tick*(1/20) exactly; (d) the per-(tick,clip,frame) selection (the actual renderer-facing choice, via _frame_index_for_clip) is IDENTICAL across two independent passes over a representative clip set. Sanity guards that the non-looping attack one-shot actually reaches its finished pose and the looping walk advances (clock not stuck on 0).",
+              "headless_safe": "yes — plain pygame.Surface frames need no display; no Ursina import.",
+              "agent10_manual_proof_referenced": "per-(tick,clip,idx) digest cbecc2e6356b4475a1d293ad42825d6e7b74f69c0726798b85245cb87808cbd6 identical across two runs (cited in the pin's section comment).",
+              "result": "PASS"
+            },
+            "pin_5b_fog_revision": {
+              "test": "test_fog_revision_sequence_is_stable_across_builds",
+              "wave_item": "5b (Agent 03) — root cause: class-global Peasant._spawn_counter carried over between builds, shifting a peasant idle offset -> a fog revealer's grid tile -> the _fog_revision increment COUNT (the +/-1 drift). Fix: reset Peasant._spawn_counter=0 in SimEngine.__init__ next to the seed reset.",
+              "what_it_pins": "Computes the per-tick _fog_revision sequence (engine.sim._fog_revision) over a scripted ranger two-leg reveal (600 ticks, no AI controller so movement is fully scripted; mirrors tests/test_wk66_render_boundary.py::_run_fog_scenario) in TWO FRESH SUBPROCESSES with pinned env (DETERMINISTIC_SIM=1, SIM_SEED=3) and asserts the two sequences are BYTE-IDENTICAL. Sanity: parsed tuple length == 600 and final value > 1 (non-trivial evolving sequence).",
+              "why_subprocess": "Same load-bearing reason as the keystone digest: pytest collection imports perf_*stress* modules that set os.environ['SIM_SEED']='42' at import; config.SIM_SEED is read at import and SimEngine re-applies it, OVERRIDING in-test set_sim_seed(). Pinning SIM_SEED in a fresh process makes the sequence byte-stable regardless of suite ordering.",
+              "observed": "Both subprocess runs: 600-tick sequence, final _fog_revision = 61 (scripted scout reveal). Pre-pin spot check confirmed two same-seed IN-PROCESS builds also now agree (Agent 03 fix working); subprocess is the bulletproof unit. NOTE: the prompt's 'final=54 at 2000 ticks' is the full-game-loop figure; this pin uses a 600-tick scripted-scout scenario (final=61) chosen for a rich-but-fast deterministic reveal footprint without spawning/AI nondeterminism.",
+              "headless_safe": "yes — GameEngine(headless=True), no display.",
+              "result": "PASS"
+            },
+            "pin_5c_combat_capture": {
+              "test": "test_combat_capture_scenario_is_registered",
+              "wave_item": "5c (Agent 12) — tools/screenshot_scenarios.py::ursina_melee_combat + tools/wk67_combat_capture_patch.py; `python tools/run_ursina_capture_once.py --scenario ursina_melee_combat ...` byte-identical across two DETERMINISTIC_SIM runs (Agent 12 manual proof SHA256 2DE5D5F4...).",
+              "what_it_pins": "Does NOT run the Ursina capture (needs a display). Asserts the scenario stays REGISTERED + importable so the coverage can't silently disappear: (1) 'ursina_melee_combat' in URSINA_CAPTURE_SCENARIOS (the registry run_ursina_capture_once.py consumes) with the expected patch_path/default_ticks>0/stem via get_ursina_capture_scenario; (2) the pygame-path builder scenario_ursina_melee_combat is importable + callable (dispatched by get_scenario). Agent 12's byte-identical hash is referenced in the pin's section comment.",
+              "headless_safe": "yes — pure registry/import assertions; no display, no Ursina init.",
+              "agent12_manual_proof_referenced": "SHA256 2DE5D5F4... byte-identical across two DETERMINISTIC_SIM capture runs (cited in the pin's section comment).",
+              "result": "PASS"
+            }
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q -rA",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "8 passed, 0 xfail, 0 xpass in 16.03s. PASSED: test_ai_decision_digest_is_stable (== golden b73961...), test_ai_decision_digest_is_reproducible, test_shopping_purchase_parity, test_ai_view_purity, test_frame_state_split, test_anim_clock_is_tick_derived_under_deterministic_sim (Pin 5a), test_fog_revision_sequence_is_stable_across_builds (Pin 5b), test_combat_capture_scenario_is_registered (Pin 5c)."
+            },
+            {
+              "cmd": "python -m pytest -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "601 passed, 4 skipped, 0 failed, 0 xfail, 0 xpass in 110.25s. Up from Gate 3's 598 passed / 4 skipped by exactly the 3 new Wave-5 pins. The 4 skips are pre-existing (unchanged since Wave-0 baseline)."
+            },
+            {
+              "cmd": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[determinism_guard] PASS: no violations found. (Known/pre-existing presentation wall-clock exemptions remain whitelisted: engine.py chat cooldown, ursina_renderer.py tax-overlay debug throttle — NOT introduced by WK67.)"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "DONE: PASS. determinism_guard PASS; embedded pytest green; all observe_sync profiles exit 0 (base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling 0.1/0.25/0.5/1.0, interior_view, quest_panel, conversation, direct_prompt_integration)."
+            },
+            {
+              "cmd": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[validate_assets] SUMMARY errors=0 warns=46. All 46 are pre-existing missing_model_file placeholder warnings (buildings + workers without .glb/.gltf/.obj). No new asset issues from WK67."
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "Log JSON validated after this round was appended."
+            }
+          ],
+          "evidence": {
+            "final_gate_results": {
+              "boundary_file": "tests/test_wk67_ai_boundary.py -> 8 passed, 0 xfail, 0 xpass (5 original + 3 new Wave-5 pins)",
+              "ai_decision_digest": "test_ai_decision_digest_is_stable PASS -> digest == golden b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (BYTE-IDENTICAL; AI behavior unchanged by all WK67 moves incl. Wave 5 determinism items)",
+              "full_suite": "601 passed, 4 skipped, 0 failed, 0 xfail, 0 xpass",
+              "determinism_guard": "PASS (no violations)",
+              "qa_smoke_quick": "DONE: PASS",
+              "validate_assets": "errors=0, warns=46 (all pre-existing missing_model_file placeholders)"
+            },
+            "full_suite_counts": {
+              "passed": 601,
+              "skipped": 4,
+              "failed": 0,
+              "xfail": 0,
+              "xpass": 0
+            },
+            "known_preexisting_items": [
+              "determinism_guard wall-clock exemptions (KNOWN, pre-existing, NOT introduced by WK67): engine.py chat cooldown; ursina_renderer.py tax-overlay debug throttle.",
+              "validate_assets warns=46: all missing_model_file placeholder models (buildings + workers) — pre-existing, unchanged.",
+              "4 pre-existing pytest skips (unchanged since the Wave-0 baseline).",
+              "3 global-state test-isolation leaks tracked since WK67-W0-DET-001 (_AI_RNG non-reseed, RESEARCH_UNLOCKS, perf_*stress* SIM_SEED-at-import). The keystone digest + the new Pin 5b both neutralize these via fresh subprocesses with pinned env; the underlying leaks remain a latent test-hygiene follow-up, independent of WK67 boundary correctness."
+            ],
+            "assertion_strength_preserved": true,
+            "weakened_any_assertion": false
+          },
+          "definition_of_done_certification": {
+            "verdict": "PASS",
+            "criteria": {
+              "full_suite_green": "MET — 601 passed, 4 skipped, 0 failed, 0 xfail, 0 xpass.",
+              "ai_decision_digest_byte_identical": "MET — b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (unchanged through Moves 4/5/6 and Wave-5 determinism items).",
+              "shopping_parity_byte_identical": "MET — test_shopping_purchase_parity GREEN through the Move-6 SimCommandSink path; gold/potions/weapon/armor + full economy transaction_log + total_spent_by_heroes all match the recorded reference.",
+              "L3_L3b_L6_L9_closed": "MET (verified at Gates 3/4 and unchanged here): L3/L3b (AiGameView/WorldView purity — test_ai_view_purity GREEN: no economy/sim/engine on the view, world is a read-only WorldView), L6 (frame-state split — test_frame_state_split GREEN: RenderSnapshot has no presentation fields, build_snapshot drops presentation kwargs, PresentationFrameState carries them), L9 (HeroCommand write path — shopping parity proven through SimCommandSink). No regressions detected this gate.",
+              "determinism_items_landed": "MET — 5a anim->tick (Pin 5a GREEN), 5b fog_revision stability (Pin 5b GREEN), 5c combat-capture registration (Pin 5c GREEN); all three pinned headlessly so they cannot silently regress."
+            },
+            "residuals": [
+              "Pre-existing only (none block DoD): determinism_guard presentation wall-clock exemptions (chat cooldown, tax-overlay throttle); validate_assets 46 missing-model placeholder warns; 3 global-state test-isolation leaks (neutralized in the WK67 pins via pinned-env subprocesses, latent follow-up).",
+              "Wave-5c byte-identical Ursina combat capture is proven MANUALLY by Agent 12 (SHA256 2DE5D5F4..., needs a display); Pin 5c is the headless registration guard, not a re-run of the capture."
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "PM: the 3 global-state isolation leaks (WK67-W0-DET-001: _AI_RNG non-reseed per BasicAI build, RESEARCH_UNLOCKS reset, perf_*stress* SIM_SEED-at-import) remain a latent test-hygiene follow-up independent of WK67; triage in a determinism-hygiene round.",
+            "Optional: record a golden _fog_revision sequence hash for Pin 5b (currently reproducibility-only across two builds) if PM wants a fixed regression constant in addition to build-to-build stability."
+          ],
+          "constraints_honored": {
+            "only_tests_edited": true,
+            "no_game_ai_or_tools_code_edited": true,
+            "no_weakened_assertions": true,
+            "headless_safe_pins": true,
+            "no_commit": true,
+            "no_push": true
+          },
+          "completion_receipt": "WK67 Gate 5 (FINAL) COMPLETE. Added 3 headless-safe Wave-5 determinism/capture pins to tests/test_wk67_ai_boundary.py — Pin 5a anim->tick (anim_clock_seconds pure function of sim tick + reproducible per-(tick,clip,frame) selection), Pin 5b fog_revision byte-identical across two same-seed fresh-process builds, Pin 5c combat-capture scenario registration guard — all GREEN; boundary file 8 passed / 0 xfail / 0 xpass. Full final gate: AI-decision digest BYTE-IDENTICAL (b73961...); full suite 601 passed / 4 skipped / 0 failed; determinism_guard PASS; qa_smoke --quick PASS; validate_assets errors=0 warns=46 (pre-existing). WK67 Definition of Done: PASS (full suite green; AI-decision digest + shopping parity byte-identical; L3/L3b/L6/L9 closed; 5a/5b/5c determinism items landed and pinned). Residuals are pre-existing only. Only tests/** edited; no game/ai/tools changes; no commit/push."
+        }
+      }
     }
   }
 }

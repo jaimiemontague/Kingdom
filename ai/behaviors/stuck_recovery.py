@@ -14,6 +14,8 @@ from game.sim.hero_guardrails_tunables import (
 )
 from game.sim.timebase import now_ms as sim_now_ms
 
+from ai.behaviors.view_compat import as_ai_view
+
 
 def _stuck_target_key(hero: Any) -> tuple[Any, ...]:
     target = getattr(hero, "target", None)
@@ -26,7 +28,7 @@ def _stuck_target_key(hero: Any) -> tuple[Any, ...]:
     return ("obj", target.__class__.__name__)
 
 
-def _update_stuck_and_recover(ai: Any, hero: Any, game_state: dict) -> None:
+def _update_stuck_and_recover(ai: Any, hero: Any, view: Any) -> None:
     """
     Detect "intends to move but no progress" using sim-time and apply deterministic recovery steps.
 
@@ -36,6 +38,7 @@ def _update_stuck_and_recover(ai: Any, hero: Any, game_state: dict) -> None:
     - max attempts per target = UNSTUCK_MAX_ATTEMPTS_PER_TARGET
     - backoff = UNSTUCK_BACKOFF_S
     """
+    view = as_ai_view(view)
     # Ignore while inside buildings; movement is intentionally paused.
     # Clear stuck state so we don't report "stuck" while a hero is intentionally hidden/paused.
     if bool(getattr(hero, "is_inside_building", False)):
@@ -112,8 +115,8 @@ def _update_stuck_and_recover(ai: Any, hero: Any, game_state: dict) -> None:
         hero.stuck_since_ms = None
         return
 
-    world = game_state.get("world")
-    buildings = game_state.get("buildings", [])
+    world = view.world
+    buildings = view.buildings
 
     if attempt_idx == 0:
         # Step 1: force replanning.
@@ -160,7 +163,7 @@ def _update_stuck_and_recover(ai: Any, hero: Any, game_state: dict) -> None:
         # Step 3: reset goal to an easy patrol objective.
         hero.stuck_reason = "reset_goal"
         hero.target = {"type": "patrol"}
-        zone_x, zone_y = ai.exploration_behavior.assign_patrol_zone(ai, hero, game_state)
+        zone_x, zone_y = ai.exploration_behavior.assign_patrol_zone(ai, hero, view)
         hero.target_position = (zone_x, zone_y)
         hero.state = HeroState.MOVING
 
