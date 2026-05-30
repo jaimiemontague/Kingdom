@@ -9,7 +9,8 @@ from game.systems.buffs import Buff
 
 
 def test_buy_item_potion_updates_inventory_and_purchase_tracking(monkeypatch) -> None:
-    monkeypatch.setattr("game.entities.hero.sim_now_ms", lambda: 12_345)
+    # WK71: buy_item moved to HeroEconomyMixin (game.entities.hero_economy).
+    monkeypatch.setattr("game.entities.hero_economy.sim_now_ms", lambda: 12_345)
     hero = Hero(0, 0, hero_class="warrior")
     hero.gold = 100
 
@@ -24,7 +25,8 @@ def test_buy_item_potion_updates_inventory_and_purchase_tracking(monkeypatch) ->
 
 
 def test_buy_item_potion_refunds_when_at_max_capacity(monkeypatch) -> None:
-    monkeypatch.setattr("game.entities.hero.sim_now_ms", lambda: 1)
+    # WK71: buy_item moved to HeroEconomyMixin (game.entities.hero_economy).
+    monkeypatch.setattr("game.entities.hero_economy.sim_now_ms", lambda: 1)
     hero = Hero(0, 0, hero_class="warrior")
     hero.gold = 50
     hero.potions = hero.max_potions
@@ -142,7 +144,8 @@ def test_attack_property_includes_active_buff(monkeypatch) -> None:
 
 
 def test_get_stuck_snapshot_reports_expected_contract_fields(monkeypatch) -> None:
-    monkeypatch.setattr("game.entities.hero.sim_now_ms", lambda: 5_000)
+    # WK71: get_stuck_snapshot moved to HeroMemoryMixin (game.entities.hero_memory).
+    monkeypatch.setattr("game.entities.hero_memory.sim_now_ms", lambda: 5_000)
     hero = Hero(0, 0, hero_class="warrior")
     hero.stuck_active = True
     hero.stuck_since_ms = 4_250

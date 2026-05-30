@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK71 CLOSE): wk71_round_b2_hero_mixin_split COMPLETE -- DoD met, GOAL 'all tests pass' satisfied. Round B-2a: split game/entities/hero.py 1156 -> 543 LOC (-613) into 3 MRO-identical mixins -- HeroRestMixin (hero_rest.py), HeroEconomyMixin (hero_economy.py), HeroMemoryMixin (hero_memory.py); Hero(HeroRestMixin,HeroEconomyMixin,HeroMemoryMixin) keeps MRO [Hero,...mixins,object] so all call sites unchanged. 27 methods moved verbatim; deleted the duplicate set_event_bus + redundant _event_bus init; repointed 3 test_hero.py monkeypatch sites to the mixin module home. Behavior-preserving: 654 passed/4 skipped/0 failed (+8 MRO tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, no import cycle. Agent 03 (split W1), Agent 11 (MRO test + DoD W2). Deferred: intent->ai/intent.py boundary move; enemy.py ENEMY_STATS split; hud/ursina_renderer/engine/input_handler presentation splits; Move 9; zombie-type purge. Plan: .cursor/plans/wk71_round_b2_hero_mixin_split.plan.md. WK70 was main 5d6351b. Committing+pushing. Next: WK72.",
+    "2026-05-30 (Agent 01 WK71 KICKOFF): hero.py mixin split (Round B-2a). Extract rest/economy/memory clusters from the 1156-LOC game/entities/hero.py into HeroRestMixin/HeroEconomyMixin/HeroMemoryMixin (MRO-identical via Hero(...mixins...)); delete the duplicate set_event_bus. Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), NO screenshots, intent->ai/ move deferred. Agent 03 split, Agent 11 MRO test+DoD. Plan: .cursor/plans/wk71_round_b2_hero_mixin_split.plan.md. WK70 was main 5d6351b. NOT YET COMMITTED for WK71.",
     "2026-05-30 (Agent 01 WK70 CLOSE): wk70_round_c1_buildingdef_registry COMPLETE -- DoD met, GOAL 'all tests pass' satisfied. Round C-1: BuildingDef single-source registry (Move 10, kills L7). Introduced game/content/buildings.py with BUILDING_DEFS (47 keys = 30 enum incl. 8 flagged WK34 zombies + 5 lairs + 12 POIs); config.py's 4 building maps + game/building_factory.py BUILDING_REGISTRY + the catalog/hotkey/placeable lists (build_catalog_panel, building_list_panel, input_handler if/elif chain) are now ALL derived from it as byte-identical back-compat views (3 duplicate copies eliminated; config.py -213 LOC). Import cycle (config imported by ~152 files) avoided via lazy building_class_for() accessor + importlib-by-path read of the BuildingType enum. Behavior-preserving: full suite 646 passed/4 skipped/0 failed (+13 snapshot-equality tests embedding git HEAD values), determinism PASS, qa_smoke PASS, validate_assets errors=0 (== WK69 baseline), WK67 digest b73961... BYTE-IDENTICAL. Agent 05 (2 gated waves), Agent 11 (snapshot test + DoD), Agent 03 (import-cycle consult, not needed -- 05 solved it). Deferred: zombie-type DELETION (guarded sprint), TAX_STASH/constraints folding, clusters 3/4/5, presentation splits, Move 9. Plan: .cursor/plans/wk70_round_c1_buildingdef_registry.plan.md. WK69 was main 2ee336c. Committing+pushing per standing authorization. Next: WK71 (continue Round B-2 presentation splits OR Round C-2 dedup clusters).",
     "2026-05-30 (Agent 01 WK70 KICKOFF): Kicked off wk70_round_c1_buildingdef_registry -- Round C-1 (BuildingDef single-source registry, Move 10, kills L7). Consolidate 6 parallel building registries into one BUILDING_DEFS (game/content/buildings.py); derive the 4 config maps + factory registry + the 3 duplicate catalog/hotkey copies as byte-identical back-compat views. Behavior-preserving (snapshot-equality test + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded). 8 WK34 zombies INCLUDED+flagged (deletion deferred to a guarded sprint). Lairs in SIZES/COLORS only (excluded from COSTS/OCCUPANTS views to preserve Building.__init__ defaults); POIs keep POI_DEFINITIONS. Key risk: import cycle (config imported by 152 files) -> resolve cls lazily, Agent 03 consult. Agent 05 (2 gated waves W1 config maps, W2 factory+catalog/hotkeys), Agent 11 W3 snapshot-equality+DoD. Plan: .cursor/plans/wk70_round_c1_buildingdef_registry.plan.md. WK69 committed+pushed (main 2ee336c). NOT YET COMMITTED for WK70.",
     "2026-05-30 (Agent 01 WK69 CLOSE): wk69_round_b1_simengine_decomposition COMPLETE -- DoD met, GOAL 'all tests pass' satisfied. Round B-1 (sim-engine half of the god-file splits). Extracted 6 inlined services out of sim_engine.py (1527 -> 988 LOC, -539) into game/sim/ modules behind 1-line delegating wrappers: fog (update_fog_of_war), separation (apply_entity_separation), lumber (tree/log cluster), poi_discovery (check_poi_discovery), early_pacing (maybe_apply_early_pacing_nudge + nearest_lair_to), building_lifecycle (cleanup_destroyed_buildings). Pure mechanical behavior-preserving move (pass `sim`, self->sim, wrappers keep every method name; modules import SimEngine only under TYPE_CHECKING -> no cycle). Full suite 633 passed/4 skipped/0 failed (+15 seam tests), determinism_guard PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (verified after each of the 6 extractions). Execution: Agent 03 in 2 PM-gated batches (W1 fog+sep+lumber, W2 poi+pacing+lifecycle), Agent 11 seam tests + DoD gate (W3). Deferred to WK70+: Move 9 (grow SystemRunner), snapshot_builder/build_snapshot extraction, _update_buildings/building_tick dispatch, CleanupManager retirement, and ALL presentation god-file splits (hud/ursina_renderer/ursina_app/engine/hero/input_handler). Plan: .cursor/plans/wk69_round_b1_simengine_decomposition.plan.md. Committing+pushing per standing authorization. Next: WK70 = Round B-2 (presentation god-file splits, screenshot-heavy, parallel-by-file).",
@@ -3511,6 +3513,67 @@
             "03(consult)"
           ],
           "pm_universal_prompt": "Kingdom AI-studio department lead. ONBOARD: read .cursor/rules/01-studio-onboarding.mdc + your .cursor/rules/agent-NN-*.mdc, then this PM round (sprints['wk70_round_c1_buildingdef_registry'].rounds['wk70_kickoff']) + the full plan .cursor/plans/wk70_round_c1_buildingdef_registry.plan.md (section 2 has the EXACT inventory/values, section 6 your wave). Model claude-opus-4-8. RULES: (1) BEHAVIOR-PRESERVING -- derived views byte-identical (keys+values) to the current maps; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged. (2) NO screenshots. (3) update YOUR OWN log agent_NN_*.json under sprint 'wk70_round_c1_buildingdef_registry'. (4) DO NOT COMMIT; no iterate after status=done. (5) report file:line + digest + suite totals.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD per standing authorization."
+        }
+      }
+    },
+    "wk71_round_b2_hero_mixin_split": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T05:30:00Z",
+        "plan_doc": ".cursor/plans/wk71_round_b2_hero_mixin_split.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK71 / Round B-2a)",
+        "notes": "Round B-2a: hero.py mixin split. Extract resting/economy/memory clusters from the 1156-LOC game/entities/hero.py into HeroRestMixin/HeroEconomyMixin/HeroMemoryMixin (game/entities/hero_{rest,economy,memory}.py); Hero(HeroRestMixin,HeroEconomyMixin,HeroMemoryMixin) keeps MRO identical so all call sites are unchanged. Delete the flagged duplicate set_event_bus. Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged; the 300-tick digest exercises hero rest/economy/intent). NO screenshots. Intent->ai/ boundary move deferred. Agent 03 split (W1), Agent 11 MRO test + DoD (W2), Agent 05 consult.",
+        "definition_of_done": [
+          "A. pytest all pass (646/4/0 baseline)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded",
+          "D. qa_smoke green",
+          "E. hero.py ~450-550 LOC; 3 mixin modules; public method surface unchanged; duplicate set_event_bus removed",
+          "F. no import cycle; MRO test passes",
+          "G. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "654 passed / 4 skipped / 0 failed (646 baseline + 8 MRO/structure tests)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical)",
+          "hero_py_loc": "1156 -> 543 (-613); mixins hero_rest 206 / hero_economy 185 / hero_memory 285",
+          "mro": "[Hero, HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin, object] -- identical resolution; 27 methods moved verbatim",
+          "duplicate_removed": "the 2nd set_event_bus (~old line 657) + the redundant _event_bus re-init; 3 test_hero.py monkeypatch sites repointed to the mixin module home (necessary relocation fallout)"
+        }
+      },
+      "rounds": {
+        "wk71_kickoff": {
+          "round_meta": {
+            "round_id": "wk71_kickoff",
+            "created_utc": "2026-05-30T05:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk71_round_b2_hero_mixin_split.plan.md",
+            "build_target": "hero.py mixin split (rest/economy/memory) + delete duplicate set_event_bus",
+            "goal": "all tests pass; MRO-identical; digest unchanged"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "WK67 digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical; MRO identical",
+            "wave_dag": "W1(03 split) -> PM gate (digest+suite) -> W2(11 MRO test+DoD) -> commit+push",
+            "dispatch_order": [
+              "03 (W1)",
+              "11 (W2)"
+            ]
+          },
+          "pm_agent_prompts": {
+            "03": "[Agent 03] Split game/entities/hero.py (1156 LOC) into MRO-identical mixins per plan .cursor/plans/wk71_round_b2_hero_mixin_split.plan.md sections 1-2. Create game/entities/hero_rest.py (HeroRestMixin: should_go_home_to_rest/start_resting/start_resting_at_building/update_resting/pop_out_of_building/can_rest_at_home/finish_resting/enter_building_briefly), hero_economy.py (HeroEconomyMixin: add_gold/transfer_taxes_to_home/use_potion/_is_at_food_stand/buy_meal_at_food_stand/_shop_for_tax_deposit/buy_item/wants_to_shop/get_shopping_context/increment_career_stat), hero_memory.py (HeroMemoryMixin: record_profile_memory/remember_known_place/_trim_known_places_if_needed/record_decision/get_intent_snapshot/get_stuck_snapshot/_derive_intent/_update_intent_and_decision/get_context_for_llm). Move method bodies VERBATIM (they use self.*); copy each method's needed imports into its mixin module (TYPE_CHECKING for type-only hints; keep lazy imports). ALL instance state stays in Hero.__init__ -- mixins hold ONLY methods. Hero becomes `class Hero(HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin):`. KEEP update(), combat/buffs, xp/level, movement, take_damage, heal, render_state, descent/ascent, _queue_render_animation on Hero core. DELETE the duplicate set_event_bus (there are 2 defs ~line 221 and ~657; keep one, ensure __init__ doesn't double-init _event_bus). No import cycle; no behavior change. VERIFY: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), python -m pytest -q (646 passed), python tools/determinism_guard.py, python tools/qa_smoke.py --quick. Report: new modules, hero.py new LOC, the duplicate removed, digest, suite totals. DO NOT COMMIT; update agent_03 log (round wk71_w1).",
+            "11": "[Agent 11] WAVE W2 (after 03): create tests/test_wk71_hero_mixin_split.py asserting Hero.__mro__ includes HeroRestMixin/HeroEconomyMixin/HeroMemoryMixin, that every moved method resolves on a constructed Hero instance (build one headless), and the public method surface is intact (a representative set: should_go_home_to_rest, buy_item, wants_to_shop, record_decision, get_intent_snapshot, get_context_for_llm, etc. are all present + callable). Run full DoD: python -m pytest (all pass), determinism_guard, digest test (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke --quick. Report PASS/FAIL verdict. Only create your test; no prod edits; DO NOT COMMIT; update agent_11 log (round wk71_w2).",
+            "05": "[Agent 05 -- CONSULT ONLY] Available if the digest drifts during the hero split -- help confirm a moved method body preserves behavior exactly. No code unless PM assigns."
+          },
+          "pm_send_list_minimal": [
+            "03",
+            "11",
+            "05(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk71_round_b2_hero_mixin_split'].rounds['wk71_kickoff']) + plan .cursor/plans/wk71_round_b2_hero_mixin_split.plan.md; claude-opus-4-8; BEHAVIOR-PRESERVING, digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged, MRO identical; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD per standing authorization."
         }
       }

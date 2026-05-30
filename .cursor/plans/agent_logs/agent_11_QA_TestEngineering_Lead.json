@@ -3183,6 +3183,59 @@
           "notes": "validate_assets baseline confirmed by stashing the WK70 working tree and re-running at HEAD (WK69 2ee336c): identical errors=0 warns=46, then stash-popped to restore. Membership invariants from plan section 2 verified directly against the pre-WK70 source before embedding: only the 5 lairs are in SIZES/COLORS but absent from COSTS/OCCUPANTS; exactly 12 poi_* keys in all four maps. No production code edited; nothing committed."
         }
       }
+    },
+    "wk71_round_b2_hero_mixin_split": {
+      "sprint_meta": {
+        "sprint_id": "wk71_round_b2_hero_mixin_split",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "goal": "QA W2: structure-lock the hero.py mixin split (1156 -> 543 LOC, 3 MRO-identical mixins) with an MRO + method-resolution test, then run the full DoD gate (A-G)."
+      },
+      "rounds": {
+        "wk71_w2": {
+          "sprint_id": "wk71_round_b2_hero_mixin_split",
+          "round_id": "wk71_w2",
+          "status": "done",
+          "round_meta": {
+            "wave": "W2 (MRO/method-resolution test + final DoD gate)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "created_utc": "2026-05-30T00:00:00Z",
+            "depends_on": "wk71 W1 (Agent 03 split game/entities/hero.py into HeroRestMixin/HeroEconomyMixin/HeroMemoryMixin, removed duplicate set_event_bus, repointed 3 test_hero.py monkeypatch sites; digest unchanged + 646 passed)"
+          },
+          "prompt_summary": "WK71 W2: create tests/test_wk71_hero_mixin_split.py asserting Hero.__mro__ == [Hero,HeroRestMixin,HeroEconomyMixin,HeroMemoryMixin,object]; each of the 27 moved methods (8 rest + 10 economy + 9 memory) is present on Hero AND resolves from its expected mixin via vars(mixin); exactly ONE callable set_event_bus (no duplicate); a headless Hero exposes the moved methods as bound methods and __init__ instance state (gold/buffs/known_places/profile_career/state/...) is visible to the mixins; representative methods execute end-to-end. Run full DoD gate (suite, determinism_guard, AI digest pin == b73961..., qa_smoke --quick) + report hero.py LOC. Only create the test file; no production edits; DO NOT COMMIT.",
+          "what_i_changed": {
+            "summary": "Created tests/test_wk71_hero_mixin_split.py (8 tests). Locks: (1) exact MRO chain [Hero,HeroRestMixin,HeroEconomyMixin,HeroMemoryMixin,object]; (2) all 27 moved methods present on Hero AND defined in the expected mixin's own __dict__ AND not shadowed on Hero/another mixin AND resolving (via MRO walk) from that mixin; (3) exactly one 'def set_event_bus' across hero.py+3 mixins, callable bound method, wires _event_bus once (None -> sentinel); (4) headless Hero exposes the 27 as bound MethodType with __self__ is hero; (5) __init__ instance state (gold/taxed_gold/buffs/known_places/profile_memory/profile_career/state/home_building/potions/max_potions) visible to mixins; (6) representative end-to-end exec per mixin: should_go_home_to_rest threshold flip, add_gold tax split + wants_to_shop + buy_item potion, record_decision -> get_intent_snapshot round-trip + get_stuck_snapshot + _derive_intent; (7) each mixin defines EXACTLY its assigned method set with no cross-mixin name collisions. No production code touched; confirmed test_hero.py passes with Agent 03's repointed monkeypatch sites (did not re-edit).",
+            "files_created": [
+              "tests/test_wk71_hero_mixin_split.py"
+            ],
+            "files_modified": [],
+            "production_code_edited": false
+          },
+          "new_tests": [
+            "test_hero_mro_is_exact_mixin_chain",
+            "test_hero_subclasses_all_three_mixins",
+            "test_all_27_moved_methods_present_and_resolve_from_expected_mixin",
+            "test_single_set_event_bus_no_duplicate",
+            "test_moved_methods_are_bound_on_instance",
+            "test_instance_state_from_init_is_visible_to_mixins",
+            "test_representative_moved_methods_execute_end_to_end",
+            "test_mixins_define_only_their_methods_no_collisions"
+          ],
+          "dod_gate": {
+            "A_full_suite": "654 passed, 4 skipped, 0 failed (baseline 646+4; +8 = new mixin-split tests). PASS",
+            "B_determinism_guard": "PASS: no violations found (exit 0)",
+            "C_ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded BYTE-IDENTICAL to golden (pin constant unchanged in test_wk67_ai_boundary.py). tests/test_wk67_ai_boundary.py = 10 passed. PASS",
+            "D_qa_smoke_quick": "DONE: PASS (exit 0; all profiles + speed_scaling 0.25/0.5/1.0x + interior_view/quest_panel/conversation/direct_prompt_integration exit_code=0)",
+            "E_hero_loc_and_surface": "PASS: hero.py = 543 LOC (was 1156; -613). hero_rest.py 206 / hero_economy.py 185 / hero_memory.py 285 exist. Public method surface intact: all 27 moved methods callable as hero.<name>(...); the duplicate set_event_bus removed (exactly 1 def across the 4 files). _event_bus initialised once in Hero.__init__.",
+            "F_mro_no_cycle": "PASS: MRO test asserts the exact chain; Hero issubclass of all 3 mixins; each moved method resolves from its expected mixin; no import cycle (modules import + suite green). Hero instance constructs headless (no pygame/SDL needed).",
+            "G_logs": "This log entry; PM hub close to be recorded by Agent 01.",
+            "verdict": "PASS (DoD A-G all green)"
+          },
+          "notes": "Hero(0,0,hero_class='warrior') constructs with no display dependency, so no SDL dummy driver needed (Hero.__init__ only sets instance attrs). The 27/27 method split verified against plan section 1: rest=8, economy=10 (plan lists add_gold/transfer_taxes_to_home/use_potion/_is_at_food_stand/buy_meal_at_food_stand/_shop_for_tax_deposit/buy_item/wants_to_shop/get_shopping_context/increment_career_stat), memory=9. test_hero.py monkeypatch sites already repointed by Agent 03 to game.entities.hero_economy.sim_now_ms (x2) and game.entities.hero_memory.sim_now_ms (x1); test_attack_property still targets game.entities.hero.sim_now_ms (attack property stayed on Hero core). No production code edited; nothing committed."
+        }
+      }
     }
   }
 }
