@@ -9,6 +9,58 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk92_round_b_ursina_unit_sync": {
+      "sprint_meta": {
+        "sprint_id": "wk92_round_b_ursina_unit_sync",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "goal": "QA W2: verify WK92 behavior-preserving MOVE of the 5 per-frame per-unit-kind render-sync methods out of game/graphics/ursina_renderer.py (1068->638) into the new leaf game/graphics/ursina_unit_sync.py as module functions sync_snapshot_heroes(r,snapshot,active_ids,HeroClass)/sync_snapshot_enemies(r,snapshot,world,active_ids)/sync_snapshot_peasants(r,snapshot,active_ids)/sync_snapshot_guards(r,snapshot,active_ids)/sync_snapshot_tax_collector(r,snapshot,active_ids). UrsinaRenderer keeps the 5 1-line delegating wrappers (_sync_snapshot_* same names+signatures forwarding self); update() call sites unchanged; renderer state (_entities, _entity_render collab, _unit_anim_state/_unit_facing_state, _camera_active_layer) and the wrappers it calls (_entity_in_view WK88, _facing_from_dto WK89, _sync_unit_atlas_billboard) stay on the renderer; unit-billboard scale constants recomputed cycle-free in the new module. Lock the seam (5 fns exist+callable; 5 wrappers delegate self+args via spy+monkeypatch AND AST incl HeroClass for heroes/world for enemies; no module-top renderer import; fresh-subprocess import both orders) + INDEPENDENT before/after screenshot review (combat hero+goblin + base overview, pixel-diff) + full DoD gate."
+      },
+      "rounds": {
+        "wk92_w2": {
+          "sprint_id": "wk92_round_b_ursina_unit_sync",
+          "round_id": "wk92_w2",
+          "status": "done",
+          "round_meta": {
+            "wave": "W2 (seam test + DoD gate + INDEPENDENT before/after screenshot review)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "created_utc": "2026-05-30T00:00:00Z",
+            "depends_on": "wk92 W1 (Agent 09 moved the 5 unit-sync methods into ursina_unit_sync.py behind delegating wrappers; verified digest UNCHANGED + 883 passed + before/after combat+base screenshots identical; PM independently confirmed combat hero+goblin render identically)."
+          },
+          "prompt_summary": "WK92 W2: create tests/test_wk92_ursina_unit_sync.py asserting ursina_unit_sync has sync_snapshot_heroes/enemies/peasants/guards/tax_collector (callable); the 5 UrsinaRenderer wrappers delegate (spy+monkeypatch the module fns + AST assert each wrapper body calls ursina_unit_sync.<fn>(self, ...) with the right args incl HeroClass for heroes/world for enemies); AST guard ursina_unit_sync.py has NO module-top ursina_renderer import; fresh-subprocess import both orders OK. INDEPENDENTLY VIEW before/after screenshots (wk92_before/after_combat hero+goblin; wk92_before/after_base) - written verdict (pixel-diff). Full DoD: pytest all pass, determinism_guard, WK67 digest == b73961..., qa_smoke --quick. Only the test file; no prod edits; DO NOT COMMIT.",
+          "what_i_changed": {
+            "summary": "Created tests/test_wk92_ursina_unit_sync.py (14 headless seam tests, all pass) locking the WK92 unit-render-sync MOVE: (1) ursina_unit_sync has all 5 fns and each is callable (parametrized x5); (2) _sync_snapshot_heroes DELEGATES - spy+monkeypatch ursina_unit_sync.sync_snapshot_heroes (patch-where-used: wrapper does a lazy from game.graphics import ursina_unit_sync then calls the module attr), assert called once with self forwarded arg0 + snapshot/active_ids/HeroClass forwarded in the RIGHT position (the heroes-only extra HeroClass arg), result returned; (3) _sync_snapshot_enemies DELEGATES the same way asserting the enemies-only extra world arg lands between snapshot and active_ids; (4) peasants/guards/tax_collector wrappers DELEGATE the simple (snapshot, active_ids) signature (parametrized x3) - self forwarded, args pass through, result returned; (5) AST belt-and-suspenders - each of the 5 wrapper bodies contains a call ursina_unit_sync.<fn>(self, ...) (pins delegation even if a monkeypatch path changed); (6) AST guard - ursina_unit_sync.py has NO module-top (runtime) import of ursina_renderer (dependency points one way: renderer->unit_sync; TYPE_CHECKING-only import is fine); (7) fresh-subprocess import of both modules in EITHER order succeeds (no module-load cycle / no scale-constant cycle, parametrized x2). Used object.__new__(UrsinaRenderer) bare instance for the wrapper spies (wrappers only forward self, touch no instance state). No production code touched. INDEPENDENTLY opened all 4 screenshots + ran a numpy pixel-diff.",
+            "files_created": [
+              "tests/test_wk92_ursina_unit_sync.py"
+            ],
+            "files_modified": []
+          },
+          "new_tests": [
+            "test_moved_function_lives_on_unit_sync (parametrized x5: heroes/enemies/peasants/guards/tax_collector exist+callable)",
+            "test_heroes_wrapper_delegates (spy+monkeypatch: self+snapshot+active_ids+HeroClass forwarded in right position; result returned)",
+            "test_enemies_wrapper_delegates (spy+monkeypatch: self+snapshot+world+active_ids forwarded in right position; result returned)",
+            "test_simple_wrapper_delegates (parametrized x3 peasants/guards/tax_collector: self+snapshot+active_ids forwarded; result returned)",
+            "test_wrappers_call_unit_sync_module_in_source (AST: all 5 wrapper bodies call ursina_unit_sync.<fn>(self, ...))",
+            "test_unit_sync_has_no_module_top_import_of_renderer (AST: no module-top runtime ursina_renderer import)",
+            "test_fresh_subprocess_imports_both_orders (parametrized x2: import order independence / no cycle)"
+          ],
+          "screenshot": "INDEPENDENT REVIEW DONE - VISUALLY IDENTICAL (pixel-diff confirmed). Opened all 4 PNGs myself + ran numpy abs-diff. (1) COMBAT hero+goblin: docs/screenshots/wk92_before_combat/ursina_melee_combat_20260530_115843_463.png vs wk92_after_combat/ursina_melee_combat_20260530_115940_380.png - ONLY 2 of 1,327,104 px differ (0.0002%) at a single lower-right corner spot (1133-1134,780; max channel delta 52 = AA flicker); hero (S... label + green HP bar), Goblin (label + green HP bar), castle, terrain, crystals/rocks all pixel-identical. (2) BASE overview: wk92_before_base/ursina_20260530_115911_598.png vs wk92_after_base/ursina_20260530_120002_185.png - ONLY 50 of 1,327,104 px differ (0.0038%), ALL confined to bbox x136-141 y725-733 = the lower-left frame-time debug HUD digit (expected fluctuating frame-time); island/buildings/crystals/HUD(Gold 2100,Heroes 0,Wave 1)/toolbar all pixel-identical. All unit kinds (hero+enemy in combat; town in base) render identically apart from the debug HUD/AA - the move is render-equivalent.",
+          "dod_gate": {
+            "A_full_suite": "897 passed, 4 skipped, 0 failed in 184.22s (baseline 883 + 14 new WK92 seam tests = 897). PASS",
+            "B_determinism_guard": "[determinism_guard] PASS: no violations found (exit 0). PASS",
+            "C_ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded BYTE-IDENTICAL to the golden pin in tests/test_wk67_ai_boundary.py line 181 (confirmed via grep). tests/test_wk67_ai_boundary.py = 10 passed. PASS",
+            "D_qa_smoke_quick": "DONE: PASS (exit 0) across base/intent_bounty/hero_stuck_repro/no-enemies/mock-LLM + speed_scaling 0.1x/0.25x/0.5x/1.0x + interior_view + quest_panel + conversation + direct_prompt_integration. PASS",
+            "E_seam_structure": "The 5 fns live in ursina_unit_sync.py (callable); UrsinaRenderer keeps the 5 _sync_snapshot_* delegating wrappers (lines 653-676) - each proven to forward self + the right args (incl HeroClass for heroes / world for enemies) and return the module result via spy+monkeypatch AND AST; update() call sites (lines 616-624) unchanged; _entities/_entity_render/_unit_anim_state/_unit_facing_state/_camera_active_layer + _entity_in_view/_facing_from_dto/_sync_unit_atlas_billboard stay on the renderer; scale constants recomputed cycle-free in the new module; ursina_renderer.py 1068->638; NO module-top renderer import in unit_sync + fresh-subprocess import both orders OK = no import cycle. PASS",
+            "F_screenshots": "BEFORE/AFTER ursina_melee_combat (hero+goblin) AND base_overview - independently opened + numpy pixel-diff - visually identical apart from the expected frame-time debug HUD digit (50 px in base) and a 2-px corner AA flicker (combat); all unit kinds render identically (see screenshot field). PASS",
+            "G_logs_and_close": "this log entry written (round wk92_w2); PM hub close handed to Agent 01. PASS",
+            "verdict": "PASS"
+          },
+          "notes": "Pure-move seam verification; no production edits, did not commit. The WK67 300-tick AI-decision digest stays byte-identical (b73961...) - the headless sim is unaffected by this renderer-only move. KEY SEAM NOTES: (a) the 5 wrappers do a LAZY function-local from game.graphics import ursina_unit_sync then call the module attr, so the delegation spies monkeypatch the names ON ursina_unit_sync (patch-where-used) - not on ursina_renderer; (b) the two extra-arg wrappers are covered by dedicated tests asserting positional forwarding (heroes: HeroClass after active_ids; enemies: world between snapshot and active_ids), the 3 simple ones by a parametrized test; (c) used object.__new__(UrsinaRenderer) so the wrapper spies need no ursina window (wrappers forward self and touch no instance state). The cycle risk flagged in the plan (unit_sync needing scale constants from ursina_renderer) is handled - the constants are recomputed leaf-style from config/color in the new module - verified by the no-top-import AST guard + fresh-subprocess both-orders import. No regressions found; all 7 DoD criteria A-G hold."
+        }
+      }
+    },
     "wk89_round_b_ursina_anim": {
       "sprint_meta": {
         "sprint_id": "wk89_round_b_ursina_anim",

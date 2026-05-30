@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-31 (Agent 01 WK92 CLOSE): wk92_round_b_ursina_unit_sync COMPLETE -- DoD met. ursina_renderer split slice 6 (LAST big chunk): moved the 5 unit-sync methods (_sync_snapshot_heroes/enemies/peasants/guards/tax_collector, ~350 LOC) from ursina_renderer.py (1068 -> 638 LOC) into game/graphics/ursina_unit_sync.py behind delegating wrappers; scale constants (UNIT_BILLBOARD_SCALE/ENEMY_SCALE/etc.) recomputed cycle-free in the new module; renderer state + entity collab + anim(WK89)/frustum(WK88) wrappers stay on the renderer. No cycle. Behavior/visually-preserving: 897 passed/4 skipped/0 failed (+14 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, before/after combat+base screenshots pixel-diffed identical (only AA flicker + frame-time digit). Agent 09 extract+screenshot, Agent 11 verify (pixel-diff). MILESTONE: ursina_renderer.py 1959 -> 638 over WK87-92 (6 slices: building_ui/frustum/anim/misc_props/building_sync/unit_sync, -67%) -- now a pure orchestrator. Plan: .cursor/plans/wk92_round_b_ursina_unit_sync.plan.md. WK91 was main 177fdf1. Committing+pushing. SESSION: 25 sprints WK68-92 shipped; suite 601->897; digest b73961 held byte-identical throughout all 25. REMAINING: hud.py(2477) split; ursina_terrain_fog_collab(1783)/ursina_app(1525) splits; Move 9; world.py fog; context_builder/direct_prompt_validator; ai/vocab.py + TaskRouter; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK93.",
+    "2026-05-31 (Agent 01 WK92 KICKOFF): extract ursina_unit_sync.py (Round B-9, ursina_renderer split slice 6, LAST big chunk). Move the 5 unit-sync methods (_sync_snapshot_heroes/enemies/peasants/guards/tax_collector, ~350 LOC) from ursina_renderer.py (1068 LOC) into game/graphics/ursina_unit_sync.py behind delegating wrappers; renderer state + entity collab + anim(WK89)/frustum(WK88) wrappers stay on the renderer. Pure VERBATIM move; screenshot-verified (base+combat, all unit kinds). Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded). After this ursina_renderer.py ~730 LOC (orchestrator; was 1959). Agent 09 extract+screenshot, Agent 11 verify. Plan: .cursor/plans/wk92_round_b_ursina_unit_sync.plan.md. WK91 was main 177fdf1. NOT YET COMMITTED for WK92.",
     "2026-05-31 (Agent 01 WK91 CLOSE): wk91_round_b_ursina_building_sync COMPLETE -- DoD met. ursina_renderer split slice 5: moved _sync_snapshot_buildings (~242 LOC) from ursina_renderer.py (1306 -> 1068 LOC) into game/graphics/ursina_building_sync.py behind a delegating wrapper; renderer state (_entities/_entity_render collab/_unit_anim_state/_camera_active_layer/_debug_revealed_pois/_poi_mystery_markers) + _entity_in_view stay on the renderer; calls to _sync_building_worldspace_ui (WK87) preserved. No cycle. Behavior/visually-preserving: 883 passed/4 skipped/0 failed (+6 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, before/after base_overview visually identical (pixel-diff: only the frame-time debug digit). Agent 09 extract+screenshot, Agent 11 verify (pixel-diff). Plan: .cursor/plans/wk91_round_b_ursina_building_sync.plan.md. WK90 was main 52c5573. Committing+pushing. SESSION: 24 sprints WK68-91 shipped; suite 601->883; digest b73961 held byte-identical throughout all 24; ursina_renderer 1959->1068 over WK87-91 (5 slices: building_ui/frustum/anim/misc_props/building_sync). REMAINING: ursina_renderer unit-sync slice (last big chunk); hud.py(2477); ursina_terrain_fog_collab/ursina_app; Move 9; world.py fog; context_builder/direct_prompt_validator; ai/vocab.py + TaskRouter; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK92.",
     "2026-05-31 (Agent 01 WK91 KICKOFF): extract ursina_building_sync.py (Round B-8, ursina_renderer split slice 5). Move _sync_snapshot_buildings (~242 LOC) from ursina_renderer.py (1306 LOC) into game/graphics/ursina_building_sync.py behind a delegating wrapper; renderer state + entity collab stay on the renderer; calls to _sync_building_worldspace_ui (WK87) + _entity_in_view (WK88) preserved. Pure VERBATIM move; screenshot-verified (base_overview, all buildings render identically). Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded). Agent 09 extract+screenshot, Agent 11 verify. Plan: .cursor/plans/wk91_round_b_ursina_building_sync.plan.md. WK90 was main 52c5573. NOT YET COMMITTED for WK91.",
     "2026-05-31 (Agent 01 WK90 CLOSE): wk90_round_b_ursina_misc_props COMPLETE -- DoD met. ursina_renderer split slice 4: moved _sync_snapshot_projectiles + _sync_snapshot_bounties + _sync_snapshot_rubble (~184 LOC) from ursina_renderer.py (1461 -> 1306 LOC) into game/graphics/ursina_misc_props_sync.py behind delegating wrappers; renderer state (_entities/_bounty_entities/_rubble_entities/_projectile_tex/_entity_render/_BOUNTY_*) stays on the renderer. No cycle. Behavior/visually-preserving: 877 passed/4 skipped/0 failed (+10 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, before/after base+combat screenshots BYTE-IDENTICAL (Agent 11 sha256-verified). Agent 09 extract+screenshot, Agent 11 verify. Plan: .cursor/plans/wk90_round_b_ursina_misc_props.plan.md. WK89 was main c46e8e4. Committing+pushing. SESSION: 23 sprints WK68-90 shipped; suite 601->877; digest b73961 held byte-identical throughout all 23; ursina_renderer 1959->1306 over WK87/88/89/90. REMAINING: ursina_renderer unit-sync + building-sync slices; hud.py(2477); ursina_terrain_fog_collab/ursina_app; Move 9; world.py fog; context_builder/direct_prompt_validator; ai/vocab.py + TaskRouter; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK91.",
@@ -4817,6 +4819,67 @@
             "10(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk91_round_b_ursina_building_sync'].rounds['wk91_kickoff']) + plan .cursor/plans/wk91_round_b_ursina_building_sync.plan.md; claude-opus-4-8; PURE VERBATIM MOVE, keep wrapper name + renderer state on the renderer, TYPE_CHECKING-only import; before/after base_overview MUST match (all buildings) + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
+        }
+      }
+    },
+    "wk92_round_b_ursina_unit_sync": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-31T02:30:00Z",
+        "plan_doc": ".cursor/plans/wk92_round_b_ursina_unit_sync.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK92 / Round B-9)",
+        "notes": "Round B-9 (ursina_renderer split slice 6, LAST big chunk): move the 5 unit-sync methods (heroes/enemies/peasants/guards/tax_collector, ~350 LOC) from ursina_renderer.py (1068 LOC) into game/graphics/ursina_unit_sync.py behind delegating wrappers; renderer state + collab + anim/frustum wrappers stay on the renderer. Pure VERBATIM move; screenshot-verified (base+combat, all unit kinds). Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded). After this ursina_renderer.py ~730 LOC (orchestrator). Agent 09 extract+screenshot, Agent 11 verify.",
+        "definition_of_done": [
+          "A. pytest all pass (883/4/0)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded",
+          "D. qa_smoke green",
+          "E. 5 fns in ursina_unit_sync.py; 5 wrappers on UrsinaRenderer; call sites unchanged; renderer state on renderer; ursina_renderer.py smaller; no cycle",
+          "F. before/after base+combat Ursina screenshots visually identical (all unit kinds)",
+          "G. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "897 passed / 4 skipped / 0 failed (883 + 14 seam tests)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961... byte-identical",
+          "screenshots": "combat+base before/after pixel-diffed identical (combat 2/1.3M AA px; base 50/1.3M = frame-time digit)",
+          "ursina_renderer_loc": "1068 -> 638 (-430); CUMULATIVE 1959 -> 638 over WK87-92 (6 slices, -67%) -- now a pure orchestrator",
+          "result": "5 unit-sync methods moved to game/graphics/ursina_unit_sync.py behind delegating wrappers; scale constants recomputed cycle-free; renderer state + collab + anim/frustum wrappers stay on the renderer; no cycle. ursina_renderer split slice 6 (final big chunk)."
+        }
+      },
+      "rounds": {
+        "wk92_kickoff": {
+          "round_meta": {
+            "round_id": "wk92_kickoff",
+            "created_utc": "2026-05-31T02:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk92_round_b_ursina_unit_sync.plan.md",
+            "build_target": "extract ursina_unit_sync.py (5 unit-sync methods)",
+            "goal": "all tests pass; all unit kinds render identically"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "before/after base+combat identical (all unit kinds) + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical",
+            "wave_dag": "W1(09 extract+screenshots)->gate->W2(11 verify+screenshot review)->commit",
+            "dispatch_order": [
+              "09 W1",
+              "11 W2"
+            ]
+          },
+          "pm_agent_prompts": {
+            "09": "[Agent 09 ArtDirector] Extract the 5 unit-render-sync methods out of game/graphics/ursina_renderer.py (1068 LOC) into a new game/graphics/ursina_unit_sync.py per plan .cursor/plans/wk92_round_b_ursina_unit_sync.plan.md (pure VERBATIM move behind delegating wrappers). This is the LAST big chunk of the ursina_renderer split. STEP 0 BEFORE screenshots: python tools/run_ursina_capture_once.py --scenario ursina_melee_combat --ticks 240 --no-llm --out docs/screenshots/wk92_before_combat ; and base overview (default) --out docs/screenshots/wk92_before_base. Move VERBATIM (self.->r.): _sync_snapshot_heroes (~891-993) -> sync_snapshot_heroes(r, snapshot, active_ids, HeroClass); _sync_snapshot_enemies (~994-1064) -> sync_snapshot_enemies(r, snapshot, world, active_ids); _sync_snapshot_peasants (~1065-1125) -> sync_snapshot_peasants(r, snapshot, active_ids); _sync_snapshot_guards (~1126-1181) -> sync_snapshot_guards(r, snapshot, active_ids); _sync_snapshot_tax_collector (~1182-1243) -> sync_snapshot_tax_collector(r, snapshot, active_ids). Leave 1-line delegating wrappers on UrsinaRenderer (SAME names + signatures) so the update() call sites are UNCHANGED. Renderer state (r._entities, r._entity_render collab, r._unit_anim_state/_unit_facing_state, unit-scale constants) stays on the renderer; calls to _compute_anim_frame/_facing_from_dto (WK89 wrappers) + _entity_in_view (WK88 wrapper) resolve via r.<wrapper> exactly as today. RULES: ursina_unit_sync.py imports the leaf deps the methods use (ursina, config, the UNIT_BILLBOARD_SCALE/ENEMY_SCALE/GUARD_SCALE/etc. constants -- if they live in ursina_renderer, import them lazily inside the fns OR move them to a leaf module to stay cycle-free; UnitDTO fields; color helpers); imports UrsinaRenderer only under TYPE_CHECKING; NO cycle (wrappers import lazily; module never imports ursina_renderer at top); verify fresh imports BOTH orders. Move VERBATIM. STEP N AFTER screenshots (same 2 scenarios, _after); VIEW before vs after -- MUST be visually identical (heroes/enemies/peasants/guards/tax-collector all render the same: positions, billboards, anim frame, facing, scale, labels, HP bars). If a unit kind renders wrong/missing, a ref broke -- revert+reinvestigate. VERIFY: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), python -m pytest -q (883 passed), determinism_guard, qa_smoke --quick, import check (from game.graphics.ursina_unit_sync import sync_snapshot_heroes, sync_snapshot_enemies, sync_snapshot_peasants, sync_snapshot_guards, sync_snapshot_tax_collector). Report: the 5 fns moved, the wrappers, ursina_renderer.py new LOC (was 1068), how you handled the scale constants cycle-free, before/after screenshot paths + visual verdict, digest, suite totals, no-cycle. Lane = ursina_renderer.py + new ursina_unit_sync.py (+ a leaf scale-constants module ONLY if needed to break a cycle). DO NOT COMMIT; update agent_09 log (round wk92_w1).",
+            "11": "[Agent 11] W2 (after 09): create tests/test_wk92_ursina_unit_sync.py: assert game.graphics.ursina_unit_sync has sync_snapshot_heroes/enemies/peasants/guards/tax_collector (callable); assert the 5 UrsinaRenderer wrappers delegate (spy+monkeypatch the module fns; object.__new__(UrsinaRenderer) or a fake self, OR source/AST assert the wrappers call ursina_unit_sync.<fn>(self, ...)); AST guard ursina_unit_sync.py has no module-top ursina_renderer import + no module-load cycle (fresh subprocess both orders). INDEPENDENTLY VIEW before/after screenshots (wk92_before_combat vs wk92_after_combat; wk92_before_base vs wk92_after_base) -- confirm ALL unit kinds render identically (use a pixel-diff if helpful; note the fluctuating frame-time debug digit is expected to differ); written verdict. Full DoD: pytest (all pass), determinism_guard, digest (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke. Report PASS/FAIL + DoD A-G + screenshot verdict. Only your test; no prod edits; DO NOT COMMIT; update agent_11 log (round wk92_w2).",
+            "10": "[Agent 10 CONSULT] available on unit render/scale specifics. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "09",
+            "11",
+            "10(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk92_round_b_ursina_unit_sync'].rounds['wk92_kickoff']) + plan .cursor/plans/wk92_round_b_ursina_unit_sync.plan.md; claude-opus-4-8; PURE VERBATIM MOVE, keep wrapper names+signatures + renderer state on the renderer, TYPE_CHECKING-only import, scale constants cycle-free; before/after base+combat MUST match (all unit kinds) + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }
