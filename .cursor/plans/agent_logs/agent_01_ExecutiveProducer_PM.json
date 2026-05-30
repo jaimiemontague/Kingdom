@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK80 CLOSE): wk80_round_b2_ursina_renderer_deadcode COMPLETE -- DoD met. Deleted residual dead code from ursina_renderer.py: the _unit_facing_direction import (:441) + its function in ursina_units_anim.py (dead since WK68 DTO migration), the inert underground-render shell + dead __init__ state (_underground_mgr/_underground_lights/cave-shader-rev -- the render BODY had already died in WK65), and the dead PEASANT_SCALE alias. Grep-proven zero live callers; sim-side poi_interaction/underground_terrain UNTOUCHED. ursina_renderer.py 1979->1959, ursina_units_anim.py -31. Behavior-preserving: 758 passed/4 skipped/0 failed, determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, before/after Ursina screenshots PM-verified PIXEL-IDENTICAL. Agent 09 delete+screenshot; PM verified directly (small deletion, no separate QA wave). NOTE: most of the audit-flagged ~450 ursina dead LOC was already removed in WK65/68 -- only residual remained. Plan: .cursor/plans/wk80_round_b2_ursina_renderer_deadcode.plan.md. WK79 was main a91e8ae. Committing+pushing. SESSION: 13 sprints WK68-80 shipped. REMAINING HIGH-VALUE: ursina_renderer.py BODY split (8 modules), hud.py split (2477), ursina_terrain_fog_collab/ursina_app splits, Move 9, world.py, config package, clusters 3/4, Round D AI router/splits, Round E audit, 21-file zombie purge. Next: WK81.",
+    "2026-05-30 (Agent 01 WK80 KICKOFF): ursina_renderer.py dead-code deletion (Round B-2g, delete-first prep for its eventual split). Remove the dead _unit_facing_direction import (ursina_renderer.py:441) + its function in ursina_units_anim.py (dead since WK68 DTO migration) + the underground render subsystem IF confirmed dead (PRESERVE the sim-side poi_interaction dungeon) + dead scale constants. Grep-guarded; before/after Ursina base_overview screenshots must be identical. Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded). Agent 09 delete, Agent 11 verify. Plan: .cursor/plans/wk80_round_b2_ursina_renderer_deadcode.plan.md. WK79 was main a91e8ae. NOT YET COMMITTED for WK80.",
     "2026-05-30 (Agent 01 WK79 CLOSE): wk79_round_c_audio_split COMPLETE -- DoD met. Split game/audio/audio_system.py (513 -> 264 LOC) into a game/audio/ package: contract.py (AUDIO_EVENT_MAP+SOUND_COOLDOWNS_MS, now the single source -- re-imported by identity), sfx_cache.py (_assets_dir/_load_sfx/play_sfx), mixer_volume.py (6 volume getters/setters + _apply_ambient_volume), ambient.py (set/stop_ambient + interior + update_enemy_ambient + _INTERIOR_AMBIENT_MAP). AudioSystem keeps __init__/on_event/_emit_single_event/set_listener_view/_is_audible_world_event + 15 delegating wrappers (pure-move pattern). enemy_sounds.py untouched. Behavior-preserving: 758 passed/4 skipped/0 failed (+19 seam tests), determinism PASS, qa_smoke PASS (runs audio dispatch), WK67 digest b73961... BYTE-IDENTICAL, no import cycle. Agent 14 SoundDirector extract, Agent 11 verify. Plan: .cursor/plans/wk79_round_c_audio_split.plan.md. WK78 was main fa58064. Committing+pushing. SESSION: 12 sprints WK68-79 shipped (Round A finish + sim/building/hero/enemy/engine(x4)/input_handler/audio splits + entity/AI dedups + building registry). Next major: BIG presentation splits (hud.py 2477 / ursina_renderer.py 1985 -- screenshot-heavy), Move 9, world.py, config package, clusters 3/4, Round D AI router/splits, Round E audit, 21-file zombie purge. Next: WK80.",
     "2026-05-30 (Agent 01 WK79 KICKOFF): audio_system.py -> game/audio/ package (Round C-3). Split the 513-LOC audio god-file into contract.py (AUDIO_EVENT_MAP+SOUND_COOLDOWNS_MS SoT) + mixer_volume.py + ambient.py + sfx_cache.py behind a thin AudioSystem facade (pure-move pattern). Audio isolated; behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unaffected); guarded by full suite + qa_smoke (runs audio dispatch). NO screenshots. Agent 14 SoundDirector extract, Agent 11 verify. Plan: .cursor/plans/wk79_round_c_audio_split.plan.md. WK78 was main fa58064. NOT YET COMMITTED for WK79.",
     "2026-05-30 (Agent 01 WK78 CLOSE): wk78_round_b2_engine_lifecycle_facade COMPLETE -- DoD met. Extracted the 4 per-frame lifecycle methods (update/_prepare_sim_and_camera/_update_render_animations/tick_simulation) -> game/engine_facades/lifecycle.py behind delegating wrappers (WK75/76 pure-move pattern; inter-method calls routed through engine.<wrapper>). build_snapshot/build_presentation_frame/update_camera/run stay on GameEngine. engine.py 1184 -> 1072 (-112; cumulative 1678 -> 1072 across the WK75/76/78 facade extractions). Behavior-preserving: 739 passed/4 skipped/0 failed (+7 seam tests), determinism PASS, qa_smoke PASS (runs the sim through tick/update), WK67 digest b73961... BYTE-IDENTICAL, no import cycle, sanity screenshot normal frame. Agent 03 extract, Agent 11 verify+screenshot. engine.py now substantially decomposed (actions/console/selection/lifecycle facades). Remaining engine.py: __init__ split + 39x idiom cleanup (minor). NEXT MAJOR WORK = the BIG presentation splits (hud.py 2477 / ursina_renderer.py 1985 / ursina_terrain_fog_collab.py 1783 / ursina_app.py 1525 -- screenshot-heavy), then Move 9, world.py, config package, audio split, clusters 3/4/5, Round D AI router/splits, Round E audit, zombie purge. Plan: .cursor/plans/wk78_round_b2_engine_lifecycle_facade.plan.md. WK77 was main 500d646. Committing+pushing. Next: WK79.",
@@ -4073,6 +4075,66 @@
             "03(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk79_round_c_audio_split'].rounds['wk79_kickoff']) + plan .cursor/plans/wk79_round_c_audio_split.plan.md; claude-opus-4-8; PURE MOVE behavior-preserving, keep wrapper names, TYPE_CHECKING-only import; qa_smoke + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded must stay green; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
+        }
+      }
+    },
+    "wk80_round_b2_ursina_renderer_deadcode": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T14:30:00Z",
+        "plan_doc": ".cursor/plans/wk80_round_b2_ursina_renderer_deadcode.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK80 / Round B-2g)",
+        "notes": "Round B-2g: ursina_renderer.py (1979 LOC) dead-code deletion (delete-first prep for the eventual split). Remove the dead _unit_facing_direction import+function (dead since WK68) + the underground render subsystem IF confirmed dead (preserve the sim-side poi_interaction dungeon) + dead scale constants. Grep-guarded; screenshot-verified (Ursina base_overview before/after identical). Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded). Agent 09 delete, Agent 11 verify+screenshot.",
+        "definition_of_done": [
+          "A. pytest all pass (758/4/0)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded",
+          "D. qa_smoke green",
+          "E. dead _unit_facing_direction gone (zero callers); ursina_renderer.py smaller; sim-side poi_interaction UNTOUCHED",
+          "F. before/after Ursina base_overview screenshots visually identical",
+          "G. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "758 passed / 4 skipped / 0 failed",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961... byte-identical",
+          "screenshots": "PM-verified before/after Ursina base_overview PIXEL-IDENTICAL",
+          "result": "deleted dead _unit_facing_direction import+function (dead since WK68) + the inert underground-render shell/state (render body died in WK65) + dead PEASANT_SCALE alias. ursina_renderer.py 1979->1959; ursina_units_anim.py -31. Grep-proven zero live callers; sim-side poi_interaction UNTOUCHED. NOTE: most of the audit-flagged 450 dead LOC was already removed in WK65/68; this cleaned the residual. PM verified directly (screenshots+grep) -- no separate Agent 11 wave for this trivial deletion."
+        }
+      },
+      "rounds": {
+        "wk80_kickoff": {
+          "round_meta": {
+            "round_id": "wk80_kickoff",
+            "created_utc": "2026-05-30T14:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk80_round_b2_ursina_renderer_deadcode.plan.md",
+            "build_target": "ursina_renderer dead-code deletion",
+            "goal": "all tests pass; render visually unchanged"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "render visually identical (before/after screenshot) + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical",
+            "wave_dag": "W1(09 grep-guarded delete + before/after screenshots)->gate->W2(11 verify+screenshot review)->commit",
+            "dispatch_order": [
+              "09 W1",
+              "11 W2"
+            ]
+          },
+          "pm_agent_prompts": {
+            "09": "[Agent 09 ArtDirector] Delete confirmed-dead code from game/graphics/ursina_renderer.py (1979 LOC) per plan .cursor/plans/wk80_round_b2_ursina_renderer_deadcode.plan.md section 1. GREP-GUARD EVERY deletion (grep the whole repo for live callers/readers; delete only if ZERO, excluding comments + the def itself). (1) Remove the dead `_unit_facing_direction` import at ursina_renderer.py:441 and DELETE the `_unit_facing_direction` function in game/graphics/ursina_units_anim.py (dead since WK68 -- renderers use _facing_from_dto/_facing_for_dto; confirm zero live callers). Fix any comment refs (ursina_renderer.py:639, instanced_unit_renderer.py:284-287) that mention it. (2) READ _sync_underground_meshes (~1396) + any UrsinaUnderground* render helpers; determine if the underground RENDER is behind an unconditional early return / off feature gate so the body never runs in prod. IF CONFIRMED dead, delete the dead body (collapse _sync_underground_meshes to a documented no-op or remove it + its :1104/:1119 call sites). CRITICAL: do NOT touch the SIM-SIDE dungeon (game/systems/poi_interaction.py _handle_dungeon etc.) -- only the render is dead; the sim dungeon is live. If you CANNOT confirm the underground render is dead, LEAVE it and report. (3) Any confirmed-unused dead scale constants. SCREENSHOT before/after: capture Ursina base_overview BEFORE editing (python tools/run_ursina_capture_once.py --scenario base_overview --ticks 480 --no-llm --out docs/screenshots/wk80_before) and AFTER (--out docs/screenshots/wk80_after); they MUST be visually identical (dead-code deletion -> no visual change). VERIFY: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), python -m pytest -q (758 passed), determinism_guard, qa_smoke --quick. Report: every symbol deleted (with the grep proving zero callers), whether you deleted the underground render (and the evidence) or left it (why), ursina_renderer.py new LOC (was 1979), the before/after screenshot paths + your visual verdict, digest, suite totals. DO NOT touch poi_interaction or the sim-side. DO NOT COMMIT; update agent_09 log (round wk80_w1).",
+            "11": "[Agent 11] W2 (after 09): confirm the deletions are clean -- grep the repo to assert the deleted symbols (_unit_facing_direction, and any underground render symbols 09 deleted) have ZERO remaining references in production code (game/**, excluding comments). Independently VIEW Agent 09's before/after Ursina screenshots (docs/screenshots/wk80_before vs wk80_after) and confirm they are visually identical (terrain/buildings/units/HUD) -- give a written verdict. Confirm poi_interaction.py (sim-side dungeon) is UNCHANGED (git diff --stat shows no poi_interaction change). Full DoD: pytest (all pass), determinism_guard, digest (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke. Report PASS/FAIL + DoD A-G + screenshot verdict. Only inspection + (optionally) a tests/test_wk80_deadcode.py that asserts the deleted symbols are gone (import of ursina_units_anim has no _unit_facing_direction). No prod edits; DO NOT COMMIT; update agent_11 log (round wk80_w2).",
+            "03": "[Agent 03 CONSULT] available if a 'dead' symbol turns out to have a live caller. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "09",
+            "11",
+            "03(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk80_round_b2_ursina_renderer_deadcode'].rounds['wk80_kickoff']) + plan .cursor/plans/wk80_round_b2_ursina_renderer_deadcode.plan.md; claude-opus-4-8; DELETE ONLY grep-confirmed-dead (zero live callers); do NOT touch the sim-side dungeon/poi_interaction; before/after Ursina screenshots MUST match; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }

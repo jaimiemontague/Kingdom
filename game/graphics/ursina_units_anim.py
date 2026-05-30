@@ -116,37 +116,6 @@ def _tax_collector_base_clip(tc) -> str:
     return "idle"
 
 
-def _unit_facing_direction(entity) -> int:
-    """Compute facing direction for a unit: 1 = right (default), -1 = left.
-
-    During combat (attack animation playing), face toward the combat target.
-    Otherwise, face in the direction of movement (dx from previous position).
-    """
-    # Check for a combat target — if the entity has a target with x/y coords,
-    # face toward it. This covers heroes attacking enemies.
-    target = getattr(entity, "target", None)
-    if target is not None and hasattr(target, "x") and hasattr(target, "y"):
-        try:
-            dx = float(target.x) - float(entity.x)
-            if abs(dx) > 0.01:
-                return 1 if dx >= 0 else -1
-        except (TypeError, AttributeError):
-            pass
-
-    # Fallback: use movement-based facing tracked by _ks_facing / _ks_last_x.
-    last_x = getattr(entity, "_ks_last_x", None)
-    cur_x = float(getattr(entity, "x", 0.0))
-    if last_x is not None:
-        dx = cur_x - last_x
-        if abs(dx) > 0.01:
-            prev_facing = getattr(entity, "_ks_facing", 1)
-            entity._ks_facing = 1 if dx >= 0 else -1
-            entity._ks_last_x = cur_x
-            return entity._ks_facing
-    entity._ks_last_x = cur_x
-    return getattr(entity, "_ks_facing", 1)
-
-
 def _worker_idle_surface(worker_type: str):
     wt = str(worker_type or "peasant").lower()
     sz = int(getattr(config, "UNIT_SPRITE_PIXELS", 32))

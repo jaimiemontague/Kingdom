@@ -98,8 +98,6 @@ _WB = float(getattr(config, "URSINA_WORKER_BILLBOARD_BASE", 0.42))
 _WYM = float(getattr(config, "URSINA_WORKER_BILLBOARD_Y_SCALE_MUL", 0.55))
 PEASANT_SCALE_XZ = _WB * _US
 PEASANT_SCALE_Y = PEASANT_SCALE_XZ * _WYM
-# Instanced path uses a single uniform scale — approximate squashed height.
-PEASANT_SCALE = PEASANT_SCALE_Y
 GUARD_SCALE_XZ = 0.5 * _US
 GUARD_SCALE_Y = 0.7 * _US
 
@@ -438,7 +436,6 @@ from game.graphics.ursina_units_anim import (
     _enemy_base_clip,
     _peasant_base_clip,
     _tax_collector_base_clip,
-    _unit_facing_direction,
 )
 
 from game.graphics.terrain_height import get_terrain_height, is_initialized as _terrain_height_ok
@@ -571,13 +568,11 @@ class UrsinaRenderer:
         self._terrain_fog = UrsinaTerrainFogCollab(self)
         self._entity_render = UrsinaEntityRenderCollab(self)
 
-        # WK57 Wave 2: Underground terrain mesh manager
-        from game.graphics.underground_terrain import UndergroundTerrainManager
-        self._underground_mgr = UndergroundTerrainManager()
-        self._underground_cave_shader_rev = -1  # tracks when to update cave entrance shader
-
-        # WK57 Wave 3: Underground lighting (torch PointLights) + layer visibility state
-        self._underground_lights: list = []  # Panda3D PointLight NodePaths
+        # WK57 Wave 3: layer visibility state (camera layer set each frame by UrsinaApp).
+        # WK80 (Agent 09): the underground RENDER state (_underground_mgr / cave-shader rev /
+        # _underground_lights) was removed — its render body died in WK65 (early-return
+        # _sync_underground_meshes, since deleted in WK80). The SIM-side dungeon
+        # (poi_interaction._handle_dungeon) is unaffected; restore from git (WK57) to revive.
         self._camera_active_layer: int = 0  # set each frame by UrsinaApp
 
     def _setup_scene_lighting(self) -> None:
@@ -636,7 +631,8 @@ class UrsinaRenderer:
     def _facing_from_dto(self, dto) -> int:
         """WK68 R2 (Agent 09): facing (1=right, -1=left) from a frozen UnitDTO.
 
-        Byte-for-byte port of ``ursina_units_anim._unit_facing_direction`` but reads
+        Port of the former ``ursina_units_anim._unit_facing_direction`` (the live-entity
+        facing helper, deleted in WK80 once this DTO path fully replaced it) but reads
         the DTO (``target_x``/``x``) and keeps the movement-tracking scratch in a
         renderer-owned dict keyed by the stable ``entity_id`` — NOT stamped onto the
         live entity (which the renderer no longer holds). Same precedence: combat
@@ -1101,7 +1097,6 @@ class UrsinaRenderer:
                 self._instanced_unit_renderer = InstancedUnitRenderer()
             active_ids: set[int] = set()
             self._sync_snapshot_buildings(snapshot, world, active_ids)
-            self._sync_underground_meshes(snapshot, world)
             # WK67 Wave 5: forward the sim tick so the instanced anim FSM uses the
             # SAME tick basis as the legacy path (deterministic captures under
             # DETERMINISTIC_SIM; wall-clock otherwise).
@@ -1115,9 +1110,6 @@ class UrsinaRenderer:
         active_ids = set()
         self._sync_snapshot_buildings(snapshot, world, active_ids)
         if _stage_profile: _rec("10_sync_snapshot_buildings", _t0); _t0 = time.perf_counter()
-        # WK57 Wave 2: Create underground meshes for discovered dungeon POIs
-        self._sync_underground_meshes(snapshot, world)
-        if _stage_profile: _rec("11_sync_underground_meshes", _t0); _t0 = time.perf_counter()
         self._sync_snapshot_heroes(snapshot, active_ids, HeroClass)
         if _stage_profile: _rec("12_sync_snapshot_heroes", _t0); _t0 = time.perf_counter()
         self._sync_snapshot_enemies(snapshot, world, active_ids)
@@ -1392,19 +1384,6 @@ class UrsinaRenderer:
             active_ids.add(obj_id)
 
         _maybe_log_tax_overlay_debug(getattr(snapshot, "building_dtos", ()))
-
-    def _sync_underground_meshes(self, snapshot: "SimStateSnapshot", world) -> None:
-        """WK57 Wave 2: Create underground cave meshes for discovered dungeon POIs.
-
-        WK65 Round 0: FEATURE GATE — underground visuals are disabled and the method
-        returns immediately. The dead render block that previously followed this return
-        (cave-mesh/stalactite creation + torch PointLight helpers
-        ``_create_underground_lighting`` / ``_remove_underground_lighting``) was
-        unreachable and has been deleted. The sim-side dungeon entry
-        (``poi_interaction._handle_dungeon``) is unaffected. If underground visuals are
-        revived, restore from git history (WK57 Wave 2/3).
-        """
-        return
 
     def _sync_snapshot_heroes(self, snapshot: "SimStateSnapshot", active_ids: set, HeroClass) -> None:
         # Heroes — atlas UV billboards (WK59 perf: single shared texture, UV offset per frame)

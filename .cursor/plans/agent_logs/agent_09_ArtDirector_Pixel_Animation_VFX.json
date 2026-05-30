@@ -9,6 +9,71 @@
   "Structure nests rounds inside sprints to keep history organized."
  ],
  "sprints": {
+  "wk80_round_b2_ursina_renderer_deadcode": {
+   "sprint_meta": {
+    "notes": "WK80 Round B-2 W1 (Agent 09): grep-guarded dead-code deletion from ursina_renderer.py (split-prep). Deleted the dead _unit_facing_direction path (import + source fn), the already-no-op underground RENDER shell (method + 2 call sites + dead __init__ state), and the dead PEASANT_SCALE constant. Behavior byte-identical (WK67 digest unchanged); before/after Ursina base-overview screenshots pixel-identical. SIM-side dungeon (poi_interaction) UNTOUCHED.",
+    "created_utc": "2026-05-30T12:40:21.574367+00:00"
+   },
+   "rounds": {
+    "wk80_w1": {
+     "sprint_id": "wk80_round_b2_ursina_renderer_deadcode",
+     "round_id": "wk80_w1",
+     "status": "done",
+     "role": "W1 - delete grep-confirmed-dead code from game/graphics/ursina_renderer.py (+ its dead helper in ursina_units_anim.py) before the eventual file split. DELETE ONLY zero-caller symbols. Screenshot-verified no visual change.",
+     "what_i_changed": {
+      "game/graphics/ursina_renderer.py": [
+       "DELETED the dead `_unit_facing_direction` import (was line 441 in the ursina_units_anim import block) - dead since WK68's DTO migration; renderers use _facing_from_dto / instanced _facing_for_dto.",
+       "DELETED the underground RENDER shell: the no-op `_sync_underground_meshes` method (a documented early-return `return` since WK65 - its render body was already deleted then) + BOTH call sites (instanced path + legacy path incl. the `11_sync_underground_meshes` _stage_profile line) + the dead __init__ render state (`_underground_mgr` / `UndergroundTerrainManager` local import / `_underground_cave_shader_rev` / `_underground_lights`). KEPT `_camera_active_layer` (LIVE: read at 6 sites for layer visibility, written by ursina_app.py:1513). Replaced the deleted __init__ lines with a comment documenting the removal + revive path.",
+       "DELETED the dead module constant `PEASANT_SCALE = PEASANT_SCALE_Y` (+ its now-misleading comment) - zero readers repo-wide; the instanced path uses its OWN module-local PEASANT_SCALE (instanced_unit_renderer.py:56). KEPT PEASANT_SCALE_XZ/_Y/UNIT_BILLBOARD_SCALE/ENEMY_SCALE/GUARD_SCALE_*/PROJECTILE_* (all have live readers).",
+       "COMMENT-ONLY: updated the _facing_from_dto docstring (was ':639') so it refers to the FORMER _unit_facing_direction (deleted in WK80) instead of as a live module member."
+      ],
+      "game/graphics/ursina_units_anim.py": [
+       "DELETED the `_unit_facing_direction(entity)` function (31 lines) - the live-entity facing helper, dead since WK68. Grep-confirmed the only `_unit_facing_direction(` call-with-paren in any .py was the def line itself; zero invocations."
+      ]
+     },
+     "deletions_grep_evidence": {
+      "_unit_facing_direction": "grep `_unit_facing_direction\\s*\\(` over *.py -> ONLY hit = the def line ursina_units_anim.py:119 (now deleted). grep bare name -> live-code hits were ONLY the import (ursina_renderer.py:441, removed) + the def; all remaining hits are comments/docstrings (instanced_unit_renderer.py:174/284/287, render_dto.py:76/171, tests, plan/log docs). ZERO live callers.",
+      "underground_render": "grep `self._underground_mgr`/`self._underground_cave_shader_rev`/`self._underground_lights` over the repo -> each assigned EXACTLY ONCE (ursina_renderer.py:576/577/580) with ZERO reads in any live .py (the only read-side refs are in the WK57 plan doc, whose code was deleted in WK65). _sync_underground_meshes was already a no-op `return` (WK65). Agent 10's WK65 log confirms the render body + _create/_remove_underground_lighting were deleted then. `_camera_active_layer` is LIVE (kept). perf_render_benchmark.py has no hardcoded dependency on the `11_sync_underground_meshes` stage label.",
+      "PEASANT_SCALE": "grep `\\bPEASANT_SCALE\\b` over *.py -> in ursina_renderer.py only the assignment (line 102, deleted); zero reads in ursina_renderer.py or anywhere. instanced_unit_renderer.py:520/522/551/553 read ITS OWN module-local PEASANT_SCALE (its line 56). No module imports ursina_renderer.PEASANT_SCALE. ZERO readers."
+     },
+     "underground_render_verdict": "DELETED (the shell, not a fresh body). The underground RENDER body was already dead-deleted in WK65 (Agent 10), which left `_sync_underground_meshes` as a documented early-return no-op + orphaned __init__ state. In WK80 I removed the no-op method, its two (no-op) call sites, and the 3 unread __init__ fields + the now-unused UndergroundTerrainManager local import. Evidence it was dead: method body was literally `return`; the 3 __init__ fields had zero reads repo-wide; full suite + qa_smoke + determinism + identical before/after screenshots all green. SIM-side dungeon (game/systems/poi_interaction.py _handle_dungeon) was NOT touched. underground_terrain.py (the UndergroundTerrainManager source module) was NOT touched/deleted - left for revival.",
+     "loc": {
+      "ursina_renderer_before": 1979,
+      "ursina_renderer_after": 1959,
+      "ursina_renderer_net_delta": "-20 (raw deletions ~33 lines; +13 explanatory comments re: the underground-state removal + revive path, kept intentionally for the eventual split)",
+      "ursina_units_anim_lines_removed": 31,
+      "git_diff_stat": "ursina_renderer.py: 7 insertions / ... ; combined 2 files changed, 7 insertions(+), 59 deletions(-)"
+     },
+     "screenshots": {
+      "before": "docs/screenshots/wk80_before/ursina_20260530_062945_054.png",
+      "after": "docs/screenshots/wk80_after/ursina_20260530_063932_796.png",
+      "capture_cmd": "python tools/run_ursina_capture_once.py --ticks 480 --no-llm --out docs/screenshots/wk80_{before,after} (no --scenario: base_overview scenario is unregistered per CAP-001 from WK68; default path runs main.py --renderer ursina --no-llm = base overview)",
+      "visual_verdict": "IDENTICAL. Pixel-for-pixel match: same terrain island, same castle/houses/farm prefabs + scatter, same HUD (Gold 2100 / Heroes 0 / Wave 1 / bounty tip), same Frame Time debug overlay, same Build/Hire/Bounty toolbar + speed controls. Dead-code deletion -> zero visual change, as required."
+     },
+     "evidence": {
+      "wk67_ai_boundary": {"cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q", "result": "10 passed", "digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded", "digest_status": "UNCHANGED (asserted by the passing test at line 181)"},
+      "full_suite": {"cmd": "python -m pytest -q", "result": "758 passed, 4 skipped, 0 failed", "time": "145.23s"},
+      "determinism_guard": {"cmd": "python tools/determinism_guard.py", "result": "PASS: no violations found"},
+      "qa_smoke": {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS"},
+      "import_parse": "ast.parse OK on both edited files; no dangling refs (grep of deleted symbols in ursina_renderer.py returns only the explanatory comments I added)."
+     },
+     "how_to_test": [
+      "python -m pytest tests/test_wk67_ai_boundary.py -q",
+      "python -m pytest -q",
+      "python tools/determinism_guard.py",
+      "python tools/qa_smoke.py --quick",
+      "python tools/run_ursina_capture_once.py --ticks 480 --no-llm --out docs/screenshots/wk80_after"
+     ],
+     "constraints_honored": "Lane = game/graphics/ursina_renderer.py + game/graphics/ursina_units_anim.py only (one comment-only touch was NOT needed in instanced_unit_renderer.py - its `old _unit_facing_direction` comments remain accurate as historical context). poi_interaction.py / sim-side dungeon UNTOUCHED. DELETE ONLY grep-confirmed-dead. Did NOT commit.",
+     "blockers": [],
+     "follow_ups": [
+      "ursina_renderer.py module split (the audit's 8-module target) is now unblocked for the dead-code portion.",
+      "underground_terrain.py (UndergroundTerrainManager source, ~unused now) is a candidate for a future zombie-purge sprint, but it's out of this lane and was left intact for revival.",
+      "CAP-001 still open: run_ursina_capture_once has no `base_overview` scenario; consider registering one in tools/screenshot_scenarios.py so the PM-prompt command works verbatim."
+     ]
+    }
+   }
+  },
   "wk47_unit_instancing_core": {
    "sprint_meta": {
     "plan_ref": ".cursor/plans/unit_instancing_master_plan_09d73f6a.plan.md",
