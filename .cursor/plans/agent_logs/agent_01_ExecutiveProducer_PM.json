@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK83 CLOSE): wk83_round_d_movement_dispatcher COMPLETE -- DoD met. Moved handle_moving (the global MOVING-state dispatcher, ~140 LOC) from ai/behaviors/bounty_pursuit.py (368 -> 236 LOC) into ai/behaviors/movement.py; bounty_pursuit.handle_moving is now a 1-line delegating shim so basic_ai self.bounty_behavior.handle_moving is unchanged. Cycle avoided via lazy imports both ways (movement.py has no top-level bounty_pursuit import -- lazy inside handle_moving; shim imports movement lazily; verified static AST + dynamic both load orders). Behavior-preserving: 800 passed/4 skipped/0 failed (+7 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (the PERFECT guard -- MOVING dispatch ARE the hashed movement decisions). Agent 06 move, Agent 11 verify. Plan: .cursor/plans/wk83_round_d_movement_dispatcher.plan.md. WK82 was main 86dba8a. Committing+pushing. SESSION: 16 sprints WK68-83 shipped; suite grown 601->800 passed; digest b73961 held byte-identical throughout. REMAINING: hud.py split (2477), ursina_renderer body split, ursina_terrain_fog_collab/ursina_app splits, Move 9, world.py, config package, clusters 3/4, rest of Round D (context_builder/direct_prompt_validator/exploration handle_idle + vocab + TaskRouter), Round E audit, 21-file zombie purge. Next: WK84.",
+    "2026-05-30 (Agent 01 WK83 KICKOFF): move handle_moving -> ai/behaviors/movement.py (Round D-3). Relocate the global MOVING-state dispatcher handle_moving (~140 LOC) from bounty_pursuit.py into movement.py (WK74); leave a bounty_pursuit.handle_moving shim so basic_ai's self.bounty_behavior.handle_moving caller is unchanged. Cycle avoided via lazy imports both ways. Perfectly digest-guarded (MOVING dispatch drives the digest); headless. Agent 06 move, Agent 11 verify. Plan: .cursor/plans/wk83_round_d_movement_dispatcher.plan.md. WK82 was main 86dba8a. NOT YET COMMITTED for WK83.",
     "2026-05-30 (Agent 01 WK82 CLOSE): wk82_round_d_basic_ai_handlers COMPLETE -- DoD met. Extracted BasicAI inline state-machine handlers out of ai/basic_ai.py (515 -> 416 LOC): handle_fighting (+nested _chase_goal_unchanged) -> ai/behaviors/combat.py; handle_retreating + _finalize_deferred_task -> ai/behaviors/recovery.py; BasicAI keeps 3 lazy-import delegating wrappers (update_hero dispatch unchanged). handle_idle/moving/shopping already delegated; handle_resting stays. Behavior-preserving: 793 passed/4 skipped/0 failed (+13 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (the PERFECT guard -- combat/retreat ARE the hashed decisions). Leaf-only imports + TYPE_CHECKING BasicAI import avoided the ai.behaviors.__init__->llm_bridge cycle. Agent 06 extract, Agent 11 verify. Plan: .cursor/plans/wk82_round_d_basic_ai_handlers.plan.md. WK81 was main 2d30f21. Committing+pushing. SESSION: 15 sprints WK68-82 shipped. REMAINING: hud.py split (2477), ursina_renderer body split, ursina_terrain_fog_collab/ursina_app splits, Move 9, world.py, config package, clusters 3/4, rest of Round D (context_builder/direct_prompt_validator/bounty_pursuit/exploration + vocab + TaskRouter), Round E audit, 21-file zombie purge. Next: WK83.",
     "2026-05-30 (Agent 01 WK82 KICKOFF): basic_ai.py inline-handler extraction (Round D-2). Move handle_fighting (+nested _chase_goal_unchanged), handle_retreating, _finalize_deferred_task out of ai/basic_ai.py into ai/behaviors/combat.py + recovery.py behind thin delegating wrappers (pure-move). handle_idle/moving/shopping already delegate; handle_resting stays. Perfectly digest-guarded (combat/retreat ARE the hashed decisions); headless. Agent 06 extract, Agent 11 verify. Plan: .cursor/plans/wk82_round_d_basic_ai_handlers.plan.md. WK81 was main 2d30f21. NOT YET COMMITTED for WK82.",
     "2026-05-30 (Agent 01 WK81 CLOSE): wk81_round_d_mock_provider_split COMPLETE -- DoD met. Split ai/providers/mock_provider.py (519 -> 129 LOC) into ai/providers/mock/ package: autonomous.py (mock_autonomous_decision), direct_prompt.py (mock_direct_prompt + _hero_ctx/_emit_validated helpers), legacy_decision.py (make_decision), conversation.py (mock_conversation_response), behind a thin MockProvider facade (complete() dispatch unchanged; MockProvider stays at ai/providers/mock_provider.py for the registry import; RNG singleton lazy-imported so the deterministic stream is not forked). Behavior-preserving: 780 passed/4 skipped/0 failed (+22 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (the PERFECT guard -- the digest hero-decisions ARE this mocks output). Agent 06 extract; Agent 11 W2 created the seam test but hit a transient API 529 on its report -- PM verified the seam test (passes) + ran the full DoD gate directly. Plan: .cursor/plans/wk81_round_d_mock_provider_split.plan.md. WK80 was main 348a6e6. Committing+pushing. SESSION: 14 sprints WK68-81 shipped. REMAINING: hud.py split (2477), ursina_renderer body split, ursina_terrain_fog_collab/ursina_app splits, Move 9, world.py, config package, clusters 3/4, rest of Round D (basic_ai/context_builder/direct_prompt_validator/bounty_pursuit/exploration + vocab + TaskRouter), Round E audit, 21-file zombie purge. Next: WK82.",
@@ -4258,6 +4260,65 @@
             "05(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk82_round_d_basic_ai_handlers'].rounds['wk82_kickoff']) + plan .cursor/plans/wk82_round_d_basic_ai_handlers.plan.md; claude-opus-4-8; PURE MOVE behavior-preserving, keep wrapper names, TYPE_CHECKING-only import, leaf imports only (avoid the ai.behaviors.__init__ cycle); digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (perfect guard) must stay byte-identical; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
+        }
+      }
+    },
+    "wk83_round_d_movement_dispatcher": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T17:30:00Z",
+        "plan_doc": ".cursor/plans/wk83_round_d_movement_dispatcher.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK83 / Round D-3)",
+        "notes": "Round D-3: move handle_moving (the global MOVING-state dispatcher) from bounty_pursuit.py (368 LOC) into ai/behaviors/movement.py; leave a bounty_pursuit.handle_moving shim so basic_ai's self.bounty_behavior.handle_moving caller is unchanged. Pure-move; cycle avoided via lazy imports both ways. Perfectly digest-guarded (MOVING dispatch drives the digest). Headless. Agent 06 move, Agent 11 verify.",
+        "definition_of_done": [
+          "A. pytest all pass (793/4/0)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (perfect guard)",
+          "D. qa_smoke green",
+          "E. movement.handle_moving exists; bounty_pursuit.handle_moving is a delegating shim; basic_ai caller unchanged; bounty_pursuit.py smaller; no cycle",
+          "F. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "800 passed / 4 skipped / 0 failed (793 + 7 seam tests)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961... byte-identical (PERFECT guard, independently reproduced)",
+          "bounty_pursuit_loc": "368 -> 236",
+          "result": "handle_moving (global MOVING-state dispatcher) moved from bounty_pursuit.py into ai/behaviors/movement.py; bounty_pursuit.handle_moving is a delegating shim (basic_ai caller unchanged); cycle avoided via lazy imports both ways (verified static AST + dynamic both load orders)."
+        }
+      },
+      "rounds": {
+        "wk83_kickoff": {
+          "round_meta": {
+            "round_id": "wk83_kickoff",
+            "created_utc": "2026-05-30T17:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk83_round_d_movement_dispatcher.plan.md",
+            "build_target": "handle_moving -> movement.py",
+            "goal": "all tests pass; MOVING dispatch byte-identical"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical (PERFECT guard) + no import cycle",
+            "wave_dag": "W1(06)->gate(suite+digest+qa_smoke+cycle)->W2(11 verify)->commit",
+            "dispatch_order": [
+              "06 W1",
+              "11 W2"
+            ]
+          },
+          "pm_agent_prompts": {
+            "06": "[Agent 06] Move the global MOVING-state dispatcher handle_moving from ai/behaviors/bounty_pursuit.py into ai/behaviors/movement.py (created in WK74) per plan .cursor/plans/wk83_round_d_movement_dispatcher.plan.md sections 1-2. The 300-tick AI-decision digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded is a PERFECT guard (MOVING dispatch drives it). Move handle_moving (bounty_pursuit.py ~227-368, ~140 LOC) VERBATIM into movement.py as `def handle_moving(ai, hero, view) -> None:`. It references bounty_pursuit helpers (start_bounty_pursuit/score_bounty/maybe_take_bounty/_resolve_bounty_from_target/_seed_direct_prompt_explore_bearing) + arrival_handlers + journey + route_to_building -- import what it needs. Leave a 1-line shim in bounty_pursuit.py: def handle_moving(ai, hero, view): from ai.behaviors import movement; return movement.handle_moving(ai, hero, view) -- so basic_ai.py:341 (self.bounty_behavior.handle_moving(self, hero, view)) is UNCHANGED. CYCLE (critical): movement.handle_moving needs bounty_pursuit helpers AND bounty_pursuit's shim needs movement -- avoid a module-top cycle: import the bounty_pursuit helpers LAZILY inside movement.handle_moving (from ai.behaviors import bounty_pursuit at the top of the function), and the shim imports movement LAZILY inside its body. Keep movement.py's existing top-level leaf imports (route_to_building etc.). VERIFY no cycle with fresh imports of both modules. Move the body VERBATIM (no logic change). VERIFY: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), python -m pytest -q (793 passed), determinism_guard, qa_smoke --quick, and `python -c \"import ai.behaviors.movement; import ai.behaviors.bounty_pursuit; from ai.behaviors import movement as m; print(hasattr(m,'handle_moving'))\"`. If the digest drifts, the moved body changed -- diff vs git show HEAD:ai/behaviors/bounty_pursuit.py. Report: movement.handle_moving, the bounty_pursuit shim, bounty_pursuit.py new LOC (was 368), how you avoided the cycle, digest, suite totals, qa_smoke. DO NOT COMMIT; update agent_06 log (round wk83_w1).",
+            "11": "[Agent 11] W2 (after 06): create tests/test_wk83_movement_dispatcher.py: assert ai.behaviors.movement.handle_moving exists+callable; assert ai.behaviors.bounty_pursuit.handle_moving is a delegating shim (spy+monkeypatch movement.handle_moving, call bounty_pursuit.handle_moving(ai,hero,view), assert movement.handle_moving fired with the same args); assert no module-load cycle (fresh subprocess: import ai.behaviors.movement then ai.behaviors.bounty_pursuit -- both succeed; and movement.py top-level does not import bounty_pursuit, only lazily inside handle_moving -- AST check). Full DoD: pytest (all pass), determinism_guard, digest (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke. NO screenshots. Report PASS/FAIL + DoD A-F. Only your test; no prod edits; DO NOT COMMIT; update agent_11 log (round wk83_w2).",
+            "05": "[Agent 05 CONSULT] available if MOVING dispatch semantics unclear. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "06",
+            "11",
+            "05(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk83_round_d_movement_dispatcher'].rounds['wk83_kickoff']) + plan .cursor/plans/wk83_round_d_movement_dispatcher.plan.md; claude-opus-4-8; PURE MOVE behavior-preserving, keep the bounty_pursuit.handle_moving shim (caller unchanged), LAZY imports both ways to avoid the cycle; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (perfect guard) must stay byte-identical; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }

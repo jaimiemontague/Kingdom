@@ -3817,6 +3817,56 @@
           "notes": "Pure-move seam verification only; no production edits, did not commit; no screenshots (audio has no on-screen change). The contract single-source guarantee is verified by object identity (audio_system re-imports the SAME dict objects from contract.py, not copies), so AUDIO_EVENT_MAP/SOUND_COOLDOWNS_MS cannot drift. Audio is fully isolated from sim/render/AI, so structural soundness (imports OK + delegation verified + full suite + qa_smoke audio-event dispatch green) is a reliable correctness proof; the WK67 AI-decision digest is byte-identical as expected since audio never touches the sim. Note: the set_ambient/play_sfx wrappers normalise their optional params to defaults and forward them positionally (volume=0.4 / 1.0) - the delegation test asserts the actual forwarded tail, which is correct behavior. No regressions found."
         }
       }
+    },
+    "wk83_round_d_movement_dispatcher": {
+      "sprint_meta": {
+        "sprint_id": "wk83_round_d_movement_dispatcher",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "goal": "QA W2: verify the WK83 move of the global MOVING-state dispatcher handle_moving(ai,hero,view) VERBATIM out of ai/behaviors/bounty_pursuit.py (368->236 LOC) into ai/behaviors/movement.py, with bounty_pursuit.handle_moving left as a 1-line delegating shim so basic_ai (self.bounty_behavior.handle_moving) is unchanged, and the movement<->bounty_pursuit cycle avoided via LAZY imports both ways. Lock the seam (movement.handle_moving exists+callable; shim delegates with same (ai,hero,view); no module-load cycle in either import order; movement.py has no top-level bounty_pursuit import) and run the full DoD gate. NO screenshots (pure-move headless AI sprint)."
+      },
+      "rounds": {
+        "wk83_w2": {
+          "sprint_id": "wk83_round_d_movement_dispatcher",
+          "round_id": "wk83_w2",
+          "status": "done",
+          "round_meta": {
+            "wave": "W2 (seam test + DoD gate; NO screenshots - pure-move AI sprint)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "created_utc": "2026-05-30T00:00:00Z",
+            "depends_on": "wk83 W1 (Agent 06 moved handle_moving VERBATIM bounty_pursuit.py->movement.py, left bounty_pursuit.handle_moving as a 1-line shim, lazy imports both ways; verified digest UNCHANGED + 793 passed + qa_smoke PASS + no cycle)."
+          },
+          "prompt_summary": "WK83 W2: create tests/test_wk83_movement_dispatcher.py asserting ai.behaviors.movement.handle_moving exists+callable; bounty_pursuit.handle_moving is a delegating shim (spy+monkeypatch movement.handle_moving, call bounty_pursuit.handle_moving(ai,hero,view) with sentinels, assert movement.handle_moving fired with the SAME (ai,hero,view) + return forwarded); NO module-load cycle (fresh subprocess imports movement then bounty_pursuit AND the reverse - both succeed; AST check that movement.py has no top-level import of bounty_pursuit, only lazily inside handle_moving). Full DoD: pytest all pass, determinism_guard, WK67 digest == b73961..., qa_smoke --quick. Only the test file; no prod edits; DO NOT COMMIT; NO screenshots.",
+          "what_i_changed": {
+            "summary": "Created tests/test_wk83_movement_dispatcher.py (7 headless seam tests) locking the WK83 dispatcher relocation: (1) ai.behaviors.movement.handle_moving exists+callable, and bounty_pursuit.handle_moving still present (the basic_ai caller name); (2) bounty_pursuit.handle_moving DELEGATES to movement.handle_moving - spy+monkeypatch on movement.handle_moving, call the shim with three distinct sentinels, assert movement.handle_moving fired exactly once with the SAME (ai,hero,view) positionally (no extra args, no kwargs) and the shim returned the module fn's return value; (3) NO module-load cycle - AST guard that movement.py has NO top-level (non-TYPE_CHECKING) import of bounty_pursuit (matches both 'import ai.behaviors.bounty_pursuit' and 'from ai.behaviors import bounty_pursuit'), a sanity AST check that handle_moving DOES lazily import bounty_pursuit inside its body (so the helper dependency is real, not dropped), and two FRESH-subprocess imports proving 'import ai.behaviors.movement; import ai.behaviors.bounty_pursuit' and the REVERSE order both succeed (a top-level cycle would ImportError). No production code touched. No screenshots (pure-move AI sprint).",
+            "files_created": [
+              "tests/test_wk83_movement_dispatcher.py"
+            ],
+            "files_modified": []
+          },
+          "new_tests": [
+            "test_movement_exposes_handle_moving",
+            "test_bounty_pursuit_still_exposes_handle_moving",
+            "test_shim_delegates_to_movement_handle_moving",
+            "test_movement_has_no_module_level_bounty_pursuit_import",
+            "test_movement_handle_moving_imports_bounty_pursuit_lazily",
+            "test_no_module_load_cycle_fresh_import (parametrized x2: movement->bounty_pursuit and bounty_pursuit->movement)"
+          ],
+          "screenshot": "N/A - pure-move AI sprint (no on-screen change). Behavioral verification via full suite + the WK67 AI-decision digest (the MOVING dispatch IS the hero movement decisions the 300-tick digest hashes - a PERFECT guard) + qa_smoke.",
+          "dod_gate": {
+            "A_full_suite": "800 passed, 4 skipped, 0 failed in 148.86s (baseline 793+4 skipped; +7 = new WK83 seam tests). PASS",
+            "B_determinism_guard": "PASS: no violations found (exit 0)",
+            "C_ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded BYTE-IDENTICAL to golden (constant pinned in tests/test_wk67_ai_boundary.py line 181). tests/test_wk67_ai_boundary.py = 10 passed. Independently reproduced the printer digest with the exact subprocess env (DETERMINISTIC_SIM=1, SIM_SEED=3, dummy SDL drivers) = b73961... PASS. (NOTE: a one-off manual 'set VAR=val&& python -m ...' invocation under the Bash tool printed a stale b31745... - that was a shell env-propagation artifact of the manual command, NOT a digest drift; the pytest pin and the correct-env reproduction both confirm byte-identical.)",
+            "D_qa_smoke_quick": "DONE: PASS (exit 0) across speed-scaling 0.25x/0.5x/1.0x + interior_view/quest_panel/conversation/direct_prompt_integration - heroes drive the relocated MOVING dispatcher (bounty claim/abandon, arrival dispatch, chase zone-limit, enter-FIGHTING) without crash",
+            "E_seam_structure": "movement.handle_moving exists+callable; bounty_pursuit.handle_moving is a 1-line delegating shim (verified by spy: forwards the SAME (ai,hero,view) positionally + returns the module result); basic_ai caller (self.bounty_behavior.handle_moving) UNCHANGED; bounty_pursuit.py = 236 LOC (down from 368, -132); NO import cycle (AST: no top-level bounty_pursuit import in movement.py, lazy import inside handle_moving confirmed present; fresh subprocess imports succeed in BOTH orders). PASS",
+            "F_logs_and_close": "this log entry written; PM hub close handed to Agent 01. PASS",
+            "verdict": "PASS"
+          },
+          "notes": "Pure-move seam verification only; no production edits, did not commit, no screenshots (pure-move AI sprint, no on-screen change). The MOVING-state dispatch IS exactly the hero movement decisions the WK67 300-tick AI-decision digest hashes, so the byte-identical b73961... digest is a PERFECT behavior-preservation guard for this move (not merely a same-as-expected pass like an audio sprint). The lazy-import-both-ways cycle break is verified two ways: statically (AST: movement.py has no module-top bounty_pursuit import; the import lives inside handle_moving) and dynamically (cold subprocess imports succeed in both orders). No regressions found."
+        }
+      }
     }
   }
 }
