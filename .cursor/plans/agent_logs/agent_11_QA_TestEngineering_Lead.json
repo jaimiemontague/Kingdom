@@ -9,6 +9,57 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk84_round_d_zones_extract": {
+      "sprint_meta": {
+        "sprint_id": "wk84_round_d_zones_extract",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "goal": "QA W2: seam test for the WK84 patrol-zone extraction (assign_patrol_zone moved from ai/behaviors/exploration.py into new ai/behaviors/zones.py; exploration RE-EXPORTS it so exploration.assign_patrol_zone IS zones.assign_patrol_zone; no import cycle) + full DoD gate (A-F): full suite, determinism_guard, AI digest byte-identical (b73961...), qa_smoke --quick."
+      },
+      "rounds": {
+        "wk84_w2": {
+          "round_id": "wk84_w2",
+          "sprint_id": "wk84_round_d_zones_extract",
+          "status": "done",
+          "prompt_summary": "WK84 W2 (QA): create tests/test_wk84_zones_extract.py -- (1) ai.behaviors.zones.assign_patrol_zone exists + callable. (2) exploration.assign_patrol_zone IS zones.assign_patrol_zone (the re-export is identity-equal, so explore/handle_idle, the ai.exploration_behavior.assign_patrol_zone call-sites at movement.py:185 / stuck_recovery.py:166, and the test mocks all resolve the one moved function). (3) no module-load cycle: fresh subprocess import zones then exploration succeeds + reverse; AST-check zones.py does NOT import ai.behaviors.exploration at module top. Full DoD gate (suite, determinism_guard, AI digest pin == b73961..., qa_smoke --quick). Only create the test; no production edits; DO NOT COMMIT; no screenshots.",
+          "round_meta": {
+            "wave": "W2 (seam test for the extracted assign_patrol_zone + final DoD gate)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "created_utc": "2026-05-30T00:00:00Z",
+            "depends_on": "wk84 W1 (Agent 06: assign_patrol_zone moved VERBATIM from exploration.py:33-69 into new ai/behaviors/zones.py; exploration.py 322->292 and re-imports `from ai.behaviors.zones import assign_patrol_zone`; the two helpers (_find_black_fog_frontier_tiles [shared w/ journey], _is_live_enemy_target) stayed in exploration; zones.py imports only leaf deps (config + view_compat). Agent 06 verified digest UNCHANGED + 800 passed + qa_smoke PASS + no cycle.)"
+          },
+          "new_tests": [
+            "test_zones_exposes_assign_patrol_zone",
+            "test_exploration_reexports_zones_assign_patrol_zone_identity",
+            "test_exploration_behavior_attribute_resolves_to_zones_function",
+            "test_zones_has_no_module_level_exploration_import",
+            "test_no_module_load_cycle_fresh_import[ai.behaviors.zones-ai.behaviors.exploration]",
+            "test_no_module_load_cycle_fresh_import[ai.behaviors.exploration-ai.behaviors.zones]",
+            "test_fresh_import_zones_then_assign_patrol_zone_is_reexported_identity"
+          ],
+          "what_i_changed": {
+            "summary": "Created tests/test_wk84_zones_extract.py (7 tests, following the WK83 Round-D seam-test pattern adapted for a RE-EXPORT seam rather than a delegating shim). (1) module-surface: ai.behaviors.zones.assign_patrol_zone exists + callable; zones.__name__ == 'ai.behaviors.zones'. (2) re-export identity (the load-bearing seam): exploration.assign_patrol_zone IS zones.assign_patrol_zone -- because exploration.py does `from ai.behaviors.zones import assign_patrol_zone` at module top, the name is the SAME object, so explore()/handle_idle(), the ai.exploration_behavior.assign_patrol_zone call-sites (movement.py:185, stuck_recovery.py:166), and the test mocks (test_ai_stuck/test_ai_bounty SimpleNamespace) all resolve to the one moved function. A second identity test resolves the actual runtime attribute chain those importers use: basic_ai.exploration (the module bound as self.exploration_behavior) .assign_patrol_zone IS zones.assign_patrol_zone. (3) no cycle: AST-parse zones.py and assert NO module-top-level (non-TYPE_CHECKING) import of ai.behaviors.exploration (so the one-directional exploration->zones dependency cannot become a cycle); plus two fresh-subprocess imports (zones-then-exploration AND exploration-then-zones) both exit 0; plus a fresh-process re-export identity check. No production code touched.",
+            "files_created": [
+              "tests/test_wk84_zones_extract.py"
+            ],
+            "files_modified": [],
+            "production_code_edited": false
+          },
+          "dod_gate": {
+            "A_full_suite": "807 passed, 4 skipped, 0 failed in 158.92s. Baseline was 800 passed / 4 skipped; +7 new wk84 seam tests = 807. Zero failures. PASS.",
+            "B_determinism_guard": "PASS: no violations found (exit 0).",
+            "C_ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded BYTE-IDENTICAL to golden (pin constant unchanged at test_wk67_ai_boundary.py:181). tests/test_wk67_ai_boundary.py = 10 passed; fresh-subprocess printer (DETERMINISTIC_SIM=1 SIM_SEED=3 via PowerShell) prints exactly b73961...d148ded. This is the PERFECT guard for WK84 -- the moved assign_patrol_zone drives hero idle/explore/patrol decisions the 300-tick digest hashes, so an unchanged digest proves the pure move + re-export preserved behavior exactly. PASS.",
+            "D_qa_smoke_quick": "DONE: PASS (exit 0; base/intent_bounty/hero_stuck_repro/no-enemies/mock-LLM + speed_scaling 0.1/0.25/0.5/1.0x + interior_view/quest_panel/conversation/direct_prompt_integration all exit_code=0).",
+            "E_module_exists_importers_resolve_no_cycle": "PASS. ai/behaviors/zones.py exists and exposes assign_patrol_zone(ai,hero,view); it imports only leaf deps (config.TILE_SIZE + ai.behaviors.view_compat.as_ai_view, with config.MAP_HEIGHT/MAP_WIDTH lazily imported inside the function) and NEVER imports ai.behaviors.exploration. exploration.py (now 292 LOC, down from 322) re-exports it via `from ai.behaviors.zones import assign_patrol_zone`, so exploration.assign_patrol_zone IS zones.assign_patrol_zone (identity verified) and every importer is satisfied: movement.py:185 + stuck_recovery.py:166 read ai.exploration_behavior.assign_patrol_zone (= the exploration module's attr = the zones object); explore()/handle_idle() use the in-module name; the test mocks replace the whole exploration_behavior attribute so they are unaffected. Dependency is one-directional (exploration->zones); fresh imports succeed in BOTH orders. No import cycle.",
+            "F_logs": "This log entry; PM hub close to be recorded by Agent 01.",
+            "verdict": "PASS (DoD A-F all green; AI digest byte-identical b73961...; determinism clean; qa_smoke PASS; 7 new seam tests all pass)"
+          },
+          "notes": "Constraint compliance: only tests/test_wk84_zones_extract.py created; no production edits; nothing committed; no screenshots (headless seam test). The seam here is a RE-EXPORT (identity), not a delegating shim like WK83 -- so the load-bearing assertion is `exploration.assign_patrol_zone IS zones.assign_patrol_zone` rather than spy-on-delegation; the behavior itself is covered byte-identically by the WK67 digest + full suite. INVESTIGATED + RESOLVED non-issue: a one-off manual `set DETERMINISTIC_SIM=1&& set SIM_SEED=3&&` invocation under the Bash-on-Windows tool printed a DIFFERENT digest (b31745...) due to trailing-space env values from the malformed `set ...&&` chaining (env became '1 '/'3 ', not pinned cleanly); re-running the digest printer with clean PowerShell env pinning ($env:DETERMINISTIC_SIM/SIM_SEED) prints the exact golden b73961...d148ded, and the authoritative gate -- pytest test_ai_decision_digest_is_stable, which pins its own subprocess env correctly -- passed. Not a behavior divergence."
+        }
+      }
+    },
     "wk82_round_d_basic_ai_handlers": {
       "sprint_meta": {
         "sprint_id": "wk82_round_d_basic_ai_handlers",

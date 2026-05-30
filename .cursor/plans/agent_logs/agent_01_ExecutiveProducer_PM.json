@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK84 CLOSE): wk84_round_d_zones_extract COMPLETE -- DoD met. Moved assign_patrol_zone from ai/behaviors/exploration.py (322 -> 292 LOC) into a new ai/behaviors/zones.py (single canonical home -- consumed by movement/stuck_recovery too). exploration.py RE-EXPORTS it identity-equal (exploration.assign_patrol_zone IS zones.assign_patrol_zone) so the ai.exploration_behavior.assign_patrol_zone module-attribute access + test mocks are unchanged. Shared helpers (_find_black_fog_frontier_tiles [shared w/ journey], _is_live_enemy_target) stayed in exploration. No cycle (zones never imports exploration; single back-edge exploration->zones). Behavior-preserving: 807 passed/4 skipped/0 failed (+7 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (PERFECT guard -- zone assignment drives idle/explore decisions). Agent 06 extract, Agent 11 verify. Plan: .cursor/plans/wk84_round_d_zones_extract.plan.md. WK83 was main cba505f. Committing+pushing. SESSION: 17 sprints WK68-84 shipped; suite 601->807; digest b73961 held byte-identical throughout. NOTE: clean pure-move/dedup work is largely exhausted (WK80/WK84 delivered modest LOC). REMAINING (harder tier, best for fresh context): hud.py split (2477) + ursina_renderer body + ursina_terrain_fog_collab + ursina_app (SCREENSHOT-HEAVY); Move 9 (risky reorder); context_builder/direct_prompt_validator/exploration-handle_idle restructures; ai/vocab.py + TaskRouter; world.py; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK85.",
+    "2026-05-30 (Agent 01 WK84 KICKOFF): extract assign_patrol_zone -> ai/behaviors/zones.py (Round D-4). Move the shared patrol-zone logic out of exploration.py (322 LOC) into a single home (zones.py); update all importers (exploration/stuck_recovery/bounty_pursuit/basic_ai). Pure move of whole functions; handle_idle restructure deferred. Perfectly digest-guarded (zone assignment drives idle/explore decisions); headless. Agent 06 extract, Agent 11 verify. Plan: .cursor/plans/wk84_round_d_zones_extract.plan.md. WK83 was main cba505f. NOT YET COMMITTED for WK84.",
     "2026-05-30 (Agent 01 WK83 CLOSE): wk83_round_d_movement_dispatcher COMPLETE -- DoD met. Moved handle_moving (the global MOVING-state dispatcher, ~140 LOC) from ai/behaviors/bounty_pursuit.py (368 -> 236 LOC) into ai/behaviors/movement.py; bounty_pursuit.handle_moving is now a 1-line delegating shim so basic_ai self.bounty_behavior.handle_moving is unchanged. Cycle avoided via lazy imports both ways (movement.py has no top-level bounty_pursuit import -- lazy inside handle_moving; shim imports movement lazily; verified static AST + dynamic both load orders). Behavior-preserving: 800 passed/4 skipped/0 failed (+7 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (the PERFECT guard -- MOVING dispatch ARE the hashed movement decisions). Agent 06 move, Agent 11 verify. Plan: .cursor/plans/wk83_round_d_movement_dispatcher.plan.md. WK82 was main 86dba8a. Committing+pushing. SESSION: 16 sprints WK68-83 shipped; suite grown 601->800 passed; digest b73961 held byte-identical throughout. REMAINING: hud.py split (2477), ursina_renderer body split, ursina_terrain_fog_collab/ursina_app splits, Move 9, world.py, config package, clusters 3/4, rest of Round D (context_builder/direct_prompt_validator/exploration handle_idle + vocab + TaskRouter), Round E audit, 21-file zombie purge. Next: WK84.",
     "2026-05-30 (Agent 01 WK83 KICKOFF): move handle_moving -> ai/behaviors/movement.py (Round D-3). Relocate the global MOVING-state dispatcher handle_moving (~140 LOC) from bounty_pursuit.py into movement.py (WK74); leave a bounty_pursuit.handle_moving shim so basic_ai's self.bounty_behavior.handle_moving caller is unchanged. Cycle avoided via lazy imports both ways. Perfectly digest-guarded (MOVING dispatch drives the digest); headless. Agent 06 move, Agent 11 verify. Plan: .cursor/plans/wk83_round_d_movement_dispatcher.plan.md. WK82 was main 86dba8a. NOT YET COMMITTED for WK83.",
     "2026-05-30 (Agent 01 WK82 CLOSE): wk82_round_d_basic_ai_handlers COMPLETE -- DoD met. Extracted BasicAI inline state-machine handlers out of ai/basic_ai.py (515 -> 416 LOC): handle_fighting (+nested _chase_goal_unchanged) -> ai/behaviors/combat.py; handle_retreating + _finalize_deferred_task -> ai/behaviors/recovery.py; BasicAI keeps 3 lazy-import delegating wrappers (update_hero dispatch unchanged). handle_idle/moving/shopping already delegated; handle_resting stays. Behavior-preserving: 793 passed/4 skipped/0 failed (+13 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (the PERFECT guard -- combat/retreat ARE the hashed decisions). Leaf-only imports + TYPE_CHECKING BasicAI import avoided the ai.behaviors.__init__->llm_bridge cycle. Agent 06 extract, Agent 11 verify. Plan: .cursor/plans/wk82_round_d_basic_ai_handlers.plan.md. WK81 was main 2d30f21. Committing+pushing. SESSION: 15 sprints WK68-82 shipped. REMAINING: hud.py split (2477), ursina_renderer body split, ursina_terrain_fog_collab/ursina_app splits, Move 9, world.py, config package, clusters 3/4, rest of Round D (context_builder/direct_prompt_validator/bounty_pursuit/exploration + vocab + TaskRouter), Round E audit, 21-file zombie purge. Next: WK83.",
@@ -4319,6 +4321,65 @@
             "05(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk83_round_d_movement_dispatcher'].rounds['wk83_kickoff']) + plan .cursor/plans/wk83_round_d_movement_dispatcher.plan.md; claude-opus-4-8; PURE MOVE behavior-preserving, keep the bounty_pursuit.handle_moving shim (caller unchanged), LAZY imports both ways to avoid the cycle; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (perfect guard) must stay byte-identical; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
+        }
+      }
+    },
+    "wk84_round_d_zones_extract": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T18:30:00Z",
+        "plan_doc": ".cursor/plans/wk84_round_d_zones_extract.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK84 / Round D-4)",
+        "notes": "Round D-4: extract assign_patrol_zone (+ dedicated helpers) from ai/behaviors/exploration.py into a shared ai/behaviors/zones.py (single home -- consumed by stuck_recovery + bounty_pursuit too); update all importers. Pure move of whole functions; handle_idle restructure deferred. Perfectly digest-guarded (zone assignment drives idle/explore decisions). Headless. Agent 06 extract, Agent 11 verify.",
+        "definition_of_done": [
+          "A. pytest all pass (800/4/0)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (perfect guard)",
+          "D. qa_smoke green",
+          "E. ai/behaviors/zones.py exists with assign_patrol_zone; all importers updated; exploration.py smaller; no cycle",
+          "F. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "807 passed / 4 skipped / 0 failed (800 + 7 seam tests)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961... byte-identical (PERFECT guard)",
+          "exploration_loc": "322 -> 292",
+          "result": "assign_patrol_zone moved to ai/behaviors/zones.py (single canonical home); exploration.py re-exports it identity-equal so the ai.exploration_behavior.assign_patrol_zone module-attribute access (movement/stuck_recovery callers + test mocks) is unchanged; shared helpers (_find_black_fog_frontier_tiles, _is_live_enemy_target) stayed; no cycle."
+        }
+      },
+      "rounds": {
+        "wk84_kickoff": {
+          "round_meta": {
+            "round_id": "wk84_kickoff",
+            "created_utc": "2026-05-30T18:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk84_round_d_zones_extract.plan.md",
+            "build_target": "assign_patrol_zone -> ai/behaviors/zones.py",
+            "goal": "all tests pass; zone assignment byte-identical"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical (PERFECT guard) + no cycle",
+            "wave_dag": "W1(06)->gate(suite+digest+qa_smoke+cycle)->W2(11 verify)->commit",
+            "dispatch_order": [
+              "06 W1",
+              "11 W2"
+            ]
+          },
+          "pm_agent_prompts": {
+            "06": "[Agent 06] Extract patrol-zone logic from ai/behaviors/exploration.py into a new ai/behaviors/zones.py per plan .cursor/plans/wk84_round_d_zones_extract.plan.md sections 1-2 (pure move of WHOLE functions + import-site updates). The 300-tick AI-decision digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded is a PERFECT guard (zone/patrol assignment drives idle/explore decisions). Create ai/behaviors/zones.py; move assign_patrol_zone (exploration.py ~33-69) into it VERBATIM. If _find_black_fog_frontier_tiles (~70-138) and/or _is_live_enemy_target (~24-32) are used ONLY by assign_patrol_zone, move them too; if SHARED with explore/handle_idle (likely for the frontier finder), LEAVE them in exploration.py and have zones.py lazy-import them (or move the frontier finder to zones and have exploration import it back -- pick the cohesive cut that avoids a cycle). Update ALL importers of assign_patrol_zone (grep `assign_patrol_zone` across ai/ -- check exploration.py, stuck_recovery.py, bounty_pursuit.py, basic_ai.py, anywhere) to `from ai.behaviors.zones import assign_patrol_zone`. Prefer updating importers over a re-export. RULES: zones.py imports leaf deps (config, navigation, etc.); lazy-import any helper that stays in exploration to avoid a cycle; TYPE_CHECKING for type-only hints; verify fresh imports of zones + exploration both succeed. Move whole functions VERBATIM. VERIFY: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), python -m pytest -q (800 passed), determinism_guard, qa_smoke --quick, import check. If the digest drifts, a moved function changed -- diff vs git show HEAD:ai/behaviors/exploration.py. Report: zones.py + functions moved, the importers updated, exploration.py new LOC (was 322), how you avoided any cycle, digest, suite totals, qa_smoke. DO NOT COMMIT; update agent_06 log (round wk84_w1).",
+            "11": "[Agent 11] W2 (after 06): create tests/test_wk84_zones_extract.py: assert ai.behaviors.zones.assign_patrol_zone exists+callable; assert the updated importers resolve it (import each module that uses it and assert it has a reference, OR call a thin path); assert no module-load cycle (fresh subprocess: import ai.behaviors.zones then ai.behaviors.exploration succeeds, and reverse). Full DoD: pytest (all pass), determinism_guard, digest (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke. NO screenshots. Report PASS/FAIL + DoD A-F. Only your test; no prod edits; DO NOT COMMIT; update agent_11 log (round wk84_w2).",
+            "05": "[Agent 05 CONSULT] available if zone-assignment semantics unclear. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "06",
+            "11",
+            "05(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk84_round_d_zones_extract'].rounds['wk84_kickoff']) + plan .cursor/plans/wk84_round_d_zones_extract.plan.md; claude-opus-4-8; PURE MOVE whole functions, update all importers, lazy-import to avoid cycles; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (perfect guard) must stay byte-identical; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }

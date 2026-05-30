@@ -20,6 +20,13 @@ from game.world import Visibility
 from ai.behaviors.movement import route_to_building
 from ai.behaviors.view_compat import as_ai_view
 
+# WK84 Round D-4: patrol-zone assignment now lives in ``ai.behaviors.zones``
+# (shared with movement/stuck_recovery via ``ai.exploration_behavior``). Re-import
+# it here so explore()/handle_idle() and the ``ai.exploration_behavior.assign_patrol_zone``
+# call-sites keep resolving against this module. zones.py imports no exploration
+# symbol, so there is no import cycle.
+from ai.behaviors.zones import assign_patrol_zone
+
 
 def _is_live_enemy_target(target: Any) -> bool:
     """True only for living enemy entities (not buildings/lairs with ``is_alive``)."""
@@ -28,43 +35,6 @@ def _is_live_enemy_target(target: Any) -> bool:
     if hasattr(target, "building_type"):
         return False
     return bool(getattr(target, "is_alive", False))
-
-
-def assign_patrol_zone(ai: Any, hero: Any, view: Any) -> tuple[float, float]:
-    """Assign a unique patrol zone to a hero based on their index."""
-    if hero.name in ai.hero_zones:
-        return ai.hero_zones[hero.name]
-
-    view = as_ai_view(view)
-    # Get castle position as reference.
-    castle = view.castle
-    if castle:
-        base_x, base_y = castle.center_x, castle.center_y
-    else:
-        from config import MAP_HEIGHT, MAP_WIDTH
-
-        base_x = (MAP_WIDTH // 2) * TILE_SIZE
-        base_y = (MAP_HEIGHT // 2) * TILE_SIZE
-
-    # Assign zones in a circle around the castle.
-    heroes = [h for h in view.heroes if h.is_alive]
-    try:
-        idx = heroes.index(hero)
-    except ValueError:
-        idx = len(ai.hero_zones)
-
-    num_heroes = max(len(heroes), 1)
-    angle = (2 * math.pi * idx) / num_heroes + ai._ai_rng.uniform(-0.2, 0.2)
-    radius = TILE_SIZE * ai._ai_rng.uniform(6, 10)  # Spread zones further out.
-
-    zone_x = base_x + math.cos(angle) * radius
-    zone_y = base_y + math.sin(angle) * radius
-
-    ai.hero_zones[hero.name] = (zone_x, zone_y)
-    ai._debug_log(
-        f"{hero.name} assigned zone at ({zone_x:.0f}, {zone_y:.0f}), angle={math.degrees(angle):.0f}deg"
-    )
-    return (zone_x, zone_y)
 
 
 def _find_black_fog_frontier_tiles(

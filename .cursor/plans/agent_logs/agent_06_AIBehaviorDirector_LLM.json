@@ -1664,6 +1664,47 @@
           "constraints_followed": "Lane respected (only bounty_pursuit.py + movement.py). basic_ai.py and other behavior files untouched. Body moved VERBATIM (no logic change). NO screenshots (headless behavior). DID NOT COMMIT. No iteration after status=done."
         }
       }
+    },
+    "wk84_round_d_zones_extract": {
+      "sprint_meta": {
+        "sprint_id": "wk84_round_d_zones_extract",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "title": "WK84 Round D-4 - extract shared patrol-zone logic assign_patrol_zone from ai/behaviors/exploration.py into new ai/behaviors/zones.py (Agent 06 W1)",
+        "role": "Agent 06 AIBehaviorDirector_LLM",
+        "plan_ref": ".cursor/plans/wk84_round_d_zones_extract.plan.md"
+      },
+      "rounds": {
+        "wk84_w1": {
+          "round_meta": {
+            "role": "Agent 06 AIBehaviorDirector_LLM",
+            "phase": "W1 - create ai/behaviors/zones.py; move assign_patrol_zone VERBATIM; re-export it from exploration.py; verify suite+digest+qa_smoke",
+            "launched_by": "Claude Code Agent-tool subagent (parent Agent 01 PM)",
+            "reports_to": "Agent 01 (PM)",
+            "completed_utc": "2026-05-30T00:00:00Z"
+          },
+          "sprint_id": "wk84_round_d_zones_extract",
+          "round_id": "wk84_w1",
+          "status": "done",
+          "scope": "PURE MOVE (behavior byte-identical). Moved assign_patrol_zone(ai,hero,view) VERBATIM from ai/behaviors/exploration.py (was ~33-67) into new ai/behaviors/zones.py. Helper cut decision: LEFT both helpers in exploration.py - _find_black_fog_frontier_tiles is SHARED (used by exploration.explore AND by journey.py via ai.exploration_behavior._find_black_fog_frontier_tiles), and _is_live_enemy_target is exploration-only (handle_idle) and NOT called by assign_patrol_zone. assign_patrol_zone depends on neither helper, so the move is clean. Lane: exploration.py + new zones.py + ai/behaviors/__init__.py (additive export). Did NOT change zone-assignment logic; did NOT do the handle_idle restructure (deferred).",
+          "functions_moved": "assign_patrol_zone -> ai/behaviors/zones.py (verbatim). Helpers _find_black_fog_frontier_tiles and _is_live_enemy_target LEFT in exploration.py (frontier finder is shared with journey.py; _is_live_enemy_target is exploration-only and unused by assign_patrol_zone).",
+          "importers_updated": "No DIRECT 'from ai.behaviors.exploration import assign_patrol_zone' importers existed anywhere - all call-sites reach it as a MODULE ATTRIBUTE via BasicAI.exploration_behavior=exploration (basic_ai.py:99): ai.exploration_behavior.assign_patrol_zone(...) in movement.py:185 and stuck_recovery.py:166, plus exploration.py's own explore()/handle_idle() (142,290). To keep that module-attribute access (and the test mocks in tests/test_ai_stuck.py:42 + tests/test_ai_bounty.py:78 that patch ai.exploration_behavior.assign_patrol_zone) byte-identical, exploration.py now does 'from ai.behaviors.zones import assign_patrol_zone' (re-export). movement.py/stuck_recovery.py/journey.py/basic_ai.py/bounty_pursuit.py needed NO edits. Single canonical home = zones.py; exploration re-exports.",
+          "exploration_loc": "exploration.py 322 -> 292 LOC (assign_patrol_zone removed; ~5 lines of import+comment added). zones.py = 57 LOC.",
+          "cycle_avoidance": "No cycle and no lazy-import needed. zones.py imports ONLY leaf deps: math, typing.Any, config.TILE_SIZE (and lazy config.MAP_HEIGHT/MAP_WIDTH inside the fn, verbatim), and ai.behaviors.view_compat.as_ai_view (leaf shim, same one exploration already uses). zones.py never imports exploration. The one back-edge is exploration -> zones (import assign_patrol_zone), which is a clean one-directional dependency. Verified fresh imports succeed in BOTH orders: 'import ai.behaviors.zones, ai.behaviors.exploration' and 'import ai.behaviors.exploration, ai.behaviors.zones' both OK; re-export identity confirmed (exploration.assign_patrol_zone IS zones.assign_patrol_zone).",
+          "changes": {
+            "ai/behaviors/zones.py": "NEW (57 LOC). Contains assign_patrol_zone(ai,hero,view)->tuple[float,float] copied VERBATIM. Leaf imports: math, typing.Any, config.TILE_SIZE, ai.behaviors.view_compat.as_ai_view. Module docstring explains the WK84 extraction + no-cycle rationale.",
+            "ai/behaviors/exploration.py": "Removed assign_patrol_zone definition; added 'from ai.behaviors.zones import assign_patrol_zone' (re-export so ai.exploration_behavior.assign_patrol_zone + internal explore/handle_idle calls keep resolving). Both helpers (_is_live_enemy_target, _find_black_fog_frontier_tiles) UNCHANGED and still defined here. 322 -> 292 LOC.",
+            "ai/behaviors/__init__.py": "Additive: 'from . import zones' + 'zones' in __all__ (discoverability as a peer behavior module; no behavior impact, no cycle)."
+          },
+          "verification": {
+            "digest_test": "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed, 1 warning. AI-decision digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded hard-asserted at test_wk67_ai_boundary.py:181 -> UNCHANGED / byte-identical (perfect guard: zone/patrol assignment drives idle/explore decisions).",
+            "full_suite": "python -m pytest -q -> 800 passed, 4 skipped, 0 failed (148.30s). Matches baseline exactly.",
+            "determinism_guard": "python tools/determinism_guard.py -> [determinism_guard] PASS: no violations found (exit 0).",
+            "qa_smoke": "python tools/qa_smoke.py --quick -> [qa_smoke] DONE: PASS (exit 0).",
+            "import_probe": "python -c 'import ai.behaviors.zones, ai.behaviors.exploration; from ai.behaviors.zones import assign_patrol_zone; print(\"ok\", callable(assign_patrol_zone))' -> ok True. Both load orders OK; re-export identity True."
+          },
+          "constraints_followed": "Lane respected (exploration.py + new zones.py + __init__ additive export; movement/stuck_recovery/journey/basic_ai/bounty_pursuit untouched). Function moved VERBATIM (no logic change). No handle_idle restructure (deferred per plan). NO screenshots (headless behavior). DID NOT COMMIT. No iterate after status=done."
+        }
+      }
     }
   }
 }
