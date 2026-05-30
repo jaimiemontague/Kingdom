@@ -9,6 +9,83 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk72_round_c2_entity_dedup": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk72_round_c2_entity_dedup.plan.md",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "notes": "Round C-2 entity/systems dedup. W1: DifficultySystem.apply_to_enemy consolidated triplicated spawn HP/damage scaling (spawner/lairs/wave_events). W2: navigation.advance_along_path_to consolidated path-replan-and-follow block at Enemy.update + SkeletonArcher.update (guard.py intentionally left inline). Agent 11 owns W3: dedup-regression tests + full DoD gate. Behavior-preserving; WK67 digest b73961...148ded must stay byte-identical."
+      },
+      "rounds": {
+        "wk72_w3": {
+          "sprint_id": "wk72_round_c2_entity_dedup",
+          "round_id": "wk72_w3",
+          "round_meta": {
+            "wave": "W3 (regression tests + DoD gate)",
+            "build_target": "tests/test_wk72_entity_dedup.py + full DoD gate (DoD A-F)",
+            "created_utc": "2026-05-30T00:00:00Z",
+            "depends_on": "wk72_w1 (apply_to_enemy), wk72_w2 (advance_along_path_to) — both Agent 05, gated"
+          },
+          "prompt_summary": "Author tests/test_wk72_entity_dedup.py: (A) apply_to_enemy matches max(1,int(round(base*mult))) at easy/normal/hard and is identity at normal, hp==max_hp after; (B) apply_to_enemy is the single implementation (no inline get_multiplier('enemy_hp') block remains in spawner/lairs/wave_events) and the 3 spawn paths produce identical scaled stats; (C) advance_along_path_to smoke — enemy moves toward goal, sets path/goal, survives deferred-None branch, and is wired into Enemy.update + SkeletonArcher.update (guard out of scope). Then run the full DoD gate and report PASS/FAIL.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Created tests/test_wk72_entity_dedup.py with 13 tests across 3 groups. Group A (5 tests, incl. parametrized tiers): apply_to_enemy reproduces the exact max(1,int(round(base*mult))) formula for enemy_hp/enemy_damage, is identity at NORMAL, softens at EASY / hardens at HARD, and respects the max(1,...) floor guard; hp resynced to max_hp. Group B (2 tests): source-grep proves no inline get_multiplier('enemy_hp') scaling block remains in spawner/lairs/wave_events (formula lives only in difficulty.py), and the 3 guarded spawn-path call shapes produce stats identical to a direct apply_to_enemy call. Group C (6 tests): advance_along_path_to drives a Goblin toward a reachable goal on a real headless World (progress + path/goal recorded), survives the deferred-None (budget-exhausted) branch without wiping the path, and is reached via real Enemy.update + SkeletonArcher.update (buildings=[] so find_target locks the duck-typed target instead of the town Castle). No production edits.",
+            "files_created": [
+              "tests/test_wk72_entity_dedup.py"
+            ],
+            "files_modified": []
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk72_entity_dedup.py -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "13 passed, 1 warning in 6.20s."
+            },
+            {
+              "cmd": "python -m pytest -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "667 passed, 4 skipped, 1 warning in 142.91s. Baseline was 654 passed / 4 skipped; +13 new tests, 0 failures."
+            },
+            {
+              "cmd": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[determinism_guard] PASS: no violations found."
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "10 passed. AI-decision digest constant unchanged = b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (verified in tests/test_wk67_ai_boundary.py:181). Behavior byte-identical."
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS. All headless profiles (base/intent_bounty/hero_stuck/no-enemies/mock-LLM/speed-scaling/interior/quest/conversation/direct_prompt) exit_code=0."
+            }
+          ],
+          "evidence": {
+            "tests_added_count": 13,
+            "suite_totals": "667 passed, 4 skipped, 0 failed (baseline 654 passed / 4 skipped)",
+            "wk67_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical, unchanged)",
+            "determinism_guard": "PASS (no violations)",
+            "qa_smoke_quick": "PASS",
+            "dod": {
+              "A_pytest_all_pass": "PASS — 667 passed / 4 skipped / 0 failed",
+              "B_determinism_guard_clean": "PASS",
+              "C_wk67_digest_byte_identical": "PASS — b73961...148ded unchanged",
+              "D_qa_smoke_quick_green": "PASS",
+              "E_helpers_sole_implementation": "PASS — apply_to_enemy is sole spawn-scaling (3 call sites use it, no inline copy; verified by grep + behavioral parity test); advance_along_path_to called by Enemy.update + SkeletonArcher.update (no inline copy at those 2 sites); guard.py intentionally inline (out of scope); hero/tax_collector untouched",
+              "F_logs_updated_pm_hub_close": "PASS (this entry) — PM hub close is Agent 01"
+            },
+            "verdict": "PASS — all DoD gates green; dedup-regression net added; behavior byte-identical."
+          },
+          "notes_for_pm": "WK72 W3 complete. 13 regression tests pin both dedups: apply_to_enemy == the exact triplicated formula across easy/normal/hard (no-op at normal, floor-guarded), is the single implementation (no inline enemy_hp block left in spawner/lairs/wave_events), and all 3 spawn-path call shapes produce identical stats; advance_along_path_to moves the enemy toward goal, records path/goal, survives the deferred-None branch (does not wipe the path), and is exercised via both Enemy.update and SkeletonArcher.update. Full DoD A-F all PASS. WK67 digest byte-identical. No production edits, no commit. Ready for commit+push by PM."
+        }
+      }
+    },
     "wk58_ursina_entities_overload": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/Ursina Entities Overload Solution.md",

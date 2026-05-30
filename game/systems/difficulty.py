@@ -93,3 +93,23 @@ class DifficultySystem:
     def lock_difficulty(self) -> None:
         """Lock difficulty so it cannot be changed for the rest of the game."""
         self.locked = True
+
+    def apply_to_enemy(self, enemy) -> None:
+        """Apply the active difficulty HP/damage multipliers to a freshly-spawned *enemy*.
+
+        WK72 Round C-2: single source of truth for the spawn-time stat scaling that was
+        previously triplicated in spawner.py / lairs.py / wave_events.py. Reproduces that
+        exact behaviour: read the ``enemy_hp`` and ``enemy_damage`` multipliers, and when a
+        multiplier is not 1.0, scale ``max_hp`` (resyncing ``hp``) / ``attack_power`` with the
+        same ``max(1, int(round(value * mult)))`` rounding and floor guard.
+
+        Assumes it is called on a real DifficultySystem (call sites keep their existing
+        ``if difficulty is not None`` guard).
+        """
+        hp_mult = self.get_multiplier("enemy_hp")
+        dmg_mult = self.get_multiplier("enemy_damage")
+        if hp_mult != 1.0:
+            enemy.max_hp = max(1, int(round(enemy.max_hp * hp_mult)))
+            enemy.hp = enemy.max_hp
+        if dmg_mult != 1.0:
+            enemy.attack_power = max(1, int(round(enemy.attack_power * dmg_mult)))

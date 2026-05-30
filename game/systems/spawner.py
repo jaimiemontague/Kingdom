@@ -187,14 +187,9 @@ class EnemySpawner(GameSystem):
                     enemy = enemy_cls(x, y)
 
                 # WK60: apply difficulty multipliers to enemy stats on spawn
+                # WK72: scaling consolidated into DifficultySystem.apply_to_enemy
                 if self.difficulty is not None:
-                    hp_mult = self.difficulty.get_multiplier("enemy_hp")
-                    dmg_mult = self.difficulty.get_multiplier("enemy_damage")
-                    if hp_mult != 1.0:
-                        enemy.max_hp = max(1, int(round(enemy.max_hp * hp_mult)))
-                        enemy.hp = enemy.max_hp
-                    if dmg_mult != 1.0:
-                        enemy.attack_power = max(1, int(round(enemy.attack_power * dmg_mult)))
+                    self.difficulty.apply_to_enemy(enemy)
 
                 new_enemies.append(enemy)
                 self.total_spawned += 1

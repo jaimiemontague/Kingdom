@@ -218,3 +218,59 @@ def follow_path(entity, dt: float, arrive_radius: float = 10.0) -> bool:
     return not bool(entity.path)
 
 
+def advance_along_path_to(
+    entity,
+    world,
+    buildings,
+    goal_x: float,
+    goal_y: float,
+    dt: float,
+    now_ms_val: int,
+) -> None:
+    """Replan-and-follow a path toward (goal_x, goal_y), with a direct-steer fallback.
+
+    WK72 W2: behavior-preserving extraction of the path-follow block copy-pasted in
+    ``Enemy.update`` and ``SkeletonArcher.update``. The logic is reproduced byte-for-byte
+    from those sites; ``now_ms_val`` is the caller's already-computed ``now_ms()`` reading.
+
+    Commitment: when chasing moving targets, stick to current path to avoid jitter.
+    Replan only if no path, or (goal changed AND commitment window expired), and only
+    once the replan throttle (``_next_replan_ms``) has elapsed. A ``None`` from
+    ``compute_path_worldpoints`` means the per-frame budget is exhausted (deferred):
+    keep the existing path and retry next frame. Falls back to ``move_towards`` (direct
+    steering) when there is no usable path so the entity never freezes.
+
+    NOTE: ``game/entities/guard.py`` deliberately does NOT use this helper -- its block
+    omits the ``_next_replan_ms`` throttle and follows the path unconditionally (no
+    direct-steer fallback). Unifying it would change guard behavior, so it is left inline.
+    """
+    if not hasattr(entity, "path"):
+        entity.path = []
+        entity._path_goal = None
+    goal_key = (int(goal_x), int(goal_y))
+    path_commit = int(getattr(entity, "_path_commit_until_ms", 0) or 0)
+    has_path = bool(getattr(entity, "path", None))
+    # Commitment: when chasing moving targets, stick to current path to avoid jitter.
+    # Replan only if no path, or (goal changed AND commitment window expired).
+    want_replan = (
+        (not has_path) or (getattr(entity, "_path_goal", None) != goal_key and now_ms_val >= path_commit)
+    ) and now_ms_val >= int(getattr(entity, "_next_replan_ms", 0) or 0)
+    if want_replan:
+        _new_path = compute_path_worldpoints(world, buildings, entity.x, entity.y, goal_x, goal_y)
+        if _new_path is not None:
+            entity.path = _new_path
+            entity._path_goal = goal_key
+            entity._path_commit_until_ms = now_ms_val + getattr(entity, "_path_commit_duration_ms", 500)
+            if not entity.path:
+                entity._next_replan_ms = now_ms_val + 800
+            else:
+                entity._next_replan_ms = now_ms_val + 150
+        # else: deferred -- keep existing path, retry next frame
+
+    if entity.path:
+        follow_path(entity, dt)
+    else:
+        # Fallback: still move roughly toward the goal so enemies don't freeze.
+        entity.move_towards(goal_x, goal_y, dt)
+
+

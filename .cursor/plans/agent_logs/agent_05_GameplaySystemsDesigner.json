@@ -997,6 +997,68 @@
       "sprint_meta": {
         "created_utc": "2026-05-30T00:00:00Z"
       }
+    },
+    "wk72_round_c2_entity_dedup": {
+      "rounds": {
+        "wk72_w1": {
+          "sprint_id": "wk72_round_c2_entity_dedup",
+          "round_id": "wk72_w1",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "W1 (DifficultySystem.apply_to_enemy + wire 3 spawn sites)",
+            "plan_ref": ".cursor/plans/wk72_round_c2_entity_dedup.plan.md (section 1.1, W1)",
+            "created_utc": "2026-05-30T00:00:00Z",
+            "launched_by": "tools/ai_studio_orchestrator"
+          },
+          "prompt_text": "W1 ONLY: add DifficultySystem.apply_to_enemy(self,enemy)->None reproducing the EXACT triplicated HP+damage spawn-scaling (spawner.py ~189-197, lairs.py ~144-153, wave_events.py ~254-259); replace all 3 inline blocks with difficulty.apply_to_enemy(enemy) under the existing if difficulty is not None guard. Behavior byte-identical; digest b73961...148ded unchanged. STOP after W1 for PM gate. DO NOT COMMIT.",
+          "what_i_changed": {
+            "game/systems/difficulty.py": "Added apply_to_enemy(self, enemy)->None to class DifficultySystem. Body: hp_mult=self.get_multiplier(\"enemy_hp\"); dmg_mult=self.get_multiplier(\"enemy_damage\"); if hp_mult!=1.0: enemy.max_hp=max(1,int(round(enemy.max_hp*hp_mult))); enemy.hp=enemy.max_hp; if dmg_mult!=1.0: enemy.attack_power=max(1,int(round(enemy.attack_power*dmg_mult))). This is byte-identical to the per-enemy logic in all 3 former sites.",
+            "game/systems/spawner.py": "Replaced the inline per-enemy block (lines ~189-197) inside the spawn loop with: if self.difficulty is not None: self.difficulty.apply_to_enemy(enemy). Guard preserved.",
+            "game/systems/lairs.py": "Replaced the inline block (~144-153). Kept the original combined guard if spawned and self.difficulty is not None:, then for enemy in spawned: self.difficulty.apply_to_enemy(enemy). Multipliers now read per-enemy inside the method instead of once before the loop (effect identical).",
+            "game/systems/wave_events.py": "Removed the hoisted hp_mult/dmg_mult fetch block (~230-235, hp_mult/dmg_mult were used ONLY in the per-enemy block) and replaced the per-enemy scaling (~254-259) with: if self.difficulty is not None: self.difficulty.apply_to_enemy(enemy). count_mult fetch left untouched (separate concern, wave_event_count)."
+          },
+          "block_diff_finding": "All 3 sites had BYTE-IDENTICAL per-enemy scaling: same !=1.0 short-circuits, same max(1,int(round(stat*mult))) rounding+floor guard, same enemy.hp=enemy.max_hp resync, same attribute names. NOTE: prompt speculated attrs might be enemy.damage/enemy.attack -- the actual attribute scaled is enemy.attack_power (HP via enemy.max_hp/enemy.hp). No site scaled speed/gold or anything beyond HP+attack_power. Only structural difference: spawner fetched multipliers per-enemy inside its own guard; lairs/wave_events hoisted the fetch once before the loop. Since apply_to_enemy reads the multipliers itself, this difference is invisible to behavior -- unified cleanly, no divergence to report.",
+          "verification": {
+            "digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded UNCHANGED -- tests/test_wk67_ai_boundary.py 10 passed",
+            "full_suite": "654 passed, 4 skipped, 0 failed (139.43s)",
+            "determinism_guard": "PASS: no violations found",
+            "qa_smoke_quick": "DONE: PASS (exit 0)"
+          },
+          "do_not_commit_ack": true,
+          "next": "STOP after W1 for PM gate. W2 (navigation.advance_along_path_to) pending PM go."
+        },
+        "wk72_w2": {
+          "sprint_id": "wk72_round_c2_entity_dedup",
+          "round_id": "wk72_w2",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "W2 (navigation.advance_along_path_to + wire enemy x2; guard left inline)",
+            "plan_ref": ".cursor/plans/wk72_round_c2_entity_dedup.plan.md (section 1.2, W2)",
+            "created_utc": "2026-05-30T00:00:00Z",
+            "launched_by": "tools/ai_studio_orchestrator"
+          },
+          "prompt_text": "W2: extract navigation.advance_along_path_to(entity, world, buildings, goal_x, goal_y, dt, ...) reproducing the path-replan-and-follow block copy-pasted in enemy.py (Enemy.update ~289-320, SkeletonArcher.update ~562-589) and guard.py (~159-180); call from those 3 sites. SCOPE enemy+guard ONLY; do NOT touch hero.py/tax_collector.py. DIFF first; parameterize exact differences without changing behavior; if a site can't be cleanly unified, leave it and report. Behavior byte-identical; digest b73961...148ded unchanged. DO NOT COMMIT.",
+          "helper_signature": "advance_along_path_to(entity, world, buildings, goal_x: float, goal_y: float, dt: float, now_ms_val: int) -> None  (in game/systems/navigation.py)",
+          "helper_body_summary": "Reproduces the Enemy/SkeletonArcher path-follow block byte-for-byte: init entity.path/_path_goal if missing; goal_key=(int(goal_x),int(goal_y)); read _path_commit_until_ms; has_path; want_replan = ((not has_path) or (_path_goal!=goal_key and now>=path_commit)) and now>=_next_replan_ms; on replan, compute_path_worldpoints(world,buildings,entity.x,entity.y,goal_x,goal_y) -- None=deferred (keep path), else set path/_path_goal/_path_commit_until_ms(+_path_commit_duration_ms||500) and _next_replan_ms (+800 if empty path else +150); then if entity.path: follow_path(entity,dt) else entity.move_towards(goal_x,goal_y,dt). now_ms_val passed in (both call sites already compute now_ms_val=now_ms()).",
+          "what_i_changed": {
+            "game/systems/navigation.py": "Added advance_along_path_to(...) after follow_path(). Docstring notes it is byte-identical to the former Enemy/SkeletonArcher inline blocks and that guard.py is deliberately left inline (differs).",
+            "game/entities/enemy.py": "Site A (Enemy.update path-follow, former ~292-321): replaced inline block with `from game.systems.navigation import advance_along_path_to; advance_along_path_to(self, world, buildings, target_x, target_y, dt, now_ms_val)`. Site B (SkeletonArcher.update move-closer path-follow, former ~566-590): same replacement. The else-branch move_towards(target_x,target_y,dt) (world is None) preserved at both. SkeletonArcher KITING/retreat block (~534-548) left untouched -- different pattern (no commit/replan window), import compute_path_worldpoints/follow_path retained there.",
+            "game/entities/guard.py": "UNCHANGED -- left inline (see block_diff_finding)."
+          },
+          "block_diff_finding": "Enemy (A) vs SkeletonArcher (B): logic BYTE-IDENTICAL; the only delta was 2 explanatory comment lines present in A and absent in B (no behavior). Both unified into the helper. Guard (G) DIVERGES in 3 behavior-affecting ways and was LEFT INLINE per the 'leave-and-report' instruction: (1) guard's want_replan has NO _next_replan_ms throttle and guard never sets _next_replan_ms (no 800/150ms replan window) -- different replan cadence; (2) guard calls follow_path(self,dt) UNCONDITIONALLY even on empty path (stays still), whereas A/B do `if path: follow_path else: move_towards(...)` (direct-steer fallback) -- genuine control-flow divergence; (3) guard uses `buildings or []` vs A/B `buildings`, and reads goal via self.target_position tuple. Parameterizing all three (throttle flag + fallback-steer flag + goal-attr indirection) would turn the helper into flag-soup and risk the digest, so guard stays inline. Only enemy x2 wired.",
+          "sites_wired": "2 of 3 -- Enemy.update (enemy.py) and SkeletonArcher.update move-closer (enemy.py). Guard left inline (reported).",
+          "verification": {
+            "digest_test": "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed, 1 warning. _AI_DECISION_DIGEST b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded UNCHANGED (hard-coded assert in test passed).",
+            "full_suite": "python -m pytest -q -> 654 passed, 4 skipped, 0 failed (135.81s). Matches baseline.",
+            "determinism_guard": "python tools/determinism_guard.py -> PASS: no violations found.",
+            "qa_smoke": "python tools/qa_smoke.py --quick -> DONE: PASS (all scenarios exit_code=0)."
+          },
+          "scope_compliance": "Lane respected: only game/systems/navigation.py + game/entities/enemy.py touched (guard.py inspected, left unchanged). hero.py and tax_collector.py NOT touched. No commit.",
+          "notes_for_pm": "W2 done. Enemy/archer path-follow now single-sourced via navigation.advance_along_path_to; guard intentionally left inline due to 3 behavioral divergences (replan throttle, unconditional follow, buildings-or-[]). If a future round wants guard unified, it must first decide whether to give guards the _next_replan_ms throttle + direct-steer fallback (a deliberate behavior change, would move the digest)."
+        }
+      }
     }
   }
 }

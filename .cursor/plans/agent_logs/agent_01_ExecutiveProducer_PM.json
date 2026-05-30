@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK72 CLOSE): wk72_round_c2_entity_dedup COMPLETE -- DoD met. Round C-2 entities-units dedup: (1) DifficultySystem.apply_to_enemy consolidated the triplicated HP/attack_power spawn-scaling (spawner/lairs/wave_events, 3 byte-identical blocks -> 1 method); (2) navigation.advance_along_path_to consolidated the path-replan block at Enemy.update + SkeletonArcher.update (2 sites). Agent 05 correctly LEFT guard.py inline (genuine behavior divergence -- unifying would move the digest; flagged as a deliberate-decision follow-up) and left hero/tax_collector out of scope per plan. Behavior-preserving: 667 passed/4 skipped/0 failed (+13 tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL. Agent 05 (2 gated waves), Agent 11 (regression+DoD). Plan: .cursor/plans/wk72_round_c2_entity_dedup.plan.md. WK71 was main 76c38f4. Committing+pushing. Next: WK73 (presentation split e.g. engine.py facades or input_handler package, OR more dedup/registry).",
+    "2026-05-30 (Agent 01 WK72 KICKOFF): Round C-2 entities-units dedup. (1) DifficultySystem.apply_to_enemy replacing triplicated HP/damage spawn-scaling (spawner/lairs/wave_events); (2) navigation.advance_along_path_to replacing the path-replan block copy-pasted in enemy.py(x2)+guard.py (hero+tax_collector excluded). Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), headless. Agent 05 (2 gated waves), Agent 11 regression+DoD. Plan: .cursor/plans/wk72_round_c2_entity_dedup.plan.md. WK71 was main 76c38f4. NOT YET COMMITTED for WK72.",
     "2026-05-30 (Agent 01 WK71 CLOSE): wk71_round_b2_hero_mixin_split COMPLETE -- DoD met, GOAL 'all tests pass' satisfied. Round B-2a: split game/entities/hero.py 1156 -> 543 LOC (-613) into 3 MRO-identical mixins -- HeroRestMixin (hero_rest.py), HeroEconomyMixin (hero_economy.py), HeroMemoryMixin (hero_memory.py); Hero(HeroRestMixin,HeroEconomyMixin,HeroMemoryMixin) keeps MRO [Hero,...mixins,object] so all call sites unchanged. 27 methods moved verbatim; deleted the duplicate set_event_bus + redundant _event_bus init; repointed 3 test_hero.py monkeypatch sites to the mixin module home. Behavior-preserving: 654 passed/4 skipped/0 failed (+8 MRO tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, no import cycle. Agent 03 (split W1), Agent 11 (MRO test + DoD W2). Deferred: intent->ai/intent.py boundary move; enemy.py ENEMY_STATS split; hud/ursina_renderer/engine/input_handler presentation splits; Move 9; zombie-type purge. Plan: .cursor/plans/wk71_round_b2_hero_mixin_split.plan.md. WK70 was main 5d6351b. Committing+pushing. Next: WK72.",
     "2026-05-30 (Agent 01 WK71 KICKOFF): hero.py mixin split (Round B-2a). Extract rest/economy/memory clusters from the 1156-LOC game/entities/hero.py into HeroRestMixin/HeroEconomyMixin/HeroMemoryMixin (MRO-identical via Hero(...mixins...)); delete the duplicate set_event_bus. Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), NO screenshots, intent->ai/ move deferred. Agent 03 split, Agent 11 MRO test+DoD. Plan: .cursor/plans/wk71_round_b2_hero_mixin_split.plan.md. WK70 was main 5d6351b. NOT YET COMMITTED for WK71.",
     "2026-05-30 (Agent 01 WK70 CLOSE): wk70_round_c1_buildingdef_registry COMPLETE -- DoD met, GOAL 'all tests pass' satisfied. Round C-1: BuildingDef single-source registry (Move 10, kills L7). Introduced game/content/buildings.py with BUILDING_DEFS (47 keys = 30 enum incl. 8 flagged WK34 zombies + 5 lairs + 12 POIs); config.py's 4 building maps + game/building_factory.py BUILDING_REGISTRY + the catalog/hotkey/placeable lists (build_catalog_panel, building_list_panel, input_handler if/elif chain) are now ALL derived from it as byte-identical back-compat views (3 duplicate copies eliminated; config.py -213 LOC). Import cycle (config imported by ~152 files) avoided via lazy building_class_for() accessor + importlib-by-path read of the BuildingType enum. Behavior-preserving: full suite 646 passed/4 skipped/0 failed (+13 snapshot-equality tests embedding git HEAD values), determinism PASS, qa_smoke PASS, validate_assets errors=0 (== WK69 baseline), WK67 digest b73961... BYTE-IDENTICAL. Agent 05 (2 gated waves), Agent 11 (snapshot test + DoD), Agent 03 (import-cycle consult, not needed -- 05 solved it). Deferred: zombie-type DELETION (guarded sprint), TAX_STASH/constraints folding, clusters 3/4/5, presentation splits, Move 9. Plan: .cursor/plans/wk70_round_c1_buildingdef_registry.plan.md. WK69 was main 2ee336c. Committing+pushing per standing authorization. Next: WK71 (continue Round B-2 presentation splits OR Round C-2 dedup clusters).",
@@ -3574,6 +3576,66 @@
             "05(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk71_round_b2_hero_mixin_split'].rounds['wk71_kickoff']) + plan .cursor/plans/wk71_round_b2_hero_mixin_split.plan.md; claude-opus-4-8; BEHAVIOR-PRESERVING, digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged, MRO identical; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD per standing authorization."
+        }
+      }
+    },
+    "wk72_round_c2_entity_dedup": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T06:30:00Z",
+        "plan_doc": ".cursor/plans/wk72_round_c2_entity_dedup.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK72 / Round C-2)",
+        "notes": "Round C-2 entities-units dedup: (1) DifficultySystem.apply_to_enemy(enemy) replacing the triplicated HP/damage spawn-scaling (spawner/lairs/wave_events); (2) navigation.advance_along_path_to replacing the copy-pasted path-replan block in enemy.py(x2)+guard.py (hero+tax_collector left out). Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), headless, NO screenshots. Agent 05 (2 gated waves), Agent 11 (regression+DoD).",
+        "definition_of_done": [
+          "A. pytest all pass (654/4/0 baseline)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded",
+          "D. qa_smoke green",
+          "E. apply_to_enemy is sole spawn-scaling (3 sites); advance_along_path_to called by enemy x2 + guard; hero/tax untouched",
+          "F. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "667 passed / 4 skipped / 0 failed (654 baseline + 13 dedup-regression tests)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical)",
+          "dedup_1": "DifficultySystem.apply_to_enemy -- 3 byte-identical spawn-scaling blocks (spawner/lairs/wave_events) -> one method (scales max_hp/hp + attack_power)",
+          "dedup_2": "navigation.advance_along_path_to -- the path-replan block at Enemy.update + SkeletonArcher.update (2 sites) -> one helper. guard.py LEFT INLINE (genuine behavior divergence: no replan throttle, unconditional follow_path, different fallback -- unifying would change behavior/digest). hero/tax_collector out of scope."
+        }
+      },
+      "rounds": {
+        "wk72_kickoff": {
+          "round_meta": {
+            "round_id": "wk72_kickoff",
+            "created_utc": "2026-05-30T06:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk72_round_c2_entity_dedup.plan.md",
+            "build_target": "DifficultySystem.apply_to_enemy + navigation.advance_along_path_to dedups",
+            "goal": "all tests pass; behavior byte-identical"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical",
+            "wave_dag": "W1(05 apply_to_enemy)->gate->W2(05 advance_along_path_to)->gate->W3(11 regression+DoD)->commit+push",
+            "dispatch_order": [
+              "05 W1",
+              "05 W2",
+              "11 W3"
+            ]
+          },
+          "pm_agent_prompts": {
+            "05": "[Agent 05] Two behavior-preserving dedups per plan .cursor/plans/wk72_round_c2_entity_dedup.plan.md section 1. W1: add DifficultySystem.apply_to_enemy(self,enemy)->None (game/systems/difficulty.py) reproducing the EXACT HP+damage spawn-scaling currently triplicated at spawner.py:~189-197, lairs.py:~144-153, wave_events.py:~254-259 -- READ all 3 first (they may also scale damage/other below the HP lines), reproduce each effect EXACTLY, then replace all 3 inline blocks with `difficulty.apply_to_enemy(enemy)` under the same `if difficulty is not None` guard. W2 (after PM gate): extract navigation.advance_along_path_to(entity, world, buildings, goal_x, goal_y, dt, ...) in game/systems/navigation.py reproducing the path-replan-and-follow block copy-pasted in enemy.py (TWO sites: Enemy.update ~289-320 and SkeletonArcher.update ~562-589) and guard.py (~159-180); call it from those 3 sites. SCOPE enemy+guard ONLY -- do NOT touch hero.py (crc32 stagger/fog differs) or tax_collector.py (gated enrichment). DIFF the 3 blocks first; if not identical, parameterize to cover the exact differences without changing any site's behavior; if a site can't be cleanly unified, leave it and report. VERIFY each wave: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), python -m pytest -q (654 passed), determinism_guard, qa_smoke --quick. STOP after W1 for PM gate. Report per wave: the helper, the sites wired, the block-diff finding, digest, suite totals. DO NOT COMMIT; update agent_05 log (rounds wk72_w1/wk72_w2).",
+            "11": "[Agent 11] W3 (after 05): create tests/test_wk72_entity_dedup.py: (a) apply_to_enemy -- for each difficulty (easy/normal/hard) a fresh enemy's max_hp/hp/damage after apply_to_enemy equal the pre-dedup values (compute expected from get_multiplier); assert the 3 spawn paths (spawner/lairs/wave_events) yield identical enemy stats for the same difficulty. (b) advance_along_path_to -- a path-follow smoke test that an enemy with a goal advances/replans as before (position changes toward goal; no crash). Run full DoD: pytest (all pass), determinism_guard, digest test (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke. Report PASS/FAIL verdict. Only your test file; no prod edits; DO NOT COMMIT; update agent_11 log (round wk72_w3).",
+            "06": "[Agent 06 CONSULT] available if a path-replan block touches ai target dicts. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "05",
+            "11",
+            "06(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk72_round_c2_entity_dedup'].rounds['wk72_kickoff']) + plan .cursor/plans/wk72_round_c2_entity_dedup.plan.md; claude-opus-4-8; BEHAVIOR-PRESERVING, digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD per standing authorization."
         }
       }

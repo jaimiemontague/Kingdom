@@ -290,38 +290,12 @@ class Enemy:
                 self._long_distance_mode = False
 
                 # Path around buildings/blocked tiles.
-                from game.systems.navigation import compute_path_worldpoints, follow_path
-                if not hasattr(self, "path"):
-                    self.path = []
-                    self._path_goal = None
-                goal_key = (int(target_x), int(target_y))
-                path_commit = int(getattr(self, "_path_commit_until_ms", 0) or 0)
-                has_path = bool(getattr(self, "path", None))
-                # Commitment: when chasing moving targets, stick to current path to avoid jitter.
-                # Replan only if no path, or (goal changed AND commitment window expired).
-                want_replan = (
-                    (not has_path) or (getattr(self, "_path_goal", None) != goal_key and now_ms_val >= path_commit)
-                ) and now_ms_val >= int(getattr(self, "_next_replan_ms", 0) or 0)
-                if want_replan:
-                    _new_path = compute_path_worldpoints(world, buildings, self.x, self.y, target_x, target_y)
-                    if _new_path is not None:
-                        self.path = _new_path
-                        self._path_goal = goal_key
-                        self._path_commit_until_ms = now_ms_val + getattr(self, "_path_commit_duration_ms", 500)
-                        if not self.path:
-                            self._next_replan_ms = now_ms_val + 800
-                        else:
-                            self._next_replan_ms = now_ms_val + 150
-                    # else: deferred -- keep existing path, retry next frame
-
-                if self.path:
-                    follow_path(self, dt)
-                else:
-                    # Fallback: still move roughly toward the goal so enemies don't freeze.
-                    self.move_towards(target_x, target_y, dt)
+                # WK72 W2: shared replan-and-follow helper (byte-identical to former inline block).
+                from game.systems.navigation import advance_along_path_to
+                advance_along_path_to(self, world, buildings, target_x, target_y, dt, now_ms_val)
             else:
                 self.move_towards(target_x, target_y, dt)
-    
+
     def do_attack(self):
         """
         Perform an attack on the current target.
@@ -563,31 +537,9 @@ class SkeletonArcher(Enemy):
             if dist > optimal_range:
                 # Move towards target
                 if world is not None:
-                    from game.systems.navigation import compute_path_worldpoints, follow_path
-                    if not hasattr(self, "path"):
-                        self.path = []
-                        self._path_goal = None
-                    goal_key = (int(target_x), int(target_y))
-                    path_commit = int(getattr(self, "_path_commit_until_ms", 0) or 0)
-                    has_path = bool(getattr(self, "path", None))
-                    want_replan = (
-                        (not has_path) or (getattr(self, "_path_goal", None) != goal_key and now_ms_val >= path_commit)
-                    ) and now_ms_val >= int(getattr(self, "_next_replan_ms", 0) or 0)
-                    if want_replan:
-                        _new_path = compute_path_worldpoints(world, buildings, self.x, self.y, target_x, target_y)
-                        if _new_path is not None:
-                            self.path = _new_path
-                            self._path_goal = goal_key
-                            self._path_commit_until_ms = now_ms_val + getattr(self, "_path_commit_duration_ms", 500)
-                            if not self.path:
-                                self._next_replan_ms = now_ms_val + 800
-                            else:
-                                self._next_replan_ms = now_ms_val + 150
-                        # else: deferred -- keep existing path, retry next frame
-                    if self.path:
-                        follow_path(self, dt)
-                    else:
-                        self.move_towards(target_x, target_y, dt)
+                    # WK72 W2: shared replan-and-follow helper (byte-identical to former inline block).
+                    from game.systems.navigation import advance_along_path_to
+                    advance_along_path_to(self, world, buildings, target_x, target_y, dt, now_ms_val)
                 else:
                     self.move_towards(target_x, target_y, dt)
 

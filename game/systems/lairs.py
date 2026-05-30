@@ -142,15 +142,10 @@ class LairSystem(GameSystem):
             spawned.extend(new_enemies)
 
         # WK60: apply difficulty HP/damage multipliers to newly spawned lair enemies
+        # WK72: scaling consolidated into DifficultySystem.apply_to_enemy
         if spawned and self.difficulty is not None:
-            hp_mult = self.difficulty.get_multiplier("enemy_hp")
-            dmg_mult = self.difficulty.get_multiplier("enemy_damage")
             for enemy in spawned:
-                if hp_mult != 1.0:
-                    enemy.max_hp = max(1, int(round(enemy.max_hp * hp_mult)))
-                    enemy.hp = enemy.max_hp
-                if dmg_mult != 1.0:
-                    enemy.attack_power = max(1, int(round(enemy.attack_power * dmg_mult)))
+                self.difficulty.apply_to_enemy(enemy)
 
         return spawned
 

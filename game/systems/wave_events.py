@@ -227,13 +227,6 @@ class WaveEventSystem(GameSystem):
         if self.difficulty is not None:
             count_mult = self.difficulty.get_multiplier("wave_event_count")
 
-        # Difficulty multipliers for enemy stats
-        hp_mult = 1.0
-        dmg_mult = 1.0
-        if self.difficulty is not None:
-            hp_mult = self.difficulty.get_multiplier("enemy_hp")
-            dmg_mult = self.difficulty.get_multiplier("enemy_damage")
-
         # Determine spawn positions based on direction
         edges = ["top", "bottom", "left", "right"]
         if event_def.direction == "random_edge":
@@ -252,11 +245,9 @@ class WaveEventSystem(GameSystem):
                 wx, wy = _edge_position(self.rng, edge)
                 enemy = enemy_cls(wx, wy)
                 # Apply difficulty HP/damage multipliers to newly spawned wave enemies
-                if hp_mult != 1.0:
-                    enemy.max_hp = max(1, int(round(enemy.max_hp * hp_mult)))
-                    enemy.hp = enemy.max_hp
-                if dmg_mult != 1.0:
-                    enemy.attack_power = max(1, int(round(enemy.attack_power * dmg_mult)))
+                # WK72: scaling consolidated into DifficultySystem.apply_to_enemy
+                if self.difficulty is not None:
+                    self.difficulty.apply_to_enemy(enemy)
                 spawned.append(enemy)
 
         # Add to shared enemy list (wave events can exceed normal cap by overflow factor).
