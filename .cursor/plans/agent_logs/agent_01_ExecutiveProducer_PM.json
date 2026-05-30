@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK81 CLOSE): wk81_round_d_mock_provider_split COMPLETE -- DoD met. Split ai/providers/mock_provider.py (519 -> 129 LOC) into ai/providers/mock/ package: autonomous.py (mock_autonomous_decision), direct_prompt.py (mock_direct_prompt + _hero_ctx/_emit_validated helpers), legacy_decision.py (make_decision), conversation.py (mock_conversation_response), behind a thin MockProvider facade (complete() dispatch unchanged; MockProvider stays at ai/providers/mock_provider.py for the registry import; RNG singleton lazy-imported so the deterministic stream is not forked). Behavior-preserving: 780 passed/4 skipped/0 failed (+22 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (the PERFECT guard -- the digest hero-decisions ARE this mocks output). Agent 06 extract; Agent 11 W2 created the seam test but hit a transient API 529 on its report -- PM verified the seam test (passes) + ran the full DoD gate directly. Plan: .cursor/plans/wk81_round_d_mock_provider_split.plan.md. WK80 was main 348a6e6. Committing+pushing. SESSION: 14 sprints WK68-81 shipped. REMAINING: hud.py split (2477), ursina_renderer body split, ursina_terrain_fog_collab/ursina_app splits, Move 9, world.py, config package, clusters 3/4, rest of Round D (basic_ai/context_builder/direct_prompt_validator/bounty_pursuit/exploration + vocab + TaskRouter), Round E audit, 21-file zombie purge. Next: WK82.",
+    "2026-05-30 (Agent 01 WK81 KICKOFF): mock_provider.py -> ai/providers/mock/ package (Round D-1). Split the 519-LOC MockProvider into autonomous/direct_prompt/legacy_decision/conversation modules behind a thin MockProvider facade (pure-move pattern; MockProvider stays at ai/providers/mock_provider.py for the provider-registry import). The AI-decision digest USES this mock to drive hero decisions -> digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded is a PERFECT guard. Headless. Chosen to conserve context (no screenshots) while continuing the roadmap. Agent 06 extract, Agent 11 verify. Plan: .cursor/plans/wk81_round_d_mock_provider_split.plan.md. WK80 was main 348a6e6. NOT YET COMMITTED for WK81.",
     "2026-05-30 (Agent 01 WK80 CLOSE): wk80_round_b2_ursina_renderer_deadcode COMPLETE -- DoD met. Deleted residual dead code from ursina_renderer.py: the _unit_facing_direction import (:441) + its function in ursina_units_anim.py (dead since WK68 DTO migration), the inert underground-render shell + dead __init__ state (_underground_mgr/_underground_lights/cave-shader-rev -- the render BODY had already died in WK65), and the dead PEASANT_SCALE alias. Grep-proven zero live callers; sim-side poi_interaction/underground_terrain UNTOUCHED. ursina_renderer.py 1979->1959, ursina_units_anim.py -31. Behavior-preserving: 758 passed/4 skipped/0 failed, determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, before/after Ursina screenshots PM-verified PIXEL-IDENTICAL. Agent 09 delete+screenshot; PM verified directly (small deletion, no separate QA wave). NOTE: most of the audit-flagged ~450 ursina dead LOC was already removed in WK65/68 -- only residual remained. Plan: .cursor/plans/wk80_round_b2_ursina_renderer_deadcode.plan.md. WK79 was main a91e8ae. Committing+pushing. SESSION: 13 sprints WK68-80 shipped. REMAINING HIGH-VALUE: ursina_renderer.py BODY split (8 modules), hud.py split (2477), ursina_terrain_fog_collab/ursina_app splits, Move 9, world.py, config package, clusters 3/4, Round D AI router/splits, Round E audit, 21-file zombie purge. Next: WK81.",
     "2026-05-30 (Agent 01 WK80 KICKOFF): ursina_renderer.py dead-code deletion (Round B-2g, delete-first prep for its eventual split). Remove the dead _unit_facing_direction import (ursina_renderer.py:441) + its function in ursina_units_anim.py (dead since WK68 DTO migration) + the underground render subsystem IF confirmed dead (PRESERVE the sim-side poi_interaction dungeon) + dead scale constants. Grep-guarded; before/after Ursina base_overview screenshots must be identical. Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded). Agent 09 delete, Agent 11 verify. Plan: .cursor/plans/wk80_round_b2_ursina_renderer_deadcode.plan.md. WK79 was main a91e8ae. NOT YET COMMITTED for WK80.",
     "2026-05-30 (Agent 01 WK79 CLOSE): wk79_round_c_audio_split COMPLETE -- DoD met. Split game/audio/audio_system.py (513 -> 264 LOC) into a game/audio/ package: contract.py (AUDIO_EVENT_MAP+SOUND_COOLDOWNS_MS, now the single source -- re-imported by identity), sfx_cache.py (_assets_dir/_load_sfx/play_sfx), mixer_volume.py (6 volume getters/setters + _apply_ambient_volume), ambient.py (set/stop_ambient + interior + update_enemy_ambient + _INTERIOR_AMBIENT_MAP). AudioSystem keeps __init__/on_event/_emit_single_event/set_listener_view/_is_audible_world_event + 15 delegating wrappers (pure-move pattern). enemy_sounds.py untouched. Behavior-preserving: 758 passed/4 skipped/0 failed (+19 seam tests), determinism PASS, qa_smoke PASS (runs audio dispatch), WK67 digest b73961... BYTE-IDENTICAL, no import cycle. Agent 14 SoundDirector extract, Agent 11 verify. Plan: .cursor/plans/wk79_round_c_audio_split.plan.md. WK78 was main fa58064. Committing+pushing. SESSION: 12 sprints WK68-79 shipped (Round A finish + sim/building/hero/enemy/engine(x4)/input_handler/audio splits + entity/AI dedups + building registry). Next major: BIG presentation splits (hud.py 2477 / ursina_renderer.py 1985 -- screenshot-heavy), Move 9, world.py, config package, clusters 3/4, Round D AI router/splits, Round E audit, 21-file zombie purge. Next: WK80.",
@@ -4135,6 +4137,66 @@
             "03(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk80_round_b2_ursina_renderer_deadcode'].rounds['wk80_kickoff']) + plan .cursor/plans/wk80_round_b2_ursina_renderer_deadcode.plan.md; claude-opus-4-8; DELETE ONLY grep-confirmed-dead (zero live callers); do NOT touch the sim-side dungeon/poi_interaction; before/after Ursina screenshots MUST match; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
+        }
+      }
+    },
+    "wk81_round_d_mock_provider_split": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T15:30:00Z",
+        "plan_doc": ".cursor/plans/wk81_round_d_mock_provider_split.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK81 / Round D-1)",
+        "notes": "Round D-1: mock_provider.py (519 LOC) split into ai/providers/mock/ package (autonomous/direct_prompt/legacy_decision/conversation) behind a thin MockProvider facade (pure-move pattern, MockProvider stays at ai/providers/mock_provider.py for the registry import). The AI-decision digest USES this mock to drive hero decisions -> digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded is a PERFECT guard. Headless. Agent 06 extract, Agent 11 verify.",
+        "definition_of_done": [
+          "A. pytest all pass (758/4/0)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (perfect guard)",
+          "D. qa_smoke green",
+          "E. ai/providers/mock/{autonomous,direct_prompt,legacy_decision,conversation,__init__}.py exist; MockProvider still importable from old path with 4 delegating wrappers; mock_provider.py smaller; no cycle",
+          "F. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "780 passed / 4 skipped / 0 failed (758 + 22 seam tests)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961... byte-identical (PERFECT guard -- the digest decisions ARE the mock output)",
+          "mock_provider_loc": "519 -> 129 (-390)",
+          "result": "mock_provider.py split into ai/providers/mock/ package (autonomous/direct_prompt/legacy_decision/conversation) behind a thin MockProvider facade; complete() dispatch unchanged; MockProvider stays at the registry import path; RNG singleton lazy-imported to keep the deterministic stream single; no import cycle.",
+          "recovery_note": "Agent 11 W2 hit a transient API 529 after creating the seam test; PM verified the seam test (passes) + ran the full DoD gate directly. Agent 11 log may be incomplete due to the 529."
+        }
+      },
+      "rounds": {
+        "wk81_kickoff": {
+          "round_meta": {
+            "round_id": "wk81_kickoff",
+            "created_utc": "2026-05-30T15:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk81_round_d_mock_provider_split.plan.md",
+            "build_target": "mock_provider.py -> ai/providers/mock/ package",
+            "goal": "all tests pass; mock responses byte-identical"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical (PERFECT guard -- the digest's decisions ARE the mock output) + qa_smoke green",
+            "wave_dag": "W1(06)->gate(suite+digest+qa_smoke)->W2(11 verify)->commit",
+            "dispatch_order": [
+              "06 W1",
+              "11 W2"
+            ]
+          },
+          "pm_agent_prompts": {
+            "06": "[Agent 06] Split ai/providers/mock_provider.py (519 LOC) into an ai/providers/mock/ package per plan .cursor/plans/wk81_round_d_mock_provider_split.plan.md sections 1-2 (pure-move pattern: function takes the MockProvider as `provider`, self.->provider., original method becomes a 1-line delegating wrapper). The AI-decision digest USES this mock to drive hero decisions, so the digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded is a PERFECT guard -- any change to a mock response breaks it. Create ai/providers/mock/: __init__.py; autonomous.py (mock_autonomous_decision(provider,user_prompt) <- _mock_autonomous_decision ~111-194 incl nested pick); direct_prompt.py (mock_direct_prompt(provider,user_prompt) <- _mock_direct_prompt ~195-364 incl nested find_place/base); legacy_decision.py (make_decision(provider,...) <- _make_decision ~365-484); conversation.py (mock_conversation_response(provider,system_prompt,user_prompt) <- _mock_conversation_response ~485-519). Module helpers _hero_ctx_from_prompt_blob/_emit_validated_direct: if used by only one responder move with it; if shared, put in ai/providers/mock/_helpers.py. KEEP MockProvider in ai/providers/mock_provider.py as the facade (name, complete [leave its prompt-sniffing dispatch UNCHANGED], _norm_msg) + a 1-line delegating wrapper for each of the 4 responder methods (same names -- complete() keeps calling self._mock_autonomous_decision etc., now wrappers). Wrapper example: def _mock_autonomous_decision(self, user_prompt): from ai.providers.mock import autonomous; return autonomous.mock_autonomous_decision(self, user_prompt). RULES: submodules import MockProvider only under TYPE_CHECKING (from __future__ import annotations); copy each method's leaf imports (validator, config, the module helpers); NO import cycle; move responder bodies VERBATIM (self.->provider.). MockProvider MUST stay importable from ai/providers/mock_provider.py (the provider registry imports it). VERIFY: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded -- the decisions ARE the mock output, so this is the definitive proof), python -m pytest -q (758 passed), determinism_guard, qa_smoke --quick (direct_prompt + conversation scenarios exercise the moved responders), import check (from ai.providers.mock_provider import MockProvider). Report: package modules + functions, the 4 wrappers, mock_provider.py new LOC (was 519), digest, suite totals, qa_smoke, no-cycle. DO NOT COMMIT; update agent_06 log (round wk81_w1).",
+            "11": "[Agent 11] W2 (after 06): create tests/test_wk81_mock_provider_split.py: assert ai.providers.mock.{autonomous,direct_prompt,legacy_decision,conversation} import with their public fns; assert MockProvider still imports from ai.providers.mock_provider; assert each of the 4 responder wrappers on MockProvider delegates (spy+monkeypatch the module fn, call the wrapper on a MockProvider instance, assert invoked with provider as first arg); AST guard the submodules don't import mock_provider at runtime (TYPE_CHECKING only). Full DoD: pytest (all pass), determinism_guard, digest (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke. NO screenshots. Report PASS/FAIL + DoD A-F. Only your test; no prod edits; DO NOT COMMIT; update agent_11 log (round wk81_w2).",
+            "03": "[Agent 03 CONSULT] available if the package import structure cycles. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "06",
+            "11",
+            "03(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk81_round_d_mock_provider_split'].rounds['wk81_kickoff']) + plan .cursor/plans/wk81_round_d_mock_provider_split.plan.md; claude-opus-4-8; PURE MOVE behavior-preserving, keep wrapper names + MockProvider's import path, TYPE_CHECKING-only import; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (perfect guard) + qa_smoke must stay green; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }

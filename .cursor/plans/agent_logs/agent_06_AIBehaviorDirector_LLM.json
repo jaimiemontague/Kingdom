@@ -1526,6 +1526,62 @@
           "notes": "Behavior byte-identical: digest unchanged after wiring all 8 sites. TARGET_COMMIT_WINDOW_S / HeroState imports still used (inside the helpers). No import cycle (helpers placed in defense.py, which already imported HeroState + TARGET_COMMIT_WINDOW_S). Did not create combat_targeting.py - in-module helpers were the simpler cycle-free choice."
         }
       }
+    },
+    "wk81_round_d_mock_provider_split": {
+      "sprint_meta": {
+        "sprint_id": "wk81_round_d_mock_provider_split",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "title": "WK81 Round D-1 - mock_provider.py -> ai/providers/mock/ package (Agent 06 W1 extraction)",
+        "role": "Agent 06 AIBehaviorDirector_LLM"
+      },
+      "rounds": {
+        "wk81_w1": {
+          "round_meta": {
+            "role": "Agent 06 AIBehaviorDirector_LLM",
+            "phase": "W1 - extract 4 mock responders into ai/providers/mock/ behind delegating wrappers",
+            "launched_by": "Claude Code Agent-tool subagent (parent Agent 01 PM)",
+            "reports_to": "Agent 01 (PM)",
+            "completed_utc": "2026-05-30T00:00:00Z"
+          },
+          "sprint_id": "wk81_round_d_mock_provider_split",
+          "round_id": "wk81_w1",
+          "status": "done",
+          "scope": "Pure-move split of ai/providers/mock_provider.py (519 LOC) into an ai/providers/mock/ package. Each responder body moved VERBATIM (self.->provider.) into a module function taking the MockProvider as provider; MockProvider stays at ai/providers/mock_provider.py as the facade (name, complete dispatch UNCHANGED, _norm_msg) with a 1-line delegating wrapper per responder. Lane: ai/providers/mock_provider.py + new ai/providers/mock/*.py only; no other providers touched.",
+          "package_modules": {
+            "ai/providers/mock/__init__.py": "docstring only (15 LOC)",
+            "ai/providers/mock/autonomous.py": "mock_autonomous_decision(provider, user_prompt) <- _mock_autonomous_decision (incl nested pick); leaf import: json. No self. refs in body.",
+            "ai/providers/mock/direct_prompt.py": "mock_direct_prompt(provider, user_prompt) <- _mock_direct_prompt (incl nested find_place/base). Owns module helpers _hero_ctx_from_prompt_blob + _emit_validated_direct (used ONLY by this responder) and a leaf copy of _norm_msg. Leaf imports: json, re, validate_direct_prompt_output.",
+            "ai/providers/mock/legacy_decision.py": "make_decision(provider, personality, health_pct, in_combat, has_potions, can_shop, low_health, critical_health, outnumbered) <- _make_decision (exact signature + provider prepended).",
+            "ai/providers/mock/conversation.py": "mock_conversation_response(provider, system_prompt, user_prompt) <- _mock_conversation_response."
+          },
+          "wrappers_in_facade": [
+            "def _mock_autonomous_decision(self, user_prompt): from ai.providers.mock import autonomous; return autonomous.mock_autonomous_decision(self, user_prompt)",
+            "def _mock_direct_prompt(self, user_prompt): from ai.providers.mock import direct_prompt; return direct_prompt.mock_direct_prompt(self, user_prompt)",
+            "def _make_decision(self, personality, health_pct, in_combat, has_potions, can_shop, low_health, critical_health, outnumbered): from ai.providers.mock import legacy_decision; return legacy_decision.make_decision(self, ...)",
+            "def _mock_conversation_response(self, system_prompt, user_prompt): from ai.providers.mock import conversation; return conversation.mock_conversation_response(self, system_prompt, user_prompt)"
+          ],
+          "shared_helpers_placement": "_hero_ctx_from_prompt_blob and _emit_validated_direct are used by ONLY the direct_prompt responder, so they moved INTO direct_prompt.py (no _helpers.py needed). _norm_msg is kept on the facade per spec AND duplicated as a trivial leaf helper in direct_prompt.py (its only consumer) to avoid a top-level cross-import.",
+          "rng_determinism_note": "get_rng(\"mock_provider\") returns a FRESH Random each call, so re-deriving in a submodule would fork the stream. legacy_decision.py and conversation.py therefore import the shared _MOCK_RNG singleton LAZILY from ai.providers.mock_provider inside the function (keeps one advancing stream; no top-level mock_provider import; no cycle).",
+          "no_import_cycle": "Confirmed: importing ai.providers.mock_provider pulls in ZERO ai.providers.mock.* submodules (sys.modules check). Submodules import MockProvider only under TYPE_CHECKING (from __future__ import annotations); wrappers import the submodule lazily; the two RNG-using submodules import _MOCK_RNG lazily.",
+          "loc": {
+            "mock_provider.py_before": 519,
+            "mock_provider.py_after": 129,
+            "autonomous.py": 94,
+            "direct_prompt.py": 212,
+            "legacy_decision.py": 139,
+            "conversation.py": 50,
+            "__init__.py": 15
+          },
+          "verification": {
+            "digest_guard": "tests/test_wk67_ai_boundary.py 10 passed - digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded UNCHANGED (the definitive proof: the digest hero decisions ARE this mock output)",
+            "full_suite": "758 passed / 4 skipped / 0 failed (baseline match)",
+            "determinism_guard": "PASS: no violations found",
+            "qa_smoke_quick": "DONE: PASS (conversation + direct_prompt_integration scenarios exit 0 - exercise the moved responders)",
+            "import_check": "from ai.providers.mock_provider import MockProvider; from ai.providers.mock import autonomous, direct_prompt, legacy_decision, conversation -> ok True True True True"
+          },
+          "constraints_honored": "Did NOT touch other providers (openai/grok/anthropic/base). complete() dispatch/sniffing UNCHANGED. MockProvider still importable from ai/providers/mock_provider.py (provider registry + ai/llm_brain.py + tests import it there). DID NOT COMMIT."
+        }
+      }
     }
   }
 }
