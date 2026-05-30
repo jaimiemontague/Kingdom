@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK77 CLOSE): wk77_round_b2_input_handler_split COMPLETE -- DoD met. Split game/input_handler.py (789 -> 170 LOC, -619) into game/input/ package: mouse.py (handle_mousedown+handle_mousemove), keyboard.py (handle_keydown), placement.py (select_building_for_placement), as functions taking the InputHandler as ih, behind 1-line delegating wrappers (WK75/76 pure-move pattern). InputHandler keeps __init__/process_events/_clear_hero_selection. Every branch moved verbatim (pause guard incl WK68 H1 panel_hit, HUD-action ladder, building-panel hire/enter/demolish dispatch, WK70 BUILD_HOTKEY_TO_TYPE reverse-map). Behavior-preserving: 732 passed/4 skipped/0 failed (+12 seam tests), determinism PASS, qa_smoke PASS, WK68 button/paused + input tests green, WK67 digest b73961... BYTE-IDENTICAL, no import cycle, sanity screenshot healthy. Agent 03 extract, Agent 11 verify+screenshot. NOTE: PM hub had a minor inline-backtick corruption in the wk77 03-prompt example (bash command-substitution); the plan doc carried the full pattern so no impact -- use Write-file writers for hub edits, not python -c with backticks. Deferred: finer handle_mousedown breakdown; engine.py lifecycle facade; hud/ursina_renderer/ursina_app splits; Move 9; world.py; config package; Round D AI; zombie purge. Plan: .cursor/plans/wk77_round_b2_input_handler_split.plan.md. WK76 was main d35c619. Committing+pushing. Next: WK78.",
+    "2026-05-30 (Agent 01 WK77 KICKOFF): input_handler.py split into game/input/ package (Round B-2e). Extract handle_mousedown+handle_mousemove->mouse.py, handle_keydown->keyboard.py, select_building_for_placement->placement.py (functions taking ih) behind delegating wrappers (WK75/76 pure-move pattern); InputHandler keeps __init__/process_events/_clear_hero_selection. Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded); guarded by WK68 button/paused tests + test_input_handler_gamecommands + sanity screenshot. Agent 03 extract, Agent 11 verify+screenshot. Plan: .cursor/plans/wk77_round_b2_input_handler_split.plan.md. WK76 was main d35c619. NOT YET COMMITTED for WK77.",
     "2026-05-30 (Agent 01 WK76 CLOSE): wk76_round_b2_engine_selection_facade COMPLETE -- DoD met. Extracted the 8 try_select_* selection methods -> game/engine_facades/selection.py behind delegating wrappers (WK75 pure-move pattern; 39x idiom cleanup deferred). engine.py 1365 -> 1184 (-181; cumulative 1678->1184 across WK75+WK76). Behavior-preserving: 720 passed/4 skipped/0 failed (+11 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, no import cycle, sanity screenshot healthy. Agent 03 extract, Agent 11 verify+screenshot. Deferred: engine.py lifecycle facade + __init__ split + 39x idiom cleanup; input_handler package; hud/ursina_renderer/ursina_app splits; Move 9; world.py; config package; Round D AI; zombie purge. Plan: .cursor/plans/wk76_round_b2_engine_selection_facade.plan.md. WK75 was main 6898168. Committing+pushing. Next: WK77.",
     "2026-05-30 (Agent 01 WK76 KICKOFF): engine.py selection facade (Round B-2d). Extract the 8 try_select_* methods -> game/engine_facades/selection.py behind delegating wrappers (WK75 pure-move pattern); 39x idiom cleanup deferred. Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded). Agent 03 extract, Agent 11 verify+screenshot. Plan: .cursor/plans/wk76_round_b2_engine_selection_facade.plan.md. WK75 was main 6898168. NOT YET COMMITTED for WK76.",
     "2026-05-30 (Agent 01 WK75 CLOSE): wk75_round_b2_engine_actions_facade COMPLETE -- DoD met. First slice of the engine.py god-file split: extracted the actions facade (try_hire_hero/place_building/place_bounty/apply_hud_pin_action -> game/engine_facades/actions.py, apply_hud_pin_action moved verbatim with all 9 branches) + the cheat console (process_command -> game/console.py) behind 1-line delegating wrappers (WK69 pattern). engine.py 1678 -> 1365 (-313). Behavior-preserving: 709 passed/4 skipped/0 failed (+7 seam tests), determinism PASS, qa_smoke PASS, WK68 button tests 12 passed (the key guard since the digest is headless and does not cover UI actions), WK67 digest b73961... BYTE-IDENTICAL, no import cycle, sanity screenshot UI healthy. Agent 03 extract, Agent 11 verify+screenshot. Deferred: engine.py selection facade + the 39x set-one-null-others cleanup, lifecycle facade, __init__ split. Plan: .cursor/plans/wk75_round_b2_engine_actions_facade.plan.md. WK74 was main 0a3a59e. Committing+pushing. Next: WK76.",
@@ -3886,6 +3888,68 @@
             "08(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints[wk76_round_b2_engine_selection_facade].rounds[wk76_kickoff]) + plan .cursor/plans/wk76_round_b2_engine_selection_facade.plan.md; claude-opus-4-8; PURE MOVE behavior-preserving, keep wrapper names, TYPE_CHECKING-only engine import, digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
+        }
+      }
+    },
+    "wk77_round_b2_input_handler_split": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T11:30:00Z",
+        "plan_doc": ".cursor/plans/wk77_round_b2_input_handler_split.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK77 / Round B-2e)",
+        "notes": "Round B-2e: input_handler.py (789 LOC) split into game/input/ package. Extract handle_mousedown+handle_mousemove -> mouse.py, handle_keydown -> keyboard.py, select_building_for_placement -> placement.py, as functions taking the InputHandler as ih, behind 1-line delegating wrappers (WK75/76 pure-move pattern). InputHandler keeps __init__/process_events/_clear_hero_selection. Behavior-preserving; guarded by WK68 button/paused tests + test_input_handler_gamecommands + sanity screenshot. Agent 03 extract, Agent 11 verify+screenshot.",
+        "definition_of_done": [
+          "A. pytest all pass (720/4/0)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded",
+          "D. qa_smoke green",
+          "E. WK68 button+paused tests + test_input_handler_gamecommands pass",
+          "F. game/input/{mouse,keyboard,placement,__init__}.py exist; wrappers on InputHandler; input_handler.py smaller; no cycle",
+          "G. sanity screenshot",
+          "H. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "732 passed / 4 skipped / 0 failed (720 + 12 seam tests)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical)",
+          "wk68_input_tests": "WK68 button/hire/paused + test_input_handler_gamecommands green",
+          "input_handler_loc": "789 -> 170 (-619)",
+          "result": "input_handler.py split into game/input/ package (mouse/keyboard/placement) behind delegating wrappers; InputHandler keeps __init__/process_events/_clear_hero_selection; every branch (pause guard, HUD-action ladder, panel dispatch, WK70 hotkey reverse-map) moved verbatim; no import cycle; sanity screenshot healthy."
+        }
+      },
+      "rounds": {
+        "wk77_kickoff": {
+          "round_meta": {
+            "round_id": "wk77_kickoff",
+            "created_utc": "2026-05-30T11:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk77_round_b2_input_handler_split.plan.md",
+            "build_target": "input_handler.py -> game/input/ package",
+            "goal": "all tests pass; input byte-identical"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "WK68 button/paused tests + test_input_handler_gamecommands pass + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical",
+            "wave_dag": "W1(03 extract)->gate->W2(11 verify+screenshot)->commit",
+            "dispatch_order": [
+              "03 W1",
+              "11 W2"
+            ]
+          },
+          "pm_agent_prompts": {
+            "03": "[Agent 03] Split game/input_handler.py (789 LOC) into a game/input/ package per plan .cursor/plans/wk77_round_b2_input_handler_split.plan.md sections 1-2 (WK75/76 pure-move pattern: function takes the InputHandler as ih, self.->ih., original method becomes a 1-line delegating wrapper). Create game/input/__init__.py, game/input/mouse.py (handle_mousedown ~395-706 + handle_mousemove ~707-789), game/input/keyboard.py (handle_keydown ~187-380), game/input/placement.py (select_building_for_placement ~142-186). KEEP on InputHandler: __init__, process_events (the event loop -- leave its dispatch unchanged; it calls self.handle_mousedown etc. which are now wrappers), _clear_hero_selection (the moved mouse code calls ih._clear_hero_selection()). Each moved method becomes . CRITICAL: move VERBATIM -- the pause guard, the HUD-action ladder, the building-panel hire/enter/demolish dispatch, the WK70 BUILD_HOTKEY_TO_TYPE reverse-map in handle_keydown -- every branch intact. Copy ALL leaf imports each method used (pygame, config, ViewMode, BUILD_HOTKEY_TO_TYPE, etc.) into the new modules. TYPE_CHECKING-only InputHandler import; NO import cycle. VERIFY: python -m pytest tests/test_wk68_building_buttons.py tests/test_wk68_hire_button.py tests/test_input_handler_gamecommands.py -q (MUST pass), python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), python -m pytest -q (720 passed), determinism_guard, qa_smoke --quick, import check. If a test fails, a branch/import was missed -- diff vs original. Report: the package modules, the wrappers, input_handler.py new LOC (was 789), the WK68/input test results, digest, suite totals, no-cycle. DO NOT COMMIT; update agent_03 log (round wk77_w1).",
+            "11": "[Agent 11] W2 (after 03): create tests/test_wk77_input_split.py asserting game.input.mouse has handle_mousedown/handle_mousemove, game.input.keyboard has handle_keydown, game.input.placement has select_building_for_placement, and each InputHandler wrapper delegates (spy+monkeypatch). Capture sanity screenshot: python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk77_input_split --size 1920x1080 --ticks 480 -- view it, confirm normal render. Full DoD: pytest (all pass), determinism_guard, digest (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke. Report PASS/FAIL + DoD A-H + screenshot verdict. Only your test+screenshots; no prod edits; DO NOT COMMIT; update agent_11 log (round wk77_w2).",
+            "08": "[Agent 08 CONSULT] available if input behaves differently after the split. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "03",
+            "11",
+            "08(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints[wk77_round_b2_input_handler_split].rounds[wk77_kickoff]) + plan .cursor/plans/wk77_round_b2_input_handler_split.plan.md; claude-opus-4-8; PURE MOVE behavior-preserving, keep wrapper names + every branch verbatim, TYPE_CHECKING-only import; WK68 button/paused + input tests + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded must stay green; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }

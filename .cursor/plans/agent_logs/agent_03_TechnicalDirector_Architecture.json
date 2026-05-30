@@ -2458,6 +2458,42 @@
           "notes_for_pm": "W1 complete and gated. PURE MOVE; selection logic byte-identical (deferred 39x idiom untouched). No private helper moved (none exists). engine.py 1365 -> 1184 (-181). Hand to Agent 11 (W2) for seam test + sanity screenshot + DoD close."
         }
       }
+    },
+    "wk77_round_b2_input_handler_split": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk77_round_b2_input_handler_split.plan.md",
+        "created_utc": "2026-05-30T22:00:00Z",
+        "notes": "Round B-2e: split game/input_handler.py (789 LOC, single InputHandler class) into a game/input/ package. PURE MOVE (WK69/WK75/WK76 pattern): handle_mousedown/handle_mousemove -> game/input/mouse.py, handle_keydown -> game/input/keyboard.py, select_building_for_placement -> game/input/placement.py, each as a module function taking the InputHandler as ih (self.->ih.); the original methods become 1-line delegating wrappers. InputHandler keeps __init__, process_events (event loop, unchanged), _clear_hero_selection. Behavior byte-identical; WK68 button/paused + input tests + WK67 digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded stay green. W1 = the extraction (this entry); W2 (Agent 11) adds seam test + sanity screenshot + DoD."
+      },
+      "rounds": {
+        "wk77_w1": {
+          "sprint_id": "wk77_round_b2_input_handler_split",
+          "round_id": "wk77_w1",
+          "status": "done",
+          "intelligence": "HIGH",
+          "wave": "Wave W1 - create game/input/ package + 4 delegating wrappers out of input_handler.py. Single-lane mechanical work; STOP after W1 for PM gate (WK68/input tests + suite + digest) before W2 (Agent 11 seam test + sanity screenshot + DoD).",
+          "summary": "Split game/input_handler.py (789 LOC) into a game/input/ package. The 4 heavy methods moved byte-for-byte into module functions taking the live InputHandler as ih (self.->ih. only; self._clear_hero_selection()->ih._clear_hero_selection(), self.select_building_for_placement->ih.select_building_for_placement). EVERY branch preserved verbatim: handle_mousedown's pause guard (WK68 H1 panel_hit allowance), the wheel-zoom 4/5 branches, the full HUD-action ladder, the building-panel result dispatch (open_build_catalog/demolish/enter/hire/True), the building_list/build_catalog panels, world selection ladder, empty-space deselect; handle_keydown's command-mode capture, ESC ladder, chat-active consume, pause/menu blocks, the WK70 BUILD_HOTKEY_TO_TYPE reverse-map branch, hire 'h', all F-keys/zoom/speed branches; select_building_for_placement's affordability/prereq/constraint checks. InputHandler KEEPS __init__, process_events (event loop dispatch unchanged - it calls self.handle_* which are now wrappers), and _clear_hero_selection. Each moved method is now a 1-line wrapper that lazily imports its module. No import cycle: new modules import InputHandler only under TYPE_CHECKING (from __future__ import annotations); keyboard.py's BUILD_HOTKEY_TO_TYPE is lazy-imported inside the function so no top-level game.input_handler import (verified: importing game.input.keyboard does NOT load game.input_handler).",
+          "new_modules": {
+            "game/input/__init__.py": "package docstring (no code).",
+            "game/input/mouse.py": "handle_mousedown(ih, event), handle_mousemove(ih, event). Leaf imports: pygame (top; plus the original's local 'import pygame' and 'import pygame._sdl2' inside handle_mousemove kept verbatim), config ZOOM_STEP, game.ui.micro_view_manager.ViewMode. Calls ih._clear_hero_selection() and ih.select_building_for_placement(...). 420 LOC.",
+            "game/input/keyboard.py": "handle_keydown(ih, event). Leaf imports: config DEFAULT_SPEED_TIER+ZOOM_STEP, game.sim.timebase get/set_time_multiplier, game.ui.micro_view_manager.ViewMode (top + the original's local re-import in the ESC block kept), game.ui.speed_control.SPEED_TIERS; BUILD_HOTKEY_TO_TYPE lazy-imported from game.input_handler inside the function (no cycle). Calls ih.select_building_for_placement(...). 220 LOC.",
+            "game/input/placement.py": "select_building_for_placement(ih, building_type)->bool. Leaf imports: config BUILDING_PREREQUISITES + BUILDING_CONSTRAINTS (local, as original). 61 LOC."
+          },
+          "wrappers_kept_on_InputHandler": "handle_mousedown(self,event)->mouse.handle_mousedown(self,event); handle_mousemove(self,event)->mouse.handle_mousemove(self,event); handle_keydown(self,event)->keyboard.handle_keydown(self,event); select_building_for_placement(self,building_type)->placement.select_building_for_placement(self,building_type). All 4 names identical; process_events/__init__/_clear_hero_selection unchanged. BUILD_HOTKEY_TO_TYPE module constant retained on input_handler.py (single source).",
+          "input_handler_loc": "789 -> 170 (process_events event loop + __init__ + _clear_hero_selection + the 4 one-line wrappers + the BUILD_HOTKEY_TO_TYPE definition). Now-unused top-level imports (DEFAULT_SPEED_TIER, COLOR_WHITE, get/set_time_multiplier, ViewMode, SPEED_TIERS) left in place to keep this a zero-behavior-change pure move; pygame + ZOOM_STEP still used by process_events; BUILDING_DEFS still used to build BUILD_HOTKEY_TO_TYPE.",
+          "verification": {
+            "wk68_input_tests": "python -m pytest tests/test_wk68_building_buttons.py tests/test_wk68_hire_button.py tests/test_input_handler_gamecommands.py -q -> 18 passed (the button/hire/paused + input routing guard).",
+            "wk67_digest": "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed; AI-decision digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded UNCHANGED (constant hard-coded in test).",
+            "full_suite": "python -m pytest -q -> 720 passed, 4 skipped, 0 failed (baseline match).",
+            "determinism_guard": "python tools/determinism_guard.py -> PASS: no violations found (exit 0).",
+            "qa_smoke": "python tools/qa_smoke.py --quick -> DONE: PASS (exit 0).",
+            "import_check": "from game.input import mouse, keyboard, placement -> all True; InputHandler still exposes handle_mousedown/handle_keydown/select_building_for_placement/_clear_hero_selection/process_events.",
+            "no_import_cycle": "Confirmed - importing game.input.keyboard does NOT load game.input_handler at module-load (lazy BUILD_HOTKEY_TO_TYPE import); new modules import InputHandler only under TYPE_CHECKING."
+          },
+          "do_not_commit": true,
+          "notes_for_pm": "W1 mechanical extraction complete, all gates green, no behavior change. Ready for PM gate then Agent 11 W2 (seam test that wrappers delegate + sanity base_overview screenshot + full DoD). Did NOT commit. Touched only game/input_handler.py + new game/input/*.py."
+        }
+      }
     }
   }
 }

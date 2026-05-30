@@ -3575,6 +3575,76 @@
           "notes": "All 11 new seam tests green in 1.63s. The WK67 AI digest is byte-identical as expected (the headless sim never exercises UI click/selection paths, so the pure-move extraction cannot move it). engine.py shrank 1365->1184 (-181 LOC), matching the plan's ~1180 target. Confirmed via git status that only tests/test_wk76_engine_selection_facade.py + docs/screenshots are mine; game/engine.py + game/engine_facades/selection.py are Agent 03's W1 work. No commit made. DoD A-G all PASS."
         }
       }
+    },
+    "wk77_round_b2_input_handler_split": {
+      "sprint_meta": {
+        "sprint_id": "wk77_round_b2_input_handler_split",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "goal": "QA W2: verify the game/input_handler.py split (handle_mousedown/handle_mousemove/handle_keydown/select_building_for_placement extracted into the game/input/ package behind 1-line delegating wrappers) is behavior-preserving (digest unchanged), lock the new module/wrapper seam with tests, capture a sanity screenshot, run the full DoD gate."
+      },
+      "rounds": {
+        "wk77_w2": {
+          "sprint_id": "wk77_round_b2_input_handler_split",
+          "round_id": "wk77_w2",
+          "status": "done",
+          "round_meta": {
+            "wave": "W2 (seam test + sanity screenshot + DoD gate)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "created_utc": "2026-05-30T00:00:00Z",
+            "depends_on": "wk77 W1 (Agent 03 extracted handle_mousedown/handle_mousemove into game/input/mouse.py, handle_keydown into game/input/keyboard.py, select_building_for_placement into game/input/placement.py, behind 1-line delegating wrappers; input_handler.py 789->170; verified WK68 button/hire/paused + input tests (18) + digest unchanged)."
+          },
+          "prompt_summary": "WK77 W2: create tests/test_wk77_input_split.py asserting game.input.mouse has handle_mousedown/handle_mousemove, game.input.keyboard has handle_keydown, game.input.placement has select_building_for_placement, and each of the 4 InputHandler wrappers delegates (spy+monkeypatch: live InputHandler passed as first arg + args forwarded + return value returned), plus an AST no-import-cycle guard (mouse.py + keyboard.py do not import game.input_handler at module load -- TYPE_CHECKING-only); capture a sanity screenshot (base_overview seed 3, 1920x1080, ticks 480) and view it; run the full DoD gate (suite, determinism_guard, AI digest pin, qa_smoke) and report DoD A-H. Only the test file + screenshots; no production edits. DO NOT COMMIT.",
+          "what_i_changed": {
+            "summary": "Created tests/test_wk77_input_split.py (12 headless seam tests) locking the WK77 extraction structure: game.input subpackage importable; game/input/{mouse,keyboard,placement}.py expose the 4 moved free functions (handle_mousedown, handle_mousemove, handle_keydown, select_building_for_placement) as callables; all 4 wrapper names remain on InputHandler; each wrapper delegates to its module function (spy + monkeypatch, asserts the live InputHandler is passed as the first positional arg + extra args forwarded verbatim + the module fn's return value returned + no stray kwargs); plus an AST no-import-cycle guard (mouse.py + keyboard.py have NO module-top-level import of game.input_handler -- the InputHandler import is TYPE_CHECKING-only; keyboard.py's BUILD_HOTKEY_TO_TYPE import is a function-body lazy import (WK70 single-source) so it is excluded from the guard) and a positive check that the TYPE_CHECKING InputHandler import is present. Captured 4 sanity screenshots under docs/screenshots/wk77_input_split/. No production code touched.",
+            "files_created": [
+              "tests/test_wk77_input_split.py",
+              "docs/screenshots/wk77_input_split/base_overview__Z1__world_clean.png",
+              "docs/screenshots/wk77_input_split/base_overview__Z1__ui_default.png",
+              "docs/screenshots/wk77_input_split/base_overview__Z2__world_clean.png",
+              "docs/screenshots/wk77_input_split/base_overview__Z2__ui_default.png",
+              "docs/screenshots/wk77_input_split/manifest.json"
+            ],
+            "tests_added": [
+              "test_package_exposes_input_subpackage",
+              "test_module_function_exists_and_callable[mouse-handle_mousedown]",
+              "test_module_function_exists_and_callable[mouse-handle_mousemove]",
+              "test_module_function_exists_and_callable[keyboard-handle_keydown]",
+              "test_module_function_exists_and_callable[placement-select_building_for_placement]",
+              "test_wrapper_delegates_to_module_function[handle_mousedown]",
+              "test_wrapper_delegates_to_module_function[handle_mousemove]",
+              "test_wrapper_delegates_to_module_function[handle_keydown]",
+              "test_wrapper_delegates_to_module_function[select_building_for_placement]",
+              "test_no_module_level_input_handler_import[game/input/mouse.py]",
+              "test_no_module_level_input_handler_import[game/input/keyboard.py]",
+              "test_type_checking_import_present_in_mouse_and_keyboard"
+            ]
+          },
+          "screenshot": {
+            "out_dir": "docs/screenshots/wk77_input_split",
+            "scenarios": "base_overview (seed 3), 1920x1080, ticks 480, 4 PNGs (Z1/Z2 x world_clean/ui_default)",
+            "viewed": [
+              "base_overview__Z1__ui_default.png",
+              "base_overview__Z2__ui_default.png"
+            ],
+            "visual_verdict": "PASS. Game renders normally with the input_handler split in place. Terrain (green grass + tree clusters + brown cobblestone cross-road grid) correct. Buildings all render + labeled (CASTLE center, SMITH, RANGERS, WARRIORS, MARKET, INN, GUARDS, ROGUES, WIZARDS, multiple HOUSEs). Units present with HP bars (heroes Nova x2 with gold $6(+2)/$6(+1) labels, guards/peasants, 52 enemies). HUD intact: top bar (Gold 2100 / Heroes 4 / Enemies 52 / Wave 1 / Quit), the bounty-placement tip line, bottom action bar (Build 1-8 / Hire H / Bounty B -- the input-driven hotkey buttons), speed-control widget (bottom-right), FPS/entity debug overlay + frame-time graph + minimap (bottom-left). No import/crash regression from the input package extraction; all input-surface HUD elements (the very thing this sprint touches) render and are labeled."
+          },
+          "dod_gate": {
+            "A_full_suite": "732 passed, 4 skipped, 0 failed in 144.46s (baseline 720+4; +12 = new seam tests). PASS",
+            "B_determinism_guard": "PASS: no violations found (exit 0)",
+            "C_ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded BYTE-IDENTICAL to golden (constant pinned in tests/test_wk67_ai_boundary.py line 181). tests/test_wk67_ai_boundary.py = 10 passed. PASS",
+            "D_qa_smoke_quick": "DONE: PASS (every sub-gate exit_code=0; determinism_guard PASS; all [qa] assertions PASS)",
+            "E_wk68_button_paused_input_tests": "Covered by full suite (732 passed): test_wk68_building_buttons + test_wk68_hire_button + test_wk68_determinism_reset + test_input_handler_gamecommands all green -- they route through the moved mouse/keyboard code. PASS",
+            "F_package_and_loc": "game/input/{mouse,keyboard,placement,__init__}.py exist; mouse.py exposes handle_mousedown+handle_mousemove, keyboard.py handle_keydown, placement.py select_building_for_placement; all 4 method names remain on InputHandler as 1-line delegating wrappers (confirmed lines 142-170); input_handler.py 170 LOC (down from 789, -619, beats plan's ~250 target); no import cycle (AST guard green; InputHandler import TYPE_CHECKING-only in mouse.py+keyboard.py). PASS",
+            "G_sanity_screenshot": "4 PNGs captured + 2 viewed (Z1/Z2 ui_default); terrain/buildings/units/HUD + input-driven action bar all render normally; no crash/import regression. PASS",
+            "H_logs_and_close": "this log entry; PM hub close handed to Agent 01. PASS",
+            "verdict": "PASS"
+          },
+          "notes": "All 12 new seam tests green in 0.17s. The WK67 AI digest is byte-identical as expected (the headless sim never exercises UI mouse/keyboard input paths, so the pure-move extraction cannot move it). input_handler.py shrank 789->170 (-619 LOC), better than the plan's ~250 target. AST guard note: the guard deliberately allows keyboard.py's function-body lazy import of BUILD_HOTKEY_TO_TYPE from game.input_handler (the documented WK70 single-source pattern) because it is inside handle_keydown, not at module level -- it cannot create an import cycle; the guard only forbids module-top-level (non-TYPE_CHECKING) game.input_handler imports, and neither mouse.py nor keyboard.py has one. Confirmed via git status that only tests/test_wk77_input_split.py + docs/screenshots/wk77_input_split/ are mine; game/input/ + game/input_handler.py are Agent 03's W1 work. No commit made. DoD A-H all PASS."
+        }
+      }
     }
   }
 }
