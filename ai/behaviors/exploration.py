@@ -161,29 +161,56 @@ def explore(ai: Any, hero: Any, view: Any) -> None:
     hero.target = {"type": "patrol"}
 
 
-def handle_idle(ai: Any, hero: Any, view: Any) -> None:
-    """Handle idle state - heroes patrol their assigned zone."""
-    view = as_ai_view(view)
-    enemies = view.enemies
-    buildings = view.buildings
+# ---------------------------------------------------------------------------
+# WK85 Round D-5: ``handle_idle`` decomposed into ordered, named sub-steps.
+#
+# Each ``_idle_*(ai, hero, view) -> bool`` holds ONE of the original sequential
+# decision branches VERBATIM and returns True iff the original ``handle_idle``
+# would have returned/taken its action there (False = fall through to the next
+# step). ``handle_idle`` is now a thin driver that runs them in the SAME order
+# with the SAME short-circuit semantics. This is a behavior-preserving
+# decomposition ONLY — same branches, same order, same effects. The WK67
+# 300-tick AI-decision digest (``b73961…``) is the guard; it stays byte-identical.
+#
+# Shared-local note: the original computed ``view = as_ai_view(view)``,
+# ``enemies``/``buildings`` and ``enemies_nearby`` once near the top and read them
+# across branches. ``as_ai_view`` is idempotent (returns its arg if already an
+# AiGameView), and the ``enemies_nearby`` scan is a pure, side-effect-free read
+# (``is_alive``/``distance_to`` only), so each step recomputes exactly what it
+# needs the same way the original did. None of the recomputations touch the RNG or
+# sim-time stream, so the digest is preserved.
+# ---------------------------------------------------------------------------
 
+
+def _idle_clear_dangling_bounty(ai: Any, hero: Any, view: Any) -> bool:
+    """Prelude: log IDLE + drop a stale ``bounty`` target. Always falls through."""
     ai._debug_log(f"{hero.name} is IDLE at ({hero.x:.0f}, {hero.y:.0f})", throttle_key=f"{hero.name}_idle")
 
     # If we were pursuing a bounty but ended up idle, clear it (avoid dangling targets).
     if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "bounty":
         hero.target = None
         hero.target_position = None
+    return False
 
-    # Majesty-style indirect control: bounties should be a primary lever.
+
+def _idle_take_bounty(ai: Any, hero: Any, view: Any) -> bool:
+    """Majesty-style indirect control: bounties should be a primary lever."""
     if ai.bounty_behavior.maybe_take_bounty(ai, hero, view):
-        return
+        return True
+    return False
 
-    # WK61-R10: hungry heroes seek food stands before discretionary explore/shopping.
+
+def _idle_seek_meal(ai: Any, hero: Any, view: Any) -> bool:
+    """WK61-R10: hungry heroes seek food stands before discretionary explore/shopping."""
     hunger_behavior = getattr(ai, "hunger_behavior", None)
     if hunger_behavior is not None and hunger_behavior.maybe_seek_meal_idle(ai, hero, view):
-        return
+        return True
+    return False
 
-    # Check if hero wants to go shopping (full health, has gold, needs potions).
+
+def _idle_shopping(ai: Any, hero: Any, view: Any) -> bool:
+    """Check if hero wants to go shopping (full health, has gold, needs potions)."""
+    buildings = view.buildings
     if hero.hp >= hero.max_hp:
         # V1.3 extension: check marketplace first, then blacksmith.
         marketplace = ai.shopping_behavior.find_marketplace_with_potions(buildings)
@@ -192,10 +219,10 @@ def handle_idle(ai: Any, hero: Any, view: Any) -> None:
             route_to_building(hero, view.world, buildings, marketplace)
             hero.state = HeroState.MOVING
             hero.target = {"type": "shopping", "marketplace": marketplace}
-            return
+            return True
 
         if isinstance(hero, dict) or not hasattr(hero, "gold"):
-            return
+            return True
 
         # WK15: Base shopping on available items
         blacksmith = ai.shopping_behavior.find_blacksmith(buildings, hero)
@@ -204,7 +231,13 @@ def handle_idle(ai: Any, hero: Any, view: Any) -> None:
             route_to_building(hero, view.world, buildings, blacksmith)
             hero.state = HeroState.MOVING
             hero.target = {"type": "shopping", "blacksmith": blacksmith}
-            return
+            return True
+    return False
+
+
+def _idle_engage_nearby_enemy(ai: Any, hero: Any, view: Any) -> bool:
+    """Heroes only know about enemies within 5 tiles; if any, engage the closest."""
+    enemies = view.enemies
 
     # Heroes only know about enemies within 5 tiles of themselves (no map-wide awareness).
     awareness_radius = TILE_SIZE * 5
@@ -226,7 +259,7 @@ def handle_idle(ai: Any, hero: Any, view: Any) -> None:
             cur = getattr(hero, "target", None)
             # WK61-R4-BUG-005: buildings now expose is_alive; only honor enemy commit windows.
             if _is_live_enemy_target(cur):
-                return
+                return True
         enemies_nearby.sort(key=lambda x: x[1])
         target_enemy, target_dist = enemies_nearby[0]
         ai._debug_log(f"{hero.name} -> sees enemy {target_dist:.0f}px away, engaging!")
@@ -234,9 +267,26 @@ def handle_idle(ai: Any, hero: Any, view: Any) -> None:
         hero._target_commit_until_ms = int(now_ms + int(float(TARGET_COMMIT_WINDOW_S) * 1000.0))
         hero.set_target_position(target_enemy.x, target_enemy.y)
         hero.state = HeroState.MOVING
-        return
+        return True
+    return False
 
-    # WK11: Get a drink at Inn (IDLE, full health, 10+ gold, ~10–15% chance per idle cycle).
+
+def _idle_get_drink(ai: Any, hero: Any, view: Any) -> bool:
+    """WK11: Get a drink at Inn (IDLE, full health, 10+ gold, ~10–15% chance per idle cycle)."""
+    buildings = view.buildings
+
+    # No enemies are nearby here — the engage step already short-circuited if any
+    # were (so ``enemies_nearby`` is empty); recompute the same pure scan to keep
+    # the original ``not enemies_nearby`` predicate byte-identical.
+    awareness_radius = TILE_SIZE * 5
+    enemies_nearby = []
+    for enemy in view.enemies:
+        if not enemy.is_alive:
+            continue
+        dist_to_hero = hero.distance_to(enemy.x, enemy.y)
+        if dist_to_hero <= awareness_radius:
+            enemies_nearby.append((enemy, dist_to_hero))
+
     if hero.hp >= hero.max_hp and hero.gold >= 10 and not enemies_nearby:
         inns = [
             b for b in buildings
@@ -247,14 +297,27 @@ def handle_idle(ai: Any, hero: Any, view: Any) -> None:
             route_to_building(hero, view.world, buildings, inn)
             hero.state = HeroState.MOVING
             hero.target = {"type": "get_drink", "inn": inn}
-            return
+            return True
+    return False
 
-    # WK55: Personality-driven POI visit (chance-gated to avoid constant POI chasing).
+
+def _idle_visit_poi(ai: Any, hero: Any, view: Any) -> bool:
+    """WK55: Personality-driven POI visit (chance-gated to avoid constant POI chasing)."""
     from ai.behaviors.poi_awareness import maybe_visit_poi
     if ai._ai_rng.random() < 0.08:  # ~8% per idle tick
         if maybe_visit_poi(ai, hero, view):
             ai._debug_log(f"{hero.name} -> visiting personality-matched POI")
-            return
+            return True
+    return False
+
+
+def _idle_patrol_zone(ai: Any, hero: Any, view: Any) -> bool:
+    """Terminal fall-through: patrol within / return to the hero's zone.
+
+    This is the last step and never short-circuits the driver (it always returns
+    False); it mirrors the original function's final no-``return`` block.
+    """
+    awareness_radius = TILE_SIZE * 5
 
     # Get this hero's patrol zone.
     zone_x, zone_y = assign_patrol_zone(ai, hero, view)
@@ -290,3 +353,33 @@ def handle_idle(ai: Any, hero: Any, view: Any) -> None:
             explore(ai, hero, view)
         elif ai._ai_rng.random() < 0.15:
             explore(ai, hero, view)
+    return False
+
+
+# Ordered idle decision pipeline — SAME order as the original sequential
+# ``handle_idle`` body. ``handle_idle`` runs these in order and returns on the
+# first one that returns True (the original early-return points). The final
+# ``_idle_patrol_zone`` is the terminal fall-through and always returns False.
+_IDLE_STEPS = (
+    _idle_clear_dangling_bounty,
+    _idle_take_bounty,
+    _idle_seek_meal,
+    _idle_shopping,
+    _idle_engage_nearby_enemy,
+    _idle_get_drink,
+    _idle_visit_poi,
+    _idle_patrol_zone,
+)
+
+
+def handle_idle(ai: Any, hero: Any, view: Any) -> None:
+    """Handle idle state - heroes patrol their assigned zone.
+
+    Thin ordered driver over the ``_idle_*`` step functions: each is tried in
+    order and the first to return True short-circuits (the original early
+    returns). Behavior is identical to the pre-WK85 single-body version.
+    """
+    view = as_ai_view(view)
+    for step in _IDLE_STEPS:
+        if step(ai, hero, view):
+            return

@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK85 CLOSE): wk85_round_d_handle_idle_split COMPLETE -- DoD met. Decomposed exploration.handle_idle (128-LOC god-function) into 8 ordered named _idle_* step functions (clear_dangling_bounty, take_bounty, seek_meal, shopping, engage_nearby_enemy, get_drink, visit_poi, patrol_zone) driven by a thin handle_idle iterating _IDLE_STEPS (returns on first True). Same branches/order/effects; shared locals (as_ai_view hoist, enemy scan, now_ms) preserved exactly. Behavior-preserving DECOMPOSITION: 825 passed/4 skipped/0 failed (+18 driver pins), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (PERFECT guard -- handle_idle IS the idle decisions; byte-identical first pass, 0 iterations). Agent 06 decompose, Agent 11 verify. Plan: .cursor/plans/wk85_round_d_handle_idle_split.plan.md. WK84 was main 0748a93. Committing+pushing. SESSION: 18 sprints WK68-85 shipped; suite 601->825; digest b73961 held byte-identical throughout all 18. REMAINING (harder/fresh-context tier): hud.py split (2477) + ursina_renderer body + ursina_terrain_fog_collab + ursina_app (SCREENSHOT-HEAVY); Move 9 (risky reorder); context_builder/direct_prompt_validator restructures; ai/vocab.py + TaskRouter (Move 12); world.py; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK86.",
+    "2026-05-30 (Agent 01 WK85 KICKOFF): decompose exploration.handle_idle (Round D-5). Split the 128-LOC idle god-function into ordered named _idle_* sub-steps; handle_idle becomes a thin ordered driver (same branches/order/effects). Behavior-preserving DECOMPOSITION; perfectly digest-guarded (handle_idle IS the idle decisions -- safest remaining refactor); headless. Agent 06 decompose, Agent 11 verify. Plan: .cursor/plans/wk85_round_d_handle_idle_split.plan.md. WK84 was main 0748a93. NOT YET COMMITTED for WK85.",
     "2026-05-30 (Agent 01 WK84 CLOSE): wk84_round_d_zones_extract COMPLETE -- DoD met. Moved assign_patrol_zone from ai/behaviors/exploration.py (322 -> 292 LOC) into a new ai/behaviors/zones.py (single canonical home -- consumed by movement/stuck_recovery too). exploration.py RE-EXPORTS it identity-equal (exploration.assign_patrol_zone IS zones.assign_patrol_zone) so the ai.exploration_behavior.assign_patrol_zone module-attribute access + test mocks are unchanged. Shared helpers (_find_black_fog_frontier_tiles [shared w/ journey], _is_live_enemy_target) stayed in exploration. No cycle (zones never imports exploration; single back-edge exploration->zones). Behavior-preserving: 807 passed/4 skipped/0 failed (+7 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (PERFECT guard -- zone assignment drives idle/explore decisions). Agent 06 extract, Agent 11 verify. Plan: .cursor/plans/wk84_round_d_zones_extract.plan.md. WK83 was main cba505f. Committing+pushing. SESSION: 17 sprints WK68-84 shipped; suite 601->807; digest b73961 held byte-identical throughout. NOTE: clean pure-move/dedup work is largely exhausted (WK80/WK84 delivered modest LOC). REMAINING (harder tier, best for fresh context): hud.py split (2477) + ursina_renderer body + ursina_terrain_fog_collab + ursina_app (SCREENSHOT-HEAVY); Move 9 (risky reorder); context_builder/direct_prompt_validator/exploration-handle_idle restructures; ai/vocab.py + TaskRouter; world.py; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK85.",
     "2026-05-30 (Agent 01 WK84 KICKOFF): extract assign_patrol_zone -> ai/behaviors/zones.py (Round D-4). Move the shared patrol-zone logic out of exploration.py (322 LOC) into a single home (zones.py); update all importers (exploration/stuck_recovery/bounty_pursuit/basic_ai). Pure move of whole functions; handle_idle restructure deferred. Perfectly digest-guarded (zone assignment drives idle/explore decisions); headless. Agent 06 extract, Agent 11 verify. Plan: .cursor/plans/wk84_round_d_zones_extract.plan.md. WK83 was main cba505f. NOT YET COMMITTED for WK84.",
     "2026-05-30 (Agent 01 WK83 CLOSE): wk83_round_d_movement_dispatcher COMPLETE -- DoD met. Moved handle_moving (the global MOVING-state dispatcher, ~140 LOC) from ai/behaviors/bounty_pursuit.py (368 -> 236 LOC) into ai/behaviors/movement.py; bounty_pursuit.handle_moving is now a 1-line delegating shim so basic_ai self.bounty_behavior.handle_moving is unchanged. Cycle avoided via lazy imports both ways (movement.py has no top-level bounty_pursuit import -- lazy inside handle_moving; shim imports movement lazily; verified static AST + dynamic both load orders). Behavior-preserving: 800 passed/4 skipped/0 failed (+7 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (the PERFECT guard -- MOVING dispatch ARE the hashed movement decisions). Agent 06 move, Agent 11 verify. Plan: .cursor/plans/wk83_round_d_movement_dispatcher.plan.md. WK82 was main 86dba8a. Committing+pushing. SESSION: 16 sprints WK68-83 shipped; suite grown 601->800 passed; digest b73961 held byte-identical throughout. REMAINING: hud.py split (2477), ursina_renderer body split, ursina_terrain_fog_collab/ursina_app splits, Move 9, world.py, config package, clusters 3/4, rest of Round D (context_builder/direct_prompt_validator/exploration handle_idle + vocab + TaskRouter), Round E audit, 21-file zombie purge. Next: WK84.",
@@ -4380,6 +4382,64 @@
             "05(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk84_round_d_zones_extract'].rounds['wk84_kickoff']) + plan .cursor/plans/wk84_round_d_zones_extract.plan.md; claude-opus-4-8; PURE MOVE whole functions, update all importers, lazy-import to avoid cycles; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (perfect guard) must stay byte-identical; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
+        }
+      }
+    },
+    "wk85_round_d_handle_idle_split": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T19:30:00Z",
+        "plan_doc": ".cursor/plans/wk85_round_d_handle_idle_split.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK85 / Round D-5)",
+        "notes": "Round D-5: decompose exploration.handle_idle (128-LOC god-function) into ordered named _idle_* sub-steps; handle_idle becomes a thin ordered driver (same branches/order/effects). Behavior-preserving DECOMPOSITION. Perfectly digest-guarded (handle_idle IS the idle decisions -- the SAFEST remaining refactor). Headless. Agent 06 decompose, Agent 11 verify.",
+        "definition_of_done": [
+          "A. pytest all pass (807/4/0)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (PERFECT guard)",
+          "D. qa_smoke green",
+          "E. handle_idle is a thin ordered driver over _idle_* steps; same name/signature; behavior identical",
+          "F. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "825 passed / 4 skipped / 0 failed (807 + 18 driver pins)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961... byte-identical (PERFECT guard, 0 iterations to match)",
+          "result": "handle_idle decomposed into 8 ordered named _idle_* steps (clear_dangling_bounty/take_bounty/seek_meal/shopping/engage_nearby_enemy/get_drink/visit_poi/patrol_zone) driven by a thin _IDLE_STEPS loop (returns on first True). Shared locals (as_ai_view hoist, enemy scan, now_ms) preserved exactly. Same name/signature/order/effects."
+        }
+      },
+      "rounds": {
+        "wk85_kickoff": {
+          "round_meta": {
+            "round_id": "wk85_kickoff",
+            "created_utc": "2026-05-30T19:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk85_round_d_handle_idle_split.plan.md",
+            "build_target": "handle_idle decomposition",
+            "goal": "all tests pass; idle decisions byte-identical"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical (PERFECT guard -- handle_idle IS the hashed idle decisions)",
+            "wave_dag": "W1(06)->gate(suite+digest+qa_smoke)->W2(11 verify)->commit",
+            "dispatch_order": [
+              "06 W1",
+              "11 W2"
+            ]
+          },
+          "pm_agent_prompts": {
+            "06": "[Agent 06] Decompose the 128-LOC handle_idle god-function in ai/behaviors/exploration.py (~194-322) into ordered named sub-steps per plan .cursor/plans/wk85_round_d_handle_idle_split.plan.md sections 1-2. BEHAVIOR-PRESERVING DECOMPOSITION ONLY -- same branches, same order, same effects. The 300-tick AI-decision digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded is a PERFECT guard (handle_idle IS the idle hero decisions). Read handle_idle, identify each sequential decision point (each if-cond/do-X/return or fall-through), lift each into a module-level `def _idle_<name>(ai, hero, view) -> bool` containing that branch VERBATIM and returning True iff the original would have returned/acted there. Then make handle_idle a thin driver that calls the steps IN THE SAME ORDER, returning on the first True (preserving the exact short-circuit/fall-through). Keep handle_idle's name+signature (basic_ai dispatch calls it). If branches share a local computed once at the top (world=view.world, nearest-X, now_ms), recompute it in each step EXACTLY as the original did (or thread it) -- the digest catches any divergence. Do NOT reorder/merge/alter branches. Keep everything in exploration.py (no new module). VERIFY: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded -- definitive), python -m pytest -q (807 passed), determinism_guard, qa_smoke --quick. If the digest drifts, the decomposition changed order/a-short-circuit/an-effect -- diff vs git show HEAD:ai/behaviors/exploration.py and fix until byte-identical. Report: the _idle_* steps + their order, handle_idle's new driver body, exploration.py new LOC (was 322 -> 292 after WK84), digest, suite totals, qa_smoke. DO NOT COMMIT; update agent_06 log (round wk85_w1).",
+            "11": "[Agent 11] W2 (after 06): create tests/test_wk85_handle_idle_split.py: assert handle_idle exists+callable with its signature; assert the named _idle_* step functions exist (list them from 06's report); a light driver pin -- monkeypatch the step fns so the first returns True and assert handle_idle short-circuits (later steps not called), and so all return False and assert the fall-through path runs. (Use simple fakes; if constructing a real idle scenario is heavy, a driver-level test is sufficient.) Full DoD: pytest (all pass), determinism_guard, digest (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke. NO screenshots. Report PASS/FAIL + DoD A-F. Only your test; no prod edits; DO NOT COMMIT; update agent_11 log (round wk85_w2).",
+            "05": "[Agent 05 CONSULT] available if an idle branch's semantics are unclear. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "06",
+            "11",
+            "05(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk85_round_d_handle_idle_split'].rounds['wk85_kickoff']) + plan .cursor/plans/wk85_round_d_handle_idle_split.plan.md; claude-opus-4-8; behavior-preserving DECOMPOSITION (same branches/order/effects), keep handle_idle name+signature; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (PERFECT guard) must stay byte-identical; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }

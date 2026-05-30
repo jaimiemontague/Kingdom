@@ -1705,6 +1705,56 @@
           "constraints_followed": "Lane respected (exploration.py + new zones.py + __init__ additive export; movement/stuck_recovery/journey/basic_ai/bounty_pursuit untouched). Function moved VERBATIM (no logic change). No handle_idle restructure (deferred per plan). NO screenshots (headless behavior). DID NOT COMMIT. No iterate after status=done."
         }
       }
+    },
+    "wk85_round_d_handle_idle_split": {
+      "sprint_meta": {
+        "sprint_id": "wk85_round_d_handle_idle_split",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "title": "WK85 Round D-5 - decompose the ~128-LOC handle_idle god-function in ai/behaviors/exploration.py into ordered named _idle_* sub-steps (Agent 06 W1)",
+        "role": "Agent 06 AIBehaviorDirector_LLM",
+        "plan_ref": ".cursor/plans/wk85_round_d_handle_idle_split.plan.md"
+      },
+      "rounds": {
+        "wk85_w1": {
+          "round_meta": {
+            "role": "Agent 06 AIBehaviorDirector_LLM",
+            "phase": "W1 - decompose handle_idle into ordered named _idle_* step functions; handle_idle becomes a thin ordered driver; verify suite+digest+qa_smoke",
+            "launched_by": "Claude Code Agent-tool subagent (parent Agent 01 PM)",
+            "reports_to": "Agent 01 (PM)",
+            "completed_utc": "2026-05-30T00:00:00Z"
+          },
+          "sprint_id": "wk85_round_d_handle_idle_split",
+          "round_id": "wk85_w1",
+          "status": "done",
+          "scope": "BEHAVIOR-PRESERVING DECOMPOSITION ONLY (idle hero decisions byte-identical). Lifted each sequential decision branch of handle_idle (was ai/behaviors/exploration.py lines 164-293) VERBATIM into a module-level `def _idle_<name>(ai, hero, view) -> bool` returning True iff the original would have returned/acted there (False = fall through). handle_idle is now a thin ordered driver that does `view = as_ai_view(view)` then iterates `_IDLE_STEPS` returning on the first True. Same branches, same order, same effects, same short-circuits. Did NOT touch explore/assign_patrol_zone/the helpers (_find_black_fog_frontier_tiles, _is_live_enemy_target). Kept everything in exploration.py (no new module). Lane: ai/behaviors/exploration.py ONLY.",
+          "idle_steps_in_order": [
+            "_idle_clear_dangling_bounty  (prelude: log IDLE + drop stale bounty target; ALWAYS returns False / falls through)",
+            "_idle_take_bounty  (ai.bounty_behavior.maybe_take_bounty)",
+            "_idle_seek_meal  (WK61-R10 hunger_behavior.maybe_seek_meal_idle)",
+            "_idle_shopping  (full-HP marketplace->blacksmith; also returns True on the bare `isinstance(hero,dict) or not hasattr(hero,'gold')` early return)",
+            "_idle_engage_nearby_enemy  (5-tile awareness scan + WK2 commit-window + engage closest)",
+            "_idle_get_drink  (WK11 Inn ~12% chance; recomputes the pure enemies_nearby scan to preserve the `not enemies_nearby` predicate byte-identically)",
+            "_idle_visit_poi  (WK55 ~8% POI visit via maybe_visit_poi)",
+            "_idle_patrol_zone  (TERMINAL fall-through: assign_patrol_zone + return-to-zone vs in-zone patrol/explore cadence; ALWAYS returns False)"
+          ],
+          "handle_idle_new_body": "def handle_idle(ai, hero, view) -> None:\n    view = as_ai_view(view)\n    for step in _IDLE_STEPS:\n        if step(ai, hero, view):\n            return",
+          "shared_local_handling": "as_ai_view(view) is hoisted once into the driver (idempotent: returns its arg if already an AiGameView) so every step receives the same wrapped view, exactly as the original computed it once at the top. enemies/buildings re-read off view.* inside each step that needs them (pure attribute reads). enemies_nearby is recomputed inside _idle_get_drink with the IDENTICAL pure scan (is_alive + distance_to only, no RNG/sim-time) the original built in the engage step - and since _idle_get_drink only runs after _idle_engage_nearby_enemy returned False, the scan is empty there, so `not enemies_nearby` is byte-identical True as in the original. now_ms recomputed via sim_now_ms() inside the steps that use it (engage, patrol) exactly as before. No RNG-order or sim-time-stream changes -> digest preserved.",
+          "files_touched": [
+            "ai/behaviors/exploration.py"
+          ],
+          "exploration_py_loc": "385 (was 293 pre-WK85). LOC increase is the named step functions + docstrings of a clarity refactor; no logic added. Plan set no LOC target.",
+          "verification": {
+            "wk67_ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (UNCHANGED / byte-identical to golden; verified via tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable AND by direct _compute_digest_in_subprocess() -> GOT==GOLDEN==b73961... True)",
+            "pytest_boundary_file": "tests/test_wk67_ai_boundary.py -> 10 passed",
+            "pytest_full_suite": "807 passed, 4 skipped, 0 failed (matches baseline)",
+            "determinism_guard": "PASS: no violations found (exit 0)",
+            "qa_smoke_quick": "DONE: PASS (exit 0)"
+          },
+          "iterations_to_match_digest": "0 (digest was byte-identical on the FIRST decomposition pass; no rework needed)",
+          "constraints_respected": "DID NOT COMMIT. Lane = ai/behaviors/exploration.py ONLY. No reorder/merge/alter of any branch. handle_idle name+signature preserved (basic_ai state dispatch calls it). No touch to explore/assign_patrol_zone/helpers.",
+          "handoff_to_11_W2": "Behavior pin candidate: assert the _IDLE_STEPS driver returns on the first True and that an idle hero in a known state takes the same action as before (integration tick test). The WK67 300-tick digest already proves byte-identical idle decisions end-to-end."
+        }
+      }
     }
   }
 }

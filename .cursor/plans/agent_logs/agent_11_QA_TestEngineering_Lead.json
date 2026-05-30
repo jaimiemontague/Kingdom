@@ -9,6 +9,56 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk85_round_d_handle_idle_split": {
+      "sprint_meta": {
+        "sprint_id": "wk85_round_d_handle_idle_split",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "goal": "QA W2: verify WK85's behavior-preserving DECOMPOSITION of the 128-LOC exploration.handle_idle god-function into 8 ordered, named _idle_*(ai,hero,view)->bool step functions driven by a thin handle_idle that iterates the module-level _IDLE_STEPS tuple and returns on the first True (the original early-return points; the terminal _idle_patrol_zone always returns False). Same branches, same order, same effects; handle_idle keeps its name+signature (basic_ai dispatch). Lock the driver seam (handle_idle + the 8 _idle_* steps exist+callable; _IDLE_STEPS is exactly those 8 in order; short-circuit pin = stop on first True with later steps NOT called; fall-through pin = all-False runs every step once in order) and run the full DoD gate. NO screenshots (pure headless AI decomposition)."
+      },
+      "rounds": {
+        "wk85_w2": {
+          "sprint_id": "wk85_round_d_handle_idle_split",
+          "round_id": "wk85_w2",
+          "status": "done",
+          "round_meta": {
+            "wave": "W2 (driver pin + DoD gate; NO screenshots - pure headless AI decomposition)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "created_utc": "2026-05-30T00:00:00Z",
+            "depends_on": "wk85 W1 (Agent 06 decomposed handle_idle into 8 ordered _idle_* steps + thin _IDLE_STEPS-driven handle_idle; verified digest UNCHANGED byte-identical/0 iterations + 807 passed + qa_smoke PASS)."
+          },
+          "prompt_summary": "WK85 W2: create tests/test_wk85_handle_idle_split.py asserting exploration.handle_idle exists+callable with (ai,hero,view) signature; the 8 _idle_* step functions (_idle_clear_dangling_bounty,_idle_take_bounty,_idle_seek_meal,_idle_shopping,_idle_engage_nearby_enemy,_idle_get_drink,_idle_visit_poi,_idle_patrol_zone) exist+callable; _IDLE_STEPS is a tuple/list of exactly those 8 in that order; DRIVER SHORT-CIRCUIT pin (monkeypatch _IDLE_STEPS with spies so a chosen step returns True -> handle_idle stops there, later steps NOT called) and FALL-THROUGH pin (all False -> every step called once in order). Minimal SimpleNamespace ai/hero/view (driver only iterates+calls). Full DoD: pytest all pass, determinism_guard, WK67 digest == b73961..., qa_smoke --quick. Only the test file; no prod edits; DO NOT COMMIT; NO screenshots.",
+          "what_i_changed": {
+            "summary": "Created tests/test_wk85_handle_idle_split.py (18 headless driver tests) locking the WK85 handle_idle decomposition: (1) exploration.handle_idle exists+callable and keeps the (ai,hero,view) signature; (2) all 8 _idle_* step functions exist+callable, each (ai,hero,view) (parametrized); (3) exploration._IDLE_STEPS is a tuple/list of EXACTLY the 8 documented step function OBJECTS in the documented order; (4) DRIVER SHORT-CIRCUIT pin - monkeypatch _IDLE_STEPS with 8 spies that record call order, with exactly one returning True at index true_at (parametrized 0,1,3,4,6,7); assert handle_idle ran steps 0..true_at IN ORDER and stopped (later steps NOT called), returned None, and forwarded the SAME (ai,hero,view) triple to each invoked spy; (5) FALL-THROUGH pin - all 8 spies return False; assert every step ran exactly once in order [0..7] and handle_idle returned None; plus a sanity pin that _idle_patrol_zone is the LAST/terminal step. Patches _IDLE_STEPS itself (not the module attrs) because the driver iterates that tuple object - rebinding individual module attrs would NOT affect the captured tuple entries, so _IDLE_STEPS is the real driver seam. No production code touched. No screenshots (pure headless AI decomposition).",
+            "files_created": [
+              "tests/test_wk85_handle_idle_split.py"
+            ],
+            "files_modified": []
+          },
+          "new_tests": [
+            "test_handle_idle_exists_and_callable_with_signature",
+            "test_idle_step_exists_and_callable (parametrized x8: the 8 _idle_* steps)",
+            "test_idle_steps_is_the_eight_in_order",
+            "test_driver_short_circuits_on_first_true (parametrized x6: true_at 0,1,3,4,6,7)",
+            "test_driver_falls_through_when_all_false",
+            "test_patrol_zone_is_the_terminal_step"
+          ],
+          "screenshot": "N/A - pure headless AI decomposition (no on-screen change). Behavioral verification via full suite + the WK67 AI-decision digest (handle_idle IS exactly the idle hero decisions the 300-tick digest hashes - a PERFECT guard) + qa_smoke.",
+          "dod_gate": {
+            "A_full_suite": "825 passed, 4 skipped, 0 failed in 152.32s (baseline 807 + 18 new WK85 driver tests = 825). PASS",
+            "B_determinism_guard": "PASS: no violations found (exit 0)",
+            "C_ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded BYTE-IDENTICAL to golden (constant pinned at tests/test_wk67_ai_boundary.py line 181). tests/test_wk67_ai_boundary.py = 10 passed. handle_idle IS the idle decisions the digest hashes, so byte-identical = decomposition is behavior-preserving. PASS",
+            "D_qa_smoke_quick": "DONE: PASS (exit 0) across speed-scaling 0.25x/0.5x/1.0x + interior_view/quest_panel/conversation/direct_prompt_integration - idle heroes drive the decomposed _IDLE_STEPS pipeline (clear-bounty/take-bounty/seek-meal/shop/engage-enemy/get-drink/visit-poi/patrol) without crash",
+            "E_driver_structure": "handle_idle is a thin ordered driver - 'view = as_ai_view(view); for step in _IDLE_STEPS: if step(ai,hero,view): return'. Verified: 8 _idle_* steps exist+callable; _IDLE_STEPS == those 8 in order; short-circuit on first True (later steps NOT called); all-False fall-through runs every step once in order; _idle_patrol_zone is terminal. handle_idle name+signature unchanged (basic_ai dispatch intact). PASS",
+            "F_logs_and_close": "this log entry written; PM hub close handed to Agent 01. PASS",
+            "verdict": "PASS"
+          },
+          "notes": "Pure decomposition driver-seam verification; no production edits, did not commit, no screenshots (headless AI sprint, no on-screen change). handle_idle IS exactly the idle hero decisions the WK67 300-tick AI-decision digest hashes, so the byte-identical b73961... digest is a PERFECT behavior-preservation guard for this decomposition (any reorder/short-circuit drift would break it). KEY SEAM NOTE: the driver iterates the module-level _IDLE_STEPS tuple (references captured at module-load), so the pins monkeypatch _IDLE_STEPS itself - patching individual exploration._idle_* module attributes would NOT change the tuple entries and would not exercise the driver. Both the short-circuit (one True) and fall-through (all False) paths are pinned with order-recording spies and a SimpleNamespace ai/hero/view (as_ai_view passes a non-dict view through unchanged). No regressions found."
+        }
+      }
+    },
     "wk84_round_d_zones_extract": {
       "sprint_meta": {
         "sprint_id": "wk84_round_d_zones_extract",
