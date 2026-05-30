@@ -877,6 +877,126 @@
           ]
         }
       }
+    },
+    "wk70_round_c1_buildingdef_registry": {
+      "rounds": {
+        "wk70_w1": {
+          "sprint_id": "wk70_round_c1_buildingdef_registry",
+          "round_id": "wk70_w1",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "W1 (BuildingDef + BUILDING_DEFS single source + derived config maps)",
+            "plan_ref": ".cursor/plans/wk70_round_c1_buildingdef_registry.plan.md (section 6 W1)",
+            "created_utc": "2026-05-30T00:00:00Z",
+            "launched_by": "tools/ai_studio_orchestrator"
+          },
+          "prompt_text": "W1 ONLY: create game/content/buildings.py (BuildingDef dataclass + BUILDING_DEFS single source covering all 30 enum keys incl 8 WK34 zombies flagged purge_candidate, 5 lairs is_lair, 12 POIs is_poi cls=None) and REPLACE the 4 hardcoded config.py dicts with byte-identical derived views (COSTS/OCCUPANTS exclude lairs; SIZES/COLORS include lairs+POIs). Add BuildingType coverage assert. Resolve cls without an import cycle. STOP after W1 for PM gate; do W2 (factory + catalog/hotkeys) after.",
+          "grep_confirm": {
+            "building_modules_importing_config": "game/entities/neutral_buildings.py + game/entities/lair.py import config -> module-level cls import would cycle config<->entities",
+            "cls_source": "game/building_factory.py:45-73 (27 keys) mirrored into _CLASS_NAMES",
+            "enum": "game/entities/buildings/types.py = 30-member BuildingType",
+            "hotkeys_placeable": "game/ui/build_catalog_panel.py:21-32 (hotkeys), :61-66 (placeable order)"
+          },
+          "what_i_changed": {
+            "new_file": "game/content/buildings.py (+ game/content/__init__.py) — BuildingDef(frozen,slots) + BUILDING_DEFS (47 keys: 30 enum incl 8 zombies, 5 lairs, 12 POIs) + lazy building_class_for() accessor + assert_building_type_coverage()",
+            "config.py": "replaced the 4 hand-authored dicts (BUILDING_COSTS/SIZES/COLORS/MAX_OCCUPANTS) with derived comprehensions over BUILDING_DEFS; BUILDING_CONSTRAINTS/PREREQUISITES/INN economy left untouched",
+            "cls_cycle_handling": "cls stored as None in every def; resolved lazily via building_class_for(key) which imports game.entities inside the function. Coverage assert lives in buildings.py and loads game/entities/buildings/types.py by file path (importlib) to read the enum WITHOUT triggering the game.entities/game.systems package __init__ graph (which imports config) — fully cycle-free. config.py imports NOTHING from game.entities."
+          },
+          "commands_run": [
+            "derived-vs-original equality (vs git HEAD:config.py): all 4 dicts IDENTICAL keys+values+insertion order",
+            "python -m pytest tests/test_building.py tests/test_wk67_ai_boundary.py -q -> 22 passed",
+            "python -m pytest -q -> 633 passed, 4 skipped, 0 failed",
+            "python tools/determinism_guard.py -> PASS"
+          ],
+          "evidence": {
+            "derived_vs_original": "BUILDING_COSTS(42)/SIZES(47)/COLORS(47)/MAX_OCCUPANTS(42) byte-identical (keys+values+order) to original committed config.py — zero diff",
+            "digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged (test_wk67_ai_boundary.py:181 passed)",
+            "suite": "633 passed / 4 skipped / 0 failed",
+            "determinism_guard": "PASS: no violations found",
+            "import_cycle": "resolved — config imports game.content.buildings only; buildings.py imports nothing from game.entities at load; enum coverage loaded by file path"
+          },
+          "blockers": [],
+          "report_to_agent_01": {
+            "status": "W1 complete, STOPPED for PM gate before W2",
+            "new_file": "game/content/buildings.py (+ game/content/__init__.py)",
+            "cls_cycle": "cls=None + lazy building_class_for() accessor; coverage assert reads enum via importlib file-path load of types.py (no package __init__, no config<->entities cycle)",
+            "derived_equality": "IDENTICAL — all 4 derived views == original (keys+values+order), zero diff",
+            "digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (unchanged)",
+            "suite": "633 passed / 4 skipped / 0 failed; determinism_guard PASS",
+            "did_not_commit": true
+          },
+          "recommended_next_actions": [
+            "PM gate: confirm snapshot-equality + digest, then release W2",
+            "W2: derive BuildingFactory.BUILDING_REGISTRY via building_class_for() (== current 27), derive placeable_buildings+BUILDING_HOTKEYS in build_catalog_panel.py, make building_list_panel.py read derived maps, replace input_handler if/elif hotkey chain with {hotkey:type} reverse-map"
+          ]
+        },
+        "wk70_w2": {
+          "sprint_id": "wk70_round_c1_buildingdef_registry",
+          "round_id": "wk70_w2",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "W2 (derive factory registry + catalog/hotkeys/placeable; kill the 2 duplicate copies + the input_handler if/elif chain)",
+            "plan_ref": ".cursor/plans/wk70_round_c1_buildingdef_registry.plan.md (section 6 W2)",
+            "created_utc": "2026-05-30T00:00:00Z",
+            "launched_by": "tools/ai_studio_orchestrator"
+          },
+          "prompt_text": "W2: derive BuildingFactory.BUILDING_REGISTRY (==current 27) via building_class_for(); derive placeable_buildings (placeable_order) + BUILDING_HOTKEYS in build_catalog_panel.py from BUILDING_DEFS; make building_list_panel.py read the SAME derived maps (delete its duplicate BUILDING_HOTKEYS + placeable_buildings); replace input_handler.py:298-320 if/elif hotkey chain with a {hotkey:type} reverse-map. Behavior byte-identical; DO NOT COMMIT.",
+          "what_i_changed": {
+            "game/building_factory.py": "replaced the hand-written 27-key dict with BUILDING_REGISTRY=_build_registry(): derives from BUILDING_DEFS via the W1 lazy building_class_for() accessor, skipping POIs and castle/house/farm; deleted the 28-line block of top-level entity-class imports (cycle-safe: imports only game.content.buildings at module top). Result == current 27 by class __name__.",
+            "game/ui/build_catalog_panel.py": "added module-level PLACEABLE_BUILDINGS (sorted by placeable_order, placeable only) + BUILDING_HOTKEYS ({type:hotkey} for placeable defs) DERIVED from BUILDING_DEFS; self.placeable_buildings now = list(PLACEABLE_BUILDINGS).",
+            "game/ui/building_list_panel.py": "DELETED its duplicate 10-key BUILDING_HOTKEYS dict + hardcoded placeable_buildings list; now imports BUILDING_HOTKEYS + PLACEABLE_BUILDINGS from build_catalog_panel (single source); self.placeable_buildings = list(PLACEABLE_BUILDINGS).",
+            "game/input_handler.py": "replaced the hardcoded 1-8/t/u if-elif hotkey chain with a single 'elif event.key in BUILD_HOTKEY_TO_TYPE' branch; added module-level BUILD_HOTKEY_TO_TYPE = {d.hotkey.lower(): k} reverse-map derived from BUILDING_DEFS."
+          },
+          "input_handler_reverse_map": "BUILD_HOTKEY_TO_TYPE maps event.key -> building_type. Hotkeys are lowercased (d.hotkey.lower()) because pygame key.name() yields lowercase letter keys: the pre-WK70 chain fired on lowercase t/u even though the catalog hotkey dict stores T/U. Digit hotkeys 1-8 are unchanged by .lower(). Result == old chain exactly: {1:warrior_guild,2:marketplace,3:ranger_guild,4:rogue_guild,5:wizard_guild,6:blacksmith,7:inn,8:trading_post,t:temple,u:guardhouse}.",
+          "duplicate_copies_deleted": [
+            "game/ui/building_list_panel.py BUILDING_HOTKEYS (was lines 16-27) -> now imported",
+            "game/ui/building_list_panel.py hardcoded placeable_buildings list (was lines 64-69) -> now list(PLACEABLE_BUILDINGS)",
+            "game/input_handler.py if/elif hotkey chain (was lines 298-320) -> reverse-map lookup",
+            "game/building_factory.py hand-written 27-key BUILDING_REGISTRY dict + 28 lines of entity-class imports -> derived from BUILDING_DEFS"
+          ],
+          "derived_equality": {
+            "BUILDING_REGISTRY": "27 mappings == current by class __name__ (True). Key insertion order differs only for food_stand (now grouped with neutral buildings vs 6th in the old hand-written dict); registry is used only via .get(), so order is behaviorally irrelevant.",
+            "BUILDING_HOTKEYS": "== {warrior_guild:1,marketplace:2,ranger_guild:3,rogue_guild:4,wizard_guild:5,blacksmith:6,inn:7,trading_post:8,temple:T,guardhouse:U} (True); building_list_panel BUILDING_HOTKEYS is the SAME object (shared import)",
+            "PLACEABLE_BUILDINGS": "== [warrior_guild,ranger_guild,rogue_guild,wizard_guild,marketplace,blacksmith,inn,trading_post,temple,guardhouse] (True) in both module-level constant and both panels self.placeable_buildings",
+            "BUILD_HOTKEY_TO_TYPE": "== old if/elif chain exactly (lowercased t/u) (True)"
+          },
+          "commands_run": [
+            "local equality check: BUILDING_REGISTRY(27)==current by class name True; CAT/LIST BUILDING_HOTKEYS==known True (shared object); PLACEABLE_BUILDINGS==known True; reverse-map==old chain True",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed (digest unchanged)",
+            "python -m pytest -q -> 633 passed, 4 skipped, 0 failed",
+            "python tools/determinism_guard.py -> PASS: no violations found",
+            "python tools/qa_smoke.py --quick -> DONE: PASS"
+          ],
+          "evidence": {
+            "registry": "BuildingFactory.BUILDING_REGISTRY == current 27 mappings (by class __name__), derived via building_class_for()",
+            "hotkeys_placeable": "BUILDING_HOTKEYS + PLACEABLE_BUILDINGS derived in build_catalog_panel.py; building_list_panel.py imports them (duplicate copies removed); input_handler reverse-map derived",
+            "digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged (test_wk67_ai_boundary.py:181 passed)",
+            "suite": "633 passed / 4 skipped / 0 failed",
+            "determinism_guard": "PASS: no violations found",
+            "qa_smoke": "qa_smoke.py --quick DONE: PASS",
+            "import_cycle": "none new — building_factory now imports only game.content.buildings at module top (no entity classes); input_handler imports game.content.buildings (cycle-safe)"
+          },
+          "blockers": [],
+          "report_to_agent_01": {
+            "status": "W2 complete; DID NOT COMMIT",
+            "derived_maps": "BUILDING_REGISTRY (27, ==current by class name), BUILDING_HOTKEYS (==known), PLACEABLE_BUILDINGS (==known), BUILD_HOTKEY_TO_TYPE (==old chain); all byte-identical to baseline",
+            "duplicate_copies_deleted": "building_list_panel.py BUILDING_HOTKEYS + placeable list; input_handler if/elif chain; building_factory hand-written registry + entity imports",
+            "input_handler_reverse_map": "{d.hotkey.lower(): type} keyed on lowercase so event.key t/u match (preserves old chain trigger keys); 1-8+t+u place the same buildings",
+            "digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (unchanged)",
+            "suite": "633 passed / 4 skipped / 0 failed; determinism_guard PASS; qa_smoke --quick PASS",
+            "did_not_commit": true
+          },
+          "recommended_next_actions": [
+            "PM gate: confirm snapshot-equality + digest + suite, then release W3 (Agent 11 snapshot-equality test + full DoD gate)",
+            "W3 test should assert BUILDING_REGISTRY 27 mappings by class name (not key order), and the catalog/hotkey/placeable derive to the known values"
+          ]
+        }
+      },
+      "sprint_meta": {
+        "created_utc": "2026-05-30T00:00:00Z"
+      }
     }
   }
 }

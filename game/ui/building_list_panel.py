@@ -10,21 +10,8 @@ from config import (
     BUILDING_PREREQUISITES, BUILDING_CONSTRAINTS,
     COLOR_WHITE, COLOR_RED, COLOR_GREEN, COLOR_UI_BG, COLOR_UI_BORDER
 )
-
-
-# Hotkey mapping for building types
-BUILDING_HOTKEYS = {
-    "warrior_guild": "1",
-    "marketplace": "2",
-    "ranger_guild": "3",
-    "rogue_guild": "4",
-    "wizard_guild": "5",
-    "blacksmith": "6",
-    "inn": "7",
-    "trading_post": "8",
-    "temple": "T",
-    "guardhouse": "U",
-}
+# WK70 W2: read the SAME derived hotkey/placeable maps as the build catalog (one source).
+from game.ui.build_catalog_panel import BUILDING_HOTKEYS, PLACEABLE_BUILDINGS
 
 
 class BuildingListPanel:
@@ -60,13 +47,8 @@ class BuildingListPanel:
         self._footer_cache = None
         self._row_caches = {}  # building_type -> (normal_surf, hover_surf, disabled_surf)
         
-        # Get list of placeable buildings (exclude castle, palace, auto-spawn)
-        self.placeable_buildings = [
-            "warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild",
-            "marketplace", "blacksmith", "inn", "trading_post",
-            "temple",
-            "guardhouse",
-        ]
+        # Get list of placeable buildings (derived from BUILDING_DEFS; shared with the catalog).
+        self.placeable_buildings = list(PLACEABLE_BUILDINGS)
     
     def toggle(self):
         """Toggle panel visibility."""

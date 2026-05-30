@@ -171,176 +171,22 @@ COLOR_GREEN = (50, 205, 50)
 COLOR_BLUE = (70, 130, 180)
 
 # Building settings
-BUILDING_COSTS = {
-    "castle": 0,  # Free, placed at start
-    "warrior_guild": 150,
-    "ranger_guild": 175,
-    "rogue_guild": 160,
-    "wizard_guild": 220,
-    "marketplace": 100,
-    # Phase 1: Economic Buildings
-    "blacksmith": 200,
-    "inn": 150,
-    "trading_post": 250,
-    # Phase 2: Temples
-    "temple": 400,
-    "temple_agrela": 400,
-    "temple_dauros": 400,
-    "temple_fervus": 400,
-    "temple_krypta": 400,
-    "temple_krolm": 400,
-    "temple_helia": 400,
-    "temple_lunord": 400,
-    # Phase 3: Non-Human Dwellings
-    "gnome_hovel": 0,  # WK34 REMOVED
-    "elven_bungalow": 0,  # WK34 REMOVED
-    "dwarven_settlement": 0,  # WK34 REMOVED
-    # Phase 4: Defensive Structures
-    "guardhouse": 300,
-    "ballista_tower": 0,  # WK34 REMOVED
-    "wizard_tower": 0,  # WK34 REMOVED
-    # Phase 5: Special Buildings
-    "fairgrounds": 0,  # WK34 REMOVED
-    "library": 0,  # WK34 REMOVED
-    "royal_gardens": 0,  # WK34 REMOVED
-    # Phase 6: Palace
-    "palace": 0,
-    # Neutral auto-spawn buildings (not player-placeable)
-    "house": 0,
-    "farm": 0,
-    "food_stand": 0,
-    # POIs (not player-purchasable)
-    "poi_shrine": 0,
-    "poi_treasure_cache": 0,
-    "poi_hermit_hut": 0,
-    "poi_gravestone": 0,
-    "poi_abandoned_camp": 0,
-    "poi_druid_grove": 0,
-    "poi_wizard_tower": 0,
-    "poi_graveyard": 0,
-    "poi_bandit_fortress": 0,
-    "poi_cave_entrance": 0,
-    "poi_mine_entrance": 0,
-    "poi_demon_portal": 0,
-}
+# WK70 Round C-1 (Move 10 / kills L7): these 4 maps are now DERIVED back-compat views of
+# the single source of truth `game.content.buildings.BUILDING_DEFS`. They are byte-identical
+# (keys + values) to the pre-WK70 hand-authored dicts (guarded by
+# tests/test_wk70_building_registry.py). Edit BUILDING_DEFS, not these. Membership rules:
+#   COSTS/MAX_OCCUPANTS  -> exclude lairs (they hit Building.__init__ defaults), include POIs
+#   SIZES/COLORS         -> include lairs + POIs
+# Import is safe: BUILDING_DEFS imports nothing from game.entities at load time (config is a
+# leaf imported by ~152 files, including the game.entities/game.systems graph, so it must not
+# import that graph back). The BuildingType-coverage assert lives in game.content.buildings,
+# which validates against a standalone load of game/entities/buildings/types.py (a pure enum,
+# no config dependency) — see assert_building_type_coverage() there, run at its import.
+from game.content.buildings import BUILDING_DEFS
 
-BUILDING_SIZES = {
-    "castle": (3, 3),
-    "warrior_guild": (2, 2),
-    "ranger_guild": (2, 2),
-    "rogue_guild": (2, 2),
-    "wizard_guild": (2, 2),
-    "marketplace": (2, 2),
-    # Phase 1: Economic Buildings
-    "blacksmith": (2, 2),
-    "inn": (3, 2),
-    "trading_post": (2, 2),
-    # Phase 2: Temples
-    "temple": (3, 4),
-    "temple_agrela": (3, 3),
-    "temple_dauros": (3, 3),
-    "temple_fervus": (3, 3),
-    "temple_krypta": (3, 3),
-    "temple_krolm": (3, 3),
-    "temple_helia": (3, 3),
-    "temple_lunord": (3, 3),
-    # Phase 3: Non-Human Dwellings
-    "gnome_hovel": (2, 2),
-    "elven_bungalow": (2, 2),
-    "dwarven_settlement": (2, 2),
-    # Phase 4: Defensive Structures
-    "guardhouse": (2, 2),
-    "ballista_tower": (1, 1),
-    "wizard_tower": (2, 2),
-    # Phase 5: Special Buildings
-    "fairgrounds": (3, 3),
-    "library": (2, 2),
-    "royal_gardens": (2, 2),
-    # Phase 6: Palace
-    "palace": (3, 3),
-    # Neutral auto-spawn buildings
-    "house": (1, 1),
-    "farm": (3, 2),
-    "food_stand": (1, 1),
-    # Lairs
-    "goblin_camp": (2, 2),
-    "wolf_den": (2, 2),
-    "skeleton_crypt": (3, 3),
-    "spider_nest": (2, 2),
-    "bandit_camp": (3, 3),
-    # POIs (Points of Interest)
-    "poi_shrine": (1, 1),
-    "poi_treasure_cache": (1, 1),
-    "poi_hermit_hut": (1, 1),
-    "poi_gravestone": (1, 1),
-    "poi_abandoned_camp": (2, 2),
-    "poi_druid_grove": (3, 3),
-    "poi_wizard_tower": (2, 2),
-    "poi_graveyard": (4, 4),
-    "poi_bandit_fortress": (5, 5),
-    "poi_cave_entrance": (2, 2),
-    "poi_mine_entrance": (2, 2),
-    "poi_demon_portal": (2, 2),
-}
-
-BUILDING_COLORS = {
-    "castle": (139, 69, 19),
-    "warrior_guild": (178, 34, 34),
-    "ranger_guild": (46, 139, 87),
-    "rogue_guild": (75, 0, 130),
-    "wizard_guild": (147, 112, 219),
-    "marketplace": (218, 165, 32),
-    # Phase 1: Economic Buildings
-    "blacksmith": (105, 105, 105),  # Dark gray
-    "inn": (160, 82, 45),  # Sienna
-    "trading_post": (255, 140, 0),  # Dark orange
-    # Phase 2: Temples
-    "temple": (220, 200, 150),
-    "temple_agrela": (255, 192, 203),  # Pink (healing)
-    "temple_dauros": (255, 255, 224),  # Light yellow (monks)
-    "temple_fervus": (50, 205, 50),  # Lime green (nature)
-    "temple_krypta": (75, 0, 130),  # Indigo (death)
-    "temple_krolm": (139, 0, 0),  # Dark red (rage)
-    "temple_helia": (255, 165, 0),  # Orange (sun)
-    "temple_lunord": (176, 196, 222),  # Light steel blue (wind)
-    # Phase 3: Non-Human Dwellings
-    "gnome_hovel": (128, 128, 0),  # Olive
-    "elven_bungalow": (34, 139, 34),  # Forest green
-    "dwarven_settlement": (101, 67, 33),  # Brown
-    # Phase 4: Defensive Structures
-    "guardhouse": (128, 128, 128),  # Gray
-    "ballista_tower": (64, 64, 64),  # Dark gray
-    "wizard_tower": (138, 43, 226),  # Blue violet
-    # Phase 5: Special Buildings
-    "fairgrounds": (255, 20, 147),  # Deep pink
-    "library": (25, 25, 112),  # Midnight blue
-    "royal_gardens": (124, 252, 0),  # Lawn green
-    # Phase 6: Palace
-    "palace": (184, 134, 11),  # Dark goldenrod
-    # Neutral auto-spawn buildings
-    "house": (120, 100, 80),  # warm brown
-    "farm": (200, 170, 90),  # wheat
-    "food_stand": (210, 120, 60),  # orange/brown
-    # Lairs
-    "goblin_camp": (120, 80, 40),
-    "wolf_den": (90, 90, 90),
-    "skeleton_crypt": (70, 60, 90),
-    "spider_nest": (20, 20, 20),
-    "bandit_camp": (110, 70, 40),
-    # POIs
-    "poi_shrine": (100, 180, 255),
-    "poi_treasure_cache": (255, 215, 0),
-    "poi_hermit_hut": (139, 90, 43),
-    "poi_gravestone": (140, 140, 140),
-    "poi_abandoned_camp": (160, 120, 80),
-    "poi_druid_grove": (50, 180, 50),
-    "poi_wizard_tower": (147, 112, 219),
-    "poi_graveyard": (90, 90, 110),
-    "poi_bandit_fortress": (139, 69, 19),
-    "poi_cave_entrance": (80, 60, 40),
-    "poi_mine_entrance": (100, 80, 60),
-    "poi_demon_portal": (180, 30, 30),
-}
+BUILDING_COSTS = {k: d.cost for k, d in BUILDING_DEFS.items() if not d.is_lair}
+BUILDING_SIZES = {k: d.size for k, d in BUILDING_DEFS.items()}          # incl. lairs + POIs
+BUILDING_COLORS = {k: d.color for k, d in BUILDING_DEFS.items()}       # incl. lairs + POIs
 
 # Building constraints (mutually exclusive buildings)
 BUILDING_CONSTRAINTS = {
@@ -360,50 +206,9 @@ INN_ENTRY_FEE = 2
 INN_LOITER_FEE_GOLD_PER_SEC = 0.5
 
 # Max heroes that can be inside a building at once (0 = not enterable in this sprint)
+# WK70: derived view of BUILDING_DEFS (excludes lairs, which hit Building.__init__ default 8).
 BUILDING_MAX_OCCUPANTS = {
-    "castle": 0,
-    "warrior_guild": 4,
-    "ranger_guild": 4,
-    "rogue_guild": 4,
-    "wizard_guild": 4,
-    "marketplace": 3,
-    "blacksmith": 2,
-    "inn": 6,
-    "trading_post": 0,
-    "temple": 4,
-    "temple_agrela": 4,
-    "temple_dauros": 4,
-    "temple_fervus": 4,
-    "temple_krypta": 4,
-    "temple_krolm": 4,
-    "temple_helia": 4,
-    "temple_lunord": 4,
-    "gnome_hovel": 0,
-    "elven_bungalow": 0,
-    "dwarven_settlement": 0,
-    "guardhouse": 0,
-    "ballista_tower": 0,
-    "wizard_tower": 0,
-    "fairgrounds": 0,
-    "library": 0,
-    "royal_gardens": 0,
-    "palace": 0,
-    "house": 0,
-    "farm": 0,
-    "food_stand": 0,
-    # POIs
-    "poi_shrine": 0,
-    "poi_treasure_cache": 0,
-    "poi_hermit_hut": 0,
-    "poi_gravestone": 0,
-    "poi_abandoned_camp": 0,
-    "poi_druid_grove": 0,
-    "poi_wizard_tower": 2,
-    "poi_graveyard": 0,
-    "poi_bandit_fortress": 6,
-    "poi_cave_entrance": 4,
-    "poi_mine_entrance": 4,
-    "poi_demon_portal": 4,
+    k: d.max_occupants for k, d in BUILDING_DEFS.items() if not d.is_lair
 }
 
 # Fog: player building line-of-sight (WK34; SimEngine `GameEngine` / `SimEngine._update_fog_of_war`)

@@ -10,9 +10,21 @@ from typing import TYPE_CHECKING
 import pygame
 
 from config import DEFAULT_SPEED_TIER, ZOOM_STEP, COLOR_WHITE
+from game.content.buildings import BUILDING_DEFS
 from game.sim.timebase import get_time_multiplier, set_time_multiplier
 from game.ui.micro_view_manager import ViewMode
 from game.ui.speed_control import SPEED_TIERS
+
+# WK70 W2: reverse hotkey map {event_key: building_type} derived from the single-source
+# BUILDING_DEFS, replacing the old hardcoded if/elif chain. Keys are lowercased to match the
+# values pygame's key.name() delivers for letter keys (the pre-WK70 chain fired on lowercase
+# 't'/'u' even though the catalog hotkey dict stores 'T'/'U'); digit hotkeys are unchanged.
+# Byte-identical to the old chain's behavior (1-8 + t + u place the same buildings).
+BUILD_HOTKEY_TO_TYPE = {
+    d.hotkey.lower(): k
+    for k, d in BUILDING_DEFS.items()
+    if d.placeable and d.hotkey
+}
 
 if TYPE_CHECKING:
     from game.game_commands import (
@@ -295,29 +307,13 @@ class InputHandler:
                 c.hud.toggle_right_panel()
             return
 
-        elif event.key == '1':
-            self.select_building_for_placement("warrior_guild")
-        elif event.key == '2':
-            self.select_building_for_placement("marketplace")
-        elif event.key == '3':
-            self.select_building_for_placement("ranger_guild")
-        elif event.key == '4':
-            self.select_building_for_placement("rogue_guild")
-        elif event.key == '5':
-            self.select_building_for_placement("wizard_guild")
-        elif event.key == '6':
-            self.select_building_for_placement("blacksmith")
-        elif event.key == '7':
-            self.select_building_for_placement("inn")
-        elif event.key == '8':
-            self.select_building_for_placement("trading_post")
-        elif event.key == 't':
-            self.select_building_for_placement("temple")
+        # WK70 W2: build hotkeys (1-8 + t + u) via the derived reverse-map (was an if/elif
+        # chain). Keys are lowercased to match event.key; see BUILD_HOTKEY_TO_TYPE above.
         # WK34 REMOVED — will return in future sprint:
         # gnome_hovel (G), elven_bungalow (E), dwarven_settlement (V),
         # ballista_tower (Y), wizard_tower (O), fairgrounds (F), library (I), royal_gardens (R)
-        elif event.key == 'u':
-            self.select_building_for_placement("guardhouse")
+        elif event.key in BUILD_HOTKEY_TO_TYPE:
+            self.select_building_for_placement(BUILD_HOTKEY_TO_TYPE[event.key])
 
         elif event.key == 'h':
             # Hire a hero

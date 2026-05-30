@@ -1,35 +1,16 @@
 """
 Building factory for runtime placement.
+
+WK70 W2: ``BUILDING_REGISTRY`` is DERIVED from the single-source ``BUILDING_DEFS``
+(game/content/buildings.py) instead of being a hand-written dict. It maps every key
+that has a constructor class and is neither a POI (POIs route via ``POI_DEFINITIONS``
+below) nor castle/house/farm (intentionally absent — those are placed via other paths).
+The class is resolved through the import-cycle-safe lazy ``building_class_for`` accessor,
+so this module imports NO entity classes at load time (config -> buildings -> entities ->
+config would cycle). The result is byte-identical to the pre-WK70 27-key registry
+(guarded by tests/test_wk70_building_registry.py).
 """
-from game.entities import (
-    WarriorGuild,
-    RangerGuild,
-    RogueGuild,
-    WizardGuild,
-    Marketplace,
-    Blacksmith,
-    Inn,
-    TradingPost,
-    Temple,
-    TempleAgrela,
-    TempleDauros,
-    TempleFervus,
-    TempleKrypta,
-    TempleKrolm,
-    TempleHelia,
-    TempleLunord,
-    GnomeHovel,
-    ElvenBungalow,
-    DwarvenSettlement,
-    Guardhouse,
-    BallistaTower,
-    WizardTower,
-    Fairgrounds,
-    Library,
-    RoyalGardens,
-    Palace,
-)
-from game.entities.neutral_buildings import FoodStand
+from game.content.buildings import BUILDING_DEFS, building_class_for
 
 # WK54: POI type registration
 try:
@@ -39,38 +20,23 @@ except Exception:
     POI_DEFINITIONS = {}  # type: ignore[assignment]
 
 
+def _build_registry() -> dict[str, type]:
+    """Derive the 27 placement-class mappings from BUILDING_DEFS (see module docstring)."""
+    registry: dict[str, type] = {}
+    for key, d in BUILDING_DEFS.items():
+        if d.is_poi or key in ("castle", "house", "farm"):
+            continue
+        cls = building_class_for(key)
+        if cls is None:
+            continue
+        registry[key] = cls
+    return registry
+
+
 class BuildingFactory:
     """Create building instances from placement type keys."""
 
-    BUILDING_REGISTRY = {
-        "warrior_guild": WarriorGuild,
-        "ranger_guild": RangerGuild,
-        "rogue_guild": RogueGuild,
-        "wizard_guild": WizardGuild,
-        "marketplace": Marketplace,
-        "food_stand": FoodStand,
-        "blacksmith": Blacksmith,
-        "inn": Inn,
-        "trading_post": TradingPost,
-        "temple": Temple,
-        "temple_agrela": TempleAgrela,
-        "temple_dauros": TempleDauros,
-        "temple_fervus": TempleFervus,
-        "temple_krypta": TempleKrypta,
-        "temple_krolm": TempleKrolm,
-        "temple_helia": TempleHelia,
-        "temple_lunord": TempleLunord,
-        "gnome_hovel": GnomeHovel,
-        "elven_bungalow": ElvenBungalow,
-        "dwarven_settlement": DwarvenSettlement,
-        "guardhouse": Guardhouse,
-        "ballista_tower": BallistaTower,
-        "wizard_tower": WizardTower,
-        "fairgrounds": Fairgrounds,
-        "library": Library,
-        "royal_gardens": RoyalGardens,
-        "palace": Palace,
-    }
+    BUILDING_REGISTRY = _build_registry()
 
     def create(self, building_type: str, grid_x: int, grid_y: int):
         """Return a placed building instance, or None for unknown type."""

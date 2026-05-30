@@ -15,20 +15,23 @@ from config import (
     BUILDING_PREREQUISITES, BUILDING_CONSTRAINTS,
     COLOR_WHITE, COLOR_RED, COLOR_GREEN, COLOR_UI_BG, COLOR_UI_BORDER
 )
+from game.content.buildings import BUILDING_DEFS
 
 
-# Hotkey mapping for building types
+# WK70 W2: placeable list (ordered by placeable_order) + hotkeys are DERIVED from the
+# single-source BUILDING_DEFS instead of hand-maintained here. These are imported by
+# building_list_panel.py and input_handler.py so there is exactly one copy. Byte-identical
+# to the pre-WK70 dict/list (guarded by tests/test_wk70_building_registry.py).
+
+# Placeable buildings in display order (exclude castle, palace, auto-spawn).
+PLACEABLE_BUILDINGS = [
+    k for k, d in sorted(BUILDING_DEFS.items(), key=lambda kv: kv[1].placeable_order)
+    if d.placeable
+]
+
+# Hotkey mapping for building types ({building_type: hotkey}).
 BUILDING_HOTKEYS = {
-    "warrior_guild": "1",
-    "marketplace": "2",
-    "ranger_guild": "3",
-    "rogue_guild": "4",
-    "wizard_guild": "5",
-    "blacksmith": "6",
-    "inn": "7",
-    "trading_post": "8",
-    "temple": "T",
-    "guardhouse": "U",
+    k: d.hotkey for k, d in BUILDING_DEFS.items() if d.placeable and d.hotkey
 }
 
 
@@ -57,13 +60,8 @@ class BuildCatalogPanel:
             slice_border=8,
         )
         
-        # Get list of placeable buildings (exclude castle, palace, auto-spawn)
-        self.placeable_buildings = [
-            "warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild",
-            "marketplace", "blacksmith", "inn", "trading_post",
-            "temple",
-            "guardhouse",
-        ]
+        # Get list of placeable buildings (derived from BUILDING_DEFS; see PLACEABLE_BUILDINGS).
+        self.placeable_buildings = list(PLACEABLE_BUILDINGS)
         
         # Grid layout
         self.cols = 3
