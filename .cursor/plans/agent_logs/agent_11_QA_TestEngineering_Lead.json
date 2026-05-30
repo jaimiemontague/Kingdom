@@ -2949,6 +2949,122 @@
           "completion_receipt": "WK67 Gate 5 (FINAL) COMPLETE. Added 3 headless-safe Wave-5 determinism/capture pins to tests/test_wk67_ai_boundary.py — Pin 5a anim->tick (anim_clock_seconds pure function of sim tick + reproducible per-(tick,clip,frame) selection), Pin 5b fog_revision byte-identical across two same-seed fresh-process builds, Pin 5c combat-capture scenario registration guard — all GREEN; boundary file 8 passed / 0 xfail / 0 xpass. Full final gate: AI-decision digest BYTE-IDENTICAL (b73961...); full suite 601 passed / 4 skipped / 0 failed; determinism_guard PASS; qa_smoke --quick PASS; validate_assets errors=0 warns=46 (pre-existing). WK67 Definition of Done: PASS (full suite green; AI-decision digest + shopping parity byte-identical; L3/L3b/L6/L9 closed; 5a/5b/5c determinism items landed and pinned). Residuals are pre-existing only. Only tests/** edited; no game/ai/tools changes; no commit/push."
         }
       }
+    },
+    "wk68_building_interaction_and_render_lastmile": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk68_building_interaction_and_render_lastmile.plan.md",
+        "created_utc": "2026-05-29T00:00:00Z",
+        "notes": "WK68 bundles Track G (building-button fix + Hire-Hero button) and Track R (render-DTO last-mile / kill L1 + determinism-hygiene). Agent 11 owns Wave G3 (regression tests + screenshots) and Wave V (shared final gate). This entry records the G3 PARTIAL: building-button regression tests that independently verify Agent 08 G1/H3 scroll-clip fix. Hire-button tests + paused-click (H1) test + full Wave V come in later passes. QA writes NO production code."
+      },
+      "rounds": {
+        "wk68_g3_partial_building_buttons": {
+          "sprint_id": "wk68_building_interaction_and_render_lastmile",
+          "round_id": "wk68_g3_partial_building_buttons",
+          "status": "done",
+          "round_meta": {
+            "wave": "G3 (partial)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "created_utc": "2026-05-29T00:00:00Z",
+            "depends_on": "wk68_g1 (Agent 08 building-panel scroll/clip hit-rect fix, landed)"
+          },
+          "prompt_summary": "PARTIAL G3: write building-button regression tests that INDEPENDENTLY verify Agent 08 just-landed G1/H3 fix (hit-rects now stored as panel_y + local_rect.y - menu_scroll_px, plus a _rect_in_viewport gate). ALL tests must PASS against current code. Do NOT write hire-hero tests yet (button not added). Do NOT test paused-click H1 (Agent 08 G2 follow-up). Create ONLY tests/test_wk68_building_buttons.py. No production edits. DO NOT COMMIT.",
+          "what_i_changed": {
+            "summary": "Created tests/test_wk68_building_buttons.py with 5 headless (SDL dummy) regression tests independently verifying Agent 08 G1/H3 scroll-clip hit-rect fix. No production code touched.",
+            "files_created": [
+              "tests/test_wk68_building_buttons.py"
+            ],
+            "files_modified": [],
+            "production_code_edited": false
+          },
+          "new_tests": [
+            "test_regression_enter_button_clickable_when_scrolled_to_bottom -- CORE bug: short left_rect (1280x720, 360x160 viewport) + 6 resting heroes on WarriorGuild forces _menu_max_scroll>0; after setting menu_scroll_px=_menu_max_scroll and re-rendering, enter_building_button_rect.center is inside the viewport Rect(panel_x,panel_y,panel_width,panel_height) AND handle_click(center) returns {type:enter_building, building:guild}.",
+            "test_offviewport_enter_button_is_blocked_at_scroll_zero -- same overflow panel at scroll=0 (Enter below the fold): _rect_in_viewport(enter_rect) is False AND handle_click at the Enter rect center does NOT return enter_building (no phantom enter; viewport gate blocks).",
+            "test_non_overflow_enter_button_still_returns_enter -- tall left_rect (360x900) => _menu_max_scroll==0, scroll==0; Enter rect in-viewport and handle_click returns enter_building dict (fix did not over-correct the common case).",
+            "test_full_path_enter_opens_interior -- gate E: game RUNNING (paused False); synthesize left InputEvent(MOUSEDOWN, button=1, pos=enter_rect.center) on an overflow+scrolled panel and route through real InputHandler.handle_mousedown; assert building_interior_overlay.visible becomes True.",
+            "test_other_buttons_dispatch_correctly -- gate F: demolish(guild)->demolish_building dict; castle build-catalog->open_build_catalog dict (+enter/demolish rects suppressed on castle); Close(X)->True and selected_building None; marketplace research(potions_researched=False)->True; blacksmith research->True; library research->True; palace upgrade(affordable)->True with gold deducted and level+1."
+          ],
+          "verify": {
+            "new_file_pytest": "5 passed, 1 warning in 8.19s  (python -m pytest tests/test_wk68_building_buttons.py -q)",
+            "full_suite_pytest": "609 passed, 4 skipped, 0 failed in 123.84s  (python -m pytest -q)  -- baseline was 608 collected; +5 new (one xfail-free); 4 pre-existing skips unchanged.",
+            "sdl_headless": "os.environ.setdefault(SDL_VIDEODRIVER=dummy); SDL_AUDIODRIVER=dummy at module top, before pygame import (mirrors Agent 08 G0 repro)."
+          },
+          "findings": {
+            "fix_holds": true,
+            "detail": "Agent 08 G1/H3 fix VERIFIED on all paths. Overflow Enter button: unclickable-below-fold before fix, clickable-after-scroll now; phantom off-viewport click blocked by _rect_in_viewport; non-overflow preserved; full input-handler path opens the interior overlay. No case where the fix fails to hold -- Agent 08 does NOT need to go back.",
+            "notes": [
+              "special_panel.py renderer dispatches on raw str(building.building_type) (NOT normalized), so Palace/Library built with enum building_type (BuildingType.PALACE) render no content/upgrade button. economic_panel.py normalizes the enum and works either way. Tests set string building_type (palace/library) for the special-renderer cases -- pre-existing quirk, OUT of scope for this G3 partial; flagging for Round B registry work (Move 10).",
+              "Default marketplace ships with potions_researched=True (no research button); the test sets potions_researched=False to exercise the research dispatch.",
+              "Library .research() mutates module-global game.entities.buildings.base.RESEARCH_UNLOCKS via unlock_research(); the test snapshots+restores it in finally to avoid cross-test leakage."
+            ]
+          },
+          "out_of_scope_followups": [
+            "Hire-Hero button tests (tests/test_wk68_hire_button.py) -- after Agent 08 G2 lands the button (gate G).",
+            "Paused-non-modal panel-click regression (H1) -- after Agent 08 G2 narrows the pause guard.",
+            "Demolish/build-catalog screenshots + open-interior + 5 hire-panel screenshots (gates H+E+G).",
+            "Wave V shared final gate (DoD A-I: full suite, determinism_guard, wk67 digest b73961..., qa_smoke --quick, gate-D zero-hit grep, both-renderer before/after screenshots)."
+          ],
+          "committed": false
+        },
+        "wk68_g3_hire_button_and_paused_click": {
+          "sprint_id": "wk68_building_interaction_and_render_lastmile",
+          "round_id": "wk68_g3_hire_button_and_paused_click",
+          "status": "done",
+          "round_meta": {
+            "wave": "G3 (gate G + H1)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "created_utc": "2026-05-30T00:00:00Z",
+            "depends_on": "wk68_g2 (Agent 08 Hire-Hero button on 5 hirable buildings + H1 paused-guard fix, landed)"
+          },
+          "prompt_summary": "G3 gate G + H1: write tests/test_wk68_hire_button.py (5 tests) verifying Agent 08 G2 Hire-Hero button + add 2 H1 paused-click regression cases to tests/test_wk68_building_buttons.py. ALL must PASS. No production edits. DO NOT COMMIT.",
+          "what_i_changed": {
+            "summary": "Created tests/test_wk68_hire_button.py (5 headless tests) verifying the Hire-Hero button + the full hire input path, and appended 2 H1 paused-click regression tests to tests/test_wk68_building_buttons.py. No production code touched.",
+            "files_created": [
+              "tests/test_wk68_hire_button.py"
+            ],
+            "files_modified": [
+              "tests/test_wk68_building_buttons.py"
+            ],
+            "production_code_edited": false
+          },
+          "new_tests": [
+            "test_hire_success_through_real_input_path (gate G core) -- game RUNNING; subscribe a hero_hired capture, render WarriorGuild panel (tall left_rect, no overflow), synthesize left InputEvent(MOUSEDOWN,button=1,pos=hire_hero_button_rect.center) through real InputHandler.handle_mousedown, flush event_bus. ASSERTS: player_gold deducted exactly HERO_HIRE_COST (100); guild.heroes_hired +1; len(heroes) +1; new_hero.home_building is guild; exactly one hero_hired event fired.",
+            "test_cap_disabled_no_hire_rect_and_no_hire -- WarriorGuild.heroes_hired=max_heroes (can_hire False, gold ample). ASSERTS: hire_hero_button_rect is None after render; a panel handle_click probe inside panel bounds does NOT return a hire_hero dict; gold/heroes/heroes_hired all unchanged.",
+            "test_broke_disabled_no_hire_rect_and_no_hire -- guild under cap, player_gold=HERO_HIRE_COST-1. ASSERTS: hire_hero_button_rect is None; click probe does not return hire_hero; gold/heroes/heroes_hired unchanged.",
+            "test_temple_is_hirable_and_hires_a_cleric -- append a constructed Temple (none exist at game start), render -> hire_hero_button_rect not None and in-viewport; real input click hires. ASSERTS: gold -100; temple.heroes_hired +1; len(heroes) +1; new hero home is temple AND hero_class=='cleric' (engine maps temple->CLERIC).",
+            "test_non_hirable_building_renders_no_hire_button -- select Marketplace (not in _HIRABLE_TYPES) with ample gold. ASSERTS: hire_hero_button_rect is None (type gate, not affordability).",
+            "test_paused_panel_click_still_processed (H1) -- ADDED to test_wk68_building_buttons.py. engine.paused=True, no memorial/interior modal, pause_menu closed; real left click at enter_building_button_rect.center through handle_mousedown. ASSERTS: building_interior_overlay.visible becomes True (panel click survives the paused-non-modal guard).",
+            "test_paused_world_click_still_blocked (H1 symmetric) -- ADDED to test_wk68_building_buttons.py. Contrast baseline: while RUNNING, an empty-world LMB OUTSIDE the panel deselects the guild (selected_building None, panel hidden). Re-select guild, set paused=True, same world click. ASSERTS: selected_building is still the guild AND panel.visible still True (guard drops world clicks before world pick)."
+          ],
+          "verify": {
+            "hire_file_pytest": "5 passed, 1 warning in 8.26s  (python -m pytest tests/test_wk68_hire_button.py -q)",
+            "both_button_files_pytest": "12 passed, 1 warning in 19.20s  (python -m pytest tests/test_wk68_hire_button.py tests/test_wk68_building_buttons.py -q)  -- 5 hire + 5 G1/H3 scroll-clip + 2 new H1.",
+            "full_suite_pytest": "5 failed, 613 passed, 4 skipped, 1 warning in 152.63s  (python -m pytest -q). The 5 failures are PRE-EXISTING / NOT MINE: tests/test_wk66_render_boundary.py (3: test_render_dto_field_parity, test_render_dto_additive_field_parity_wk68, test_snapshot_not_mutated_on_consume) and tests/test_wk67_ai_boundary.py (2: test_chat_path_consumes_pure_ai_view, test_frame_state_split). They are mid-flight render/AI-boundary (Move 4 / render-DTO) work by other WK68 agents -- those two test files + game/sim/snapshot.py + game/sim/render_dto.py are heavily modified in the working tree (+238/+170/+81 lines). Errors ('RenderSnapshot' object has no attribute 'heroes'; '_FakeAI' object has no attribute 'defense_behavior') are unrelated to the hire button or paused-click guard. My new tests (hire + H1) all pass; 613 passed includes them.",
+            "sdl_headless": "os.environ.setdefault(SDL_VIDEODRIVER=dummy); SDL_AUDIODRIVER=dummy at module top before pygame import (mirrors prior G3 file)."
+          },
+          "findings": {
+            "hire_holds": true,
+            "paused_h1_holds": true,
+            "detail": "Agent 08 G2 + H1 VERIFIED. Hire button: full real-input path deducts 100 gold, spawns 1 hero (warrior for warrior_guild, cleric for temple) into engine.heroes with home_building set, bumps guild.heroes_hired, emits hero_hired. Disabled paths (at-cap and gold<100) and non-hirable buildings (marketplace) all render hire_hero_button_rect is None so no hit-rect exists -> no hire possible. H1: a paused (non-modal) LMB inside the panel still opens the interior; the same paused LMB out in the world is dropped (selection untouched) whereas RUNNING it deselects. No case where hire or paused behavior fails -- Agent 08 does NOT need to go back.",
+            "notes": [
+              "DEV_MODE (env KINGDOM_DEV_MODE=1) would set HERO_HIRE_COST=0 / infinite gold / cap 999; not set in test env so default cost 100 / cap 8 / gold 2100 hold.",
+              "No Temple exists in a fresh engine; the temple test appends a constructed game.entities.buildings.temples.Temple. Marketplace/WarriorGuild DO exist at game start (used directly).",
+              "hero_hired is queued by event_bus.emit and dispatched on flush(); the success test subscribes then flushes to capture exactly one event. Disabled-path tests probe handle_click directly (no live rect) to confirm no hire_hero dispatch + no state change."
+            ]
+          },
+          "out_of_scope_followups": [
+            "5 hire-panel screenshots + demolish/build-catalog/open-interior screenshots (gates H+E+G visual evidence).",
+            "Wave V shared final gate (DoD A-I: full suite green after render/AI-boundary work settles, determinism_guard, wk67 digest, qa_smoke --quick, gate-D zero-hit grep, both-renderer before/after screenshots).",
+            "PRE-EXISTING full-suite failures in test_wk66_render_boundary.py (3) + test_wk67_ai_boundary.py (2) belong to the concurrent render-DTO/Move-4 wave -- PM should confirm those land green before Wave V sign-off."
+          ],
+          "committed": false
+        }
+      }
     }
   }
 }

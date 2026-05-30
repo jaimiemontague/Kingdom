@@ -108,13 +108,14 @@ def test_build_snapshot_does_not_mutate_entities():
 
         # Touch the snapshot exactly like a renderer would (read-only iteration of
         # the renderer-consumed lists). This is the access pattern we are pinning as
-        # side-effect-free.
-        _ = [(getattr(h, "x", None), getattr(h, "y", None)) for h in snap.heroes]
-        _ = [(getattr(e, "x", None), getattr(e, "hp", None)) for e in snap.enemies]
-        _ = [(getattr(b, "building_type", None), getattr(b, "hp", None)) for b in snap.buildings]
-        _ = list(snap.peasants)
-        _ = list(snap.guards)
-        _ = list(snap.bounties)
+        # side-effect-free. WK68 R3: the live entity tuples were deleted; renderers
+        # now read the frozen *_dtos tuples, so iterate those.
+        _ = [(getattr(h, "x", None), getattr(h, "y", None)) for h in snap.hero_dtos]
+        _ = [(getattr(e, "x", None), getattr(e, "hp", None)) for e in snap.enemy_dtos]
+        _ = [(getattr(b, "building_type", None), getattr(b, "hp", None)) for b in snap.building_dtos]
+        _ = list(snap.peasant_dtos)
+        _ = list(snap.guard_dtos)
+        _ = list(snap.bounty_dtos)
 
         after = _digest(engine)
 
@@ -124,25 +125,34 @@ def test_build_snapshot_does_not_mutate_entities():
 
 
 def test_build_snapshot_lists_are_copies_not_aliases():
-    """The snapshot's entity tuples must be independent copies of engine lists.
+    """The snapshot's render-DTO tuples must be independent of the engine lists.
 
     Guards the other half of the read-only contract: even if a renderer (or this
     test) appended to a snapshot-derived sequence, it must not reach back into the
-    engine's live lists. `SimStateSnapshot` stores tuples, so they are by construction
-    distinct objects from the engine's lists; assert that explicitly.
+    engine's live lists. WK68 R3: the snapshot no longer carries the live entity
+    tuples — it carries frozen value-type DTO tuples, which are by construction
+    distinct objects from the engine's live lists. Assert that, plus that the DTOs
+    cover exactly the live entities (same count + stable ids) at snapshot time.
     """
     engine = GameEngine(headless=True)
     try:
         snap = engine.build_snapshot()
 
-        # Tuples are immutable + a distinct object from the live list.
-        assert snap.heroes is not engine.heroes
-        assert snap.enemies is not engine.enemies
-        assert snap.buildings is not engine.buildings
+        # The DTO tuples are distinct objects from the engine's live lists.
+        assert snap.hero_dtos is not engine.heroes
+        assert snap.enemy_dtos is not engine.enemies
+        assert snap.building_dtos is not engine.buildings
 
-        # Same membership at snapshot time (shallow copy contract).
-        assert list(snap.heroes) == list(engine.heroes)
-        assert list(snap.enemies) == list(engine.enemies)
-        assert list(snap.buildings) == list(engine.buildings)
+        # Same membership at snapshot time (one DTO per live entity, stable ids).
+        assert [d.entity_id for d in snap.hero_dtos] == [
+            str(getattr(h, "hero_id", None) or getattr(h, "entity_id", None) or id(h))
+            for h in engine.heroes
+        ]
+        assert [d.entity_id for d in snap.enemy_dtos] == [
+            str(getattr(e, "entity_id", None) or id(e)) for e in engine.enemies
+        ]
+        assert [d.entity_id for d in snap.building_dtos] == [
+            str(getattr(b, "entity_id", None) or id(b)) for b in engine.buildings
+        ]
     finally:
         pygame.quit()

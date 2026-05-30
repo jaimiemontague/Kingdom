@@ -46,6 +46,23 @@ def _building_type_str(bt) -> str:
     return str(getattr(bt, "value", bt) or "")
 
 
+def _building_is_lair(building) -> bool:
+    """True for monster lairs — works for BOTH a live building and a frozen BuildingDTO.
+
+    WK68 R2 (Agent 09): the legacy duck-type check ``hasattr(building, "stash_gold")``
+    is WRONG for a BuildingDTO, because the DTO carries a ``stash_gold`` int field on
+    EVERY building (0 for non-lairs) → ``hasattr`` is always True, which would mis-detect
+    the castle/guilds as lairs. The DTO instead carries ``has_stash_gold`` (a faithful
+    mirror of the live ``hasattr(b, "stash_gold")``). Prefer that flag when present, else
+    fall back to the live ``hasattr``. ``is_lair`` is set on every real lair (live + DTO),
+    so this is byte-equivalent to the old check for live buildings and correct for DTOs.
+    """
+    return bool(
+        getattr(building, "is_lair", False)
+        or getattr(building, "has_stash_gold", hasattr(building, "stash_gold"))
+    )
+
+
 def _footprint_tiles(building_type) -> tuple[int, int]:
     key = getattr(building_type, "value", building_type)
     return config.BUILDING_SIZES.get(key, (2, 2))
@@ -53,13 +70,13 @@ def _footprint_tiles(building_type) -> tuple[int, int]:
 
 def _is_3d_mesh_building(bts: str, building) -> bool:
     """Castle, peasant house, and monster lairs render as lit 3D meshes (not sprite billboards)."""
-    if getattr(building, "is_lair", False) or hasattr(building, "stash_gold"):
+    if _building_is_lair(building):  # WK68 R2: DTO-safe lair check (see _building_is_lair)
         return True
     return bts in ("castle", "house")
 
 
 def _mesh_kind_for_building(bts: str, building) -> str:
-    if getattr(building, "is_lair", False) or hasattr(building, "stash_gold"):
+    if _building_is_lair(building):  # WK68 R2: DTO-safe lair check (see _building_is_lair)
         return "lair"
     if bts == "castle":
         return "castle"
@@ -208,7 +225,7 @@ def _resolve_prefab_path(bts: str, building) -> Path | None:
         return None
     if not bts:
         return None
-    if getattr(building, "is_lair", False) or hasattr(building, "stash_gold"):
+    if _building_is_lair(building):  # WK68 R2: DTO-safe lair check (see _building_is_lair)
         p = _PREFAB_BUILDINGS_DIR / "lair_v1.json"
         return p if p.is_file() else None
     filename = _PREFAB_BUILDING_TYPE_TO_FILE.get(bts) or f"{bts}_v1.json"

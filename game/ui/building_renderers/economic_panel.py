@@ -105,7 +105,7 @@ class EconomicPanelRenderer:
                 )
                 panel.research_button_rect = pygame.Rect(
                     panel.panel_x + local_rect.x,
-                    panel.panel_y + local_rect.y,
+                    panel.panel_y + local_rect.y - panel.menu_scroll_px,
                     local_rect.width,
                     local_rect.height,
                 )
@@ -238,7 +238,7 @@ class EconomicPanelRenderer:
             )
             panel.blacksmith_research_rects[option["key"]] = pygame.Rect(
                 panel.panel_x + local_rect.x,
-                panel.panel_y + local_rect.y,
+                panel.panel_y + local_rect.y - panel.menu_scroll_px,
                 local_rect.width,
                 local_rect.height,
             )

@@ -19,7 +19,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 os.environ["DETERMINISTIC_SIM"] = "1"
-os.environ["SIM_SEED"] = "42"
+# WK68 R0 (Agent 04): SIM_SEED is set inside main(), NOT at import scope. pytest
+# collection imports this module; setting SIM_SEED here would mutate the shared
+# process env and shift config.SIM_SEED for the whole suite (e.g. the WK67
+# AI-decision digest). The run-as-script path applies it in main() instead.
 
 
 def setup_sim(num_heroes: int):
@@ -251,6 +254,9 @@ def print_results(timings, tick_times, num_ticks, max_enemies, max_heroes, num_h
 
 
 def main():
+    # WK68 R0: apply the fixed perf seed here (script entry point), not at import
+    # scope, so pytest collection never mutates the shared process env.
+    os.environ["SIM_SEED"] = "42"
     parser = argparse.ArgumentParser(description="Kingdom Sim performance stress test")
     parser.add_argument("--ticks", type=int, default=600, help="Number of sim ticks to run")
     parser.add_argument("--heroes", type=int, default=30, help="Number of heroes to spawn")

@@ -182,9 +182,10 @@ def test_frame_context_build_returns_snapshot_and_game_state():
         # game_state must contain the canonical required keys
         missing = REQUIRED_GAME_STATE_KEYS - set(ctx.game_state.keys())
         assert not missing, f"FrameContext game_state missing keys: {missing}"
-        # snapshot must carry entity tuples
-        assert isinstance(ctx.snapshot.heroes, tuple)
-        assert isinstance(ctx.snapshot.buildings, tuple)
+        # snapshot must carry the frozen render-DTO tuples (WK68 R3: the live
+        # entity tuples heroes/buildings/... were deleted; renderers read *_dtos).
+        assert isinstance(ctx.snapshot.hero_dtos, tuple)
+        assert isinstance(ctx.snapshot.building_dtos, tuple)
     finally:
         pygame.quit()
 

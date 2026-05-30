@@ -1662,6 +1662,146 @@
           "recommended_next_actions": []
         }
       }
+    },
+    "wk68_building_interaction_and_render_lastmile": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk68_building_interaction_and_render_lastmile.plan.md",
+        "notes": "WK68 Track G (UX): G0 diagnose + G1 fix buttons (H3 scroll/clip) DONE; G2 Hire-Hero button + H1 pause-guard fix DONE."
+      },
+      "rounds": {
+        "wk68_g0_diagnose": {
+          "sprint_id": "wk68_building_interaction_and_render_lastmile",
+          "round_id": "wk68_g0_diagnose",
+          "status": "done",
+          "confirmed_root_cause": "H3 (hit-rect coordinate space) -- NOT H1 pause-guard, NOT H2 masked exception.",
+          "diagnosis": [
+            "The building panel renders ALL content into a tall scratch sub-surface (panel_surf, scratch_h up to 2400px), then blits only a CLIPPED, scroll-offset slice into the left-column viewport Rect(panel_x, panel_y, panel_width, viewport_h) with src_y=menu_scroll_px (building_panel.py:333-341).",
+            "But every interactive rect is stored at its UN-scrolled scratch position: enter_building_button_rect = Rect(panel_x+local.x, panel_y+local.y, ...) with NO menu_scroll_px term (building_panel.py:502-507); same for demolish (:461-466) and research/blacksmith/library/upgrade/build_catalog in the 3 building_renderers modules. menu_scroll_px appeared NOWHERE in rect computation.",
+            "Consequence: when panel content overflows the left-column viewport (hero pinned / 720p / 4-occupant guild), the bottom buttons (Enter renders last/lowest) fall BELOW the clip and are unclickable; scrolling does not help because the stored rect stays frozen at its scratch y while the drawn button moves with src_y.",
+            "Evidence lines: building_panel.py:502-507 (enter rect, no scroll term), :461-466 (demolish), :333-341 (clipped scroll-blit src_y=menu_scroll_px), :136-140 (outer bounds-gate). Same pattern in building_renderers/{economic,special,castle}_panel.py. Close (X) at top is unaffected (top-pinned)."
+          ],
+          "ranked_hypotheses_ruled_out": [
+            "H1 (input_handler.py:421-427 pause-guard) -- left in place; the click reaches building_panel.handle_click fine when the panel is visible. NOT the cause (separate latent issue; Agent 11 owns the paused-click regression test per PM brief).",
+            "H2 (try/except at input_handler.py:445) -- no exception fires in the click ladder; the click is simply rejected by the frozen-rect/viewport mismatch. NOT the cause."
+          ],
+          "reported_to_pm": "Confirmed cause H3 + exact lines reported; PM APPROVED root cause and the option-1 + viewport-clamp fix for G1."
+        },
+        "wk68_g1_fix_buttons": {
+          "sprint_id": "wk68_building_interaction_and_render_lastmile",
+          "round_id": "wk68_g1_fix_buttons",
+          "status": "done",
+          "what_i_changed": [
+            "game/ui/building_panel.py: NEW _rect_in_viewport(rect) helper -- True iff a stored interactive rect.center is inside the visible clipped viewport Rect(panel_x, panel_y, panel_width, panel_height). Gates every interactive collidepoint so a button scrolled above/below the clip cannot be clicked through.",
+            "game/ui/building_panel.py handle_click: wrapped every interactive collidepoint with _rect_in_viewport(...) -- enter, demolish, research(marketplace), build_catalog(castle), upgrade(palace), and the library/blacksmith research loops. Close (X) left as-is (top-pinned). Preserved exact action dicts: {type:enter_building}, {type:demolish_building}, {type:open_build_catalog}, truthy fallbacks.",
+            "game/ui/building_panel.py update_hover: same _rect_in_viewport gate on demolish/enter/build_catalog/upgrade/research hover + the library/blacksmith hover loops so hover highlight only registers on visible rects.",
+            "game/ui/building_panel.py _render_demolish_button (:461) and _render_enter_building_button (:502): store rect y as panel_y + local_rect.y - self.menu_scroll_px so the screen rect tracks the on-screen (scrolled, clipped) button position.",
+            "game/ui/building_panel.py render(): pre-clamp self.menu_scroll_px against the prior frame _menu_max_scroll BEFORE rendering content, so the rect stores use the SAME scroll offset as the final blit src_y (the end-of-frame clamp only tightens if content shrank).",
+            "game/ui/building_renderers/economic_panel.py: research_button_rect (:106) and blacksmith_research_rects (:239) now subtract panel.menu_scroll_px from the stored y.",
+            "game/ui/building_renderers/special_panel.py: library_research_rects (:92) and palace upgrade_button_rect (:210) now subtract panel.menu_scroll_px from the stored y.",
+            "game/ui/building_renderers/castle_panel.py: build_catalog_button_rect (:72) now subtracts panel.menu_scroll_px from the stored y."
+          ],
+          "scope_constraints_respected": [
+            "Functional fix ONLY: no typed action enum, no dispatch-ladder restructure (Round B).",
+            "Stayed in lane: game/ui/building_panel.py + building_renderers/{economic,special,castle}_panel.py. Did NOT touch input_handler.py pause-guard (H1 is a separate latent issue; flagged for Agent 11).",
+            "Preserved exact action dicts/strings the input_handler consumers expect (input_handler.py:623-643)."
+          ],
+          "verification": [
+            "Throwaway repro (overflow case: 1280x720, short 300x240 left_rect, 4-occupant warrior_guild): at scroll=0 enter_rect center (150,648) is BELOW the 240px viewport -> _rect_in_viewport False, handle_click returns False (no phantom enter). After scroll-to-bottom (menu_scroll_px=425) enter_rect center (150,223) is INSIDE viewport -> _rect_in_viewport True, handle_click(center) returns {type:enter_building, building:<WarriorGuild>}. Back-to-top -> off-viewport again, handle_click False. REPRO PASS.",
+            "Overflow screenshots with clickable-rect outlines: scroll0 shows Demolish/Enter rects red (off-viewport, correctly rejected); scrolled shows the magenta/cyan rect outlines pixel-overlapping the drawn Demolish/Enter buttons inside the viewport (clickable)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest -q",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "603 passed, 4 skipped, 0 failed (baseline 601; +2 are Agent 04 wk68 determinism tests, none of mine regressed)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS"
+            },
+            {
+              "command": "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk68_g1_panels --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "7 PNGs; non-overflow case (inn panel, Demolish+Enter visible+clickable)"
+            },
+            {
+              "command": "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk68_g1_panels_720 --size 1280x720 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "7 PNGs; inn panel still fits at 720p (0 occupants -> short content, no overflow)"
+            }
+          ],
+          "evidence": {
+            "pytest": "python -m pytest -q exit_code=0 -> 603 passed, 4 skipped",
+            "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 DONE: PASS",
+            "screenshots_non_overflow": [
+              "docs/screenshots/wk68_g1_panels/ui_panels_building.png (1920x1080: Inn panel, Demolish+Enter both inside panel, clickable)",
+              "docs/screenshots/wk68_g1_panels_720/ui_panels_building.png (1280x720: Inn panel fits, no overflow)"
+            ],
+            "screenshots_overflow": [
+              "docs/screenshots/wk68_g1_overflow/overflow_scroll0.png (warrior_guild, short left col: content overflows; Enter/Demolish rects below clip, correctly NOT clickable)",
+              "docs/screenshots/wk68_g1_overflow/overflow_scrolled.png (scrolled to bottom: Enter/Demolish inside viewport; stored clickable rect outlines pixel-overlap the drawn buttons)"
+            ],
+            "visual_verdict": "PASS. Alignment/layering checked first: panel left edge flush x=0, buttons left-aligned x=10 with consistent margins, Demolish above Enter, no overlap with world. The stored clickable rect tracks the scrolled on-screen button position exactly (rect outline overlaps drawn button) and the viewport gate blocks off-screen clicks. Both the non-overflow case (buttons visible+clickable) and the overflow case (buttons reachable after scroll) verified."
+          },
+          "notes": "ui_panels scenario selects an inn with 0 occupants so it never overflows the left column -- as anticipated in the PM brief, I captured the overflow case via a dedicated warrior_guild render with a short (hero-pinned/720p-style) left_rect. G2 (Hire-Hero button) is still PENDING PM DISPATCH -- not started in this wave. DID NOT COMMIT."
+        },
+        "wk68_g2_hire_and_h1": {
+          "sprint_id": "wk68_building_interaction_and_render_lastmile",
+          "round_id": "wk68_g2_hire_and_h1",
+          "status": "done",
+          "what_i_changed": {
+            "PART_A_hire_button": [
+              "game/ui/building_panel.py: added module constant _HIRABLE_TYPES=frozenset({warrior_guild,ranger_guild,rogue_guild,wizard_guild,temple}) (comment: source of truth engine.py:962 allowed); imported HERO_HIRE_COST from config.",
+              "game/ui/building_panel.py: added self.hire_hero_button_rect + self.hire_hero_button_hovered next to enter_building_button_rect (~ln 58-59); reset hire_hero_button_rect=None each frame in render() next to the other rect resets (~ln 297).",
+              "game/ui/building_panel.py: new _render_hire_hero_button(self, surface, building, y, economy) -- gated on _HIRABLE_TYPES + is_constructed; enabled = can_hire AND player_gold>=HERO_HIRE_COST; draws blue button \"Hire Hero  00\" with greyed/disabled state (bg_disabled + text_disabled_color) + sub-line \"Heroes: hired/max\"; stores hit-rect ONLY when enabled using the G1 scroll-aware convention Rect(panel_x+local.x, panel_y+local.y - menu_scroll_px, w, h); called right after _render_enter_building_button in render() (~ln 326).",
+              "game/ui/building_panel.py: handle_click -- new branch before demolish (gated by self.hire_hero_button_rect and _rect_in_viewport + collidepoint) returns {\"type\":\"hire_hero\",\"building\":building} when constructed + can_hire.",
+              "game/ui/building_panel.py: update_hover -- new hire_hero_button_hovered entry gated with _rect_in_viewport like the others.",
+              "game/input_handler.py: new consumer in the building-panel result block after the enter_building branch (~ln 642) -- on {\"type\":\"hire_hero\"} sets c.selected_building=building then calls no-arg c.try_hire_hero(); returns. try_hire_hero() kept NO-ARG (H-hotkey at :322 + command-bar caller untouched). engine.py NOT modified."
+            ],
+            "PART_B_h1_pause_guard": [
+              "game/input_handler.py: H1 fix at the paused-non-modal guard (~ln 420-440). Previously dropped EVERY panel click when c.paused and no pause_menu/memorial/interior modal visible. Now also computes panel_hit = (event.button==1 and building_panel.visible and Rect(panel_x,panel_y,panel_width,panel_height).collidepoint(event.pos)); the early-return now fires only if event.button!=1 OR not (mem_vis or bio_vis or panel_hit). World-selection clicks stay blocked because building_panel.handle_click returns True (consumes) for any click inside the panel bounds before world pick is reached -- only panel-area clicks pass through."
+            ]
+          },
+          "scope_constraints_respected": [
+            "Functional only -- no typed HudAction/dispatch refactor; mirrored the Enter/Demolish button idiom.",
+            "Lane respected: edited game/ui/building_panel.py + game/input_handler.py only. engine.py untouched (no guild= param needed -- setting selected_building auto-targets try_hire_hero).",
+            "Preserved all existing action strings + the no-arg try_hire_hero() hotkey/command-bar callers.",
+            "DID NOT COMMIT."
+          ],
+          "verification": {
+            "pytest": "python -m pytest -q -> 609 passed, 4 skipped, 0 failed, 1 warning (131s). No regressions; Agent 11 to add formal hire+paused tests next.",
+            "qa_smoke": "python tools/qa_smoke.py --quick -> PASS (exit_code 0).",
+            "functional_repro_hire": "Throwaway repro: clicking the hire hit-rect routed through InputHandler.handle_mousedown -> gold 500->400 (-100), guild.heroes_hired 0->1, len(engine.heroes) 0->1, new hero.home_building==warrior_guild, and selected_building re-targeted to the clicked guild even though a DIFFERENT building was engine.selected_building before the click.",
+            "functional_repro_disabled": "Broke (gold=50) -> hire_hero_button_rect is None (not clickable). At cap (heroes_hired==max_heroes) -> hire_hero_button_rect is None.",
+            "functional_repro_h1_paused": "With engine.paused=True + no pause_menu/memorial/interior modal, a click on the hire button is now PROCESSED (gold-100, heroes_hired+1). Control: a paused world-click OUTSIDE the panel (1000,600) is STILL blocked (selected_building unchanged, no hero spawned) -- guard not over-widened."
+          },
+          "commands_run": [
+            "python -m pytest -q",
+            "python tools/qa_smoke.py --quick",
+            "python _wk68_g2_repro.py  (throwaway, deleted)",
+            "python _wk68_g2_shots.py  (throwaway screenshot harness, deleted)"
+          ],
+          "evidence": {
+            "screenshots_dir": "docs/screenshots/wk68_hire/",
+            "screenshots": [
+              "warrior_guild_enabled.png",
+              "ranger_guild_enabled.png",
+              "rogue_guild_enabled.png",
+              "wizard_guild_enabled.png",
+              "temple_enabled.png",
+              "warrior_guild_disabled_broke.png",
+              "ranger_guild_disabled_atcap.png"
+            ],
+            "visual_verdict": "PASS. Alignment/layering FIRST: the Hire Hero button is left-flush and same width as Demolish + Enter Building, sits directly below Enter Building, no overlap, no clipping, within the scroll viewport. ENABLED: blue button \"Hire Hero  00\" + greyish sub-line \"Heroes: 0/8\" legible on all 5 hirable types (incl. Temple, correctly gated). DISABLED: broke + at-cap both render the button greyed (dark-grey fill, dimmed text) with a greyed sub-line and store NO hit-rect; at-cap panel header also shows \"Heroes: 8/8\" in red."
+          },
+          "notes": "G1 (scroll/clip rect convention) was already landed; G2 builds on it -- the hire rect uses the identical panel_y+local.y-menu_scroll_px convention and is gated by _rect_in_viewport in both handle_click and update_hover. H1 was a latent issue (Agent 11 owns the formal paused-click test). DO NOT COMMIT per PM gate."
+        }
+      }
     }
   }
 }

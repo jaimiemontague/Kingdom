@@ -417,13 +417,28 @@ class InputHandler:
                     pass
             return  # Consume all input when menu is open
 
-        # While paused (without menu), allow only modal overlays (memorial / building interior) LMB.
+        # While paused (without menu), allow only modal overlays (memorial / building interior) LMB,
+        # plus LMB that lands inside a visible building panel so its buttons (Enter/Demolish/Hire/
+        # research/etc.) still work when paused for a non-modal reason (e.g. speed-control pause).
+        # WK68 H1: world-selection clicks stay blocked — the building panel consumes (returns True
+        # for) any click inside its bounds before world pick is reached, so only panel-area clicks
+        # pass through here.
         if c.paused and not c.pause_menu.visible:
             mc = getattr(c.hud, "memorial_card", None)
             bio = getattr(c.hud, "building_interior_overlay", None)
             mem_vis = mc is not None and getattr(mc, "visible", False)
             bio_vis = bio is not None and getattr(bio, "visible", False)
-            if event.button != 1 or not (mem_vis or bio_vis):
+            bp = getattr(c, "building_panel", None)
+            panel_hit = False
+            if event.button == 1 and bp is not None and getattr(bp, "visible", False):
+                panel_rect = pygame.Rect(
+                    int(getattr(bp, "panel_x", 0)),
+                    int(getattr(bp, "panel_y", 0)),
+                    int(getattr(bp, "panel_width", 0)),
+                    int(getattr(bp, "panel_height", 0)),
+                )
+                panel_hit = panel_rect.collidepoint(event.pos)
+            if event.button != 1 or not (mem_vis or bio_vis or panel_hit):
                 return
 
         _cp = getattr(c.hud, "_chat_panel", None)
@@ -638,6 +653,12 @@ class InputHandler:
                         bio.show(building)
                         if hasattr(c, "apply_hud_pin_action"):
                             c.apply_hud_pin_action("open_building_interior")
+                    return
+                elif isinstance(result, dict) and result.get("type") == "hire_hero":
+                    building = result.get("building")
+                    if building is not None:
+                        c.selected_building = building  # target THIS guild
+                    c.try_hire_hero()
                     return
                 elif result:  # Other panel clicks (True)
                     return

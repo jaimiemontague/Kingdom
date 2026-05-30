@@ -1332,6 +1332,47 @@
      "completion_receipt": "WK67 Wave 3 (Move 6) DONE. do_shopping proposes a synchronous HeroPurchaseCommand through view.commands; all 4 branches converted; economy/buy_item writes removed from ai/ (only 2 docstring mentions remain). rg economy.hero_purchase|buy_item ai/ -> ZERO live hits. AI-decision digest byte-identical (matches golden). determinism_guard PASS. Full suite: 5 tests/** failures, ALL the parity-pin-needs-real-sink case (Agent 11 lane) - not an ai/ regression; live path proven by the digest pins."
     }
    }
+  },
+  "wk68_building_interaction_and_render_lastmile": {
+   "sprint_meta": {
+    "sprint_id": "wk68_building_interaction_and_render_lastmile",
+    "created_utc": "2026-05-30T00:00:00Z",
+    "title": "WK68 - building interaction + render last-mile (Agent 06: Wave R4 chat-path purity)",
+    "role": "Agent 06 AIBehaviorDirector_LLM"
+   },
+   "rounds": {
+    "wk68_kickoff": {
+     "round_meta": {
+      "role": "Agent 06 AIBehaviorDirector_LLM",
+      "phase": "Wave R4 - chat-path purity (finishes Move 5)",
+      "launched_by": "Claude Code Agent-tool subagent (parent Agent 01 PM)",
+      "reports_to": "Agent 01 (PM)",
+      "completed_utc": "2026-05-30T00:00:00Z"
+     },
+     "sprint_id": "wk68_building_interaction_and_render_lastmile",
+     "round_id": "wk68_kickoff",
+     "status": "done",
+     "decision": "NOT CUT - clean view-swap, no new view surface needed.",
+     "scope": "game/sim/direct_prompt_exec.py + its chat caller in game/engine.py (the two chat sites _poll_conversation_response + send_player_message) + tests/test_wk67_ai_boundary.py (two new purity pins). Did NOT touch renderers, snapshot.py, building_panel, determinism reset, or the AI view file (no new accessor needed).",
+     "what_chat_path_read_before": "The chat path consumed the live UI dict from GameEngine.get_game_state(), which carries the mutable 'sim' (the SimEngine), 'world' (live World), and 'economy' (EconomySystem) -- the L3 read leak. _poll_conversation_response passed get_game_state() into apply_validated_direct_prompt_physical; send_player_message passed it into ContextBuilder.build_hero_context to build the conversation prompt.",
+     "how_routed": "engine.py now passes SimEngine.build_ai_view() (the WK67 pure AiGameView: WorldView + immutable facts + command sink, NO sim/world/economy/engine) at both chat sites. In direct_prompt_exec.apply_validated_direct_prompt_physical the param was renamed view_or_game_state and normalized ONCE at the boundary: as_ai_view(...) yields a uniform read-only view; view_to_legacy_context(view) projects the fresh game_state-shaped dict the in-module resolvers (resolve_move_destination/resolve_explore_direction_target) + ContextBuilder consume (carrying NO economy/sim/engine); the AiGameView itself is forwarded to apply_llm_decision (which already accepts view-or-dict via as_ai_view). Mirrors exactly the Move-5 bridge pattern in ai/behaviors/llm_bridge.py. Backward compatible: legacy dict callers (the WK50 integration/resolve tests) still work because as_ai_view wraps a dict in _DictGameStateView.",
+     "purity_assertion": "Added tests/test_wk67_ai_boundary.py::test_chat_path_consumes_pure_ai_view (drives apply_validated_direct_prompt_physical with build_ai_view() exactly as the engine now does; spies the object forwarded into apply_llm_decision; asserts BOTH inbound and forwarded objects expose NO economy/sim/engine and that .world is not the live engine.world -- it is the read-only WorldView; asserts the forwarded object is the SAME pure AiGameView, pass-through, never a re-wrapped live dict). Also added test_engine_chat_caller_uses_build_ai_view_not_get_game_state (source guard: both chat sites use build_ai_view() and neither calls get_game_state() in code lines).",
+     "determinism": "AI-decision digest UNCHANGED = b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded. The chat path is separate from the autonomous hero-decision path the digest captures; migration is digest-neutral as predicted. test_ai_decision_digest_is_stable + test_ai_decision_digest_is_reproducible both green.",
+     "verify": {
+      "pytest_boundary": "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed (incl. digest pin b73961... + 2 new chat-purity pins)",
+      "pytest_direct_prompt": "python -m pytest tests/test_direct_prompt_integration.py tests/test_wk50_direct_prompt_engine_resolve.py -q -> all green (legacy dict callers preserved)",
+      "pytest_full": "python -m pytest -q -> 618 passed, 4 skipped (was 617+the pre-existing render test that is order-sensitive; see test_isolation_note)",
+      "qa_smoke": "python tools/qa_smoke.py --quick -> DONE: PASS (direct_prompt_integration + conversation scenarios exercise this path)"
+     },
+     "test_isolation_note": "My new engine-building pin initially surfaced a PRE-EXISTING global-state leak in the unrelated tests/test_wk66_render_boundary.py::test_snapshot_not_mutated_on_consume (render/snapshot lane, not mine): the module-level shared ai.basic_ai._AI_RNG is never re-seeded per engine build (documented at length in test_wk67_ai_boundary.py PM NOTE), so RNG state from my pin bled into a later bounty-responder snapshot pin. Proven inert: with my 2 new test pins deselected the full suite is green, and the render test passes in isolation with my production change present -- the production change does NOT touch the render path. Fixed in-lane by snapshotting+restoring _AI_RNG.getstate()/.setstate() around my pin so it leaves zero global residue. Full suite now 618 passed.",
+     "files_changed": [
+      "game/sim/direct_prompt_exec.py (param view_or_game_state; as_ai_view+view_to_legacy_context boundary normalization; 5 apply_llm_decision calls now forward the view)",
+      "game/engine.py (_poll_conversation_response + send_player_message source the chat AI context from self.sim.build_ai_view())",
+      "tests/test_wk67_ai_boundary.py (Pin 3b: test_chat_path_consumes_pure_ai_view + test_engine_chat_caller_uses_build_ai_view_not_get_game_state; _assert_no_live_sim_refs helper)"
+     ],
+     "did_not_commit": true
+    }
+   }
   }
  }
 }

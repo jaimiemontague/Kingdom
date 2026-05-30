@@ -2133,6 +2133,110 @@
           "completion_receipt": "WK67 Wave 5 (item 5b) COMPLETE. Root cause: leaked class-global Peasant._spawn_counter (not fog code, not entangled with the _AI_RNG/RESEARCH_UNLOCKS DET-001 leaks). Fix: reset it in SimEngine.__init__ next to set_sim_seed (game/sim_engine.py, in-lane). _fog_revision now identical across in-process same-seed builds (54==54==54). AI digest byte-identical (b73961...); WK66 fog pin GREEN; full suite 598 passed/4 skipped; determinism_guard PASS. No commit/push."
         }
       }
+    },
+    "wk68_building_interaction_and_render_lastmile": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk68_building_interaction_and_render_lastmile.plan.md",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "notes": "Track R: R1 (extend render DTOs additively so R2 can flip the remaining renderers with zero behavior change) then R3 (delete the live entity tuples from RenderSnapshot -- kills boundary-leak L1, finishes Round A). Agents 09+10 landed R2 (all renderers read DTOs, keyed on stable entity_id). WK67 AI-decision digest b73961... stays byte-identical."
+      },
+      "rounds": {
+        "wk68_r1_extend_dtos": {
+          "sprint_id": "wk68_building_interaction_and_render_lastmile",
+          "round_id": "wk68_r1_extend_dtos",
+          "status": "done",
+          "intelligence": "HIGH",
+          "wave": "Wave R1 - extend render DTOs additively (after R0). Purely additive; nothing reads the new fields yet (R2 flips readers).",
+          "summary": "Audited the live-entity reads in the still-unmigrated renderers (Ursina _sync_snapshot_*, instanced_unit_renderer pack loop, pygame guards/peasants/tax-collector + minimap) and added the missing fields ADDITIVELY to UnitDTO/BuildingDTO in game/sim/render_dto.py, populated in unit_dto_from/building_dto_from with the SAME getattr/hasattr-with-default the renderers use today, so R2 flips them with zero behavior change.",
+          "dto_fields_added": {
+            "UnitDTO": [
+              "layer (ursina underground gating :1286/1378)",
+              "is_inside_castle (worker_renderer:150 / ursina:1448 / instanced:415)",
+              "render_worker_type (peasant vs peasant_builder; ursina:1473 / instanced:419 / worker_renderer:56)",
+              "carried_gold (tax-collector label; worker_renderer:214 / ursina:1592)"
+            ],
+            "BuildingDTO": [
+              "center_x/center_y (== live b.x/b.y; ursina frustum/tile-fog/world placement)",
+              "is_poi (duck-type POI flag; ursina:1062/1067)",
+              "poi_type (poi_def.poi_type cave/mine tint; ursina:1168/1201/1252)",
+              "has_stash_gold (hasattr lair detection; ursina:1096)"
+            ]
+          },
+          "tests": "Extended tests/test_wk66_render_boundary.py::test_render_dto_additive_field_parity_wk68 to pin every new field equals the live-entity read.",
+          "verify": "python -m pytest tests/test_wk66_render_boundary.py -q (green); grep-confirmed nothing read the new fields yet (additive)."
+        },
+        "wk68_r3_delete_live_tuples": {
+          "sprint_id": "wk68_building_interaction_and_render_lastmile",
+          "round_id": "wk68_r3_delete_live_tuples",
+          "status": "done",
+          "intelligence": "HIGH",
+          "wave": "Wave R3 - delete the 7 live entity tuples from RenderSnapshot (kills L1, finishes Round A). Behavior-preserving; WK67 digest byte-identical.",
+          "summary": "Relocated bounty update_ui_metrics out of the pygame renderer into SimEngine.build_snapshot (the render-prep path, before the bounty DTOs), then DELETED the 7 live entity tuples (heroes/enemies/peasants/guards/buildings/bounties/tax_collector) from RenderSnapshot and stopped populating them in build_snapshot. Fixed every breaking reader/constructor across production + tests. Gate D: zero production reads of the live tuples remain in game/**.",
+          "step1_relocation": {
+            "what": "Added one self.bounty_system.update_ui_metrics(self.heroes, self.enemies, self.buildings) call in SimEngine.build_snapshot (game/sim_engine.py), positioned BEFORE _bounties is fetched / bounty_dtos are built, using the sim's own live lists.",
+            "deleted_from": [
+              "game/graphics/pygame_renderer.py:_draw_world_layers bounty_pipeline block (snapshot.heroes/enemies/buildings)",
+              "game/graphics/pygame_renderer.py:render_world skip_pygame_world branch (snapshot.heroes/enemies/buildings)"
+            ],
+            "determinism": "Placed in build_snapshot (RENDER-prep), NOT in SimEngine.update() tick and NOT in build_ai_view(). The WK67 AI digest is computed by a HEADLESS sim that ticks but never builds render snapshots, so update_ui_metrics (which mutates b.responders/attractiveness_tier -> contracts.py -> AI contract) runs only at render time exactly as before. Digest b73961... verified byte-identical."
+          },
+          "step2_deleted_fields": [
+            "RenderSnapshot.buildings",
+            "RenderSnapshot.heroes",
+            "RenderSnapshot.enemies",
+            "RenderSnapshot.peasants",
+            "RenderSnapshot.guards",
+            "RenderSnapshot.bounties",
+            "RenderSnapshot.tax_collector"
+          ],
+          "kept_fields": [
+            "world",
+            "trees",
+            "pois",
+            "log_stacks",
+            "fog_revision",
+            "gold",
+            "wave",
+            "buildings_construction_progress",
+            "castle",
+            "vfx_projectiles",
+            "underground_areas",
+            "rubble_records",
+            "hero_dtos",
+            "enemy_dtos",
+            "peasant_dtos",
+            "guard_dtos",
+            "tax_collector_dto",
+            "building_dtos",
+            "bounty_dtos",
+            "SimStateSnapshot alias"
+          ],
+          "breaking_sites_fixed": {
+            "production": [
+              "game/sim_engine.py: build_snapshot stops constructing the 7 tuples + the relocated update_ui_metrics call",
+              "game/graphics/pygame_renderer.py: both update_ui_metrics calls deleted; stale docstring updated",
+              "game/graphics/ursina_renderer.py:1819-1821: deleted dead snapshot.bounties fallback (bounty_dtos always present now)",
+              "game/engine_facades/render_coordinator.py: pinned-hero minimap lookup migrated snapshot.heroes->snapshot.hero_dtos (match entity_id==hero_id); no-PygameRenderer minimap fallback migrated buildings/enemies/heroes/guards/peasants/tax_collector -> *_dtos / tax_collector_dto"
+            ],
+            "tests": [
+              "tests/test_engine.py: ctx.snapshot.heroes/buildings -> hero_dtos/building_dtos",
+              "tests/test_renderer_snapshot_contract.py: test_snapshot_is_frozen builds SimStateSnapshot(world=None) + freezes building_dtos; build-snapshot assert reads building_dtos",
+              "tests/test_wk65_snapshot_no_mutation.py: consume iterates *_dtos; aliasing test asserts DTO tuples distinct from live lists + entity_id membership parity",
+              "tests/test_wk67_ai_boundary.py::test_frame_state_split: inverted pin -> asserts the 7 live fields are GONE (hasattr False) and *_dtos present",
+              "tests/test_wk66_render_boundary.py: parity tests zip DTOs against engine.heroes/enemies/buildings/bounty_system.get_unclaimed_bounties() (live source, snapshot tuple deleted); _drive_full_render_pass takes (engine, snap) -> animations over live entities, draws over *_dtos; test_snapshot_not_mutated_on_consume baselines AFTER build_snapshot (update_ui_metrics relocated into build); added _unit_r2_view/_building_r2_view and asserted UnitDTO.{target_x,state} + BuildingDTO.{has_tax_overlay,grid_x,grid_y,size}"
+            ]
+          },
+          "gate_d": "Repo-wide grep over game/** for snapshot.(heroes|enemies|peasants|guards|buildings|bounties|tax_collector) and getattr(snapshot,...) = ZERO production hits. Only two matches remain and both are inside explanatory comments (render_coordinator.py:70, ursina_renderer.py:1819). A non-comment-line grep returned 0 matches. L1 dead.",
+          "verify": {
+            "pytest_full": "618 passed, 4 skipped, 0 failed",
+            "determinism_guard": "PASS: no violations found",
+            "wk67_ai_boundary": "10 passed; _AI_DECISION_DIGEST b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical",
+            "qa_smoke_quick": "DONE: PASS",
+            "screenshots": "pygame base_overview (docs/screenshots/wk68_r3_pygame_after) + Ursina ursina_melee_combat & wk61_hold_g_tax_overlay (docs/screenshots/wk68_r3_ursina_after); visually identical to the R2 after shots (terrain/buildings/heroes/HP bars/name labels/$42 tax overlays/HUD/minimap all match; trivial mid-step unit offsets only)."
+          },
+          "visual_verdict": "PASS - deletion changed nothing visually across all three render paths. Alignment/layering/panels/fog/overlays match R2."
+        }
+      }
     }
   }
 }

@@ -6,10 +6,23 @@ from collections.abc import Callable
 
 import pygame
 
-from config import COLOR_GREEN, COLOR_RED, COLOR_UI_BG, COLOR_UI_BORDER, COLOR_WHITE
+from config import (
+    COLOR_GREEN,
+    COLOR_RED,
+    COLOR_UI_BG,
+    COLOR_UI_BORDER,
+    COLOR_WHITE,
+    HERO_HIRE_COST,
+)
 from game.ui.building_renderers import get_panel_renderer, normalize_building_type_key
 from game.ui.hud import LEFT_COL_W, RADAR_MINIMAP_H
 from game.ui.widgets import Button, NineSlice
+
+# WK68 G2: buildings that can hire a hero from their own panel.
+# source of truth: engine.py:962 `allowed` (try_hire_hero). temple hires a Cleric.
+_HIRABLE_TYPES = frozenset(
+    {"warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild", "temple"}
+)
 
 
 class BuildingPanel:
@@ -55,6 +68,8 @@ class BuildingPanel:
         self.demolish_button_hovered = False
         self.enter_building_button_rect: pygame.Rect | None = None
         self.enter_building_button_hovered = False
+        self.hire_hero_button_rect: pygame.Rect | None = None
+        self.hire_hero_button_hovered = False
         self.build_catalog_button_rect: pygame.Rect | None = None
         self.build_catalog_button_hovered = False
         self.blacksmith_research_rects: dict[str, pygame.Rect] = {}
@@ -129,6 +144,20 @@ class BuildingPanel:
         """Return normalized string key for a building type."""
         return normalize_building_type_key(getattr(building, "building_type", ""))
 
+    def _rect_in_viewport(self, rect: pygame.Rect | None) -> bool:
+        """True iff a stored interactive rect is inside the visible (clipped) left-column viewport.
+
+        WK68 G1: panel content is rendered into a tall scratch surface and only a scroll-offset
+        slice is blitted into ``Rect(panel_x, panel_y, panel_width, panel_height)``. Interactive
+        rects are stored with the scroll offset already subtracted (so they track the on-screen
+        position), but a button scrolled above/below the clip must not be clickable "through" the
+        edge. Gate every collidepoint on this so only rects whose center is actually visible hit.
+        """
+        if rect is None:
+            return False
+        viewport = pygame.Rect(self.panel_x, self.panel_y, self.panel_width, self.panel_height)
+        return viewport.collidepoint(rect.center)
+
     def handle_click(self, mouse_pos: tuple[int, int], economy, game_state: dict) -> bool | dict:
         """Handle panel clicks. Returns True or action dict when handled."""
         if not self.visible or not self.selected_building:
@@ -145,12 +174,19 @@ class BuildingPanel:
             self.deselect()
             return True
 
-        if self.enter_building_button_rect and self.enter_building_button_rect.collidepoint(mouse_pos):
+        if self._rect_in_viewport(self.enter_building_button_rect) and self.enter_building_button_rect.collidepoint(mouse_pos):
             building = self.selected_building
             if building and getattr(building, "max_occupants", 0) > 0 and getattr(building, "is_constructed", True):
                 return {"type": "enter_building", "building": building}
 
-        if self.demolish_button_rect and self.demolish_button_rect.collidepoint(mouse_pos):
+        if self.hire_hero_button_rect and self._rect_in_viewport(self.hire_hero_button_rect) and self.hire_hero_button_rect.collidepoint(mouse_pos):
+            building = self.selected_building
+            if building and getattr(building, "is_constructed", True) and (
+                (not hasattr(building, "can_hire")) or building.can_hire()
+            ):
+                return {"type": "hire_hero", "building": building}
+
+        if self._rect_in_viewport(self.demolish_button_rect) and self.demolish_button_rect.collidepoint(mouse_pos):
             building = self.selected_building
             if building_type == "castle":
                 return True
@@ -160,7 +196,7 @@ class BuildingPanel:
                 return True
             return {"type": "demolish_building", "building": building}
 
-        if self.research_button_rect and building_type == "marketplace":
+        if self._rect_in_viewport(self.research_button_rect) and building_type == "marketplace":
             if self.research_button_rect.collidepoint(mouse_pos):
                 if hasattr(self.selected_building, "is_constructed") and not self.selected_building.is_constructed:
                     return True
@@ -173,18 +209,18 @@ class BuildingPanel:
                     self.selected_building.potions_researched = True
                     return True
 
-        if self.build_catalog_button_rect and building_type == "castle":
+        if self._rect_in_viewport(self.build_catalog_button_rect) and building_type == "castle":
             if self.build_catalog_button_rect.collidepoint(mouse_pos):
                 return {"type": "open_build_catalog"}
 
-        if self.upgrade_button_rect and building_type == "palace":
+        if self._rect_in_viewport(self.upgrade_button_rect) and building_type == "palace":
             if self.upgrade_button_rect.collidepoint(mouse_pos):
                 if self.selected_building.can_upgrade() and self.selected_building.upgrade(economy):
                     return True
 
         if building_type == "library" and self.library_research_rects:
             for research_name, rect in self.library_research_rects.items():
-                if rect.collidepoint(mouse_pos):
+                if self._rect_in_viewport(rect) and rect.collidepoint(mouse_pos):
                     if hasattr(self.selected_building, "is_constructed") and not self.selected_building.is_constructed:
                         return True
                     self.selected_building.research(research_name, economy, game_state)
@@ -192,7 +228,7 @@ class BuildingPanel:
 
         if building_type == "blacksmith" and self.blacksmith_research_rects:
             for research_key, rect in self.blacksmith_research_rects.items():
-                if rect.collidepoint(mouse_pos):
+                if self._rect_in_viewport(rect) and rect.collidepoint(mouse_pos):
                     if hasattr(self.selected_building, "is_constructed") and not self.selected_building.is_constructed:
                         return True
                     self._apply_blacksmith_research(self.selected_building, research_key, economy, game_state)
@@ -207,21 +243,25 @@ class BuildingPanel:
         else:
             self.close_button_hovered = False
         if self.research_button_rect:
-            self.research_button_hovered = self.research_button_rect.collidepoint(mouse_pos)
+            self.research_button_hovered = self._rect_in_viewport(self.research_button_rect) and self.research_button_rect.collidepoint(mouse_pos)
         if self.demolish_button_rect:
-            self.demolish_button_hovered = self.demolish_button_rect.collidepoint(mouse_pos)
+            self.demolish_button_hovered = self._rect_in_viewport(self.demolish_button_rect) and self.demolish_button_rect.collidepoint(mouse_pos)
         else:
             self.demolish_button_hovered = False
         if self.enter_building_button_rect:
-            self.enter_building_button_hovered = self.enter_building_button_rect.collidepoint(mouse_pos)
+            self.enter_building_button_hovered = self._rect_in_viewport(self.enter_building_button_rect) and self.enter_building_button_rect.collidepoint(mouse_pos)
         else:
             self.enter_building_button_hovered = False
+        if self.hire_hero_button_rect:
+            self.hire_hero_button_hovered = self._rect_in_viewport(self.hire_hero_button_rect) and self.hire_hero_button_rect.collidepoint(mouse_pos)
+        else:
+            self.hire_hero_button_hovered = False
         if self.build_catalog_button_rect:
-            self.build_catalog_button_hovered = self.build_catalog_button_rect.collidepoint(mouse_pos)
+            self.build_catalog_button_hovered = self._rect_in_viewport(self.build_catalog_button_rect) and self.build_catalog_button_rect.collidepoint(mouse_pos)
         else:
             self.build_catalog_button_hovered = False
         if self.upgrade_button_rect:
-            self.upgrade_button_hovered = self.upgrade_button_rect.collidepoint(mouse_pos)
+            self.upgrade_button_hovered = self._rect_in_viewport(self.upgrade_button_rect) and self.upgrade_button_rect.collidepoint(mouse_pos)
         else:
             self.upgrade_button_hovered = False
 
@@ -230,14 +270,14 @@ class BuildingPanel:
         self.library_research_hovered = None
         if self.visible and self.selected_building and building_type == "library":
             for research_name, rect in self.library_research_rects.items():
-                if rect.collidepoint(mouse_pos):
+                if self._rect_in_viewport(rect) and rect.collidepoint(mouse_pos):
                     self.library_research_hovered = research_name
                     break
 
         self.blacksmith_research_hovered = None
         if self.visible and self.selected_building and building_type == "blacksmith":
             for research_key, rect in self.blacksmith_research_rects.items():
-                if rect.collidepoint(mouse_pos):
+                if self._rect_in_viewport(rect) and rect.collidepoint(mouse_pos):
                     self.blacksmith_research_hovered = research_key
                     break
 
@@ -274,8 +314,14 @@ class BuildingPanel:
         self.build_catalog_button_rect = None
         self.demolish_button_rect = None
         self.enter_building_button_rect = None
+        self.hire_hero_button_rect = None
 
         viewport_h = min(self._panel_height_max, max(120, int(lr.height)))
+        # WK68 G1: pre-clamp the scroll against the prior frame's max so the interactive rects
+        # (stored below with ``- self.menu_scroll_px``) use the SAME offset as the final blit's
+        # ``src_y`` — keeping the clickable rect aligned with the on-screen (scrolled, clipped)
+        # button. The post-render clamp at the end only tightens this if content shrank this frame.
+        self.menu_scroll_px = max(0, min(self.menu_scroll_px, self._menu_max_scroll))
         scratch_h = max(900, viewport_h + 400)
         scratch_h = min(2400, scratch_h)
         panel_surf = pygame.Surface((self.panel_width, scratch_h), pygame.SRCALPHA)
@@ -301,6 +347,7 @@ class BuildingPanel:
         y = renderer.render(self, panel_surf, building, heroes, y, economy)
         y = self._render_demolish_button(panel_surf, building, y)
         y = self._render_enter_building_button(panel_surf, building, y)
+        y = self._render_hire_hero_button(panel_surf, building, y, economy)
 
         bottom_padding = 20
         content_h = min(scratch_h, y + bottom_padding)
@@ -460,7 +507,7 @@ class BuildingPanel:
         )
         self.demolish_button_rect = pygame.Rect(
             self.panel_x + local_rect.x,
-            self.panel_y + local_rect.y,
+            self.panel_y + local_rect.y - self.menu_scroll_px,
             local_rect.width,
             local_rect.height,
         )
@@ -501,10 +548,70 @@ class BuildingPanel:
         )
         self.enter_building_button_rect = pygame.Rect(
             self.panel_x + local_rect.x,
-            self.panel_y + local_rect.y,
+            self.panel_y + local_rect.y - self.menu_scroll_px,
             local_rect.width,
             local_rect.height,
         )
         y += local_rect.height + 10
+        return y
+
+    def _render_hire_hero_button(self, surface: pygame.Surface, building, y: int, economy) -> int:
+        """Render 'Hire Hero $100' button on the 5 hirable buildings (WK68 G2).
+
+        Mirrors the Enter/Demolish buttons + uses the G1 scroll-aware rect convention.
+        Disabled (greyed, no live hit-rect) when at the hero cap or when gold < HERO_HIRE_COST.
+        """
+        self.hire_hero_button_rect = None
+        if self._building_type_key(building) not in _HIRABLE_TYPES:
+            return y
+        if not getattr(building, "is_constructed", True):
+            return y
+
+        can_hire = (not hasattr(building, "can_hire")) or building.can_hire()
+        affordable = bool(economy is not None and getattr(economy, "player_gold", 0) >= HERO_HIRE_COST)
+        enabled = can_hire and affordable
+
+        pygame.draw.line(surface, COLOR_UI_BORDER, (10, y), (self.panel_width - 10, y))
+        y += 10
+
+        bw = max(60, self.panel_width - 20)
+        local_rect = pygame.Rect(10, y, bw, 30)
+        button = Button(
+            rect=local_rect,
+            text=f"Hire Hero  ${HERO_HIRE_COST}",
+            font=self.font_small,
+            enabled=enabled,
+        )
+        button.render(
+            surface,
+            mouse_pos=pygame.mouse.get_pos() if (enabled and self.hire_hero_button_hovered) else None,
+            enabled=enabled,
+            bg_normal=(50, 90, 140),
+            bg_hover=(70, 120, 180),
+            bg_pressed=(60, 105, 160),
+            bg_disabled=(80, 80, 80),
+            border_outer=(20, 20, 25),
+            border_inner=(80, 80, 100),
+            border_highlight=(107, 107, 132),
+            text_color=COLOR_WHITE,
+            text_disabled_color=(120, 120, 120),
+        )
+
+        # Cap sub-line below the button.
+        hired = int(getattr(building, "heroes_hired", 0))
+        cap = int(getattr(building, "max_heroes", 8))
+        sub_color = (180, 180, 180) if enabled else (120, 120, 120)
+        sub = self.font_small.render(f"Heroes: {hired}/{cap}", True, sub_color)
+        sub_y = local_rect.bottom + 2
+        surface.blit(sub, (12, sub_y))
+
+        if enabled:
+            self.hire_hero_button_rect = pygame.Rect(
+                self.panel_x + local_rect.x,
+                self.panel_y + local_rect.y - self.menu_scroll_px,
+                local_rect.width,
+                local_rect.height,
+            )
+        y = sub_y + sub.get_height() + 10
         return y
 

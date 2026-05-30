@@ -34,8 +34,15 @@ class UrsinaEntityRenderCollab:
         rotation=(0, 0, 0),
         texture=None,
         billboard=False,
+        key=None,
     ):
-        obj_id = id(sim_obj)
+        # WK68 R2 (Agent 09): the entity-map key is now the STABLE render entity_id
+        # (a string from the frozen DTO) when ``key`` is supplied, instead of
+        # ``id(sim_obj)``. ``id()`` of a per-frame DTO is unstable, so callers that
+        # feed DTOs MUST pass ``key=dto.entity_id``. ``key=None`` preserves the legacy
+        # ``id(sim_obj)`` behavior for any caller still passing a long-lived sim entity
+        # (e.g. projectiles).
+        obj_id = id(sim_obj) if key is None else key
         ents = self._r._entities
         if obj_id not in ents:
             kw = dict(
@@ -54,10 +61,12 @@ class UrsinaEntityRenderCollab:
             ents[obj_id] = ent
         return ents[obj_id], obj_id
 
-    def get_or_create_3d_building_entity(self, sim_obj, model_path: str, col) -> tuple:
+    def get_or_create_3d_building_entity(self, sim_obj, model_path: str, col, *, key=None) -> tuple:
         import ursina as u
 
-        obj_id = id(sim_obj)
+        # WK68 R2 (Agent 09): stable entity_id keying when ``key`` is given (see
+        # get_or_create_entity); ``key=None`` keeps the legacy ``id(sim_obj)`` path.
+        obj_id = id(sim_obj) if key is None else key
         ents = self._r._entities
         if obj_id in ents:
             ent = ents[obj_id]
@@ -82,10 +91,12 @@ class UrsinaEntityRenderCollab:
             ents[obj_id] = ent
         return ents[obj_id], obj_id
 
-    def get_or_create_prefab_building_entity(self, sim_obj, prefab_path: Path, col) -> tuple:
+    def get_or_create_prefab_building_entity(self, sim_obj, prefab_path: Path, col, *, key=None) -> tuple:
         import ursina as u
 
-        obj_id = id(sim_obj)
+        # WK68 R2 (Agent 09): stable entity_id keying when ``key`` is given (see
+        # get_or_create_entity); ``key=None`` keeps the legacy ``id(sim_obj)`` path.
+        obj_id = id(sim_obj) if key is None else key
         ents = self._r._entities
         if obj_id in ents:
             ent = ents[obj_id]

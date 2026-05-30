@@ -1139,8 +1139,14 @@ class GameEngine:
             return
         self._last_conversation_request_ms = now_ms
         history = (getattr(chat_panel, "conversation_history", []) or [])[-CONVERSATION_HISTORY_LIMIT:]
-        game_state = self.get_game_state()
-        context = ContextBuilder.build_hero_context(hero, game_state)
+        # WK68 R4 (finishes Move 5): build the conversation prompt context from the
+        # read-only AiGameView (NO live sim/world/economy/engine), projected to the
+        # legacy context shape ContextBuilder consumes.
+        from ai.behaviors.view_compat import view_to_legacy_context
+
+        context = ContextBuilder.build_hero_context(
+            hero, view_to_legacy_context(self.sim.build_ai_view())
+        )
         llm.request_conversation(hero.name, context, history, text)
         chat_panel.waiting_for_response = True
         self._last_chat_player_message = text
@@ -1164,14 +1170,18 @@ class GameEngine:
             if tool_action:
                 from game.sim.direct_prompt_exec import apply_validated_direct_prompt_physical
 
-                game_state = self.get_game_state()
+                # WK68 R4 (finishes Move 5): the chat path consumes the read-only
+                # AiGameView (NO live sim/world/economy/engine), not the live UI
+                # state dict. build_ai_view exposes exactly the read + command
+                # surface this path needs.
+                ai_view = self.sim.build_ai_view()
                 response_dict["action"] = tool_action
                 physical_committed = bool(
                     apply_validated_direct_prompt_physical(
                         self.ai_controller,
                         hero_target,
                         response_dict,
-                        game_state,
+                        ai_view,
                         player_message=getattr(self, "_last_chat_player_message", "") or "",
                         source="chat",
                     )

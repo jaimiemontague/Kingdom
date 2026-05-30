@@ -1164,6 +1164,99 @@
           "completion_receipt": "WK67 Wave 5 item 5a DONE. Anim within-clip frame index is now sim-tick-derived under DETERMINISTIC_SIM (shared anim_clock_seconds() across both unit renderers), byte-reproducible (proven on the real renderer objects, two-run digest cbecc2e6...), with the normal-play wall-clock path untouched (screenshots identical). Full suite 598/4, qa_smoke PASS, AI digest unchanged. The only determinism_guard hit (ursina_renderer.py:347) is a pre-existing debug-only throttle out of scope. No commit/push."
         }
       }
+    },
+    "wk68_building_interaction_and_render_lastmile": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk68_building_interaction_and_render_lastmile.plan.md",
+        "created_utc": "2026-05-29T00:00:00Z",
+        "notes": "WK68 Wave R2 (Agent 10 half): migrate the dormant hardware-instanced unit renderer onto the frozen render DTOs and key on stable entity_id. Behavior-preserving; perf parity proven. WK67 AI digest b73961... unchanged. DO NOT COMMIT -- PM gates."
+      },
+      "rounds": {
+        "wk68_kickoff": {
+          "sprint_id": "wk68_building_interaction_and_render_lastmile",
+          "round_id": "wk68_kickoff",
+          "status": "done",
+          "intelligence": "HIGH",
+          "round_meta": {
+            "wave": "Wave R2 (Track R) -- instanced-renderer DTO migration + perf parity",
+            "role": "Agent 10 PerformanceStability_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": true,
+            "committed": false,
+            "pushed": false,
+            "lane": "game/graphics/instanced_unit_renderer.py ONLY"
+          },
+          "summary": "Migrated game/graphics/instanced_unit_renderer.py off live sim entities onto the WK66/R1 frozen UnitDTOs, keyed on the stable string entity_id instead of id(obj). The pack loop iterates snapshot.hero_dtos/enemy_dtos/peasant_dtos/guard_dtos and tax_collector_dto and reads dto fields. The anim FSM (_resolve_unit_anim_clip_frame) takes a UnitDTO and reads the one-shot trigger + monotonic anim_trigger_seq off the DTO, still using the WK67 sim-tick-derived anim clock. Base-clip selection moved to five DTO helpers mirroring ursina_units_anim byte-for-byte from dto.state_name/is_inside_building/is_alive. Facing moved to a renderer-owned per-entity_id dict (_facing_by_id) from the DTO x-delta, replacing _unit_facing_direction which MUTATED the live entity. Update signature (snapshot, frame_tick_id) unchanged (caller ursina_renderer.py:988).",
+          "what_i_changed": {
+            "file": "game/graphics/instanced_unit_renderer.py",
+            "edits": [
+              "imports: dropped the five _*_base_clip entity helpers and _unit_facing_direction; kept anim_clock_seconds + _frame_index_for_clip; added TYPE_CHECKING import of UnitDTO.",
+              "new module helpers: _hero/_enemy/_guard/_peasant/_tax_collector_base_clip_dto (read dto.state_name/is_inside_building/is_alive).",
+              "__slots__ + __init__: added _facing_by_id; retyped _unit_anim_state/_visual_pos_by_id to dict[str, ...].",
+              "new method _facing_for_dto(dto): renderer-owned sticky facing from dto.x delta keyed on dto.entity_id.",
+              "_resolve_unit_anim_clip_frame(dto, clips, base_clip_fn): obj_id=dto.entity_id; trigger=dto.anim_trigger; seq=dto.anim_trigger_seq.",
+              "_smooth_visual_position(obj_id: str): annotation only.",
+              "update() pack loop: all kinds iterate *_dtos / tax_collector_dto; key on dto.entity_id; facing via _facing_for_dto.",
+              "cleanup: prune _facing_by_id each frame; destroy() clears it."
+            ],
+            "diffstat": "1 file changed, 151 insertions(+), 53 deletions(-)"
+          },
+          "entity_id_keying": "All per-unit render state keyed on dto.entity_id (stable string = hero_id/entity_id) instead of id(obj). active_ids returned from update() contains string entity_ids for units (projectiles still id(proj)); this set only prunes this renderer's own dicts -- instanced units are NOT in UrsinaRenderer._entities (buffer-texture draws), so _destroy_removed_entities is unaffected by the key-type change.",
+          "behavior_change_note": "ONE intentional delta: dropped the target-based facing branch of _unit_facing_direction (the frozen DTO carries no live combat target). Matches the already-migrated pygame hero/enemy renderers (consistency with Agent 09) and is boundary-correct. Verified harmless: the dormant instanced path renders identically before/after (screenshots); this path is opt-in (KINGDOM_URSINA_INSTANCING=1, default off, known visual issues per project memory).",
+          "parity_proof": {
+            "base_clip": "0 mismatches: DTO helpers vs ursina_units_anim entity helpers across all states x kinds (headless harness).",
+            "facing_movement_branch": "0 mismatches: _facing_for_dto vs _unit_facing_direction movement branch over a position sequence.",
+            "anim_fsm_oneshot": "trigger plays on seq increase, holds during same seq, returns to base after one-shot finishes -- matches legacy FSM."
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest -q",
+              "result": "609 passed, 4 skipped, 0 failed (baseline before AND after -- unchanged)"
+            },
+            {
+              "cmd": "python tools/determinism_guard.py",
+              "result": "PASS: no violations found"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "result": "8 passed -- WK67 AI digest pin b73961... byte-identical"
+            },
+            {
+              "cmd": "python tools/perf_benchmark.py (before)",
+              "result": "ms/tick total 0.311 (sim-only headless benchmark; does not invoke the renderer)"
+            },
+            {
+              "cmd": "python tools/perf_benchmark.py (after x4)",
+              "result": "0.387, 0.312, 0.300, 0.330 -- same noise band; no regression (benchmark never calls InstancedUnitRenderer.update)"
+            },
+            {
+              "cmd": "py_compile + AST + import smoke",
+              "result": "OK; no stale imports of removed entity helpers"
+            },
+            {
+              "cmd": "KINGDOM_URSINA_INSTANCING=1 run_ursina_capture_once --scenario ursina_melee_combat --ticks 240 --no-llm (before/after + legacy compare)",
+              "result": "captured 3 PNGs"
+            }
+          ],
+          "evidence": {
+            "qa_smoke": "Full pytest 609 passed / 4 skipped / 0 failed (== baseline). Determinism guard PASS. WK67 digest pin byte-identical (b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded).",
+            "perf": "Headless perf_benchmark is sim-only and does NOT exercise the renderer, so it is identical before/after by construction (0.30-0.39 ms/tick noise band both runs). The renderer read-path change is strictly cheaper: frozen-dataclass attribute reads replace per-frame live-entity getattr chains + the _unit_facing_direction target-lookup/entity-write; no new per-frame allocations.",
+            "screenshots": {
+              "instanced_before_HEAD": "docs/screenshots/wk68_r2_instanced_before/ursina_melee_combat_20260529_233325_009.png",
+              "instanced_after_DTO": "docs/screenshots/wk68_r2_instanced_after/ursina_melee_combat_20260529_233156_648.png",
+              "legacy_default_compare": "docs/screenshots/wk68_r2_legacy_compare/ursina_melee_combat_20260529_233234_524.png"
+            },
+            "visual_verdict": "PASS (no regression). The dormant instanced path renders PIXEL-EQUIVALENTLY before vs after my migration (castle, terrain/rock scatter, HUD all identical; alignment/layering correct). Unit billboards are absent in the instanced path BOTH before and after -- documented pre-existing 'known visual issue' of KINGDOM_URSINA_INSTANCING (default off), NOT introduced by my change; the legacy default path correctly shows the warrior + goblin with health bars and the attack-strike VFX."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Instanced unit billboards do not render in the dormant KINGDOM_URSINA_INSTANCING=1 path (pre-existing, unrelated to this DTO migration) -- the original instanced-renderer hardening is still the open hero-perf item from project memory.",
+            "No projectile DTO yet: instanced vfx_projectiles still read live proj objects + id(proj). If/when a ProjectileDTO lands, migrate this last slice.",
+            "Consistency with Agent 09: pygame hero/enemy renderers and now the instanced renderer both use position-delta facing only (target-based facing dropped at the DTO boundary)."
+          ]
+        }
+      }
     }
   }
 }

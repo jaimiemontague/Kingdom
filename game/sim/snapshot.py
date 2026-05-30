@@ -33,25 +33,21 @@ class RenderSnapshot:
     """
     Sim truth for one rendered frame — NO presentation state.
 
-    Entity lists are shallow copies of the engine's live lists. Individual
-    entities are still mutable (the renderer reads but must not write to them),
-    but the list membership is frozen.
-
     WK67 Move 4: presentation fields (camera/zoom/screen/paused/running/
     pause_menu_visible/selected_*/sim_blend_fraction/sim_tick_id) were removed
-    from this object and moved to :class:`PresentationFrameState`. The live
-    entity tuples are deliberately KEPT alongside the WK66 DTO tuples — Ursina
-    still reads the live tuples; the DTO read-migration + live-tuple deletion is
-    the deferred render last-mile (Round B), not this sprint.
-    """
+    from this object and moved to :class:`PresentationFrameState`.
 
-    # --- Core entity lists (shallow-copied from engine) ---
-    buildings: tuple
-    heroes: tuple
-    enemies: tuple
-    peasants: tuple
-    guards: tuple
-    bounties: tuple
+    WK68 R3 (Agent 03) — L1 killer: the seven live entity tuples
+    (``buildings/heroes/enemies/peasants/guards/bounties`` + the single
+    ``tax_collector``) have been DELETED. They were the last render-boundary leak
+    of live, mutable sim objects. Every renderer now reads the frozen value-type
+    DTO tuples below (``*_dtos`` / ``tax_collector_dto``); the world/effects
+    fields that are NOT live entities (``world``/``trees``/``log_stacks``/
+    ``castle``/``vfx_projectiles``/``underground_areas``/``rubble_records``)
+    deliberately remain — they are out of scope for the DTO migration. A
+    repo-wide grep for ``snapshot.{heroes,enemies,…}`` now returns zero
+    production hits (gate D).
+    """
 
     # --- World / map ---
     world: Any
@@ -69,7 +65,6 @@ class RenderSnapshot:
 
     # --- Special entities ---
     castle: Any = None
-    tax_collector: Any = None
 
     # --- VFX / projectiles (sim-effect data; stays sim truth) ---
     vfx_projectiles: tuple = ()

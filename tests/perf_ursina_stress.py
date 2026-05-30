@@ -21,7 +21,10 @@ os.environ["KINGDOM_URSINA_AUTO_EXIT_SEC"] = "10"
 os.environ["KINGDOM_URSINA_AUTO_SCREENSHOT"] = "0"
 os.environ["KINGDOM_PLAYTEST_START"] = "0"
 os.environ["DETERMINISTIC_SIM"] = "1"
-os.environ["SIM_SEED"] = "42"
+# WK68 R0 (Agent 04): SIM_SEED is set inside main(), NOT at import scope. pytest
+# collection imports this module; setting SIM_SEED here would mutate the shared
+# process env and shift config.SIM_SEED for the whole suite (e.g. the WK67
+# AI-decision digest). The run-as-script path applies it in main() instead.
 
 
 def inject_stress_entities(app):
@@ -73,6 +76,9 @@ def inject_stress_entities(app):
 
 
 def main():
+    # WK68 R0: apply the fixed perf seed here (script entry point), not at import
+    # scope, so pytest collection never mutates the shared process env.
+    os.environ["SIM_SEED"] = "42"
     print("=" * 60)
     print("  URSINA FPS STRESS TEST (30 heroes + 60 enemies)")
     print("=" * 60)

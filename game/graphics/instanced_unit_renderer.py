@@ -27,17 +27,12 @@ from game.graphics.ursina_coords import sim_px_to_world_xz
 from game.graphics.ursina_texture_bridge import pygame_surface_to_ursina_texture
 from game.graphics.ursina_units_anim import (
     anim_clock_seconds,
-    _enemy_base_clip,
     _frame_index_for_clip,
-    _guard_base_clip,
-    _hero_base_clip,
-    _peasant_base_clip,
-    _tax_collector_base_clip,
-    _unit_facing_direction,
 )
 from game.world import Visibility
 
 if TYPE_CHECKING:
+    from game.sim.render_dto import UnitDTO
     from game.sim.snapshot import SimStateSnapshot
 
 import config
@@ -76,6 +71,64 @@ def _flip_uv_horizontal(uv: tuple[float, float, float, float]) -> tuple[float, f
     return (u + uw, v, -uw, vh)
 
 
+# --- WK68 R2: base-clip selection from the frozen ``UnitDTO`` ---------------
+# These mirror the per-kind ``_*_base_clip`` functions in ``ursina_units_anim``
+# byte-for-byte, except they read ``dto.state_name``/``dto.is_inside_building``/
+# ``dto.is_alive`` off the frozen DTO instead of off a live sim entity. The DTO
+# carries ``state_name = str(getattr(state, "name", state))`` (render_dto.py),
+# i.e. the SAME value the entity-reading functions compute, so the clip choice
+# is identical — but the renderer no longer touches a live entity.
+
+
+def _hero_base_clip_dto(dto: "UnitDTO") -> str:
+    if dto.is_inside_building:
+        return "inside"
+    if dto.state_name in ("MOVING", "RETREATING"):
+        return "walk"
+    return "idle"
+
+
+def _enemy_base_clip_dto(dto: "UnitDTO") -> str:
+    return "walk" if dto.state_name == "MOVING" else "idle"
+
+
+def _guard_base_clip_dto(dto: "UnitDTO") -> str:
+    sn = dto.state_name
+    if sn == "DEAD":
+        return "dead"
+    if sn == "ATTACKING":
+        return "attack"
+    if sn == "MOVING":
+        return "walk"
+    return "idle"
+
+
+def _peasant_base_clip_dto(dto: "UnitDTO") -> str:
+    if not dto.is_alive:
+        return "dead"
+    sn = dto.state_name
+    if sn == "DEAD":
+        return "dead"
+    if sn == "WORKING":
+        return "work"
+    if sn == "MOVING":
+        return "walk"
+    return "idle"
+
+
+def _tax_collector_base_clip_dto(dto: "UnitDTO") -> str:
+    sn = dto.state_name
+    if sn == "COLLECTING":
+        return "collect"
+    if sn == "RETURNING":
+        return "return"
+    if sn == "MOVING_TO_GUILD":
+        return "walk"
+    if sn == "RESTING_AT_CASTLE":
+        return "rest"
+    return "idle"
+
+
 class InstancedUnitRenderer:
     """Dual ``GeomNode`` draws with ``NodePath.set_instance_count(N)`` and float buffer textures.
 
@@ -96,6 +149,7 @@ class InstancedUnitRenderer:
         "_geom",
         "_unit_anim_state",
         "_visual_pos_by_id",
+        "_facing_by_id",
         "_frame_tick_id",
     )
 
@@ -111,8 +165,16 @@ class InstancedUnitRenderer:
         self._initialized = False
         # Mirror ``UrsinaRenderer._compute_anim_frame`` triggers + locomotion timing.
         # Wall-clock in normal play; sim-tick-derived under DETERMINISTIC_SIM (WK67 Wave 5).
-        self._unit_anim_state: dict[int, dict] = {}
-        self._visual_pos_by_id: dict[int, tuple[float, float, float]] = {}
+        # WK68 R2: all per-unit render state is keyed on the frozen DTO's stable
+        # string ``entity_id`` (hero_id/entity_id), never ``id(obj)``.
+        self._unit_anim_state: dict[str, dict] = {}
+        self._visual_pos_by_id: dict[str, tuple[float, float, float]] = {}
+        # WK68 R2: renderer-OWNED facing per unit (1=right, -1=left), derived from
+        # the DTO x-delta — same idiom as the migrated pygame HeroRenderer._facing.
+        # Replaces ``_unit_facing_direction`` which mutated the live entity
+        # (``entity._ks_facing``/``_ks_last_x``); the renderer no longer writes to
+        # sim entities and no longer reads a live entity at all.
+        self._facing_by_id: dict[str, tuple[int, float]] = {}
         # WK67 Wave 5: the current frame's sim tick id (set in ``update``); the anim
         # clock derives from it under DETERMINISTIC_SIM so captures are byte-reproducible.
         self._frame_tick_id: int = 0
@@ -216,21 +278,46 @@ class InstancedUnitRenderer:
         np.set_instance_count(0)
         return np, geom
 
+    def _facing_for_dto(self, dto: "UnitDTO") -> int:
+        """Renderer-owned facing (1=right, -1=left) from the DTO x-delta.
+
+        Mirrors the movement branch of the old ``_unit_facing_direction`` and the
+        migrated pygame ``HeroRenderer`` facing exactly: sticky facing that flips
+        only when |Δx| > 0.01, ``last_x`` updated every call, default 1 on first
+        sight. The target-based branch of ``_unit_facing_direction`` is dropped on
+        purpose — the frozen DTO carries no live combat target, the same boundary
+        choice the pygame hero/enemy renderers already made.
+        """
+        cur_x = float(dto.x)
+        prev = self._facing_by_id.get(dto.entity_id)
+        if prev is None:
+            self._facing_by_id[dto.entity_id] = (1, cur_x)
+            return 1
+        facing, last_x = prev
+        if abs(cur_x - last_x) > 0.01:
+            facing = 1 if (cur_x - last_x) >= 0 else -1
+        self._facing_by_id[dto.entity_id] = (facing, cur_x)
+        return facing
+
     def _resolve_unit_anim_clip_frame(
         self,
-        obj_id: int,
-        entity,
+        dto: "UnitDTO",
         clips: dict[str, AnimationClip],
         base_clip_fn,
     ) -> tuple[str, int]:
-        """Same resolution as ``UrsinaRenderer._compute_anim_frame`` minus surface/cache_key."""
+        """Same resolution as ``UrsinaRenderer._compute_anim_frame`` minus surface/cache_key.
+
+        WK68 R2: reads the one-shot trigger + monotonic ``anim_trigger_seq`` and the
+        base clip off the frozen ``UnitDTO`` (``dto.anim_trigger`` /
+        ``dto.anim_trigger_seq``; ``base_clip_fn(dto)``), keyed on the stable string
+        ``dto.entity_id`` — never ``id(obj)`` and never a live entity.
+        """
+        obj_id = dto.entity_id
         # WK66 Move 1a: play one-shots when the sim's monotonic anim_trigger_seq
         # advances vs our renderer-owned last-seen value; never write the trigger
         # back onto the entity.
-        trigger = getattr(entity, "_ursina_anim_trigger", None) or getattr(
-            entity, "_render_anim_trigger", None
-        )
-        trigger_seq = int(getattr(entity, "_anim_trigger_seq", 0) or 0)
+        trigger = dto.anim_trigger
+        trigger_seq = int(dto.anim_trigger_seq or 0)
         # WK67 Wave 5: wall-clock perf_counter in normal play; sim-tick-derived under
         # DETERMINISTIC_SIM (byte-reproducible captures). Same clock as the legacy path.
         now = anim_clock_seconds(self._frame_tick_id)
@@ -239,7 +326,7 @@ class InstancedUnitRenderer:
         if trigger and trigger_seq != last_seq:
             tname = str(trigger)
             if tname in clips:
-                base = base_clip_fn(entity)
+                base = base_clip_fn(dto)
                 oc = clips[tname]
                 self._unit_anim_state[obj_id] = {
                     "clip": tname,
@@ -252,7 +339,7 @@ class InstancedUnitRenderer:
             elif st is not None:
                 st["last_seq"] = trigger_seq
 
-        base = base_clip_fn(entity)
+        base = base_clip_fn(dto)
         st = self._unit_anim_state.get(obj_id)
         if st is None:
             self._unit_anim_state[obj_id] = {
@@ -286,7 +373,7 @@ class InstancedUnitRenderer:
 
     def _smooth_visual_position(
         self,
-        obj_id: int,
+        obj_id: str,
         wx: float,
         wy: float,
         wz: float,
@@ -328,7 +415,11 @@ class InstancedUnitRenderer:
         assert self._geom is not None
 
         dt = max(float(ursina_time.dt), 0.0)
-        active_ids: set[int] = set()
+        # WK68 R2: ids are the DTOs' stable string entity_id (units); the legacy
+        # projectile slice still keys on id(proj) (no projectile DTO yet — out of
+        # scope), hence the mixed-key set. Both are only used to prune this
+        # renderer's own per-id dicts; they never index the Ursina Entity table.
+        active_ids: set = set()
 
         buf_out = memoryview(self._instance_buffer.modify_ram_image())
         buf_in = memoryview(self._instance_buffer_inside.modify_ram_image())
@@ -358,21 +449,23 @@ class InstancedUnitRenderer:
         ts = float(config.TILE_SIZE)
 
         # --- Outside pass: surface heroes + enemies + workers (smooth into main buffer). ---
-        for h in getattr(snapshot, "heroes", ()):
-            if not getattr(h, "is_alive", True):
+        # WK68 R2: iterate the frozen *_dtos tuples; key all per-unit render state on
+        # the stable string dto.entity_id; never touch a live sim entity.
+        for h in getattr(snapshot, "hero_dtos", ()):
+            if not h.is_alive:
                 continue
-            if bool(getattr(h, "is_inside_building", False)):
+            if h.is_inside_building:
                 continue
             if count_outside >= MAX_INSTANCES:
                 break
-            hc_key = str(getattr(h, "hero_class", "warrior") or "warrior").lower()
+            hc_key = str(h.hero_class or "warrior").lower()
             clips_h = HeroSpriteLibrary.clips_for(hc_key, size=FRAME_SIZE)
-            obj_id = id(h)
+            obj_id = h.entity_id
             clip_name, frame_idx = self._resolve_unit_anim_clip_frame(
-                obj_id, h, clips_h, _hero_base_clip
+                h, clips_h, _hero_base_clip_dto
             )
             uv = self._atlas_builder.lookup_uv("hero", hc_key, clip_name, frame_idx)
-            facing = _unit_facing_direction(h)
+            facing = self._facing_for_dto(h)
             if facing < 0:
                 uv = _flip_uv_horizontal(uv)
             wx, wz = sim_px_to_world_xz(h.x, h.y)
@@ -382,8 +475,8 @@ class InstancedUnitRenderer:
             active_ids.add(obj_id)
 
         # --- Enemies (fog visibility matches legacy) ---
-        for e in getattr(snapshot, "enemies", ()):
-            if not getattr(e, "is_alive", True):
+        for e in getattr(snapshot, "enemy_dtos", ()):
+            if not e.is_alive:
                 continue
             if world is not None:
                 tx, ty = int(e.x / ts), int(e.y / ts)
@@ -392,14 +485,14 @@ class InstancedUnitRenderer:
                         continue
             if count_outside >= MAX_INSTANCES:
                 break
-            et_key = str(getattr(e, "enemy_type", "goblin") or "goblin").lower()
+            et_key = str(e.enemy_type or "goblin").lower()
             clips_e = EnemySpriteLibrary.clips_for(et_key, size=FRAME_SIZE)
-            obj_id = id(e)
+            obj_id = e.entity_id
             clip_name, frame_idx = self._resolve_unit_anim_clip_frame(
-                obj_id, e, clips_e, _enemy_base_clip
+                e, clips_e, _enemy_base_clip_dto
             )
             uv = self._atlas_builder.lookup_uv("enemy", et_key, clip_name, frame_idx)
-            facing_e = _unit_facing_direction(e)
+            facing_e = self._facing_for_dto(e)
             if facing_e < 0:
                 uv = _flip_uv_horizontal(uv)
             wx, wz = sim_px_to_world_xz(e.x, e.y)
@@ -409,18 +502,18 @@ class InstancedUnitRenderer:
             active_ids.add(obj_id)
 
         # --- Workers (peasants / builder variant — animated UVs like guards) ---
-        for p in getattr(snapshot, "peasants", ()):
-            if not getattr(p, "is_alive", True):
+        for p in getattr(snapshot, "peasant_dtos", ()):
+            if not p.is_alive:
                 continue
-            if bool(getattr(p, "is_inside_castle", False)):
+            if p.is_inside_castle:
                 continue
             if count_outside >= MAX_INSTANCES:
                 break
-            wk = str(getattr(p, "render_worker_type", "peasant") or "peasant")
+            wk = str(p.render_worker_type or "peasant")
             clips_p = WorkerSpriteLibrary.clips_for(wk, size=FRAME_SIZE)
-            oid = id(p)
+            oid = p.entity_id
             clip_name, frame_idx = self._resolve_unit_anim_clip_frame(
-                oid, p, clips_p, _peasant_base_clip
+                p, clips_p, _peasant_base_clip_dto
             )
             uv = self._atlas_builder.lookup_uv("worker", wk, clip_name, frame_idx)
             wx, wz = sim_px_to_world_xz(p.x, p.y)
@@ -429,15 +522,15 @@ class InstancedUnitRenderer:
             pack_outside(vx, vy, vz, PEASANT_SCALE, uv)
             active_ids.add(oid)
 
-        for g in getattr(snapshot, "guards", ()):
-            if not getattr(g, "is_alive", True):
+        for g in getattr(snapshot, "guard_dtos", ()):
+            if not g.is_alive:
                 continue
             if count_outside >= MAX_INSTANCES:
                 break
             clips_g = WorkerSpriteLibrary.clips_for("guard", size=FRAME_SIZE)
-            oid = id(g)
+            oid = g.entity_id
             clip_name, frame_idx = self._resolve_unit_anim_clip_frame(
-                oid, g, clips_g, _guard_base_clip
+                g, clips_g, _guard_base_clip_dto
             )
             uv = self._atlas_builder.lookup_uv("worker", "guard", clip_name, frame_idx)
             wx, wz = sim_px_to_world_xz(g.x, g.y)
@@ -446,12 +539,12 @@ class InstancedUnitRenderer:
             pack_outside(vx, vy, vz, GUARD_SCALE_UNIFORM, uv)
             active_ids.add(oid)
 
-        tc = getattr(snapshot, "tax_collector", None)
-        if tc is not None and getattr(tc, "is_alive", True) and count_outside < MAX_INSTANCES:
+        tc = getattr(snapshot, "tax_collector_dto", None)
+        if tc is not None and tc.is_alive and count_outside < MAX_INSTANCES:
             clips_tc = WorkerSpriteLibrary.clips_for("tax_collector", size=FRAME_SIZE)
-            oid = id(tc)
+            oid = tc.entity_id
             clip_name, frame_idx = self._resolve_unit_anim_clip_frame(
-                oid, tc, clips_tc, _tax_collector_base_clip
+                tc, clips_tc, _tax_collector_base_clip_dto
             )
             uv = self._atlas_builder.lookup_uv("worker", "tax_collector", clip_name, frame_idx)
             wx, wz = sim_px_to_world_xz(tc.x, tc.y)
@@ -472,21 +565,21 @@ class InstancedUnitRenderer:
             active_ids.add(oid)
 
         # --- Inside-building heroes (fixed bin draws after terrain/buildings). ---
-        for h in getattr(snapshot, "heroes", ()):
-            if not getattr(h, "is_alive", True):
+        for h in getattr(snapshot, "hero_dtos", ()):
+            if not h.is_alive:
                 continue
-            if not bool(getattr(h, "is_inside_building", False)):
+            if not h.is_inside_building:
                 continue
             if count_inside >= MAX_INSIDE_INSTANCES:
                 break
-            hc_key = str(getattr(h, "hero_class", "warrior") or "warrior").lower()
+            hc_key = str(h.hero_class or "warrior").lower()
             clips_h = HeroSpriteLibrary.clips_for(hc_key, size=FRAME_SIZE)
-            obj_id = id(h)
+            obj_id = h.entity_id
             clip_name, frame_idx = self._resolve_unit_anim_clip_frame(
-                obj_id, h, clips_h, _hero_base_clip
+                h, clips_h, _hero_base_clip_dto
             )
             uv = self._atlas_builder.lookup_uv("hero", hc_key, clip_name, frame_idx)
-            facing_in = _unit_facing_direction(h)
+            facing_in = self._facing_for_dto(h)
             if facing_in < 0:
                 uv = _flip_uv_horizontal(uv)
             wx, wz = sim_px_to_world_xz(h.x, h.y)
@@ -511,6 +604,10 @@ class InstancedUnitRenderer:
         for oid in list(self._visual_pos_by_id.keys()):
             if oid not in active_ids:
                 self._visual_pos_by_id.pop(oid, None)
+
+        for oid in list(self._facing_by_id.keys()):
+            if oid not in active_ids:
+                self._facing_by_id.pop(oid, None)
 
         return active_ids
 
@@ -563,6 +660,7 @@ class InstancedUnitRenderer:
     def destroy(self) -> None:
         self._unit_anim_state.clear()
         self._visual_pos_by_id.clear()
+        self._facing_by_id.clear()
         if self._geom_node_outside is not None:
             self._geom_node_outside.remove_node()
             self._geom_node_outside = None

@@ -286,8 +286,10 @@ def test_render_dto_field_parity():
         snap = engine.build_snapshot()
 
         # --- units (heroes + enemies + peasants + guards + tax collector) ---
-        hero_views = [_unit_view(h, "hero") for h in list(snap.heroes)[:3]]
-        enemy_views = [_unit_view(e, "enemy") for e in list(snap.enemies)[:3]]
+        # WK68 R3: the live entity tuples were deleted from the snapshot; read the
+        # engine's live lists (exactly what build_snapshot iterates to build DTOs).
+        hero_views = [_unit_view(h, "hero") for h in list(engine.heroes)[:3]]
+        enemy_views = [_unit_view(e, "enemy") for e in list(engine.enemies)[:3]]
         assert hero_views, "expected at least one hero to pin"
         assert enemy_views, "expected at least one enemy to pin"
 
@@ -312,11 +314,11 @@ def test_render_dto_field_parity():
 
         # Read-equivalence: reading the same live entity twice yields the same
         # tuple (this is what the DTO must reproduce).
-        first_hero = list(snap.heroes)[0]
+        first_hero = list(engine.heroes)[0]
         assert _unit_view(first_hero, "hero") == _unit_view(first_hero, "hero")
 
         # --- buildings ---
-        building_views = [_building_view(b) for b in list(snap.buildings)[:5]]
+        building_views = [_building_view(b) for b in list(engine.buildings)[:5]]
         assert building_views, "expected buildings to pin"
         for view in building_views:
             (eid, btype, wx, wy, w, h, hp, max_hp, constructed, prog, color,
@@ -340,7 +342,10 @@ def test_render_dto_field_parity():
         assert castle_views[0][8] is True, "castle should be constructed"
 
         # --- bounties ---
-        bounty_views = [_bounty_view(b) for b in list(snap.bounties)[:3]]
+        bounty_views = [
+            _bounty_view(b)
+            for b in list(engine.bounty_system.get_unclaimed_bounties())[:3]
+        ]
         assert bounty_views, "expected at least one bounty to pin"
         for (bid, bx, by, claimed, reward, responders, tier) in bounty_views:
             assert isinstance(bid, str) and bid
@@ -351,6 +356,190 @@ def test_render_dto_field_parity():
             assert tier in ("low", "med", "high")
         # Our seeded bounty reward is preserved through the snapshot.
         assert any(v[4] == 100 for v in bounty_views), "seeded bounty reward=100 must be visible"
+    finally:
+        pygame.quit()
+
+
+# ---------------------------------------------------------------------------
+# WK68 R1 — additive DTO field parity (Ursina / instanced / pygame-remainder)
+# ---------------------------------------------------------------------------
+#
+# WK68 Wave R1 extends the WK66 DTOs ADDITIVELY so the still-unmigrated renderers
+# (Ursina ``_sync_snapshot_*``, the instanced pack loop, and the pygame
+# guards/peasants/tax-collector worker renderer) can flip onto DTOs in R2 with
+# ZERO behavior change. Each new field must equal the value the renderer reads off
+# the LIVE entity today, using the SAME getattr/hasattr-with-default. These helpers
+# encode those exact reads (the audit sites are noted in render_dto.py).
+
+
+def _unit_extra_view(entity) -> tuple:
+    """The WK68 R1 additive UnitDTO fields, read off a live unit exactly as the
+    Ursina / instanced / worker renderers read them today."""
+    return (
+        int(getattr(entity, "layer", 0)),                        # ursina:1286/1378
+        bool(getattr(entity, "is_inside_castle", False)),        # ursina:1448 / instanced:415 / worker_renderer:150
+        str(getattr(entity, "render_worker_type", "peasant") or "peasant"),  # ursina:1473 / instanced:419
+        int(getattr(entity, "carried_gold", 0) or 0),            # worker_renderer:214 / ursina:1592
+    )
+
+
+def _unit_r2_view(entity) -> tuple:
+    """The WK68 R2 (Agent 09/10) additive UnitDTO fields, read off a live unit
+    exactly as ``render_dto.unit_dto_from`` flattens them today.
+
+    - ``target_x`` — the Ursina facing helper (_unit_facing_direction) reads the
+      combat ``target``'s x when the target has x/y coords; None otherwise.
+    - ``state`` — the pygame WorkerRenderer reads ``entity.state`` as
+      ``str(getattr(state, "name", state))`` == ``state_name``; the DTO carries
+      ``state`` == state_name so the worker read is byte-identical.
+    """
+    target = getattr(entity, "target", None)
+    if target is not None and hasattr(target, "x") and hasattr(target, "y"):
+        try:
+            target_x = float(target.x)
+        except (TypeError, ValueError):
+            target_x = None
+    else:
+        target_x = None
+    state = getattr(entity, "state", None)
+    state_name = str(getattr(state, "name", state))
+    return (target_x, state_name)
+
+
+def _building_extra_view(b) -> tuple:
+    """The WK68 R1 additive BuildingDTO fields, read off a live building exactly as
+    the Ursina building sync reads them today."""
+    poi_def = getattr(b, "poi_def", None)
+    poi_type = getattr(poi_def, "poi_type", None) if poi_def is not None else None
+    return (
+        float(getattr(b, "x", 0.0)),       # ursina center reads (b.x/b.y) — distinct from world_x/world_y
+        float(getattr(b, "y", 0.0)),
+        bool(getattr(b, "is_poi", False)),  # ursina:1062/1067
+        (str(poi_type) if poi_type is not None else None),  # ursina cave/mine tint:1168/1201/1252
+        hasattr(b, "stash_gold"),           # ursina lair detection:1096
+    )
+
+
+def _building_r2_view(b) -> tuple:
+    """The WK68 R2 (Agent 09) additive BuildingDTO fields, read off a live building
+    exactly as ``render_dto.building_dto_from`` reads them today.
+
+    - ``has_tax_overlay`` == ``building.has_tax_stash_data`` (hold-G gold overlay).
+    - ``grid_x``/``grid_y``/``size`` == the footprint coords the terrain
+      scatter-exclusion + grid-debug paths read (b.grid_x/.grid_y/.size).
+    """
+    return (
+        bool(getattr(b, "has_tax_stash_data", False)),
+        int(getattr(b, "grid_x", 0) or 0),
+        int(getattr(b, "grid_y", 0) or 0),
+        tuple(getattr(b, "size", (0, 0)) or (0, 0)),
+    )
+
+
+def test_render_dto_additive_field_parity_wk68():
+    """WK68 R1: the additive DTO fields equal the live-entity values (R2 unblock).
+
+    Builds a scene that exercises the NON-default values of every new field
+    (a builder-peasant -> render_worker_type='peasant_builder', an underground
+    hero -> layer=-1, a tax collector carrying gold, a POI building -> is_poi /
+    poi_type, a lair -> has_stash_gold) so the parity has teeth, then asserts the
+    DTO carries exactly what the renderer would read off the live entity.
+    """
+    from game.entities.builder_peasant import BuilderPeasant
+    from game.entities.lair import GoblinCamp
+
+    engine = GameEngine(headless=True)
+    try:
+        _seed_entities(engine)
+
+        castle = next(b for b in engine.buildings if getattr(b, "building_type", None) == "castle")
+        cx, cy = float(castle.center_x), float(castle.center_y)
+
+        # Non-default unit fields:
+        # - an underground hero (layer != 0)
+        underground_hero = list(engine.heroes)[0]
+        underground_hero.layer = -1
+        # - a builder peasant (render_worker_type == 'peasant_builder')
+        target_b = next(b for b in engine.buildings if b is not castle)
+        engine.peasants.append(BuilderPeasant.spawn_from_castle(castle=castle, target_building=target_b))
+        # - a peasant inside the castle (is_inside_castle True)
+        from game.entities.peasant import Peasant
+        inside_peasant = Peasant(cx, cy)
+        inside_peasant.is_inside_castle = True
+        engine.peasants.append(inside_peasant)
+        # - tax collector carrying gold (carried_gold > 0)
+        assert engine.tax_collector is not None
+        engine.tax_collector.carried_gold = 77
+
+        # Non-default building fields: add a lair (has_stash_gold True).
+        lair = GoblinCamp(10, 10)
+        engine.buildings.append(lair)
+
+        # Snapshot immediately (no settle ticks): the seeded builder/inside peasant
+        # would otherwise transition/cull, and parity needs no motion — it pins the
+        # read-equivalence of the DTO vs the live entity, not absolute positions.
+        snap = engine.build_snapshot()
+
+        # --- unit DTOs vs live entities (every kind) ---
+        # WK68 R3: the live entity tuples were deleted from the snapshot; the DTO
+        # tuples are built in live-list order, so zip each DTO tuple against the
+        # engine's live list (the exact source build_snapshot iterates).
+        unit_pairs = (
+            list(zip(snap.hero_dtos, engine.heroes))
+            + list(zip(snap.enemy_dtos, engine.enemies))
+            + list(zip(snap.peasant_dtos, engine.peasants))
+            + list(zip(snap.guard_dtos, engine.guards))
+        )
+        if snap.tax_collector_dto is not None and engine.tax_collector is not None:
+            unit_pairs.append((snap.tax_collector_dto, engine.tax_collector))
+        assert unit_pairs, "expected units to pin"
+
+        for dto, live in unit_pairs:
+            assert (dto.layer, dto.is_inside_castle, dto.render_worker_type, dto.carried_gold) == \
+                _unit_extra_view(live), (
+                    "UnitDTO additive fields must equal the live-entity reads "
+                    f"(kind={dto.kind}, id={dto.entity_id})"
+                )
+            # WK68 R2 (Agent 09/10) additive fields — target_x (Ursina facing) and the
+            # ``state`` alias (pygame worker label) — must equal the live-entity reads.
+            assert (dto.target_x, dto.state) == _unit_r2_view(live), (
+                "UnitDTO R2 fields (target_x/state) must equal the live-entity reads "
+                f"(kind={dto.kind}, id={dto.entity_id})"
+            )
+
+        # Teeth: the non-default values actually flowed through (not just defaults).
+        hero_dto = next(d for d in snap.hero_dtos if d.entity_id == str(underground_hero.hero_id))
+        assert hero_dto.layer == -1, "underground hero layer must reach the DTO"
+        assert any(d.render_worker_type == "peasant_builder" for d in snap.peasant_dtos), \
+            "builder-peasant render_worker_type must reach the DTO"
+        assert any(d.is_inside_castle for d in snap.peasant_dtos), \
+            "inside-castle peasant flag must reach the DTO"
+        assert snap.tax_collector_dto.carried_gold == 77, "tax-collector carried_gold must reach the DTO"
+
+        # --- building DTOs vs live buildings ---
+        # WK68 R3: zip against the engine's live list (snapshot live tuple deleted).
+        bld_pairs = list(zip(snap.building_dtos, engine.buildings))
+        assert bld_pairs, "expected buildings to pin"
+        for dto, live in bld_pairs:
+            assert (dto.center_x, dto.center_y, dto.is_poi, dto.poi_type, dto.has_stash_gold) == \
+                _building_extra_view(live), (
+                    "BuildingDTO additive fields must equal the live-building reads "
+                    f"(type={dto.building_type}, id={dto.entity_id})"
+                )
+            # center_x/center_y are the CENTER (== live x/y), distinct from world_x/world_y corner.
+            assert dto.center_x == float(live.x) and dto.center_y == float(live.y)
+            # WK68 R2 (Agent 09) additive fields — the hold-G tax overlay flag + the
+            # terrain scatter-exclusion/grid-debug footprint coords — must equal the
+            # live-building reads.
+            assert (dto.has_tax_overlay, dto.grid_x, dto.grid_y, dto.size) == \
+                _building_r2_view(live), (
+                    "BuildingDTO R2 fields (has_tax_overlay/grid_x/grid_y/size) must "
+                    f"equal the live-building reads (type={dto.building_type})"
+                )
+
+        # Teeth: the lair surfaces has_stash_gold True via the same hasattr the renderer uses.
+        assert any(d.has_stash_gold for d in snap.building_dtos), \
+            "a lair must surface has_stash_gold=True (Ursina lair detection)"
     finally:
         pygame.quit()
 
@@ -817,9 +1006,16 @@ def _scene_digest(engine: GameEngine) -> dict:
     }
 
 
-def _drive_full_render_pass(snap) -> None:
-    """Exercise a renderer pass over the snapshot exactly like the pygame path:
+def _drive_full_render_pass(engine, snap) -> None:
+    """Exercise a renderer pass exactly like the pygame path:
     advance every animated renderer, then render every entity to a dummy surface.
+
+    WK68 R3: the snapshot no longer carries the live entity tuples. The real
+    pygame path advances animations on the live entities (in
+    ``GameEngine._update_render_animations``) and DRAWS from the frozen ``*_dtos``
+    (``PygameRenderer._draw_world_layers``). This helper mirrors that split: the
+    animation advance runs over the engine's live entities; every render_* draw
+    runs over the snapshot's DTO tuples — the exact production access pattern.
     """
     from game.graphics.renderers.registry import RendererRegistry
 
@@ -828,25 +1024,25 @@ def _drive_full_render_pass(snap) -> None:
 
     registry.update_animations(
         1 / 60,
-        list(snap.heroes),
-        list(snap.enemies),
-        list(snap.peasants),
-        snap.tax_collector,
-        list(snap.guards),
+        list(engine.heroes),
+        list(engine.enemies),
+        list(engine.peasants),
+        engine.tax_collector,
+        list(engine.guards),
     )
-    for building in snap.buildings:
+    for building in snap.building_dtos:
         registry.render_building(surface, building, (0.0, 0.0))
-    for enemy in snap.enemies:
+    for enemy in snap.enemy_dtos:
         registry.render_enemy(surface, enemy, (0.0, 0.0))
-    for hero in snap.heroes:
+    for hero in snap.hero_dtos:
         registry.render_hero(surface, hero, (0.0, 0.0))
-    for peasant in snap.peasants:
+    for peasant in snap.peasant_dtos:
         registry.render_peasant(surface, peasant, (0.0, 0.0))
-    for guard in snap.guards:
+    for guard in snap.guard_dtos:
         registry.render_guard(surface, guard, (0.0, 0.0))
-    if snap.tax_collector is not None:
-        registry.render_tax_collector(surface, snap.tax_collector, (0.0, 0.0))
-    registry.render_bounties(surface, list(snap.bounties), (0.0, 0.0))
+    if snap.tax_collector_dto is not None:
+        registry.render_tax_collector(surface, snap.tax_collector_dto, (0.0, 0.0))
+    registry.render_bounties(surface, list(snap.bounty_dtos), (0.0, 0.0))
 
 
 def test_snapshot_not_mutated_on_consume():
@@ -864,10 +1060,17 @@ def test_snapshot_not_mutated_on_consume():
         assert len(engine.heroes) >= 1
         assert len(engine.bounty_system.get_unclaimed_bounties()) >= 1
 
-        before = _scene_digest(engine)
-
+        # WK68 R3: the bounty ``update_ui_metrics`` mutation was relocated from the
+        # renderer INTO ``build_snapshot`` (it deterministically refreshes
+        # ``responders``/``attractiveness_tier`` once per snapshot build, before the
+        # bounty DTOs, exactly as it used to run once per render frame). Build the
+        # snapshot FIRST, then baseline — this pin isolates the CONSUME side (the
+        # render pass), which must remain inert; the build side is pinned separately
+        # by tests/test_wk65_snapshot_no_mutation.py.
         snap = engine.build_snapshot()
-        _drive_full_render_pass(snap)
+
+        before = _scene_digest(engine)
+        _drive_full_render_pass(engine, snap)
 
         after = _scene_digest(engine)
         assert before == after, "a renderer pass over the snapshot mutated live sim gameplay state"

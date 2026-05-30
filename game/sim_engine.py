@@ -75,19 +75,14 @@ class SimEngine:
         # Determinism knobs (future multiplayer enablement).
         # Seed early so world gen + initial lairs are reproducible when enabled.
         set_sim_seed(SIM_SEED)
-        # WK67 Round A-2 (Wave 5, fog-revision determinism): reset the class-level
-        # `Peasant._spawn_counter` at build time, next to the seed reset, so two
-        # same-seed in-process GameEngine builds produce identical peasant idle
-        # offsets. This counter is module/class-global and otherwise carries over
-        # between builds: peasant idle positions then differ across builds, which
-        # shifts a fog revealer's grid tile and makes `_fog_revision` drift ±1
-        # cross-instance (the visibility grid / discovery stay byte-stable; only
-        # the increment COUNT drifted because the revealer moved). Resetting it
-        # here makes the fog-revision sequence reproducible without changing what
-        # is revealed. NOTE: this is the SAME family as the WK67-W0-DET-001
-        # global-state isolation leaks; the entity-ID counters (`_next_*_id`) are
-        # a related but fog-neutral follow-up (IDs are labels, not positions).
-        Peasant._spawn_counter = 0
+        # WK68 Round R0 (Agent 04 — NetworkingDeterminism): a single sim-owned
+        # per-build reset of every piece of module/class-global mutable state that
+        # the sim reads, so two same-seed in-process GameEngine builds produce
+        # byte-identical AI behavior. This folds in the WK67 `Peasant._spawn_counter`
+        # fog reset and extends it to RESEARCH_UNLOCKS, the entity-ID counters, and
+        # the shared AI RNG. See `_reset_global_sim_state` for the full rationale +
+        # the digest guardrail it preserves.
+        self._reset_global_sim_state()
         self._sim_now_ms = 0
         # wk12 Chronos: 5-tier speed control; default NORMAL (0.5x).
         set_time_multiplier(DEFAULT_SPEED_TIER)
@@ -167,6 +162,88 @@ class SimEngine:
         # Fog-of-war dirty check state (Ursina consumes via snapshot.fog_revision)
         self._fog_revision = 0
         self._fog_revealers_snapshot = None
+
+    def _reset_global_sim_state(self) -> None:
+        """WK68 R0: reset every module/class-global piece of sim state per build.
+
+        Several sim subsystems keep *module-level* or *class-level* mutable state
+        that — unlike instance state — survives across `SimEngine`/`GameEngine`
+        constructions inside one process. With seeded determinism that carry-over
+        makes two same-seed in-process builds diverge (the keystone WK67
+        AI-decision digest drifts build-to-build; observed in the
+        `tests/test_wk67_ai_boundary.py` PM NOTE). A *fresh* process starts clean,
+        so this reset is a NO-OP on the first build in a process and only matters
+        on the 2nd+ in-process build — which is why it leaves the WK67 digest
+        (`b73961…`) byte-identical (see the digest guardrail note below).
+
+        Resets, in order:
+        1. `Peasant._spawn_counter` (class-global) — drives the deterministic idle
+           offset slot (peasant.py). Carry-over moves a fog revealer's grid tile
+           and drifts `_fog_revision` ±1 cross-instance (WK67 fog reset).
+        2. The monotonic entity-ID counters (`_next_*_id`) in each entity module —
+           IDs are labels, not positions, so these do not move the digest, but
+           folding them in here makes ID streams reproducible across in-process
+           builds (a guardrail for any future ID-keyed determinism).
+        3. `RESEARCH_UNLOCKS` (module-global dict in buildings/base.py) — mutated
+           in place by `unlock_research()` and never reset; a prior build/test
+           that unlocks weapon/armor upgrades changes the blacksmith catalogue and
+           shifts hero shopping/decisions.
+        4. The shared AI RNG `ai.basic_ai._AI_RNG` — re-seeded to the per-build
+           seed so the patrol/wander stream does not keep advancing from where the
+           previous in-process build's tick loop left off.
+
+        The `_AI_RNG` reseed (step 4) is GUARDED behind `config.DETERMINISTIC_SIM`:
+        in normal (non-deterministic) play `_AI_RNG` stays at its shipped
+        import-frozen state, so this reset is a zero-real-play-behavior change
+        there. The reseed only runs under deterministic mode, where it exists
+        purely so in-process captures/tests reproduce. The other three resets
+        (steps 1-3) are UNCONDITIONAL — they are per-new-game correctness, not
+        determinism-only.
+
+        DIGEST GUARDRAIL (read before changing the `_AI_RNG` reseed):
+        The WK67 keystone digest `b73961…` was captured from
+        `_build_digest_engine`, which re-seeds `_AI_RNG` with `.seed(SIM_SEED)`
+        BEFORE building the engine (the "reference recipe"). To keep that digest
+        byte-identical, this reset re-applies *exactly that same* reseed under
+        deterministic mode: `_AI_RNG.seed(int(config.SIM_SEED))`. NOTE: the
+        natural fresh-import state of `_AI_RNG` is
+        `random.Random(_derive_seed("ai_basic"))` (base seed at import time),
+        which is NOT the same state as `.seed(SIM_SEED)`; reseeding to that
+        derived state instead WOULD move the digest. We deliberately mirror the
+        established `.seed(SIM_SEED)` reference recipe so the digest pin holds and
+        deterministic in-process builds stay reproducible. (Proper per-sim RNG
+        injection is the deferred Round B `research_state.py`/RNG-injection
+        refactor.)
+        """
+        import config
+        import ai.basic_ai as _basic_ai
+        import game.entities.buildings.base as _buildings_base
+        from game.entities import enemy as _enemy
+        from game.entities import guard as _guard
+        from game.entities import peasant as _peasant
+        from game.entities import rubble as _rubble
+
+        # 1. Class-global peasant idle-offset counter (fog-revision determinism).
+        Peasant._spawn_counter = 0
+
+        # 2. Monotonic per-entity-module ID counters (deterministic spawn-order IDs).
+        _enemy._next_enemy_id = 0
+        _guard._next_guard_id = 0
+        _peasant._next_peasant_id = 0
+        _rubble._next_rubble_id = 0
+        _buildings_base._next_building_id = 0
+
+        # 3. Kingdom-wide research-unlock dict (module-global, mutated in place).
+        for _research_key in _buildings_base.RESEARCH_UNLOCKS:
+            _buildings_base.RESEARCH_UNLOCKS[_research_key] = False
+
+        # 4. Shared AI RNG re-seed — ONLY under deterministic mode. In normal play
+        #    _AI_RNG stays at its shipped import-frozen state (zero real-play
+        #    behavior change); the reseed exists purely so deterministic in-process
+        #    captures/tests reproduce (mirrors the WK67 digest reference recipe so
+        #    the keystone digest stays byte-identical — see the guardrail note).
+        if config.DETERMINISTIC_SIM:
+            _basic_ai._AI_RNG.seed(int(config.SIM_SEED))
 
     def _init_trees_from_world(self) -> None:
         """WK44: Build sim tree entities from world TileType.TREE grid."""
@@ -542,6 +619,28 @@ class SimEngine:
 
         castle = next((b for b in self.buildings if getattr(b, "building_type", None) == "castle"), None)
 
+        # WK68 R3 (Agent 03): bounty UI metrics are computed HERE, in the
+        # render-prep path, immediately before the bounty DTOs are built — so
+        # ``bounty_dto_from`` reads freshly-computed ``b.responders`` /
+        # ``b.attractiveness_tier``. This call MUST live in build_snapshot (NOT in
+        # the core ``SimEngine.update`` tick and NOT in ``build_ai_view``): it
+        # mutates the live bounties' responders/attractiveness_tier, which
+        # ``game/sim/contracts.py`` feeds into the WK67 AI contract. The WK67
+        # AI-decision digest (b73961…) is computed by a HEADLESS sim that ticks but
+        # does NOT build render snapshots, so running this only at render-prep time
+        # keeps that digest byte-identical while giving Ursina (the default
+        # renderer) correct bounty metrics too. Relocated out of pygame_renderer
+        # (the last render-path reader of the live entity tuples) for WK68 R3 / L1.
+        if hasattr(self.bounty_system, "update_ui_metrics"):
+            try:
+                self.bounty_system.update_ui_metrics(
+                    self.heroes,
+                    self.enemies,
+                    self.buildings,
+                )
+            except Exception:
+                pass
+
         # WK66 Round A-1 (ADDITIVE): build frozen render DTOs alongside the live
         # tuples. tile_visible is computed here from the sim's fog grid so the
         # render boundary does not have to read world.visibility for it.
@@ -550,16 +649,10 @@ class SimEngine:
         _bounties = self.bounty_system.get_unclaimed_bounties()
         _tax = getattr(self, "tax_collector", None)
         return RenderSnapshot(
-            buildings=tuple(self.buildings),
-            heroes=tuple(self.heroes),
-            enemies=tuple(self.enemies),
-            peasants=tuple(self.peasants),
-            guards=tuple(self.guards),
-            bounties=tuple(_bounties),
+            world=self.world,
             pois=tuple(getattr(self, 'pois', ())),
             trees=tuple(self.trees),
             log_stacks=tuple(self.log_stacks),
-            world=self.world,
             fog_revision=int(getattr(self, "_fog_revision", 0)),
             gold=int(getattr(self.economy, "player_gold", 0)),
             wave=int(getattr(self.spawner, "wave_number", 0)),
@@ -567,7 +660,6 @@ class SimEngine:
                 float(getattr(b, "construction_progress", 1.0)) for b in self.buildings
             ),
             castle=castle,
-            tax_collector=getattr(self, "tax_collector", None),
             vfx_projectiles=tuple(vfx_projectiles or ()),
             underground_areas=getattr(self, 'underground_areas', None),
             rubble_records=tuple(getattr(self, 'rubble_records', ())),

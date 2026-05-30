@@ -169,9 +169,24 @@ def is_tax_gold_overlay_held() -> bool:
 
 
 def building_tax_overlay_snapshot(b, *, is_lair: bool) -> tuple[bool, int]:
-    """Return (has_tax_field, amount) for hold-G building gold overlays (WK61-R6)."""
+    """Return (has_tax_field, amount) for hold-G building gold overlays (WK61-R6).
+
+    WK68 R2 (Agent 09): now consumes the frozen BuildingDTO. The DTO carries
+    ``has_tax_overlay`` (== the live ``has_tax_stash_data`` property) and
+    ``stored_tax_gold``; for tax buildings the live ``get_overlay_tax_gold()`` returns
+    exactly ``stored_tax_gold`` and base buildings have ``has_tax_stash_data=False``,
+    so ``(has_tax_overlay, stored_tax_gold)`` reproduces the legacy method-based result
+    byte-for-byte. A live entity (no ``has_tax_overlay`` attr) still takes the original
+    method path below — fully backward compatible.
+    """
     if is_lair or getattr(b, "is_poi", False):
         return False, 0
+    # DTO path: the participation flag is present (live entities don't carry it).
+    if hasattr(b, "has_tax_overlay"):
+        if not getattr(b, "has_tax_overlay", False):
+            return False, 0
+        return True, int(getattr(b, "stored_tax_gold", 0) or 0)
+    # Legacy live-entity path (method-based) — unchanged.
     if hasattr(b, "get_overlay_tax_gold"):
         if not getattr(b, "has_tax_stash_data", True):
             return False, 0
@@ -352,7 +367,14 @@ def _maybe_log_tax_overlay_debug(buildings) -> None:
     tax_count = 0
     stash_sum = 0
     for b in buildings or ():
-        is_lair = hasattr(b, "stash_gold")
+        # WK68 R2 (Agent 09): DTO-SAFE lair flag. The BuildingDTO carries a ``stash_gold``
+        # int field on EVERY building, so a bare ``hasattr(b, "stash_gold")`` would be True
+        # for all DTOs (mis-flagging tax buildings as lairs). Use ``has_stash_gold`` when
+        # present (the DTO mirror), else the live ``hasattr``. Matches _building_is_lair.
+        is_lair = bool(
+            getattr(b, "is_lair", False)
+            or getattr(b, "has_stash_gold", hasattr(b, "stash_gold"))
+        )
         has_tax, stash = building_tax_overlay_snapshot(b, is_lair=is_lair)
         if has_tax:
             tax_count += 1
@@ -421,6 +443,52 @@ from game.graphics.ursina_units_anim import (
 
 from game.graphics.terrain_height import get_terrain_height, is_initialized as _terrain_height_ok
 from game.graphics.unit_atlas import UnitAtlasBuilder, ATLAS_SIZE, FRAME_SIZE
+
+
+# WK68 R2 (Agent 09): DTO-driven base-clip selection. Mirrors the per-type live-entity
+# helpers in ursina_units_anim.py (_hero_base_clip / _enemy_base_clip / _guard_base_clip
+# / _peasant_base_clip / _tax_collector_base_clip) byte-for-byte, but reads the frozen
+# UnitDTO (state_name / is_inside_building / is_alive) instead of a live entity. ``dto.kind``
+# routes to the matching branch; the worker kinds split on dto.kind (peasant/guard/tax).
+def _base_clip_from_dto(dto) -> str:
+    kind = getattr(dto, "kind", "")
+    state_name = str(getattr(dto, "state_name", "") or "")
+    if kind == "hero":
+        if bool(getattr(dto, "is_inside_building", False)):
+            return "inside"
+        if state_name in ("MOVING", "RETREATING"):
+            return "walk"
+        return "idle"
+    if kind == "enemy":
+        return "walk" if state_name == "MOVING" else "idle"
+    if kind == "guard":
+        if state_name == "DEAD":
+            return "dead"
+        if state_name == "ATTACKING":
+            return "attack"
+        if state_name == "MOVING":
+            return "walk"
+        return "idle"
+    if kind == "tax_collector":
+        if state_name == "COLLECTING":
+            return "collect"
+        if state_name == "RETURNING":
+            return "return"
+        if state_name == "MOVING_TO_GUILD":
+            return "walk"
+        if state_name == "RESTING_AT_CASTLE":
+            return "rest"
+        return "idle"
+    # peasant / peasant_builder
+    if not bool(getattr(dto, "is_alive", True)):
+        return "dead"
+    if state_name == "DEAD":
+        return "dead"
+    if state_name == "WORKING":
+        return "work"
+    if state_name == "MOVING":
+        return "walk"
+    return "idle"
 from game.graphics.ursina_entity_render_collab import UrsinaEntityRenderCollab
 from game.graphics.ursina_terrain_fog_collab import UrsinaTerrainFogCollab
 
@@ -480,7 +548,12 @@ class UrsinaRenderer:
         # WK22 R3: per-sim-object billboard animation (wall clock). WK66: each entry
         # also tracks "last_seq" — the sim's anim_trigger_seq we last played — so a
         # one-shot plays once per new trigger without writing back to the entity.
-        self._unit_anim_state: dict[int, dict] = {}
+        self._unit_anim_state: dict = {}
+        # WK68 R2 (Agent 09): renderer-owned movement-facing scratch, keyed by the
+        # stable render entity_id (string). Replaces the old write-back of
+        # ``_ks_facing`` / ``_ks_last_x`` onto the live sim entity (which the renderer
+        # no longer holds — it reads frozen DTOs). Value: {"facing": int, "last_x": float}.
+        self._unit_facing_state: dict[str, dict] = {}
         # WK66 L2: renderer-owned record of POIs force-revealed by debug mode
         # (KINGDOM_DEBUG_SHOW_ALL_POIS), keyed by stable entity_id. Replaces the
         # old renderer writes of b.is_discovered / world.visibility = SEEN.
@@ -560,7 +633,38 @@ class UrsinaRenderer:
                 self._clips_cache[cache_key] = WorkerSpriteLibrary.clips_for(class_key, size=size)
         return self._clips_cache[cache_key]
 
-    def _compute_anim_frame(self, obj_id, entity, unit_type: str, class_key: str, base_clip_fn) -> tuple:
+    def _facing_from_dto(self, dto) -> int:
+        """WK68 R2 (Agent 09): facing (1=right, -1=left) from a frozen UnitDTO.
+
+        Byte-for-byte port of ``ursina_units_anim._unit_facing_direction`` but reads
+        the DTO (``target_x``/``x``) and keeps the movement-tracking scratch in a
+        renderer-owned dict keyed by the stable ``entity_id`` — NOT stamped onto the
+        live entity (which the renderer no longer holds). Same precedence: combat
+        target wins, else last-x movement delta, else last known facing.
+        """
+        eid = getattr(dto, "entity_id", None)
+        cur_x = float(getattr(dto, "x", 0.0))
+        # 1) Combat target: face toward target.x when meaningfully offset.
+        target_x = getattr(dto, "target_x", None)
+        if target_x is not None:
+            dx = float(target_x) - cur_x
+            if abs(dx) > 0.01:
+                return 1 if dx >= 0 else -1
+        # 2) Movement-based facing (renderer-owned scratch keyed by entity_id).
+        st = self._unit_facing_state.get(eid)
+        last_x = st.get("last_x") if st is not None else None
+        if last_x is not None:
+            dx = cur_x - last_x
+            if abs(dx) > 0.01:
+                new_facing = 1 if dx >= 0 else -1
+                self._unit_facing_state[eid] = {"facing": new_facing, "last_x": cur_x}
+                return new_facing
+        # 3) No movement this frame: record current x, keep last known facing.
+        prev_facing = st.get("facing", 1) if st is not None else 1
+        self._unit_facing_state[eid] = {"facing": prev_facing, "last_x": cur_x}
+        return prev_facing
+
+    def _compute_anim_frame(self, obj_id, entity, unit_type: str, class_key: str, base_clip_fn=None) -> tuple:
         """Compute current animation clip name and frame index.
 
         The within-clip elapsed uses :func:`anim_clock_seconds` — wall-clock
@@ -571,12 +675,25 @@ class UrsinaRenderer:
         # anim_trigger_seq and play when the seq advances vs our renderer-owned
         # last-seen value, instead of clearing the trigger on the entity. The
         # renderer no longer writes _ursina_anim_trigger/_render_anim_trigger back.
-        trigger = getattr(entity, "_ursina_anim_trigger", None) or getattr(
-            entity, "_render_anim_trigger", None
+        # WK68 R2 (Agent 09): ``entity`` is now a frozen UnitDTO. The DTO carries
+        # ``anim_trigger``/``anim_trigger_seq`` (the live entity exposed
+        # ``_render_anim_trigger``/``_ursina_anim_trigger``/``_anim_trigger_seq``);
+        # read the DTO names first, falling back to the legacy entity attrs so any
+        # non-DTO caller still works.
+        trigger = (
+            getattr(entity, "anim_trigger", None)
+            or getattr(entity, "_ursina_anim_trigger", None)
+            or getattr(entity, "_render_anim_trigger", None)
         )
-        trigger_seq = int(getattr(entity, "_anim_trigger_seq", 0) or 0)
+        trigger_seq = int(
+            getattr(entity, "anim_trigger_seq", None)
+            if getattr(entity, "anim_trigger_seq", None) is not None
+            else getattr(entity, "_anim_trigger_seq", 0) or 0
+        )
 
-        base = base_clip_fn(entity)
+        # WK68 R2 (Agent 09): base clip from the DTO (default path); legacy callers
+        # may still pass a base_clip_fn that reads a live entity.
+        base = base_clip_fn(entity) if base_clip_fn is not None else _base_clip_from_dto(entity)
         st = self._unit_anim_state.get(obj_id)
         # WK67 Wave 5: under DETERMINISTIC_SIM/capture this is sim-tick-derived
         # (byte-reproducible); otherwise wall-clock perf_counter (live play unchanged).
@@ -951,7 +1068,9 @@ class UrsinaRenderer:
 
         world = getattr(snapshot, "world", None) or self._world
         fog_revision = int(getattr(snapshot, "fog_revision", 0))
-        self._terrain_fog.build_3d_terrain(world, getattr(snapshot, "buildings", ()))
+        # WK68 R2 (Agent 09): feed the one-time terrain build the frozen BuildingDTOs.
+        # _building_occupied_tiles reads b.grid_x/grid_y/size — now carried by the DTO.
+        self._terrain_fog.build_3d_terrain(world, getattr(snapshot, "building_dtos", ()))
         # WK58 W8 (4.C): per-frame LOD refresh for the GeoMipTerrain display
         # path (env-flag gated; handle is None when the custom Mesh path is
         # active, so this is a cheap attribute read in the default case).
@@ -969,7 +1088,8 @@ class UrsinaRenderer:
         if _stage_profile: _rec("07_sync_visibility_gated_terrain", _t0); _t0 = time.perf_counter()
         self._terrain_fog.cull_terrain_chunks(self._frame_visible_rect, world)
         if _stage_profile: _rec("08_cull_terrain_chunks", _t0); _t0 = time.perf_counter()
-        self._terrain_fog.ensure_grid_debug_overlay(world, getattr(snapshot, "buildings", ()))
+        # WK68 R2 (Agent 09): grid-debug overlay reads b.building_type=="castle" — DTO ok.
+        self._terrain_fog.ensure_grid_debug_overlay(world, getattr(snapshot, "building_dtos", ()))
         if _stage_profile: _rec("09_ensure_grid_debug_overlay", _t0); _t0 = time.perf_counter()
 
         # WK47 Wave 2b: hardware-instanced units (snapshot → buffer texture).
@@ -1032,75 +1152,85 @@ class UrsinaRenderer:
 
     def _sync_snapshot_buildings(self, snapshot: "SimStateSnapshot", world, active_ids: set) -> None:
         # Buildings — billboard quads, except castle / house / lair (v1.5 Sprint 2.1: lit 3D meshes).
+        # WK68 R2 (Agent 09): consume frozen BuildingDTOs and key self._entities on the
+        # stable dto.entity_id (string) — NOT id(b). The DTO carries center_x/center_y
+        # (== live b.x/b.y), is_lair/has_stash_gold (lair detection), is_poi/poi_type
+        # (cave/mine tint), is_discovered/tile_visible (visibility). All prefab/mesh
+        # helpers (_resolve_prefab_path / _is_3d_mesh_building / _mesh_kind_for_building /
+        # _resolve_construction_staged_prefab / _footprint_tiles) read only fields the DTO
+        # exposes, so they accept the DTO unchanged (lair detection via is_lair, equivalent
+        # to the old hasattr(b,"stash_gold") since every lair sets is_lair=True).
         _active_layer = self._camera_active_layer
-        for b in getattr(snapshot, "buildings", ()):
+        for b in getattr(snapshot, "building_dtos", ()):
+            obj_id = b.entity_id
+            # building CENTER coords (== live b.x/b.y) for placement / cull / fog sampling.
+            b_cx = float(getattr(b, "center_x", 0.0))
+            b_cy = float(getattr(b, "center_y", 0.0))
+            bts = _building_type_str(getattr(b, "building_type", "") or "")
             # WK61-BUG-003: Skip destroyed buildings that haven't been cleaned
             # from the snapshot yet. The engine's _cleanup_destroyed_buildings
             # removes them, but if a building reaches hp<=0 mid-tick it may
             # still appear in this frame's snapshot. Destroy its entity so the
             # model disappears immediately (rubble replaces it next frame).
-            if getattr(b, 'hp', 1) <= 0 and getattr(b, 'building_type', '') != 'castle':
-                _dead_obj_id = id(b)
-                _dead_ent = self._entities.get(_dead_obj_id)
+            if getattr(b, 'hp', 1) <= 0 and bts != 'castle':
+                _dead_ent = self._entities.get(obj_id)
                 if _dead_ent is not None:
                     import ursina as _u
-                    self._unit_anim_state.pop(_dead_obj_id, None)
-                    _u.destroy(self._entities.pop(_dead_obj_id))
+                    self._unit_anim_state.pop(obj_id, None)
+                    _u.destroy(self._entities.pop(obj_id))
                 continue
             # WK57 Wave 3: Buildings are always surface (layer 0) — hide when camera underground
             if _active_layer != 0:
-                _bld_obj_id = id(b)
-                _bld_existing = self._entities.get(_bld_obj_id)
+                _bld_existing = self._entities.get(obj_id)
                 if _bld_existing is not None:
                     _bld_existing.enabled = False
-                    active_ids.add(_bld_obj_id)
+                    active_ids.add(obj_id)
                 continue
             # WK54+fix: Debug mode — force POIs to render consistently.
             # WK66 L2: record the force-reveal in a renderer-owned dict keyed by the
             # stable entity_id instead of writing b.is_discovered / world.visibility
             # (the renderer must never mutate sim fog/discovery state).
             if _debug_show_pois and getattr(b, 'is_poi', False):
-                self._debug_revealed_pois[str(getattr(b, 'entity_id', None) or id(b))] = True
+                self._debug_revealed_pois[obj_id] = True
             # WK55-fix: Binary POI visibility — hidden until discovered by hero.
             # Undiscovered POIs are completely hidden (minimap gray dots are the only hint).
             # Once a hero walks within discovery range, the POI becomes fully visible.
             if getattr(b, "is_poi", False) and not _debug_show_pois:
-                _poi_obj_id = id(b)
                 if not getattr(b, 'is_discovered', False):
                     # UNDISCOVERED — hide entity completely; minimap shows gray dot instead
-                    existing = self._entities.get(_poi_obj_id)
+                    existing = self._entities.get(obj_id)
                     if existing is not None:
                         existing.enabled = False
-                        active_ids.add(_poi_obj_id)
+                        active_ids.add(obj_id)
                     # Also hide any leftover mystery marker from old code
-                    marker = self._poi_mystery_markers.get(_poi_obj_id)
+                    marker = self._poi_mystery_markers.get(obj_id)
                     if marker is not None:
                         marker.enabled = False
                     continue
                 # DISCOVERED — fall through to normal rendering below
             # WK59 perf: frustum culling — skip buildings outside visible tile rect
-            if not self._entity_in_view(getattr(b, "x", 0.0), getattr(b, "y", 0.0)):
-                _bld_obj_id = id(b)
-                _bld_existing = self._entities.get(_bld_obj_id)
+            if not self._entity_in_view(b_cx, b_cy):
+                _bld_existing = self._entities.get(obj_id)
                 if _bld_existing is not None:
                     _bld_existing.enabled = False
-                    active_ids.add(_bld_obj_id)
+                    active_ids.add(obj_id)
                 continue
             # Re-enable building if it was previously culled and is now in view
-            _bld_reenable = self._entities.get(id(b))
+            _bld_reenable = self._entities.get(obj_id)
             if _bld_reenable is not None and getattr(_bld_reenable, "enabled", True) is False:
                 _bld_reenable.enabled = True
             bt_raw = getattr(b, "building_type", "") or ""
-            bts = _building_type_str(bt_raw)
             is_castle = bts == "castle"
-            is_lair = hasattr(b, "stash_gold")
+            # Lair detection: is_lair (or has_stash_gold) — equivalent to the old
+            # hasattr(b,"stash_gold") since the Lair class sets both.
+            is_lair = bool(getattr(b, "is_lair", False) or getattr(b, "has_stash_gold", False))
             # Fog-of-war: lairs appear once a hero explores near them (SEEN) and stay
             # visible permanently.  Previous check required real-time LoS (VISIBLE)
             # which never triggered because lairs spawn 18+ tiles from the castle
             # while hero vision radius is only 10 tiles at game start.
             if is_lair:
                 ts = float(config.TILE_SIZE)
-                tx, ty = int(getattr(b, "x", 0.0) / ts), int(getattr(b, "y", 0.0) / ts)
+                tx, ty = int(b_cx / ts), int(b_cy / ts)
                 lair_visible = True
                 if 0 <= ty < world.height and 0 <= tx < world.width:
                     # Read the sim fog grid READ-ONLY (>= SEEN). In debug mode a
@@ -1108,11 +1238,8 @@ class UrsinaRenderer:
                     # renderer write of world.visibility = SEEN).
                     lair_visible = (world.visibility[ty][tx] >= Visibility.SEEN) or (
                         _debug_show_pois
-                        and self._debug_revealed_pois.get(
-                            str(getattr(b, "entity_id", None) or id(b)), False
-                        )
+                        and self._debug_revealed_pois.get(obj_id, False)
                     )
-                obj_id = id(b)
                 existing = self._entities.get(obj_id)
                 if not lair_visible:
                     if existing is not None:
@@ -1137,7 +1264,7 @@ class UrsinaRenderer:
             if getattr(b, "hp", 200) < getattr(b, "max_hp", 200) * 0.4:
                 state = "damaged"
 
-            wx, wz = sim_px_to_world_xz(b.x, b.y)
+            wx, wz = sim_px_to_world_xz(b_cx, b_cy)
             # WK53 Wave 2: sample terrain height at building footprint center
             bld_terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
 
@@ -1148,7 +1275,7 @@ class UrsinaRenderer:
             if prefab_path is not None:
                 staged = _resolve_construction_staged_prefab(b, prefab_path, tw, th)
                 ent, obj_id = self._entity_render.get_or_create_prefab_building_entity(
-                    b, staged, col
+                    b, staged, col, key=obj_id
                 )
                 self._entity_render.sync_prefab_building_entity(
                     ent,
@@ -1163,9 +1290,9 @@ class UrsinaRenderer:
                     terrain_y=bld_terrain_y,
                 )
                 # WK57: Visual hint for cave/mine entrances — cool dark tint
+                # WK68 R2 (Agent 09): poi_type from the DTO (== live poi_def.poi_type).
                 if not getattr(ent, "_ks_cave_tint_applied", False):
-                    poi_def = getattr(b, 'poi_def', None)
-                    if poi_def and getattr(poi_def, 'poi_type', None) in ('poi_cave_entrance', 'poi_mine_entrance'):
+                    if getattr(b, 'poi_type', None) in ('poi_cave_entrance', 'poi_mine_entrance'):
                         try:
                             ent.color = color.rgb(180, 180, 200)
                         except Exception:
@@ -1181,7 +1308,9 @@ class UrsinaRenderer:
             if _is_3d_mesh_building(bts, b):
                 mesh_kind = _mesh_kind_for_building(bts, b)
                 model_path = _environment_model_path(mesh_kind)
-                ent, obj_id = self._entity_render.get_or_create_3d_building_entity(b, model_path, col)
+                ent, obj_id = self._entity_render.get_or_create_3d_building_entity(
+                    b, model_path, col, key=obj_id
+                )
                 self._entity_render.sync_3d_building_entity(
                     ent,
                     mesh_kind=mesh_kind,
@@ -1196,9 +1325,9 @@ class UrsinaRenderer:
                     terrain_y=bld_terrain_y,
                 )
                 # WK57: Visual hint for cave/mine entrances — cool dark tint
+                # WK68 R2 (Agent 09): poi_type from the DTO (== live poi_def.poi_type).
                 if not getattr(ent, '_ks_cave_tint_applied', False):
-                    poi_def = getattr(b, 'poi_def', None)
-                    if poi_def and getattr(poi_def, 'poi_type', None) in ('poi_cave_entrance', 'poi_mine_entrance'):
+                    if getattr(b, 'poi_type', None) in ('poi_cave_entrance', 'poi_mine_entrance'):
                         try:
                             ent.color = color.rgb(180, 180, 200)
                         except Exception:
@@ -1230,6 +1359,7 @@ class UrsinaRenderer:
                 col=col,
                 scale=(face_w, hy, 1),
                 billboard=True,
+                key=obj_id,
             )
             if not getattr(ent, "_ks_billboard_configured", False):
                 ent.model = "quad"
@@ -1247,9 +1377,9 @@ class UrsinaRenderer:
                 shader=sprite_unlit_shader,
             )
             # WK57: Visual hint for cave/mine entrances — cool dark tint
+            # WK68 R2 (Agent 09): poi_type from the DTO (== live poi_def.poi_type).
             if not getattr(ent, '_ks_cave_tint_applied', False):
-                poi_def = getattr(b, 'poi_def', None)
-                if poi_def and getattr(poi_def, 'poi_type', None) in ('poi_cave_entrance', 'poi_mine_entrance'):
+                if getattr(b, 'poi_type', None) in ('poi_cave_entrance', 'poi_mine_entrance'):
                     try:
                         ent.color = color.rgb(180, 180, 200)
                     except Exception:
@@ -1261,7 +1391,7 @@ class UrsinaRenderer:
             )
             active_ids.add(obj_id)
 
-        _maybe_log_tax_overlay_debug(getattr(snapshot, "buildings", ()))
+        _maybe_log_tax_overlay_debug(getattr(snapshot, "building_dtos", ()))
 
     def _sync_underground_meshes(self, snapshot: "SimStateSnapshot", world) -> None:
         """WK57 Wave 2: Create underground cave meshes for discovered dungeon POIs.
@@ -1278,29 +1408,31 @@ class UrsinaRenderer:
 
     def _sync_snapshot_heroes(self, snapshot: "SimStateSnapshot", active_ids: set, HeroClass) -> None:
         # Heroes — atlas UV billboards (WK59 perf: single shared texture, UV offset per frame)
+        # WK68 R2 (Agent 09): consume frozen UnitDTOs and key self._entities on the stable
+        # dto.entity_id (string) — NOT id(h). id() of a per-frame DTO is unstable; entity_id
+        # is consistent across create / cull / re-enable / destroy.
         _active_layer = self._camera_active_layer
-        for h in getattr(snapshot, "heroes", ()):
+        for h in getattr(snapshot, "hero_dtos", ()):
             if not getattr(h, "is_alive", True):
                 continue
+            obj_id = h.entity_id
             # WK57 Wave 3: Layer-aware visibility — hide heroes on a different layer
             _hero_layer = getattr(h, 'layer', 0)
             if _hero_layer != _active_layer:
-                _h_obj_id = id(h)
-                _h_existing = self._entities.get(_h_obj_id)
+                _h_existing = self._entities.get(obj_id)
                 if _h_existing is not None:
                     _h_existing.enabled = False
-                    active_ids.add(_h_obj_id)
+                    active_ids.add(obj_id)
                 continue
             # WK59 perf: frustum culling — skip heroes outside visible tile rect
             if not self._entity_in_view(h.x, h.y):
-                _h_obj_id = id(h)
-                _h_existing = self._entities.get(_h_obj_id)
+                _h_existing = self._entities.get(obj_id)
                 if _h_existing is not None:
                     _h_existing.enabled = False
-                    active_ids.add(_h_obj_id)
+                    active_ids.add(obj_id)
                 continue
             # Re-enable hero if it was previously culled and is now in view
-            _h_reenable = self._entities.get(id(h))
+            _h_reenable = self._entities.get(obj_id)
             if _h_reenable is not None and getattr(_h_reenable, "enabled", True) is False:
                 _h_reenable.enabled = True
             col = COLOR_HERO
@@ -1326,15 +1458,16 @@ class UrsinaRenderer:
                 scale=(sy, sy, 1),
                 texture=None,
                 billboard=True,
+                key=obj_id,
             )
             wx, wz = sim_px_to_world_xz(h.x, h.y)
             terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
             y_center = terrain_y + sy * 0.5
-            facing = _unit_facing_direction(h)
+            facing = self._facing_from_dto(h)
             sx = sy * facing  # negative scale_x flips the billboard horizontally
 
             self._sync_unit_atlas_billboard(
-                ent, obj_id, h, "hero", hc_key, _hero_base_clip,
+                ent, obj_id, h, "hero", hc_key, None,
                 col, (sx, sy, 1), (wx, y_center, wz), sprite_unlit_shader,
             )
             # Layer compositing (not Y offset): draw after building billboards; skip depth so the
@@ -1359,7 +1492,14 @@ class UrsinaRenderer:
 
             # --- R5: Hero rest indicator (Agent 08) ---
             # WK62: delegates to ursina_unit_overlays.sync_hero_rest_label
-            is_resting = (getattr(h, 'state', '') == 'RESTING')
+            # WK68 R2 (Agent 09): BEHAVIOR-PRESERVING. The legacy line compared the live
+            # ``hero.state`` (a plain ``HeroState`` Enum, NOT a str-enum) to the string
+            # 'RESTING' — which is ALWAYS False, so the "Zzz" label never showed. The DTO
+            # flattens state to the string 'RESTING' when resting, so reading dto.state
+            # here would FLIP this on and add a label that legacy never drew. To keep the
+            # captures byte-identical we reproduce the legacy always-False result.
+            # (Latent dead indicator — flagged to Agent 08/UX; fix belongs in their lane.)
+            is_resting = False
             sync_hero_rest_label(ent, is_resting)
 
             # WK61-R4-BUG-001: un-mirror overlay children when parent faces left.
@@ -1371,17 +1511,18 @@ class UrsinaRenderer:
 
     def _sync_snapshot_enemies(self, snapshot: "SimStateSnapshot", world, active_ids: set) -> None:
         # Enemies — atlas UV billboards (WK59 perf: single shared texture)
+        # WK68 R2 (Agent 09): frozen UnitDTOs keyed on the stable dto.entity_id (not id(e)).
         _active_layer = self._camera_active_layer
         ts = float(config.TILE_SIZE)
-        for e in getattr(snapshot, "enemies", ()):
+        for e in getattr(snapshot, "enemy_dtos", ()):
+            obj_id = e.entity_id
             # WK57 Wave 3: Layer-aware visibility — hide enemies on a different layer
             _enemy_layer = getattr(e, 'layer', 0)
             if _enemy_layer != _active_layer:
-                _e_obj_id = id(e)
-                _e_existing = self._entities.get(_e_obj_id)
+                _e_existing = self._entities.get(obj_id)
                 if _e_existing is not None:
                     _e_existing.enabled = False
-                    active_ids.add(_e_obj_id)
+                    active_ids.add(obj_id)
                 continue
 
             tx, ty = int(e.x / ts), int(e.y / ts)
@@ -1393,14 +1534,13 @@ class UrsinaRenderer:
                 continue
             # WK59 perf: frustum culling — skip enemies outside visible tile rect
             if not self._entity_in_view(e.x, e.y):
-                _e_obj_id = id(e)
-                _e_existing = self._entities.get(_e_obj_id)
+                _e_existing = self._entities.get(obj_id)
                 if _e_existing is not None:
                     _e_existing.enabled = False
-                    active_ids.add(_e_obj_id)
+                    active_ids.add(obj_id)
                 continue
             # Re-enable enemy if it was previously culled and is now in view
-            _e_reenable = self._entities.get(id(e))
+            _e_reenable = self._entities.get(obj_id)
             if _e_reenable is not None and getattr(_e_reenable, "enabled", True) is False:
                 _e_reenable.enabled = True
             s = ENEMY_SCALE
@@ -1413,14 +1553,15 @@ class UrsinaRenderer:
                 scale=(s, s, 1),
                 texture=None,
                 billboard=True,
+                key=obj_id,
             )
             wx, wz = sim_px_to_world_xz(e.x, e.y)
             terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
-            facing_e = _unit_facing_direction(e)
+            facing_e = self._facing_from_dto(e)
             sx_e = s * facing_e
 
             self._sync_unit_atlas_billboard(
-                ent, obj_id, e, "enemy", et_key, _enemy_base_clip,
+                ent, obj_id, e, "enemy", et_key, None,
                 col, (sx_e, s, 1), (wx, terrain_y + s * 0.5, wz), sprite_unlit_shader,
             )
 
@@ -1441,30 +1582,30 @@ class UrsinaRenderer:
 
     def _sync_snapshot_peasants(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
         # Peasants — atlas UV billboards (WK59 perf: single shared texture)
+        # WK68 R2 (Agent 09): frozen UnitDTOs keyed on the stable dto.entity_id (not id(p)).
         _active_layer = self._camera_active_layer
-        for p in getattr(snapshot, "peasants", ()):
+        for p in getattr(snapshot, "peasant_dtos", ()):
             if not getattr(p, "is_alive", True):
                 continue
             if bool(getattr(p, "is_inside_castle", False)):
                 continue
+            obj_id = p.entity_id
             # WK57 Wave 3: Peasants are always surface (layer 0) — hide when camera underground
             if _active_layer != 0:
-                _p_obj_id = id(p)
-                _p_existing = self._entities.get(_p_obj_id)
+                _p_existing = self._entities.get(obj_id)
                 if _p_existing is not None:
                     _p_existing.enabled = False
-                    active_ids.add(_p_obj_id)
+                    active_ids.add(obj_id)
                 continue
             # WK59 perf: frustum culling — skip peasants outside visible tile rect
             if not self._entity_in_view(p.x, p.y):
-                _p_obj_id = id(p)
-                _p_existing = self._entities.get(_p_obj_id)
+                _p_existing = self._entities.get(obj_id)
                 if _p_existing is not None:
                     _p_existing.enabled = False
-                    active_ids.add(_p_obj_id)
+                    active_ids.add(obj_id)
                 continue
             # Re-enable peasant if it was previously culled and is now in view
-            _p_reenable = self._entities.get(id(p))
+            _p_reenable = self._entities.get(obj_id)
             if _p_reenable is not None and getattr(_p_reenable, "enabled", True) is False:
                 _p_reenable.enabled = True
             sx = PEASANT_SCALE_XZ
@@ -1478,12 +1619,13 @@ class UrsinaRenderer:
                 scale=(sx, sy, 1),
                 texture=None,
                 billboard=True,
+                key=obj_id,
             )
             wx, wz = sim_px_to_world_xz(p.x, p.y)
             terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
 
             self._sync_unit_atlas_billboard(
-                ent, obj_id, p, "worker", wk, _peasant_base_clip,
+                ent, obj_id, p, "worker", wk, None,
                 col, (sx, sy, 1), (wx, terrain_y + sy * 0.5, wz), sprite_unlit_shader,
             )
 
@@ -1501,28 +1643,28 @@ class UrsinaRenderer:
 
     def _sync_snapshot_guards(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
         # Guards — atlas UV billboards (WK59 perf: single shared texture)
+        # WK68 R2 (Agent 09): frozen UnitDTOs keyed on the stable dto.entity_id (not id(g)).
         _active_layer = self._camera_active_layer
-        for g in getattr(snapshot, "guards", ()):
+        for g in getattr(snapshot, "guard_dtos", ()):
             if not getattr(g, "is_alive", True):
                 continue
+            obj_id = g.entity_id
             # WK57 Wave 3: Guards are always surface (layer 0) — hide when camera underground
             if _active_layer != 0:
-                _g_obj_id = id(g)
-                _g_existing = self._entities.get(_g_obj_id)
+                _g_existing = self._entities.get(obj_id)
                 if _g_existing is not None:
                     _g_existing.enabled = False
-                    active_ids.add(_g_obj_id)
+                    active_ids.add(obj_id)
                 continue
             # WK59 perf: frustum culling — skip guards outside visible tile rect
             if not self._entity_in_view(g.x, g.y):
-                _g_obj_id = id(g)
-                _g_existing = self._entities.get(_g_obj_id)
+                _g_existing = self._entities.get(obj_id)
                 if _g_existing is not None:
                     _g_existing.enabled = False
-                    active_ids.add(_g_obj_id)
+                    active_ids.add(obj_id)
                 continue
             # Re-enable guard if it was previously culled and is now in view
-            _g_reenable = self._entities.get(id(g))
+            _g_reenable = self._entities.get(obj_id)
             if _g_reenable is not None and getattr(_g_reenable, "enabled", True) is False:
                 _g_reenable.enabled = True
             col = color.white
@@ -1533,12 +1675,13 @@ class UrsinaRenderer:
                 scale=(GUARD_SCALE_XZ, GUARD_SCALE_Y, 1),
                 texture=None,
                 billboard=True,
+                key=obj_id,
             )
             wx, wz = sim_px_to_world_xz(g.x, g.y)
             terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
 
             self._sync_unit_atlas_billboard(
-                ent, obj_id, g, "worker", "guard", _guard_base_clip,
+                ent, obj_id, g, "worker", "guard", None,
                 col, (GUARD_SCALE_XZ, GUARD_SCALE_Y, 1),
                 (wx, terrain_y + GUARD_SCALE_Y * 0.5, wz), sprite_unlit_shader,
             )
@@ -1556,16 +1699,19 @@ class UrsinaRenderer:
 
     def _sync_snapshot_tax_collector(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
         # Tax Collector — atlas UV billboards (WK59 perf: single shared texture)
-        tc = getattr(snapshot, "tax_collector", None)
+        # WK68 R2 (Agent 09): frozen UnitDTO (tax_collector_dto) keyed on the stable
+        # dto.entity_id (not id(tc)).
+        tc = getattr(snapshot, "tax_collector_dto", None)
         if tc is not None:
+            tc_id = tc.entity_id
             if not getattr(tc, "is_alive", True):
                 pass
             # WK57 Wave 3: Tax collector is always surface — hide when camera underground
             elif self._camera_active_layer != 0:
-                _tc_existing = self._entities.get(id(tc))
+                _tc_existing = self._entities.get(tc_id)
                 if _tc_existing is not None:
                     _tc_existing.enabled = False
-                    active_ids.add(id(tc))
+                    active_ids.add(tc_id)
             else:
                 col = color.white
                 sx = PEASANT_SCALE_XZ
@@ -1577,12 +1723,13 @@ class UrsinaRenderer:
                     scale=(sx, sy, 1),
                     texture=None,
                     billboard=True,
+                    key=tc_id,
                 )
                 wx, wz = sim_px_to_world_xz(tc.x, tc.y)
                 terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
 
                 self._sync_unit_atlas_billboard(
-                    ent, obj_id, tc, "worker", "tax_collector", _tax_collector_base_clip,
+                    ent, obj_id, tc, "worker", "tax_collector", None,
                     col, (sx, sy, 1), (wx, terrain_y + sy * 0.5, wz), sprite_unlit_shader,
                 )
 
@@ -1669,9 +1816,9 @@ class UrsinaRenderer:
         # WK66 Move 3: consume frozen BountyDTOs (bounty_id/claimed/x/y/reward) — the
         # Ursina flag shows only $reward (not responders/tier), and none of those
         # fields are mutated during the render pass, so this is behavior-identical.
-        bounties = getattr(snapshot, "bounty_dtos", None)
-        if bounties is None:
-            bounties = getattr(snapshot, "bounties", ()) or ()
+        # WK68 R3 (Agent 03): the live ``snapshot.bounties`` fallback was deleted with
+        # the live entity tuples (L1); ``bounty_dtos`` is always present now.
+        bounties = getattr(snapshot, "bounty_dtos", ()) or ()
 
         # Build set of currently active bounty IDs
         active_bounty_ids: set[int] = set()
@@ -1798,11 +1945,13 @@ class UrsinaRenderer:
             self._rubble_entities[r.record_id] = entities
 
     def _update_debug_status_text(self, snapshot: "SimStateSnapshot") -> None:
-        heroes_alive = len([h for h in getattr(snapshot, "heroes", ()) if getattr(h, "is_alive", True)])
-        enemies_alive = len(getattr(snapshot, "enemies", ()))
+        # WK68 R2 (Agent 09): counts from the frozen DTO tuples (same values as the live
+        # tuples — equal length; hero alive-filter mirrors the live read).
+        heroes_alive = len([h for h in getattr(snapshot, "hero_dtos", ()) if getattr(h, "is_alive", True)])
+        enemies_alive = len(getattr(snapshot, "enemy_dtos", ()))
         status_text = (
             f"Gold: {getattr(snapshot, 'gold', 0)}  |  Heroes: {heroes_alive}  |  "
-            f"Enemies: {enemies_alive}  |  Buildings: {len(getattr(snapshot, 'buildings', ())) }"
+            f"Enemies: {enemies_alive}  |  Buildings: {len(getattr(snapshot, 'building_dtos', ())) }"
         )
         if self.status_text.text != status_text:
             self.status_text.text = status_text
@@ -1812,6 +1961,9 @@ class UrsinaRenderer:
         dead_ids = set(self._entities.keys()) - active_ids
         for obj_id in dead_ids:
             self._unit_anim_state.pop(obj_id, None)
+            # WK68 R2 (Agent 09): drop the entity_id-keyed facing scratch too (units only;
+            # a no-op miss for building/projectile keys). Prevents unbounded growth.
+            self._unit_facing_state.pop(obj_id, None)
             ent = self._entities.pop(obj_id)
             gold = getattr(ent, "_ks_gold_label", None)
             if gold is not None:

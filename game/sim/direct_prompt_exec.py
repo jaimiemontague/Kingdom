@@ -3,6 +3,19 @@ WK50 Phase 2B: apply validated direct-prompt tool actions with engine-side targe
 
 Chat text is shown from ``spoken_response`` in the engine; physical effects use only
 validated fields, with move targets resolved here (known-place ids, compass explore).
+
+WK68 Wave R4 (finishes Move 5): the chat path no longer consumes the live
+``get_game_state()`` UI dict (which carried the mutable ``sim``/``world``/
+``economy``/``engine``). ``game.engine`` now drives this with the read-only
+``AiGameView`` from ``SimEngine.build_ai_view()``. The view-or-dict input is
+normalized once at the boundary via :func:`ai.behaviors.view_compat.as_ai_view`
+and projected to the legacy ``game_state``-shaped dict the in-module resolvers
+(:func:`resolve_move_destination` / :func:`resolve_explore_direction_target`) and
+the LLM-context builder still take. That projected dict is built fresh from the
+view and carries NO ``economy``/``sim``/``engine`` — closing the last L3 read
+leak on the chat path. The legacy-dict callers (the WK50 integration/resolve
+tests) keep working: ``as_ai_view`` wraps a dict in a read-only adapter, so the
+same projection is produced either way.
 """
 
 from __future__ import annotations
@@ -10,6 +23,7 @@ from __future__ import annotations
 from typing import Any
 
 from ai.behaviors.llm_bridge import apply_llm_decision
+from ai.behaviors.view_compat import as_ai_view, view_to_legacy_context
 from ai.context_builder import ContextBuilder
 
 from game.sim.direct_prompt_commit import (
@@ -53,7 +67,7 @@ def apply_validated_direct_prompt_physical(
     ai: Any,
     hero: Any,
     decision: dict[str, Any],
-    game_state: dict,
+    view_or_game_state: Any,
     *,
     player_message: str,
     source: str = "chat",
@@ -64,7 +78,17 @@ def apply_validated_direct_prompt_physical(
 
     Returns whether a physical sim effect was committed (movement commit, potion, shop
     intent, etc.) for UI feedback.
+
+    WK68 R4: ``view_or_game_state`` is the read-only :class:`AiGameView` on the live
+    chat path (``game.engine`` passes ``SimEngine.build_ai_view()``); legacy callers
+    (WK50 tests) still pass a ``game_state`` dict. Both are normalized to a single
+    AiGameView surface via :func:`as_ai_view`. The in-module resolvers + the LLM
+    context builder take a ``game_state``-shaped dict, so we project the view to that
+    shape ONCE here (carrying NO ``economy``/``sim``/``engine``); the view itself is
+    handed to :func:`apply_llm_decision`, which accepts view-or-dict directly.
     """
+    view = as_ai_view(view_or_game_state)
+    game_state = view_to_legacy_context(view)
     sanitized = strip_untrusted_spatial_fields(decision)
     tool = sanitized.get("tool_action") or sanitized.get("action")
     intent = str(sanitized.get("interpreted_intent") or "")
@@ -91,7 +115,7 @@ def apply_validated_direct_prompt_physical(
             )
             return True
         prior_rq, was_inside = _commit_snapshot(hero)
-        apply_llm_decision(ai, hero, sanitized, game_state, source=source, context=context)
+        apply_llm_decision(ai, hero, sanitized, view, source=source, context=context)
         eff = str(sanitized.get("tool_action") or sanitized.get("action") or "move_to").strip().lower()
         return _infer_physical_after_llm(hero, prior_rq, was_inside, eff)
 
@@ -123,7 +147,7 @@ def apply_validated_direct_prompt_physical(
                 )
                 return True
         prior_rq, was_inside = _commit_snapshot(hero)
-        apply_llm_decision(ai, hero, sanitized, game_state, source=source, context=context)
+        apply_llm_decision(ai, hero, sanitized, view, source=source, context=context)
         eff = str(sanitized.get("tool_action") or sanitized.get("action") or "explore").strip().lower()
         return _infer_physical_after_llm(hero, prior_rq, was_inside, eff)
 
@@ -136,7 +160,7 @@ def apply_validated_direct_prompt_physical(
         if not str(merged.get("action") or "").strip():
             merged["action"] = "buy_item"
         prior_rq, was_inside = _commit_snapshot(hero)
-        apply_llm_decision(ai, hero, merged, game_state, source=source)
+        apply_llm_decision(ai, hero, merged, view, source=source)
         tp = getattr(hero, "target_position", None)
         if tp is None:
             return _infer_physical_after_llm(hero, prior_rq, was_inside, "buy_item")
@@ -149,7 +173,7 @@ def apply_validated_direct_prompt_physical(
         if not str(merged.get("action") or "").strip():
             merged["action"] = "retreat"
         prior_rq, was_inside = _commit_snapshot(hero)
-        apply_llm_decision(ai, hero, merged, game_state, source=source)
+        apply_llm_decision(ai, hero, merged, view, source=source)
         tp = getattr(hero, "target_position", None)
         if tp is None:
             return _infer_physical_after_llm(hero, prior_rq, was_inside, "retreat")
@@ -158,6 +182,6 @@ def apply_validated_direct_prompt_physical(
         return True
 
     prior_rq, was_inside = _commit_snapshot(hero)
-    apply_llm_decision(ai, hero, sanitized, game_state, source=source)
+    apply_llm_decision(ai, hero, sanitized, view, source=source)
     eff = str(sanitized.get("tool_action") or sanitized.get("action") or "").strip().lower()
     return _infer_physical_after_llm(hero, prior_rq, was_inside, eff)

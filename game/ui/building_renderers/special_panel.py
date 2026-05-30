@@ -91,7 +91,7 @@ class SpecialPanelRenderer:
             )
             panel.library_research_rects[name] = pygame.Rect(
                 panel.panel_x + local_rect.x,
-                panel.panel_y + local_rect.y,
+                panel.panel_y + local_rect.y - panel.menu_scroll_px,
                 local_rect.width,
                 local_rect.height,
             )
@@ -209,7 +209,7 @@ class SpecialPanelRenderer:
         )
         panel.upgrade_button_rect = pygame.Rect(
             panel.panel_x + local_rect.x,
-            panel.panel_y + local_rect.y,
+            panel.panel_y + local_rect.y - panel.menu_scroll_px,
             local_rect.width,
             local_rect.height,
         )

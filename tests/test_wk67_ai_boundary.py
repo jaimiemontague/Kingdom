@@ -554,6 +554,164 @@ def test_ai_view_purity():
 
 
 # ===========================================================================
+# Pin 3b — Chat-path purity (WK68 R4; finishes Move 5; GREEN)
+# ===========================================================================
+#
+# WK67 Move 5 migrated the AUTONOMOUS hero-decision consumers to the read-only
+# AiGameView, but ONE production AI consumer still drove the LLM through the live
+# UI ``get_game_state()`` dict: the direct-prompt CHAT path
+# (``game.engine._poll_conversation_response`` / ``send_player_message`` feeding
+# ``game.sim.direct_prompt_exec.apply_validated_direct_prompt_physical``). That
+# dict carried the mutable ``sim``/``world``/``economy``/``engine``.
+#
+# WK68 R4 routed the chat path through ``SimEngine.build_ai_view()`` (the same
+# pure view the autonomous path uses). This pin is the contract: the object the
+# chat path consumes (and forwards to ``apply_llm_decision`` + the in-module
+# resolvers) holds NO live ``sim``/``world``/``economy``/``engine`` reference — it
+# is the read-only AiGameView, whose ``world`` is a WorldView, not the live World.
+
+
+def _assert_no_live_sim_refs(obj, engine, *, label: str) -> None:
+    """Assert ``obj`` exposes no live sim/world/economy/engine handle.
+
+    Mirrors the L3-leak pins on Pin 3: a forbidden attribute must be absent, and
+    even where a read-only facade is named ``world`` it must NOT be the live
+    ``World``. ``economy``/``sim``/``engine`` must not be reachable at all.
+    """
+    for forbidden in ("economy", "sim", "engine"):
+        assert not hasattr(obj, forbidden), (
+            f"{label} must not expose '{forbidden}' — that is the live L3 leak the "
+            "chat-path migration (WK68 R4) closes"
+        )
+    facade_world = getattr(obj, "world", None)
+    assert facade_world is not engine.world, (
+        f"{label}.world is the LIVE World — the chat path must hold a read-only "
+        "WorldView, never the mutable World"
+    )
+
+
+def test_chat_path_consumes_pure_ai_view():
+    """The direct-prompt CHAT path holds no live sim/world/economy/engine ref.
+
+    Drives ``apply_validated_direct_prompt_physical`` exactly as the engine chat
+    caller now does — with ``SimEngine.build_ai_view()`` — and spies on the object
+    it forwards to ``apply_llm_decision`` (the bridge into the migrated behaviors),
+    asserting BOTH the inbound view and the forwarded view are pure (no live
+    sim/world/economy/engine; ``world`` is the read-only WorldView, not the live
+    World). This is the chat-path twin of Pin 3 ``test_ai_view_purity``.
+    """
+    import game.sim.direct_prompt_exec as dpe
+    import ai.basic_ai as _basic_ai
+    from game.entities.hero import Hero
+    from game.sim.ai_view import AiGameView, WorldView
+
+    # Leave ZERO global-state residue: the shared module-level ``_AI_RNG`` is never
+    # re-seeded per engine build (documented at length in this module's PM NOTE),
+    # so any RNG this pin consumes would otherwise carry into a later suite test
+    # (e.g. the WK66 bounty-responder snapshot pin). Snapshot + restore its state
+    # around the whole pin so it is byte-for-byte unchanged afterwards.
+    _ai_rng_state = _basic_ai._AI_RNG.getstate()
+    engine = GameEngine(headless=True)
+    try:
+        # The view the engine chat caller now passes (NOT get_game_state()).
+        view = engine.sim.build_ai_view()
+        assert isinstance(view, AiGameView)
+        assert isinstance(view.world, WorldView)
+        _assert_no_live_sim_refs(view, engine, label="chat-path AiGameView (inbound)")
+
+        # Capture (without executing) what the chat applier forwards into the AI
+        # behavior bridge — we are pinning the PURITY of the forwarded object, not
+        # the retreat behavior, so the spy records and returns.
+        forwarded: dict = {}
+
+        def _spy_apply_llm_decision(ai, hero, decision, fwd_view, **kwargs):
+            forwarded["view"] = fwd_view
+            return None
+
+        castle = next(
+            b for b in engine.buildings if getattr(b, "building_type", None) == "castle"
+        )
+        hero = Hero(
+            float(castle.center_x) + 4 * TILE_SIZE,
+            float(castle.center_y),
+            hero_class="warrior",
+            hero_id="wk68_chat_purity",
+            name="ChatScout",
+        )
+        engine.heroes.append(hero)
+
+        class _FakeAI:
+            def set_intent(self, h, label):
+                h.intent = label
+
+            def record_decision(self, h, **kwargs):
+                pass
+
+        # A 'retreat' tool routes through apply_llm_decision (the bridge into the
+        # migrated behaviors), so the spy captures the forwarded view.
+        import unittest.mock as _mock
+
+        with _mock.patch.object(dpe, "apply_llm_decision", _spy_apply_llm_decision):
+            dpe.apply_validated_direct_prompt_physical(
+                _FakeAI(),
+                hero,
+                {
+                    "action": "retreat",
+                    "interpreted_intent": "seek_healing",
+                    "target": "",
+                    "reasoning": "chat-purity pin",
+                },
+                view,  # <- the pure AiGameView, exactly as the engine now passes
+                player_message="retreat",
+                source="chat",
+            )
+
+        assert "view" in forwarded, "chat path never reached apply_llm_decision"
+        fwd = forwarded["view"]
+        # The forwarded surface must itself be pure — it is the read-only view
+        # (pass-through), never the live UI dict carrying sim/world/economy/engine.
+        _assert_no_live_sim_refs(fwd, engine, label="chat-path forwarded view")
+        # It is the SAME pure view object (pass-through), not a re-wrapped live dict.
+        assert fwd is view, (
+            "chat path must forward the read-only AiGameView straight through to "
+            "apply_llm_decision, not a live game_state dict"
+        )
+    finally:
+        _basic_ai._AI_RNG.setstate(_ai_rng_state)
+        pygame.quit()
+
+
+def test_engine_chat_caller_uses_build_ai_view_not_get_game_state():
+    """Source guard: the engine chat caller passes build_ai_view(), not get_game_state().
+
+    Cheap structural pin (mirrors Pin 4's signature inspection): even if a future
+    edit reaches for the live UI dict again on the chat path, this catches it. The
+    two chat sites are ``send_player_message`` (prompt context) and
+    ``_poll_conversation_response`` (tool apply); both must source the read-only
+    AiGameView via ``build_ai_view`` and neither may call ``get_game_state`` for
+    the AI/chat consumption.
+    """
+    import inspect
+
+    import game.engine as engine_mod
+
+    for fn_name in ("_poll_conversation_response", "send_player_message"):
+        src = inspect.getsource(getattr(engine_mod.GameEngine, fn_name))
+        # Strip comments so an explanatory comment mentioning the old API can't
+        # mask (or falsely trip) the guard — only real code lines count.
+        code_lines = [ln.split("#", 1)[0] for ln in src.splitlines()]
+        code = "\n".join(code_lines)
+        assert "build_ai_view()" in code, (
+            f"GameEngine.{fn_name} must source the chat AI context from "
+            "build_ai_view() (the pure AiGameView)"
+        )
+        assert "get_game_state()" not in code, (
+            f"GameEngine.{fn_name} must NOT feed the chat/AI path the live "
+            "get_game_state() dict (the L3 leak WK68 R4 closes)"
+        )
+
+
+# ===========================================================================
 # Pin 4 — Frame-state split (pins Move 4; GREEN — Move 4 landed)
 # ===========================================================================
 #
@@ -575,12 +733,20 @@ def test_frame_state_split():
         snap = engine.build_snapshot()
         assert isinstance(snap, RenderSnapshot)
 
-        # RenderSnapshot carries sim truth: live entity tuples...
-        assert isinstance(snap.heroes, tuple)
-        assert isinstance(snap.enemies, tuple)
-        assert isinstance(snap.buildings, tuple)
-        # ...AND the WK66 DTO tuples (live tuples are NOT deleted this sprint).
-        assert hasattr(snap, "hero_dtos") and hasattr(snap, "building_dtos")
+        # WK68 R3 (L1 killer): the live entity tuples have been DELETED from the
+        # sim snapshot — renderers read only the frozen value-type DTO tuples.
+        for live_field in (
+            "heroes", "enemies", "buildings", "peasants", "guards", "bounties",
+            "tax_collector",
+        ):
+            assert not hasattr(snap, live_field), (
+                f"'{live_field}' is a live entity tuple — WK68 R3 deleted it from the "
+                "sim snapshot (L1). Renderers must read the *_dtos tuples instead."
+            )
+        # The WK66 frozen DTO tuples are the source of truth now.
+        assert isinstance(snap.hero_dtos, tuple)
+        assert isinstance(snap.enemy_dtos, tuple)
+        assert isinstance(snap.building_dtos, tuple)
         # Presentation fields are GONE from the sim snapshot.
         for presentation_field in (
             "camera_x", "camera_y", "zoom", "paused", "selected_hero", "selected_building",

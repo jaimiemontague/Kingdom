@@ -61,13 +61,11 @@ def test_buildings_have_required_renderer_attributes():
 
 
 def test_snapshot_is_frozen():
-    snap = SimStateSnapshot(
-        buildings=(), heroes=(), enemies=(), peasants=(),
-        guards=(), bounties=(), world=None,
-    )
+    # WK68 R3: the live entity tuples were deleted; the snapshot is still frozen.
+    snap = SimStateSnapshot(world=None)
     import pytest
     with pytest.raises(AttributeError):
-        snap.buildings = []  # Should fail — frozen
+        snap.building_dtos = []  # Should fail — frozen
 
 
 def test_engine_build_snapshot_returns_valid_snapshot():
@@ -75,7 +73,7 @@ def test_engine_build_snapshot_returns_valid_snapshot():
     try:
         snap = engine.build_snapshot()
         assert isinstance(snap, SimStateSnapshot)
-        assert len(snap.buildings) >= 1  # Castle
+        assert len(snap.building_dtos) >= 1  # Castle (WK68 R3: read the DTO tuple)
         assert snap.world is engine.world
         assert snap.fog_revision >= 0
         assert snap.castle is not None

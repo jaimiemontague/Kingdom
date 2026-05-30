@@ -65,11 +65,15 @@ class EngineRenderCoordinator:
                 pin_slot = getattr(e.hud, "_pin_slot", None)
                 pinned_id = getattr(pin_slot, "hero_id", None) if pin_slot else None
                 if pinned_id:
+                    # WK68 R3 (Agent 03): the pinned-hero lookup reads the frozen
+                    # hero DTOs (entity_id == str(hero_id); see _stable_entity_id),
+                    # not the deleted live ``snapshot.heroes`` tuple. The minimap
+                    # only needs the hero's x/y, both carried by UnitDTO.
                     pinned_hero = next(
                         (
                             h
-                            for h in snapshot.heroes
-                            if str(getattr(h, "hero_id", "")) == pinned_id
+                            for h in snapshot.hero_dtos
+                            if str(getattr(h, "entity_id", "")) == pinned_id
                             and int(getattr(h, "hp", 0)) > 0
                         ),
                         None,
@@ -196,21 +200,25 @@ class EngineRenderCoordinator:
                 wtr = WorldTerrainRenderer()
                 e._world_terrain_renderer = wtr
             wtr.render(w, mini_surf, camera_offset)
-            for b in snapshot.buildings:
+            # WK68 R3 (Agent 03): the no-PygameRenderer minimap fallback draws from
+            # the frozen render DTOs (same as the primary _draw_world_layers path),
+            # not the deleted live entity tuples. The registry render_* methods accept
+            # the DTOs directly (getattr(x, "render_state", x) returns the DTO).
+            for b in snapshot.building_dtos:
                 e.renderer_registry.render_building(mini_surf, b, camera_offset)
-            for en in snapshot.enemies:
+            for en in snapshot.enemy_dtos:
                 gx, gy = w.world_to_grid(getattr(en, "x", 0.0), getattr(en, "y", 0.0))
                 if 0 <= gx < w.width and 0 <= gy < w.height:
                     if w.visibility[gy][gx] == Visibility.VISIBLE:
                         e.renderer_registry.render_enemy(mini_surf, en, camera_offset)
-            for h in snapshot.heroes:
+            for h in snapshot.hero_dtos:
                 e.renderer_registry.render_hero(mini_surf, h, camera_offset)
-            for g in snapshot.guards:
+            for g in snapshot.guard_dtos:
                 e.renderer_registry.render_guard(mini_surf, g, camera_offset)
-            for p in snapshot.peasants:
+            for p in snapshot.peasant_dtos:
                 e.renderer_registry.render_peasant(mini_surf, p, camera_offset)
-            if snapshot.tax_collector:
-                e.renderer_registry.render_tax_collector(mini_surf, snapshot.tax_collector, camera_offset)
+            if snapshot.tax_collector_dto is not None:
+                e.renderer_registry.render_tax_collector(mini_surf, snapshot.tax_collector_dto, camera_offset)
             wtr.render_fog(w, mini_surf, camera_offset)
 
         pygame.draw.rect(mini_surf, (100, 100, 100), mini_surf.get_rect(), 2)

@@ -101,26 +101,33 @@ class PygameRenderer:
         for hero in snapshot.hero_dtos:  # WK66 Move 3: draw from frozen DTOs
             ctx.renderer_registry.render_hero(target, hero, camera_offset)
 
-        # Guards/peasants/tax-collector still draw from live entities (reads only):
-        # their UnitDTO lacks worker-only draw fields (is_inside_castle/carried_gold/state).
-        for guard in snapshot.guards:
+        # WK68 R2 (Agent 09): guards/peasants/tax-collector now draw from frozen DTOs.
+        # The WK68 R1/R2 UnitDTO carries every field the WorkerRenderer.render path reads
+        # (is_alive/is_inside_castle/x/y/size/hp/max_hp/carried_gold and a ``state`` alias
+        # == state_name for the tax "Collecting..." label). The registry's
+        # ``getattr(x, "render_state", x)`` returns the DTO itself (no render_state attr),
+        # exactly as the already-migrated hero/enemy draws above.
+        for guard in snapshot.guard_dtos:
             ctx.renderer_registry.render_guard(target, guard, camera_offset)
 
-        for peasant in snapshot.peasants:
+        for peasant in snapshot.peasant_dtos:
             ctx.renderer_registry.render_peasant(target, peasant, camera_offset)
 
-        if snapshot.tax_collector:
-            ctx.renderer_registry.render_tax_collector(target, snapshot.tax_collector, camera_offset)
+        if snapshot.tax_collector_dto is not None:
+            ctx.renderer_registry.render_tax_collector(target, snapshot.tax_collector_dto, camera_offset)
 
         if place_building_ui:
             ctx.building_menu.render(target, camera_offset)
 
             if ctx.building_list_panel.visible:
                 selected_type = getattr(ctx.building_menu, "selected_building", None)
+                # WK68 R2 (Agent 09): availability check reads only building_type +
+                # is_constructed; both are on BuildingDTO (building_type is the same
+                # lowercase string a BuildingType str-enum compares equal to).
                 ctx.building_list_panel.render(
                     target,
                     ctx.economy,
-                    snapshot.buildings,
+                    snapshot.building_dtos,
                     selected_type,
                 )
 
@@ -135,18 +142,16 @@ class PygameRenderer:
             self._world_terrain.render_fog(world, target, camera_offset)
 
         if bounty_pipeline:
-            if hasattr(ctx.bounty_system, "update_ui_metrics"):
-                try:
-                    ctx.bounty_system.update_ui_metrics(
-                        snapshot.heroes,
-                        snapshot.enemies,
-                        snapshot.buildings,
-                    )
-                except Exception:
-                    pass
+            # WK68 R3 (Agent 03): bounty ``update_ui_metrics`` (a sim-state mutation
+            # keyed on live-object identity, NOT a render read) was relocated to
+            # ``SimEngine.build_snapshot`` — the renderer no longer touches the live
+            # entity tuples (L1 killed). The bounty DRAW below is fully DTO-migrated.
+            # WK68 R2 (Agent 09): bounty flags draw from frozen BountyDTOs (the renderer
+            # reads only claimed/x/y/bounty_id/reward/responders/attractiveness_tier — all
+            # carried by BountyDTO). Mirrors the Ursina path (_sync_snapshot_bounties).
             ctx.renderer_registry.render_bounties(
                 target,
-                list(snapshot.bounties),
+                list(snapshot.bounty_dtos),
                 camera_offset,
             )
 
@@ -165,8 +170,10 @@ class PygameRenderer:
         Draw world layers to ``screen`` (or an offscreen ``view_surface`` then scale).
 
         When ``skip_pygame_world`` is True (Ursina compositing), fills are handled by
-        the caller; this method only runs bounty ``update_ui_metrics`` so HUD/minimap
-        stay consistent — same ordering as pre-extraction ``GameEngine.render``.
+        the caller and this method is a no-op (the pygame world layers are not drawn).
+        WK68 R3: the bounty ``update_ui_metrics`` that used to run here on the Ursina
+        path was relocated to ``SimEngine.build_snapshot`` so the renderer no longer
+        reads the (now-deleted) live entity tuples.
 
         WK67 Move 4 / L6: camera/zoom are *presentation* state and now arrive on
         ``frame`` (a :class:`~game.sim.snapshot.PresentationFrameState`), not on the
@@ -226,17 +233,11 @@ class PygameRenderer:
                     screen.blit(scaled_surface, (0, 0))
                 except Exception:
                     raise
-        else:
-            ctx = self._ctx
-            if hasattr(ctx.bounty_system, "update_ui_metrics"):
-                try:
-                    ctx.bounty_system.update_ui_metrics(
-                        snapshot.heroes,
-                        snapshot.enemies,
-                        snapshot.buildings,
-                    )
-                except Exception:
-                    pass
+        # WK68 R3 (Agent 03): when Ursina composits the world (skip_pygame_world),
+        # the bounty ``update_ui_metrics`` that used to run here was relocated to
+        # ``SimEngine.build_snapshot`` (it runs once per snapshot build, before the
+        # bounty DTOs), so HUD/minimap bounty metrics stay consistent without the
+        # renderer touching the deleted live entity tuples.
 
     def render_minimap_contents(
         self,
