@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK86 CLOSE): wk86_round_b_worldgen_extract COMPLETE -- DoD met. Moved generate_terrain + generate_heightmap + flatten_building_footprints from game/world.py (483 -> 278 LOC) into game/worldgen.py behind delegating wrappers (pure-move). World.render/render_fog were already moved out in WK66 (L10). Dual heightmap writes (World.heightmap + terrain_height module) + RNG order preserved. TileType lazy-imported inside the fns; World TYPE_CHECKING-only; no cycle (static AST + dynamic both-order). Behavior-preserving: 834 passed/4 skipped/0 failed (+9 seam+snapshot tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, world-snapshot hash pinned (tiles 1418f96... + heightmap 87f69ce...). Agent 03 extract, Agent 11 verify+snapshot. Plan: .cursor/plans/wk86_round_b_worldgen_extract.plan.md. WK85 was main 8c0b8ba. Committing+pushing. SESSION: 19 sprints WK68-86 shipped; suite 601->834; digest b73961 held byte-identical throughout. REMAINING (fresh-context tier): hud.py(2477)/ursina_renderer-body/ursina_terrain_fog_collab/ursina_app SCREENSHOT-HEAVY splits; Move 9; world.py fog state-machine; context_builder/direct_prompt_validator restructures; ai/vocab.py + TaskRouter; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK87.",
+    "2026-05-30 (Agent 01 WK86 KICKOFF): world.py worldgen extraction (Round B-3). Move generate_terrain + generate_heightmap from game/world.py (483 LOC) into game/worldgen.py behind delegating wrappers (pure-move). World.render/render_fog already moved out in WK66 (L10 closed); fog state-machine extraction deferred. Digest-guarded (the seeded world is part of the deterministic scenario -- generation drift breaks the digest); headless. Preserve RNG order + the dual heightmap writes (World.heightmap + terrain_height module). Agent 03 extract, Agent 11 verify + world-snapshot pin. Plan: .cursor/plans/wk86_round_b_worldgen_extract.plan.md. WK85 was main 8c0b8ba. NOT YET COMMITTED for WK86.",
     "2026-05-30 (Agent 01 WK85 CLOSE): wk85_round_d_handle_idle_split COMPLETE -- DoD met. Decomposed exploration.handle_idle (128-LOC god-function) into 8 ordered named _idle_* step functions (clear_dangling_bounty, take_bounty, seek_meal, shopping, engage_nearby_enemy, get_drink, visit_poi, patrol_zone) driven by a thin handle_idle iterating _IDLE_STEPS (returns on first True). Same branches/order/effects; shared locals (as_ai_view hoist, enemy scan, now_ms) preserved exactly. Behavior-preserving DECOMPOSITION: 825 passed/4 skipped/0 failed (+18 driver pins), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (PERFECT guard -- handle_idle IS the idle decisions; byte-identical first pass, 0 iterations). Agent 06 decompose, Agent 11 verify. Plan: .cursor/plans/wk85_round_d_handle_idle_split.plan.md. WK84 was main 0748a93. Committing+pushing. SESSION: 18 sprints WK68-85 shipped; suite 601->825; digest b73961 held byte-identical throughout all 18. REMAINING (harder/fresh-context tier): hud.py split (2477) + ursina_renderer body + ursina_terrain_fog_collab + ursina_app (SCREENSHOT-HEAVY); Move 9 (risky reorder); context_builder/direct_prompt_validator restructures; ai/vocab.py + TaskRouter (Move 12); world.py; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK86.",
     "2026-05-30 (Agent 01 WK85 KICKOFF): decompose exploration.handle_idle (Round D-5). Split the 128-LOC idle god-function into ordered named _idle_* sub-steps; handle_idle becomes a thin ordered driver (same branches/order/effects). Behavior-preserving DECOMPOSITION; perfectly digest-guarded (handle_idle IS the idle decisions -- safest remaining refactor); headless. Agent 06 decompose, Agent 11 verify. Plan: .cursor/plans/wk85_round_d_handle_idle_split.plan.md. WK84 was main 0748a93. NOT YET COMMITTED for WK85.",
     "2026-05-30 (Agent 01 WK84 CLOSE): wk84_round_d_zones_extract COMPLETE -- DoD met. Moved assign_patrol_zone from ai/behaviors/exploration.py (322 -> 292 LOC) into a new ai/behaviors/zones.py (single canonical home -- consumed by movement/stuck_recovery too). exploration.py RE-EXPORTS it identity-equal (exploration.assign_patrol_zone IS zones.assign_patrol_zone) so the ai.exploration_behavior.assign_patrol_zone module-attribute access + test mocks are unchanged. Shared helpers (_find_black_fog_frontier_tiles [shared w/ journey], _is_live_enemy_target) stayed in exploration. No cycle (zones never imports exploration; single back-edge exploration->zones). Behavior-preserving: 807 passed/4 skipped/0 failed (+7 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (PERFECT guard -- zone assignment drives idle/explore decisions). Agent 06 extract, Agent 11 verify. Plan: .cursor/plans/wk84_round_d_zones_extract.plan.md. WK83 was main cba505f. Committing+pushing. SESSION: 17 sprints WK68-84 shipped; suite 601->807; digest b73961 held byte-identical throughout. NOTE: clean pure-move/dedup work is largely exhausted (WK80/WK84 delivered modest LOC). REMAINING (harder tier, best for fresh context): hud.py split (2477) + ursina_renderer body + ursina_terrain_fog_collab + ursina_app (SCREENSHOT-HEAVY); Move 9 (risky reorder); context_builder/direct_prompt_validator/exploration-handle_idle restructures; ai/vocab.py + TaskRouter; world.py; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK85.",
@@ -4440,6 +4442,66 @@
             "05(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk85_round_d_handle_idle_split'].rounds['wk85_kickoff']) + plan .cursor/plans/wk85_round_d_handle_idle_split.plan.md; claude-opus-4-8; behavior-preserving DECOMPOSITION (same branches/order/effects), keep handle_idle name+signature; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (PERFECT guard) must stay byte-identical; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
+        }
+      }
+    },
+    "wk86_round_b_worldgen_extract": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T20:30:00Z",
+        "plan_doc": ".cursor/plans/wk86_round_b_worldgen_extract.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK86 / Round B-3)",
+        "notes": "Round B-3: extract generate_terrain + generate_heightmap from game/world.py (483 LOC) into game/worldgen.py behind delegating wrappers (pure-move). World.render/render_fog already left in WK66 (L10 closed). Fog state-machine extraction deferred. Digest-guarded (seeded world is in the deterministic scenario); headless. Agent 03 extract, Agent 11 verify+world-snapshot pin.",
+        "definition_of_done": [
+          "A. pytest all pass (825/4/0)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded",
+          "D. qa_smoke green",
+          "E. game/worldgen.py exists; World.generate_terrain/generate_heightmap delegating wrappers; world.py smaller; no cycle",
+          "F. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "834 passed / 4 skipped / 0 failed (825 + 9 seam+snapshot tests)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961... byte-identical",
+          "world_snapshot": "tiles sha256 1418f96... + heightmap sha256 87f69ce... pinned (byte-identical generation, fresh-subprocess SIM_SEED pin)",
+          "world_loc": "483 -> 278",
+          "result": "generate_terrain + generate_heightmap + flatten_building_footprints moved to game/worldgen.py behind delegating wrappers; dual heightmap writes (World.heightmap + terrain_height) preserved; TileType lazy-imported, World TYPE_CHECKING; no cycle."
+        }
+      },
+      "rounds": {
+        "wk86_kickoff": {
+          "round_meta": {
+            "round_id": "wk86_kickoff",
+            "created_utc": "2026-05-30T20:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk86_round_b_worldgen_extract.plan.md",
+            "build_target": "world.py worldgen -> game/worldgen.py",
+            "goal": "all tests pass; seeded world byte-identical"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical (seeded world in scenario) + world-snapshot pin",
+            "wave_dag": "W1(03)->gate(suite+digest+qa_smoke)->W2(11 verify+snapshot)->commit",
+            "dispatch_order": [
+              "03 W1",
+              "11 W2"
+            ]
+          },
+          "pm_agent_prompts": {
+            "03": "[Agent 03] Extract one-shot world generation from game/world.py (483 LOC) into a new game/worldgen.py per plan .cursor/plans/wk86_round_b_worldgen_extract.plan.md sections 1-2 (pure-move: function takes the World as `world`, self.->world., original method becomes a 1-line delegating wrapper). The seeded world is part of the deterministic 300-tick scenario, so the digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded is a strong guard (generation drift breaks it). Create game/worldgen.py; move generate_terrain (world.py ~74-167) and generate_heightmap (~168-278) into it VERBATIM as def generate_terrain(world)/def generate_heightmap(world). Leave 1-line wrappers on World: def generate_terrain(self): from game.worldgen import generate_terrain as _gt; return _gt(self). KEEP the wrapper names (setup_initial_state + tools/tests call world.generate_terrain/generate_heightmap). If flatten_building_footprints (~279-300) is generation-time and co-locates cleanly, you MAY move it too; else leave it. RULES: worldgen.py imports its leaf deps (config, the terrain_height module, get_rng/random, math, numpy if used -- read the bodies); imports World only under TYPE_CHECKING (from __future__ import annotations); NO import cycle (wrapper imports worldgen lazily; worldgen never imports world at top). PRESERVE the EXACT generation -- same RNG calls/order, same heightmap passes, same terrain_height module writes AND World.heightmap writes (the heightmap is dual-stored -- keep BOTH writes verbatim) -- so the seeded world is byte-identical. VERIFY: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), python -m pytest -q (825 passed), determinism_guard, qa_smoke --quick, import check. If the digest drifts, generation changed -- diff vs git show HEAD:game/world.py. Report: worldgen.py + functions moved, the wrappers, world.py new LOC (was 483), digest, suite totals, qa_smoke, no-cycle. DO NOT COMMIT; update agent_03 log (round wk86_w1).",
+            "11": "[Agent 11] W2 (after 03): create tests/test_wk86_worldgen_extract.py: assert game.worldgen has generate_terrain + generate_heightmap (callable); assert World.generate_terrain/generate_heightmap are delegating wrappers (spy+monkeypatch worldgen fns, call the wrapper on a World, assert invoked with the World); AST guard worldgen.py doesn't import game.world at runtime (TYPE_CHECKING only); WORLD-SNAPSHOT PIN: build a World with a fixed seed (config.SIM_SEED via set_sim_seed, deterministic), generate it, and assert a stable hash/sample of the resulting tile grid + heightmap matches a captured baseline (so generation is byte-identical -- belt-and-suspenders beyond the digest). Full DoD: pytest (all pass), determinism_guard, digest (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke. NO screenshots. Report PASS/FAIL + DoD A-F. Only your test; no prod edits; DO NOT COMMIT; update agent_11 log (round wk86_w2).",
+            "09": "[Agent 09 CONSULT] available on terrain/heightmap generation specifics. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "03",
+            "11",
+            "09(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk86_round_b_worldgen_extract'].rounds['wk86_kickoff']) + plan .cursor/plans/wk86_round_b_worldgen_extract.plan.md; claude-opus-4-8; PURE MOVE behavior-preserving, keep wrapper names, TYPE_CHECKING-only World import, preserve RNG order + the dual heightmap writes; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded must stay byte-identical; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }

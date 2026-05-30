@@ -3968,6 +3968,65 @@
           "notes": "Pure-move seam verification only; no production edits, did not commit, no screenshots (pure-move AI sprint, no on-screen change). The MOVING-state dispatch IS exactly the hero movement decisions the WK67 300-tick AI-decision digest hashes, so the byte-identical b73961... digest is a PERFECT behavior-preservation guard for this move (not merely a same-as-expected pass like an audio sprint). The lazy-import-both-ways cycle break is verified two ways: statically (AST: movement.py has no module-top bounty_pursuit import; the import lives inside handle_moving) and dynamically (cold subprocess imports succeed in both orders). No regressions found."
         }
       }
+    },
+    "wk86_round_b_worldgen_extract": {
+      "sprint_meta": {
+        "sprint_id": "wk86_round_b_worldgen_extract",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "goal": "QA W2: verify the WK86 move of one-shot world generation (generate_terrain + generate_heightmap + flatten_building_footprints) VERBATIM out of game/world.py (483->278 LOC) into a new game/worldgen.py, with World keeping three 1-line delegating wrappers (same names; flatten_building_footprints wrapper takes 'buildings') so callers (World.__init__, setup_initial_state, tools/tests) are unchanged, and the worldgen<->world cycle avoided by construction (World TYPE_CHECKING-only in worldgen, TileType lazy-imported inside the fns, wrappers import worldgen lazily). Lock the seam (worldgen fns exist+callable; wrappers delegate with the same World [+ forwarded buildings]; no module-load cycle in either import order; worldgen.py has no top-level game.world import) PLUS a world-snapshot pin (a fixed-seed World generates a byte-identical tile grid + heightmap vs an embedded baseline - belt-and-suspenders beyond the b73961... AI digest) and run the full DoD gate. NO screenshots (pure-move headless worldgen sprint)."
+      },
+      "rounds": {
+        "wk86_w2": {
+          "sprint_id": "wk86_round_b_worldgen_extract",
+          "round_id": "wk86_w2",
+          "status": "done",
+          "round_meta": {
+            "wave": "W2 (seam test + world-snapshot pin + DoD gate; NO screenshots - pure-move headless worldgen sprint)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "depends_on": "wk86 W1 (Agent 03 moved generate_terrain + generate_heightmap + flatten_building_footprints VERBATIM game/world.py->game/worldgen.py [world.py 483->278]; World keeps 3 delegating wrappers (same names; flatten_building_footprints wrapper takes 'buildings'); TileType lazy-imported inside the worldgen fns, World TYPE_CHECKING-only; Agent 03 verified digest UNCHANGED + 825 passed + qa_smoke PASS + no cycle)."
+          },
+          "prompt_summary": "WK86 W2: create tests/test_wk86_worldgen_extract.py: assert game.worldgen has generate_terrain + generate_heightmap + flatten_building_footprints (callable); assert World.generate_terrain/generate_heightmap/flatten_building_footprints are delegating wrappers (spy+monkeypatch the worldgen fn, call the wrapper on a World instance, assert invoked with the World [+ forwarded buildings]); AST guard worldgen.py has NO top-level import game.world / from game.world import (World TYPE_CHECKING-only; TileType lazy-imported inside the fns) + no module-load cycle in either fresh-subprocess import order; WORLD-SNAPSHOT PIN: with a fixed seed (set_sim_seed(3)) build a World, generate terrain+heightmap, assert a STABLE sha256 of the tile grid + heightmap matches an embedded baseline. Full DoD: pytest all pass, determinism_guard, WK67 digest == b73961..., qa_smoke --quick. Only the test file; no prod edits; DO NOT COMMIT; NO screenshots.",
+          "what_i_changed": {
+            "summary": "Created tests/test_wk86_worldgen_extract.py (9 headless seam + snapshot tests) locking the WK86 worldgen extraction: (1) game.worldgen exposes generate_terrain + generate_heightmap + flatten_building_footprints, all callable, in the new home; (2) THREE delegating-wrapper pins - for each World method, monkeypatch the corresponding game.worldgen function with a spy, build the World via object.__new__(World) (so __init__ auto-generation does NOT fire and each spy sees exactly ONE wrapper call), call the wrapper, and assert the worldgen fn ran with the SAME World instance (and, for flatten_building_footprints, the forwarded 'buildings' object unchanged). The lazy 'from game.worldgen import ...' inside each wrapper is what makes the monkeypatch the thing that runs; (3) AST guard that worldgen.py has NO module-top (non-TYPE_CHECKING) import of game.world (matches 'import game.world', 'from game.world import ...', and 'from game import world'); (4) two FRESH-subprocess imports proving 'import game.worldgen; import game.world' and the REVERSE both succeed (a top-level cycle would ImportError); (5) WORLD-SNAPSHOT PIN: build a seeded World in a fresh subprocess with SIM_SEED pinned in the env, sha256 the tile grid (rows of ints) and the heightmap (rows of 6dp floats), assert both == embedded baselines, plus a reproducibility pin (two fresh builds give the identical snapshot). No production code touched. No screenshots (pure-move headless worldgen sprint).",
+            "files_created": [
+              "tests/test_wk86_worldgen_extract.py"
+            ],
+            "files_modified": []
+          },
+          "new_tests": [
+            "test_worldgen_exposes_moved_generation_functions",
+            "test_generate_terrain_is_delegating_wrapper",
+            "test_generate_heightmap_is_delegating_wrapper",
+            "test_flatten_building_footprints_is_delegating_wrapper",
+            "test_worldgen_has_no_module_level_world_import",
+            "test_no_module_load_cycle_fresh_import (parametrized x2: worldgen->world and world->worldgen)",
+            "test_world_snapshot_is_byte_identical",
+            "test_world_snapshot_is_reproducible_across_builds"
+          ],
+          "world_snapshot_pin": {
+            "seed": "set_sim_seed(3); SIM_SEED env pinned to 1 in a fresh subprocess",
+            "map_dims": "250x250 tiles; heightmap fence-post grid 501x501",
+            "tiles_sha256": "1418f9617bb7d8374cd53efae6f59597187c19256671f361c81003fd95ce5c9a",
+            "heightmap_sha256": "87f69ce3fbac1cdd8c23fbd6af5624a87934c0cfcf2ebf33e677a21f8f5c22ea",
+            "why_subprocess_with_pinned_env": "generate_heightmap's Perlin octaves use base=int(config.SIM_SEED); config.SIM_SEED is read from the env at import (config.py: int(os.getenv('SIM_SEED','1'))) and is NOT changed by set_sim_seed. Verified: SIM_SEED=42 changes the heightmap hash (aaa7d98f...) while the tile grid is unchanged (tiles use the world_gen sub-RNG seeded by set_sim_seed). Some suite modules (tests/perf_*stress*.py) set os.environ['SIM_SEED']='42' at import time which pytest collection inherits, so an in-process pin would FLAP by collection order - the snapshot is therefore computed in a fresh process with SIM_SEED=1 pinned, the SAME bulletproofing the WK67 keystone uses. The test also asserts the subprocess actually saw config.SIM_SEED==1.",
+            "noise_package": "present in this env (heightmap not None); heightmap pin skips gracefully if the 'noise' package is ever unavailable (tile-grid pin still asserted)."
+          },
+          "screenshot": "N/A - pure-move headless worldgen sprint (no on-screen change). Behavioral verification via full suite + the WK67 AI-decision digest (the seeded world the 300-tick digest scenario runs on is produced by exactly these generation fns - generation drift -> different world -> different hero decisions -> different digest, so b73961... is a strong guard) + the new world-snapshot pin (pins the generated world artifact directly, belt-and-suspenders) + qa_smoke.",
+          "dod_gate": {
+            "A_full_suite": "834 passed, 4 skipped, 0 failed in 152.65s (baseline 825 passed + 4 skipped; +9 = new WK86 seam/snapshot tests). PASS",
+            "B_determinism_guard": "[determinism_guard] PASS: no violations found (exit 0). PASS",
+            "C_ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded BYTE-IDENTICAL to golden (constant pinned in tests/test_wk67_ai_boundary.py line 181). tests/test_wk67_ai_boundary.py = 10 passed. Independently reproduced the printer digest with the exact subprocess env (DETERMINISTIC_SIM=1, SIM_SEED=3, dummy SDL drivers, POSIX env syntax) = b73961... PASS. (NOTE: a one-off manual 'set VAR=val && python -m ...' cmd-shell invocation printed a stale b31745... - that is the cmd env-not-propagating artifact documented in the WK67 PM NOTE [in-process _AI_RNG carry-over surfaces when SIM_SEED is NOT actually pinned], NOT a digest drift; the pytest pin and the correctly-pinned-env reproduction both confirm byte-identical.)",
+            "D_qa_smoke_quick": "DONE: PASS (exit 0) across speed-scaling 0.25x/0.5x/1.0x + interior_view/quest_panel/conversation/direct_prompt_integration - the seeded world (lakes/forests/paths + heightmap) generates and the headless sim runs on it without crash",
+            "E_seam_structure": "game/worldgen.py exists with generate_terrain/generate_heightmap/flatten_building_footprints; World.generate_terrain/generate_heightmap/flatten_building_footprints are 1-line delegating wrappers (same names; flatten wrapper takes 'buildings') - verified by spy: each forwards to the worldgen fn with the SAME World instance (+ forwarded buildings) via a lazy import; callers (World.__init__, setup_initial_state) UNCHANGED; world.py = 278 LOC (down from 483, -205); NO import cycle (AST: no module-top game.world import in worldgen.py - World is TYPE_CHECKING-only, TileType lazy-imported inside the fns; fresh subprocess imports succeed in BOTH orders). PASS",
+            "F_logs_and_close": "this log entry written (round wk86_w2); PM hub close handed to Agent 01. PASS",
+            "verdict": "PASS"
+          },
+          "notes": "Pure-move seam + world-snapshot verification only; no production edits, did not commit, no screenshots (pure-move headless worldgen sprint, no on-screen change). TWO independent behavior-preservation guards held: (1) the WK67 300-tick AI-decision digest stayed byte-identical at b73961... - the seeded world these generation fns produce IS the world that scenario runs on, so generation drift would shift hero decisions and break the digest; (2) the new world-snapshot pin hashes the generated tile grid + heightmap directly and matches the embedded baselines (tiles 1418f961..., heightmap 87f69ce3...). The cycle break is verified two ways: statically (AST: worldgen.py has no module-top game.world import; World is TYPE_CHECKING-only and TileType is lazy-imported inside the fns) and dynamically (cold subprocess imports succeed in both orders). Discovered + handled correctly: the heightmap depends on config.SIM_SEED (Perlin base) which is env-read-at-import, so the snapshot pin runs in a fresh subprocess with SIM_SEED pinned to avoid suite-ordering flap (perf_*stress* sets SIM_SEED=42 at import). No regressions found."
+        }
+      }
     }
   }
 }

@@ -2526,6 +2526,37 @@
           "notes_for_pm": "W1 mechanical extraction complete; all gates green, zero behavior change, no import cycle. Touched ONLY game/engine.py + new game/engine_facades/lifecycle.py. Did NOT commit. Ready for PM gate then Agent 11 W2 (seam test that the 4 wrappers delegate + sanity base_overview pygame screenshot that runs update/tick/render + full DoD)."
         }
       }
+    },
+    "wk86_round_b_worldgen_extract": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk86_round_b_worldgen_extract.plan.md",
+        "created_utc": "2026-05-30T21:00:00Z",
+        "notes": "Round B-3: extract one-shot world generation (generate_terrain + generate_heightmap + flatten_building_footprints) out of game/world.py (was 483 LOC) into new game/worldgen.py behind 1-line delegating wrappers. PURE MOVE: module functions take the live World as world (self.->world.); behavior byte-identical; WK67 digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded + suite + determinism_guard + qa_smoke stay green. W1 = extraction (this entry); W2 (Agent 11) adds seam test + world-snapshot pin + DoD."
+      },
+      "rounds": {
+        "wk86_w1": {
+          "sprint_id": "wk86_round_b_worldgen_extract",
+          "round_id": "wk86_w1",
+          "status": "done",
+          "intelligence": "HIGH",
+          "wave": "Wave W1 - extract one-shot world generation out of game/world.py into new game/worldgen.py behind 1-line delegating wrappers. Single-lane mechanical pure-move; STOP after W1 for PM gate (suite + WK67 digest + determinism_guard + qa_smoke) before W2 (Agent 11 seam test + world-snapshot pin + full DoD).",
+          "summary": "Created game/worldgen.py and moved three generation methods out of game/world.py VERBATIM (self.->world. only): generate_terrain(world) ~74-167 (lake, WK44 clustered forests, WK54 zone-influenced tree density + sprinkle, cross paths, WK45 tree-cap trim), generate_heightmap(world) ~168-278 (3-octave Perlin at 2x sub-tile res, WK54 zone elevation, castle cosine plateau, water clamp), flatten_building_footprints(world, buildings) ~279-300. RNG call order preserved exactly (single world.rng stream, same randint/random/shuffle sequence). Heightmap DUAL-STORE preserved: writes both World.heightmap (world.heightmap = hmap) AND the terrain_height module (lazy apply_zone_elevation / flatten_footprint calls) -- both kept verbatim. World keeps 1-line delegating wrappers under the SAME names (generate_terrain/generate_heightmap/flatten_building_footprints) so World.__init__, sim_engine setup (sim_engine.py:395-396 flatten_building_footprints), and tools/tests are unchanged.",
+          "flatten_building_footprints_moved": "YES -- it is generation-time (called from game/sim_engine.py:395-396 after buildings are placed) and co-locates cleanly (only touches world.heightmap / heightmap_grid_w/h + the lazy terrain_height.flatten_footprint import; no TileType, no RNG). Moved with a matching wrapper (def flatten_building_footprints(self, buildings): from game.worldgen import flatten_building_footprints as _fbf; return _fbf(self, buildings)).",
+          "cycle_avoidance": "No import cycle. worldgen.py imports leaf deps at module top (math, get_rng from game.sim.determinism, get_zone_blend from game.world_zones, pnoise2 from noise via the same try/except, config lazily inside generate_heightmap). World is imported only under TYPE_CHECKING (from __future__ import annotations). TileType (a module-level class in game.world) is imported LAZILY inside generate_terrain/generate_heightmap (from game.world import TileType) -- guaranteed cycle-free since game.world imports game.worldgen only lazily inside the wrappers. Verified: python -c import game.worldgen + import game.world -> ok.",
+          "world_py_loc": "game/world.py 483 -> 278 LOC (also dropped now-orphaned top-level imports: math, the noise/pnoise2 try-block, get_zone_blend -- all three now live in worldgen.py; get_rng stays, still used in World.__init__). game/worldgen.py = 262 LOC.",
+          "gates": {
+            "digest_test": "tests/test_wk67_ai_boundary.py: 10 passed (digest constant asserted == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded, byte-identical -- the seeded world is part of the 300-tick scenario, so this guards generation drift).",
+            "full_suite": "825 passed, 4 skipped, 0 failed in 151.04s (matches DoD baseline).",
+            "determinism_guard": "PASS: no violations found (exit 0).",
+            "qa_smoke_quick": "DONE: PASS (exit 0) -- speed_scaling 0.5x/1.0x, interior_view, quest_panel, conversation, direct_prompt_integration all exit_code=0.",
+            "import_check": "from game.worldgen import generate_terrain, generate_heightmap, flatten_building_footprints; import game.world -> ok True True True."
+          },
+          "digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (UNCHANGED -- byte-identical seeded world).",
+          "lane": "game/world.py + new game/worldgen.py only.",
+          "commit": "NOT COMMITTED (PM commits+pushes after DoD).",
+          "handoff_to_11": "W2: seam test (worldgen has generate_terrain/generate_heightmap callable + wrappers delegate to them via monkeypatch/spy), AST guard worldgen.py imports game.world only under TYPE_CHECKING (the lazy  is inside the functions, not module top), and the WORLD-SNAPSHOT PIN (fixed-seed World -> stable hash of tile grid + heightmap matches a captured baseline). Note: flatten_building_footprints ALSO moved (wrapper takes buildings)."
+        }
+      }
     }
   }
 }
