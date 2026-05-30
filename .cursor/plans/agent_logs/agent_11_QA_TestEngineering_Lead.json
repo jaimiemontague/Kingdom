@@ -9,6 +9,84 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk73_round_b2_enemy_stats_table": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk73_round_b2_enemy_stats_table.plan.md",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "notes": "Round B-2b: the 7 near-identical enemy stat-block subclasses (Goblin/Wolf/Skeleton/Spider/Bandit/BanditLord/DemonOverlord) collapsed into one ENEMY_STATS table applied by Enemy.__init__; each is now a 1-line shim. SkeletonArcher (behavioral kiter) untouched. register_attacker lifted to the Enemy base, gated on an attackers set existing. W1 = Agent 05 refactor (digest+suite gated). Agent 11 owns W2: stat-parity test vs git HEAD + full DoD gate. Behavior-preserving; WK67 digest b73961...148ded must stay byte-identical."
+      },
+      "rounds": {
+        "wk73_w2": {
+          "sprint_id": "wk73_round_b2_enemy_stats_table",
+          "round_id": "wk73_w2",
+          "round_meta": {
+            "wave": "W2 (stat-parity test + DoD gate)",
+            "build_target": "tests/test_wk73_enemy_stats.py + full DoD gate (DoD A-F)",
+            "created_utc": "2026-05-30T00:00:00Z",
+            "depends_on": "wk73_w1 (Agent 05: ENEMY_STATS table + Enemy.__init__ apply + 7 shims) — gated by PM on digest+suite"
+          },
+          "prompt_summary": "Author tests/test_wk73_enemy_stats.py: for each of the 8 enemy types, capture the PRE-WK73 expected attributes from git HEAD (WK72 065efa6) and assert today's construction yields byte-identical stats. Compare instance __dict__ minus volatile keys (entity_id/x/y) vs the old subclass built from exec'd HEAD source. Respect the attribute-surface notes (wolf/skeleton/skeleton_archer must NOT have attackers; non-boss must NOT have name/is_boss). Assert the 7 shims are Enemy subclasses and Shim(x,y) stats == Enemy(x,y,key). Then run the full DoD gate (suite + determinism_guard + WK67 digest + qa_smoke --quick).",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Created tests/test_wk73_enemy_stats.py with 36 tests. The gold standard is git HEAD itself: the test execs `git show HEAD:game/entities/enemy.py` (WK72 065efa6, pre-WK73) in an isolated module namespace, constructs the OLD subclass, and compares __dict__ minus volatile keys (entity_id/x/y) against today's build. (1) FULL __dict__ PARITY vs HEAD for all 8 types (goblin/wolf/skeleton/spider/bandit/bandit_lord/demon_overlord/skeleton_archer) — catches a missed/changed/extra attribute OR a wrong attribute surface. Enum-valued `state` is normalized to (qualname,name) so the duplicate EnemyState class created by exec-ing the source is not mistaken for drift. (2) EMBEDDED-LITERAL per-type stat coverage (hp/max_hp/attack_power/speed/xp_reward/gold_reward/color/size, plus boss name/is_boss, attacker set, and skeleton_archer ranged fields attack_range/min_range/attack_cooldown_max/is_ranged_attacker), captured verbatim from the HEAD subclass __init__ bodies and cross-checked against the live HEAD source so the literals cannot drift. (3) ATTRIBUTE-SURFACE invariants: wolf/skeleton/skeleton_archer have NO attackers; non-boss types have NO name/is_boss; bosses have both. (4) SHIM STRUCTURE: each of the 7 shims is an Enemy subclass and Shim(0,0) stats == Enemy(0,0,key); ENEMY_STATS covers the 7 keys and excludes skeleton_archer; register_attacker is on the Enemy base and is gated (records for goblin, no-op + no attr materialised for wolf). No production edits.",
+            "files_created": [
+              "tests/test_wk73_enemy_stats.py"
+            ],
+            "files_modified": []
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk73_enemy_stats.py -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "36 passed, 1 warning in 0.18s. 8 types x full __dict__ parity vs HEAD + embedded-literal stat coverage + attribute-surface + shim structure."
+            },
+            {
+              "cmd": "python -m pytest -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "703 passed, 4 skipped, 1 warning in 144.90s. Baseline was 667 passed / 4 skipped; 667 + 36 new = 703, 0 failures."
+            },
+            {
+              "cmd": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[determinism_guard] PASS: no violations found."
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "10 passed. AI-decision digest constant unchanged = b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (verified in tests/test_wk67_ai_boundary.py:181). Behavior byte-identical — the enemy stat-table refactor did NOT alter AI/combat behavior."
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS. All headless profiles exit_code=0 (base/intent_bounty/hero_stuck/no-enemies/mock-LLM/speed-scaling 0.1-1.0x/interior/quest/conversation/direct_prompt)."
+            }
+          ],
+          "evidence": {
+            "tests_added_count": 36,
+            "per_type_coverage": "All 8 types covered with full __dict__ parity vs git HEAD + embedded-literal stats. goblin(hp30/atk10/spd90/xp25/gold15/color(139,69,19)/size18/attackers), wolf(hp22/atk4/spd138/xp20/gold9/color(160,160,160)/size18/NO attackers), skeleton(hp55/atk7/spd66/xp35/gold21/color(220,220,240)/size18/NO attackers), spider(hp18/atk4/spd156/xp18/gold8/color(30,30,30)/size18/attackers), bandit(hp42/atk9/spd102/xp32/gold18/color(120,80,50)/size18/attackers), bandit_lord(hp300/atk20/spd90/xp150/gold200/color(180,100,30)/size28/boss 'The Bandit Lord'/attackers), demon_overlord(hp500/atk30/spd72/xp300/gold500/color(200,30,30)/size32/boss 'The Demon Overlord'/attackers), skeleton_archer(hp40/atk4/spd81/xp35/gold21/color(200,200,220)/size18/range192/min64/cd1400/ranged/NO attackers).",
+            "suite_totals": "703 passed, 4 skipped, 0 failed (baseline 667 passed / 4 skipped; +36 new)",
+            "wk67_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical, unchanged)",
+            "determinism_guard": "PASS (no violations)",
+            "qa_smoke_quick": "PASS",
+            "dod": {
+              "A_pytest_all_pass": "PASS — 703 passed / 4 skipped / 0 failed (667 baseline + 36 new)",
+              "B_determinism_guard_clean": "PASS",
+              "C_wk67_digest_byte_identical": "PASS — b73961...148ded unchanged",
+              "D_qa_smoke_quick_green": "PASS",
+              "E_enemy_stats_table_and_shims": "PASS — ENEMY_STATS table exists with the 7 shim keys (excludes skeleton_archer); the 7 stat subclasses are 1-line shims (no per-subclass stat duplication); SkeletonArcher behavior intact; full __dict__ parity vs git HEAD proves byte-identical attributes for all 8 types; construction sites (lair.py/spawner.py) construct by class name unchanged",
+              "F_logs_updated_pm_hub_close": "PASS (this entry) — PM hub close is Agent 01"
+            },
+            "verdict": "PASS — all DoD gates green; stat-parity test proves all 8 enemy types are byte-identical to pre-WK73 (git HEAD); behavior unchanged."
+          },
+          "notes_for_pm": "WK73 W2 complete — VERDICT PASS. 36 parity tests lock the ENEMY_STATS refactor: every one of the 8 enemy types constructs with a __dict__ byte-identical to the pre-WK73 (git HEAD 065efa6) subclass, minus volatile entity_id/x/y. No stat diverged — Agent 05's table is exact. Attribute surface is preserved exactly (wolf/skeleton/skeleton_archer carry NO attackers; non-boss types carry NO name/is_boss; the two bosses carry both). The 7 shims are confirmed Enemy subclasses and equal Enemy(x,y,key); register_attacker correctly lifted to the base and gated (records for goblin/spider/bandit/bosses, safe no-op for wolf/skeleton with no attr materialised). Full DoD A-F all PASS; WK67 digest b73961...148ded byte-identical; determinism clean; qa_smoke PASS. No production edits, no commit. Ready for commit+push by PM."
+        }
+      }
+    },
     "wk72_round_c2_entity_dedup": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk72_round_c2_entity_dedup.plan.md",

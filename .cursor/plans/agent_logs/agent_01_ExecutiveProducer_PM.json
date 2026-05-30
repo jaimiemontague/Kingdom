@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK73 CLOSE): wk73_round_b2_enemy_stats_table COMPLETE -- DoD met. Round B-2b: collapsed the 7 stat-block Enemy subclasses into one ENEMY_STATS table (EnemyStats dataclass) applied by Enemy.__init__; the 7 are now 1-line shims so lair.py/spawner.py construction is unchanged; register_attacker lifted to the Enemy base (gated on hasattr attackers, behavior-neutral). SkeletonArcher (behavioral kiting) left untouched. Behavior-preserving: 703 passed/4 skipped/0 failed (+36 stat-parity tests comparing __dict__ vs git HEAD for all 8 types), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL. Agent 05 (refactor+self-parity-proof), Agent 11 (parity test + DoD). Plan: .cursor/plans/wk73_round_b2_enemy_stats_table.plan.md. WK72 was main 065efa6. Committing+pushing. SESSION SO FAR: WK68(Round A finish)+WK69(sim split)+WK70(building registry)+WK71(hero split)+WK72(entity dedup)+WK73(enemy stats) all shipped. Next: WK74 (presentation split OR more dedup/registry; remaining: hud/ursina_renderer/engine/input_handler/ursina_app splits, Move 9, world.py split, config package, clusters 3/4/5, Round D AI router/splits, Round E audit, the 21-file zombie purge).",
+    "2026-05-30 (Agent 01 WK73 KICKOFF): enemy.py ENEMY_STATS table (Round B-2b). Collapse 7 stat-block Enemy subclasses into one ENEMY_STATS table applied by Enemy.__init__; keep them as 1-line shims (construction sites unchanged); SkeletonArcher behavioral subclass stays. Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), headless. PIVOTED here from the zombie-purge (grep showed the 8 WK34 types are referenced in 21 files -- not cleanly dead; needs its own careful sprint). Agent 05 refactor, Agent 11 stat-parity+DoD. Plan: .cursor/plans/wk73_round_b2_enemy_stats_table.plan.md. WK72 was main 065efa6. NOT YET COMMITTED for WK73.",
     "2026-05-30 (Agent 01 WK72 CLOSE): wk72_round_c2_entity_dedup COMPLETE -- DoD met. Round C-2 entities-units dedup: (1) DifficultySystem.apply_to_enemy consolidated the triplicated HP/attack_power spawn-scaling (spawner/lairs/wave_events, 3 byte-identical blocks -> 1 method); (2) navigation.advance_along_path_to consolidated the path-replan block at Enemy.update + SkeletonArcher.update (2 sites). Agent 05 correctly LEFT guard.py inline (genuine behavior divergence -- unifying would move the digest; flagged as a deliberate-decision follow-up) and left hero/tax_collector out of scope per plan. Behavior-preserving: 667 passed/4 skipped/0 failed (+13 tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL. Agent 05 (2 gated waves), Agent 11 (regression+DoD). Plan: .cursor/plans/wk72_round_c2_entity_dedup.plan.md. WK71 was main 76c38f4. Committing+pushing. Next: WK73 (presentation split e.g. engine.py facades or input_handler package, OR more dedup/registry).",
     "2026-05-30 (Agent 01 WK72 KICKOFF): Round C-2 entities-units dedup. (1) DifficultySystem.apply_to_enemy replacing triplicated HP/damage spawn-scaling (spawner/lairs/wave_events); (2) navigation.advance_along_path_to replacing the path-replan block copy-pasted in enemy.py(x2)+guard.py (hero+tax_collector excluded). Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), headless. Agent 05 (2 gated waves), Agent 11 regression+DoD. Plan: .cursor/plans/wk72_round_c2_entity_dedup.plan.md. WK71 was main 76c38f4. NOT YET COMMITTED for WK72.",
     "2026-05-30 (Agent 01 WK71 CLOSE): wk71_round_b2_hero_mixin_split COMPLETE -- DoD met, GOAL 'all tests pass' satisfied. Round B-2a: split game/entities/hero.py 1156 -> 543 LOC (-613) into 3 MRO-identical mixins -- HeroRestMixin (hero_rest.py), HeroEconomyMixin (hero_economy.py), HeroMemoryMixin (hero_memory.py); Hero(HeroRestMixin,HeroEconomyMixin,HeroMemoryMixin) keeps MRO [Hero,...mixins,object] so all call sites unchanged. 27 methods moved verbatim; deleted the duplicate set_event_bus + redundant _event_bus init; repointed 3 test_hero.py monkeypatch sites to the mixin module home. Behavior-preserving: 654 passed/4 skipped/0 failed (+8 MRO tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, no import cycle. Agent 03 (split W1), Agent 11 (MRO test + DoD W2). Deferred: intent->ai/intent.py boundary move; enemy.py ENEMY_STATS split; hud/ursina_renderer/engine/input_handler presentation splits; Move 9; zombie-type purge. Plan: .cursor/plans/wk71_round_b2_hero_mixin_split.plan.md. WK70 was main 5d6351b. Committing+pushing. Next: WK72.",
@@ -3637,6 +3639,65 @@
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk72_round_c2_entity_dedup'].rounds['wk72_kickoff']) + plan .cursor/plans/wk72_round_c2_entity_dedup.plan.md; claude-opus-4-8; BEHAVIOR-PRESERVING, digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD per standing authorization."
+        }
+      }
+    },
+    "wk73_round_b2_enemy_stats_table": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T07:30:00Z",
+        "plan_doc": ".cursor/plans/wk73_round_b2_enemy_stats_table.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK73 / Round B-2b)",
+        "notes": "Round B-2b: enemy.py ENEMY_STATS table. Collapse the 7 stat-block Enemy subclasses (Goblin/Wolf/Skeleton/Spider/Bandit/BanditLord/DemonOverlord) into one ENEMY_STATS table applied by Enemy.__init__; keep the 7 as 1-line shims so lair.py/spawner.py construction is unchanged; SkeletonArcher (behavioral) stays. Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), headless. Agent 05 (refactor), Agent 11 (stat-parity+DoD).",
+        "definition_of_done": [
+          "A. pytest all pass (667/4/0 baseline)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded",
+          "D. qa_smoke green",
+          "E. ENEMY_STATS exists; 7 subclasses are 1-line shims; no per-subclass stat dup; SkeletonArcher intact; construction sites unchanged",
+          "F. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "703 passed / 4 skipped / 0 failed (667 baseline + 36 stat-parity tests)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical)",
+          "result": "7 stat-block Enemy subclasses (Goblin/Wolf/Skeleton/Spider/Bandit/BanditLord/DemonOverlord) collapsed into one ENEMY_STATS table applied by Enemy.__init__; subclasses now 1-line shims (construction sites unchanged); register_attacker lifted to base (gated/neutral). SkeletonArcher (behavioral) left as-is. Parity proven via __dict__ comparison vs git HEAD for all 8 types.",
+          "note": "enemy.py 623->687 LOC (explicit table more verbose than inline blocks; the win is single-source-of-truth, not raw LOC)."
+        }
+      },
+      "rounds": {
+        "wk73_kickoff": {
+          "round_meta": {
+            "round_id": "wk73_kickoff",
+            "created_utc": "2026-05-30T07:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk73_round_b2_enemy_stats_table.plan.md",
+            "build_target": "ENEMY_STATS table + 1-line subclass shims",
+            "goal": "all tests pass; stats byte-identical"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical",
+            "wave_dag": "W1(05 table+shims)->gate->W2(11 stat-parity+DoD)->commit+push",
+            "dispatch_order": [
+              "05 W1",
+              "11 W2"
+            ]
+          },
+          "pm_agent_prompts": {
+            "05": "[Agent 05] Collapse the 7 stat-block Enemy subclasses in game/entities/enemy.py into one ENEMY_STATS table per plan .cursor/plans/wk73_round_b2_enemy_stats_table.plan.md sections 1-2. STEP 1: read EACH of the 7 stat subclass __init__ VERBATIM (Goblin ~362, Wolf ~383, Skeleton ~397, Spider ~550, Bandit ~568, BanditLord ~586, DemonOverlord ~607) and record EVERY attribute each one sets beyond the base (hp/max_hp, attack_power, speed, color, size, xp/gold reward, attack range/cooldown, vision, flags -- ALL of them). STEP 2: add `@dataclass(frozen=True) EnemyStats` with a field for every such attribute + `ENEMY_STATS: dict[str,EnemyStats]` with the EXACT current values per type. STEP 3: make Enemy.__init__(x,y,enemy_type='goblin') apply ENEMY_STATS.get(enemy_type) AFTER the existing base init, exactly where/how the subclasses set them (preserve current default behavior for unknown types). STEP 4: reduce each of the 7 to a 1-line shim: `class Goblin(Enemy):\\n    def __init__(self,x,y): super().__init__(x,y,'goblin')` (use each type's exact key). KEEP the class NAMES (lair.py + spawner.py construct by name -- do NOT change construction sites). SkeletonArcher (~411-546): LEAVE its behavioral update/kiting untouched; only fold its pure stats into the table IF clean, else leave SkeletonArcher entirely as-is. Do NOT rebalance any stat. VERIFY: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded UNCHANGED), python -m pytest -q (667 passed), determinism_guard, qa_smoke --quick. If the digest drifts, a stat value or apply-order is wrong -- diff vs the original subclass and fix. Report: the EnemyStats fields, the table, the per-subclass shims, digest, suite totals. DO NOT COMMIT; update agent_05 log (round wk73_w1).",
+            "11": "[Agent 11] W2 (after 05): create tests/test_wk73_enemy_stats.py -- for EACH enemy type (goblin/wolf/skeleton/spider/bandit/bandit_lord/demon_overlord/skeleton_archer), capture the PRE-WK73 attribute values from `git show HEAD:game/entities/enemy.py` (read each old subclass __init__), and assert that constructing the type now yields BYTE-IDENTICAL attributes (hp, max_hp, attack_power, speed, color, size, xp/gold reward, attack range/cooldown, and any other the subclass set). Also assert lair.py/spawner.py still construct the same classes. Run full DoD: pytest (all pass), determinism_guard, digest test (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke. Report PASS/FAIL verdict + DoD A-F. Only your test file; no prod edits; DO NOT COMMIT; update agent_11 log (round wk73_w2).",
+            "06": "[Agent 06 CONSULT] available if the digest drifts (combat semantics). No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "05",
+            "11",
+            "06(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk73_round_b2_enemy_stats_table'].rounds['wk73_kickoff']) + plan .cursor/plans/wk73_round_b2_enemy_stats_table.plan.md; claude-opus-4-8; BEHAVIOR-PRESERVING, digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }
     }

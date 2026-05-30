@@ -2,6 +2,7 @@
 Enemy entities.
 """
 import math
+from dataclasses import dataclass
 from enum import Enum, auto
 
 # Monotonic entity ID allocation (deterministic: follows spawn order).
@@ -25,6 +26,111 @@ from config import (
     COLOR_RED
 )
 from game.sim.timebase import now_ms
+
+
+@dataclass(frozen=True)
+class EnemyStats:
+    """Per-type stat block applied by ``Enemy.__init__`` (WK73 Round B-2b).
+
+    Captures EVERY attribute the former stat-block subclasses (Goblin, Wolf,
+    Skeleton, Spider, Bandit, BanditLord, DemonOverlord) set beyond the base
+    ``Enemy.__init__`` defaults. Values are byte-identical to the pre-WK73
+    subclasses; the WK67 AI-decision digest guards against any drift.
+
+    ``name``/``is_boss``/``has_attackers`` are gated in ``__init__`` so that types
+    which did NOT set them (e.g. wolf/skeleton) keep their exact attribute surface
+    — ``self.name`` and ``self.is_boss`` are only created for boss types, and
+    ``self.attackers`` only for types that had it.
+    """
+    hp: int
+    attack_power: int
+    speed: float
+    xp_reward: int
+    gold_reward: int
+    color: tuple
+    size: int
+    has_attackers: bool = False
+    is_boss: bool = False
+    name: str | None = None
+
+
+# Exact current per-type stat values (read verbatim from the former subclasses).
+# Config-derived values (GOBLIN_HP etc.) are referenced here so the table stays
+# config-driven exactly as the subclasses were. Goblin keeps GOBLIN_ATTACK * 2.
+ENEMY_STATS: dict[str, "EnemyStats"] = {
+    "goblin": EnemyStats(
+        hp=GOBLIN_HP,
+        attack_power=GOBLIN_ATTACK * 2,  # 2x damage (scaled back from 4x)
+        speed=GOBLIN_SPEED,
+        xp_reward=25,
+        gold_reward=15,  # wk15: +50% for pacing (was 10)
+        color=(139, 69, 19),  # Brown-ish green
+        size=18,
+        has_attackers=True,
+    ),
+    "wolf": EnemyStats(
+        hp=WOLF_HP,
+        attack_power=WOLF_ATTACK,
+        speed=WOLF_SPEED,
+        xp_reward=20,
+        gold_reward=9,  # wk15: +50% for pacing (was 6)
+        color=(160, 160, 160),
+        size=18,
+    ),
+    "skeleton": EnemyStats(
+        hp=SKELETON_HP,
+        attack_power=SKELETON_ATTACK,
+        speed=SKELETON_SPEED,
+        xp_reward=35,
+        gold_reward=21,  # wk15: +50% for pacing (was 14)
+        color=(220, 220, 240),
+        size=18,
+    ),
+    "spider": EnemyStats(
+        hp=18,
+        attack_power=4,
+        speed=156.0,  # px/sec (baked: old 2.6 * 60)
+        xp_reward=18,
+        gold_reward=8,  # wk15: +50% for pacing (was 5)
+        color=(30, 30, 30),
+        size=18,
+        has_attackers=True,
+    ),
+    "bandit": EnemyStats(
+        hp=42,
+        attack_power=9,
+        speed=102.0,  # px/sec (baked: old 1.7 * 60)
+        xp_reward=32,
+        gold_reward=18,  # wk15: +50% for pacing (was 12)
+        color=(120, 80, 50),
+        size=18,
+        has_attackers=True,
+    ),
+    "bandit_lord": EnemyStats(
+        hp=300,
+        attack_power=20,
+        speed=90.0,  # px/sec (baked: old 1.5 * 60)
+        xp_reward=150,
+        gold_reward=200,
+        color=(180, 100, 30),
+        size=28,
+        has_attackers=True,
+        is_boss=True,
+        name="The Bandit Lord",
+    ),
+    "demon_overlord": EnemyStats(
+        hp=500,
+        attack_power=30,
+        speed=72.0,  # px/sec (baked: old 1.2 * 60)
+        xp_reward=300,
+        gold_reward=500,
+        color=(200, 30, 30),
+        size=32,
+        has_attackers=True,
+        is_boss=True,
+        name="The Demon Overlord",
+    ),
+}
 
 
 class EnemyState(Enum):
@@ -82,6 +188,29 @@ class Enemy:
         self._render_anim_trigger: str | None = None
         self._anim_trigger_seq: int = 0  # WK66 Move 1a: monotonic one-shot trigger counter
 
+        # WK73 Round B-2b: apply the per-type stat block (replaces the former
+        # stat-block subclasses). Applied AFTER the base init above so the
+        # resulting object is byte-identical to what the subclass set. Unknown
+        # types (e.g. "skeleton_archer", which keeps its own __init__, or any
+        # custom type) keep the base defaults exactly as before.
+        s = ENEMY_STATS.get(enemy_type)
+        if s is not None:
+            self.hp = s.hp
+            self.max_hp = s.hp
+            self.attack_power = s.attack_power
+            self.speed = s.speed
+            self.xp_reward = s.xp_reward
+            self.gold_reward = s.gold_reward
+            self.color = s.color
+            self.size = s.size
+            if s.name is not None:
+                self.name = s.name
+            if s.is_boss:
+                self.is_boss = True
+            if s.has_attackers:
+                # Track who has hit this enemy for gold distribution.
+                self.attackers = set()  # Set of hero names who have hit this enemy
+
     @property
     def is_alive(self) -> bool:
         return self.hp > 0
@@ -109,7 +238,19 @@ class Enemy:
         self._render_anim_trigger = str(name)
         # WK66 Move 1a: sim-owned monotonic counter (see Hero._queue_render_animation).
         self._anim_trigger_seq = int(getattr(self, "_anim_trigger_seq", 0)) + 1
-    
+
+    def register_attacker(self, hero):
+        """Register a hero as having attacked this enemy (for gold distribution).
+
+        WK73: lifted from the former per-subclass methods. Gated on ``attackers``
+        existing so types that never had an ``attackers`` set (wolf/skeleton/
+        skeleton_archer) keep their exact behavior — combat.py calls this via a
+        ``hasattr`` guard, and ``get_gold_recipients`` reads ``attackers`` via
+        ``getattr(..., set())``, so a no-op here is byte-identical to today.
+        """
+        if hasattr(self, "attackers"):
+            self.attackers.add(hero.name)
+
     def distance_to(self, x: float, y: float) -> float:
         """Calculate distance to a point."""
         return math.sqrt((self.x - x) ** 2 + (self.y - y) ** 2)
@@ -357,52 +498,24 @@ class Enemy:
 
 
 class Goblin(Enemy):
-    """Basic goblin enemy."""
-    
+    """Basic goblin enemy. WK73: stats now live in ENEMY_STATS["goblin"]."""
+
     def __init__(self, x: float, y: float):
         super().__init__(x, y, "goblin")
-        self.hp = GOBLIN_HP
-        self.max_hp = GOBLIN_HP
-        self.attack_power = GOBLIN_ATTACK * 2  # 2x damage (scaled back from 4x)
-        self.speed = GOBLIN_SPEED
-        self.xp_reward = 25
-        self.gold_reward = 15  # wk15: +50% for pacing (was 10)
-        self.color = (139, 69, 19)  # Brown-ish green
-        
-        # Track who has hit this goblin for gold distribution
-        self.attackers = set()  # Set of hero names who have hit this goblin
-    
-    def register_attacker(self, hero):
-        """Register a hero as having attacked this goblin."""
-        self.attackers.add(hero.name)
 
 
 class Wolf(Enemy):
-    """Fast, low-HP enemy usually spawned from Wolf Dens."""
+    """Fast, low-HP enemy usually spawned from Wolf Dens. Stats: ENEMY_STATS["wolf"]."""
 
     def __init__(self, x: float, y: float):
         super().__init__(x, y, "wolf")
-        self.hp = WOLF_HP
-        self.max_hp = WOLF_HP
-        self.attack_power = WOLF_ATTACK
-        self.speed = WOLF_SPEED
-        self.xp_reward = 20
-        self.gold_reward = 9   # wk15: +50% for pacing (was 6)
-        self.color = (160, 160, 160)
 
 
 class Skeleton(Enemy):
-    """Tougher slow enemy usually spawned from Skeleton Crypts."""
+    """Tougher slow enemy spawned from Skeleton Crypts. Stats: ENEMY_STATS["skeleton"]."""
 
     def __init__(self, x: float, y: float):
         super().__init__(x, y, "skeleton")
-        self.hp = SKELETON_HP
-        self.max_hp = SKELETON_HP
-        self.attack_power = SKELETON_ATTACK
-        self.speed = SKELETON_SPEED
-        self.xp_reward = 35
-        self.gold_reward = 21  # wk15: +50% for pacing (was 14)
-        self.color = (220, 220, 240)
 
 
 class SkeletonArcher(Enemy):
@@ -545,79 +658,29 @@ class SkeletonArcher(Enemy):
 
 
 class Spider(Enemy):
-    """Fast, low-HP swarm enemy usually spawned from Spider Nests."""
+    """Fast, low-HP swarm enemy spawned from Spider Nests. Stats: ENEMY_STATS["spider"]."""
 
     def __init__(self, x: float, y: float):
         super().__init__(x, y, "spider")
-        self.hp = 18
-        self.max_hp = 18
-        self.attack_power = 4
-        self.speed = 156.0  # px/sec (baked: old 2.6 * 60)
-        self.xp_reward = 18
-        self.gold_reward = 8   # wk15: +50% for pacing (was 5)
-        self.color = (30, 30, 30)
-        self.attackers = set()
-
-    def register_attacker(self, hero):
-        self.attackers.add(hero.name)
 
 
 class Bandit(Enemy):
-    """Mid-tier humanoid enemy usually spawned from Bandit Camps."""
+    """Mid-tier humanoid enemy spawned from Bandit Camps. Stats: ENEMY_STATS["bandit"]."""
 
     def __init__(self, x: float, y: float):
         super().__init__(x, y, "bandit")
-        self.hp = 42
-        self.max_hp = 42
-        self.attack_power = 9
-        self.speed = 102.0  # px/sec (baked: old 1.7 * 60)
-        self.xp_reward = 32
-        self.gold_reward = 18  # wk15: +50% for pacing (was 12)
-        self.color = (120, 80, 50)
-        self.attackers = set()
-
-    def register_attacker(self, hero):
-        self.attackers.add(hero.name)
 
 
 class BanditLord(Enemy):
-    """WK58: Boss enemy at the Bandit Fortress POI."""
+    """WK58: Boss enemy at the Bandit Fortress POI. Stats: ENEMY_STATS["bandit_lord"]."""
 
     def __init__(self, x: float, y: float):
         super().__init__(x, y, "bandit_lord")
-        self.hp = 300
-        self.max_hp = 300
-        self.attack_power = 20
-        self.speed = 90.0  # px/sec (baked: old 1.5 * 60)
-        self.xp_reward = 150
-        self.gold_reward = 200
-        self.name = "The Bandit Lord"
-        self.is_boss = True
-        self.color = (180, 100, 30)
-        self.size = 28
-        self.attackers = set()
-
-    def register_attacker(self, hero):
-        self.attackers.add(hero.name)
 
 
 class DemonOverlord(Enemy):
-    """WK58: Boss enemy at the Demon Portal POI."""
+    """WK58: Boss enemy at the Demon Portal POI. Stats: ENEMY_STATS["demon_overlord"]."""
 
     def __init__(self, x: float, y: float):
         super().__init__(x, y, "demon_overlord")
-        self.hp = 500
-        self.max_hp = 500
-        self.attack_power = 30
-        self.speed = 72.0  # px/sec (baked: old 1.2 * 60)
-        self.xp_reward = 300
-        self.gold_reward = 500
-        self.name = "The Demon Overlord"
-        self.is_boss = True
-        self.color = (200, 30, 30)
-        self.size = 32
-        self.attackers = set()
-
-    def register_attacker(self, hero):
-        self.attackers.add(hero.name)
 
