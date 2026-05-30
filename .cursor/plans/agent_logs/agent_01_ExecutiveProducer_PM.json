@@ -3225,7 +3225,7 @@
             "Pre-existing presentation wall-clock exemptions (presentation-exempt, no action): engine.py chat-cooldown get_ticks, ursina_renderer.py:347 tax-overlay debug throttle, perf-overlay/camera-blend reads. Folded into the WK65 wall-clock note.",
             "Files created this sprint: game/sim/ai_view.py, game/sim/hero_commands.py, game/graphics/kenney_material.py, game/graphics/ursina_input_debug.py, game/graphics/ursina_screenshot.py, ai/behaviors/view_compat.py, tools/wk67_combat_capture_patch.py, tests/test_wk67_ai_boundary.py."
           ],
-          "pm_commits": "NOT COMMITTED / NOT PUSHED. Git is a human gate; awaiting Jaimie's explicit commit/push authorization (per agent-01-sprint-close-git-save-state.mdc)."
+          "pm_commits": "COMMITTED + PUSHED 2026-05-29 (Jaimie authorized): main 14b47d9..b76f6c7 (51 files, +8482/-4578; 8 new modules: game/sim/ai_view.py, game/sim/hero_commands.py, game/graphics/kenney_material.py + ursina_input_debug.py + ursina_screenshot.py, ai/behaviors/view_compat.py, tools/wk67_combat_capture_patch.py, tests/test_wk67_ai_boundary.py), pushed to origin jaimiemontague/Kingdom; local and origin/main in sync. Note: predecessor 14b47d9 (roll_agent_logs ordering fix) was the separate-agent ticket Jaimie excluded from WK67 -- no conflict."
         }
       }
     }
