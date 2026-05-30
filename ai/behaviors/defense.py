@@ -12,6 +12,39 @@ from game.sim.timebase import now_ms as sim_now_ms
 from ai.behaviors.view_compat import as_ai_view
 
 
+def _commit_until_ms(now_ms: int) -> int:
+    """Anti-oscillation target-commit deadline (sim-time ms) from ``now_ms``.
+
+    Reproduces the inline expression copy-pasted across the engage sites:
+    ``int(now_ms + int(float(TARGET_COMMIT_WINDOW_S) * 1000.0))``.
+    """
+    return int(now_ms + int(float(TARGET_COMMIT_WINDOW_S) * 1000.0))
+
+
+def engage(
+    hero: Any,
+    enemy: Any,
+    now_ms: int,
+    *,
+    set_fighting: bool = False,
+    set_position: bool = True,
+) -> None:
+    """Commit ``hero`` to ``enemy`` as a combat target (WK74 dedup helper).
+
+    Consolidates the "engage enemy" block duplicated ~8x in this module:
+    set the target, refresh the anti-oscillation commit window, and -- depending
+    on the call site -- either flip to ``FIGHTING`` (in attack range) or steer the
+    hero toward the enemy's position (out of range). Callers that need a specific
+    ``hero.state`` (e.g. ``MOVING``) still set it themselves after the call.
+    """
+    hero.target = enemy
+    hero._target_commit_until_ms = _commit_until_ms(now_ms)
+    if set_fighting:
+        hero.state = HeroState.FIGHTING
+    if set_position:
+        hero.set_target_position(enemy.x, enemy.y)
+
+
 def defend_castle(ai: Any, hero: Any, view: Any, castle: Any) -> None:
     """Send hero to defend the castle when it's damaged."""
     view = as_ai_view(view)
@@ -36,15 +69,9 @@ def defend_castle(ai: Any, hero: Any, view: Any, castle: Any) -> None:
     if target_enemy:
         dist_to_hero = hero.distance_to(target_enemy.x, target_enemy.y)
         if dist_to_hero <= hero.attack_range:
-            hero.target = target_enemy
-            hero._target_commit_until_ms = int(
-                now_ms + int(float(TARGET_COMMIT_WINDOW_S) * 1000.0)
-            )
-            hero.state = HeroState.FIGHTING
+            engage(hero, target_enemy, now_ms, set_fighting=True, set_position=False)
             return
-        hero.target = target_enemy
-        hero._target_commit_until_ms = int(now_ms + int(float(TARGET_COMMIT_WINDOW_S) * 1000.0))
-        hero.set_target_position(target_enemy.x, target_enemy.y)
+        engage(hero, target_enemy, now_ms)
         hero.state = HeroState.MOVING
         return
 
@@ -88,17 +115,9 @@ def defend_home_building(ai: Any, hero: Any, view: Any) -> None:
 
     if nearest_enemy:
         if nearest_dist <= hero.attack_range:
-            hero.target = nearest_enemy
-            hero._target_commit_until_ms = int(
-                now_ms + int(float(TARGET_COMMIT_WINDOW_S) * 1000.0)
-            )
-            hero.state = HeroState.FIGHTING
+            engage(hero, nearest_enemy, now_ms, set_fighting=True, set_position=False)
         else:
-            hero.target = nearest_enemy
-            hero._target_commit_until_ms = int(
-                now_ms + int(float(TARGET_COMMIT_WINDOW_S) * 1000.0)
-            )
-            hero.set_target_position(nearest_enemy.x, nearest_enemy.y)
+            engage(hero, nearest_enemy, now_ms)
     else:
         dist_to_home = hero.distance_to(building.center_x, building.center_y)
         if dist_to_home > TILE_SIZE * 2:
@@ -168,15 +187,9 @@ def defend_economic_building_warrior(ai: Any, hero: Any, view: Any) -> bool:
     if target_enemy:
         dist_to_hero = hero.distance_to(target_enemy.x, target_enemy.y)
         if dist_to_hero <= hero.attack_range:
-            hero.target = target_enemy
-            hero._target_commit_until_ms = int(
-                now_ms + int(float(TARGET_COMMIT_WINDOW_S) * 1000.0)
-            )
-            hero.state = HeroState.FIGHTING
+            engage(hero, target_enemy, now_ms, set_fighting=True, set_position=False)
             return True
-        hero.target = target_enemy
-        hero._target_commit_until_ms = int(now_ms + int(float(TARGET_COMMIT_WINDOW_S) * 1000.0))
-        hero.set_target_position(target_enemy.x, target_enemy.y)
+        engage(hero, target_enemy, now_ms)
         hero.state = HeroState.MOVING
         return True
 
@@ -253,15 +266,9 @@ def defend_neutral_building_if_visible(ai: Any, hero: Any, view: Any) -> bool:
     if target_enemy:
         dist_to_hero = hero.distance_to(target_enemy.x, target_enemy.y)
         if dist_to_hero <= hero.attack_range:
-            hero.target = target_enemy
-            hero._target_commit_until_ms = int(
-                now_ms + int(float(TARGET_COMMIT_WINDOW_S) * 1000.0)
-            )
-            hero.state = HeroState.FIGHTING
+            engage(hero, target_enemy, now_ms, set_fighting=True, set_position=False)
             return True
-        hero.target = target_enemy
-        hero._target_commit_until_ms = int(now_ms + int(float(TARGET_COMMIT_WINDOW_S) * 1000.0))
-        hero.set_target_position(target_enemy.x, target_enemy.y)
+        engage(hero, target_enemy, now_ms)
         hero.state = HeroState.MOVING
         return True
 

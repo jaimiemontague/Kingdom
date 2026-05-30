@@ -178,7 +178,7 @@ def test_do_shopping_passes_purchased_types_to_journey_and_returns_value() -> No
 
 
 def test_go_shopping_uses_adjacent_tile_when_available(monkeypatch) -> None:
-    monkeypatch.setattr("ai.behaviors.shopping.best_adjacent_tile", lambda *_args, **_kwargs: (3, 4))
+    monkeypatch.setattr("ai.behaviors.movement.best_adjacent_tile", lambda *_args, **_kwargs: (3, 4))
     ai = _AI(journey_returns=False)
     hero = _Hero()
     marketplace = SimpleNamespace(building_type="marketplace", center_x=999.0, center_y=888.0)

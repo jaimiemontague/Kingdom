@@ -9,6 +9,58 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk74_round_c2_ai_behavior_dedup": {
+      "sprint_meta": {
+        "sprint_id": "wk74_round_c2_ai_behavior_dedup",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "goal": "QA W3: pin the contract of the two WK74 AI-behavior dedup helpers (route_to_building, engage/_commit_until_ms) with focused behavior tests, then run the full DoD gate (A-F): full suite, determinism_guard, AI digest byte-identical (b73961...), qa_smoke --quick."
+      },
+      "rounds": {
+        "wk74_w3": {
+          "round_id": "wk74_w3",
+          "sprint_id": "wk74_round_c2_ai_behavior_dedup",
+          "status": "done",
+          "prompt_summary": "WK74 W3: create tests/test_wk74_ai_behavior_dedup.py -- (a) route_to_building (ai/behaviors/movement.py): monkeypatch best_adjacent_tile -> (gx,gy) asserts target_position == (gx*TILE_SIZE+TILE_SIZE/2, gy*TILE_SIZE+TILE_SIZE/2); -> None asserts target_position == (building.center_x, building.center_y); world falsy -> building-center AND best_adjacent_tile not consulted. (b) engage (ai/behaviors/defense.py): target is enemy, _target_commit_until_ms == int(now + int(float(TARGET_COMMIT_WINDOW_S)*1000.0)), set_target_position called with (enemy.x,enemy.y) by default, set_fighting=True -> FIGHTING, set_fighting=False -> state unchanged, set_position=False -> no set_target_position; plus _commit_until_ms(now) == formula. Full DoD gate (suite, determinism_guard, AI digest pin == b73961..., qa_smoke --quick). Only create the test; no production edits; DO NOT COMMIT.",
+          "round_meta": {
+            "wave": "W3 (behavior tests for both dedup helpers + final DoD gate)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "created_utc": "2026-05-30T00:00:00Z",
+            "depends_on": "wk74 W1 (Agent 06: route_to_building added to ai/behaviors/movement.py, wired at 7 sites) + W2 (Agent 06: engage/_commit_until_ms added to ai/behaviors/defense.py, wired at 8 sites). Digest unchanged after both."
+          },
+          "new_tests": [
+            "test_route_to_building_uses_adjacent_tile_world_center",
+            "test_route_to_building_falls_back_to_building_center_when_no_adj",
+            "test_route_to_building_falls_back_to_building_center_when_world_falsy",
+            "test_commit_until_ms_matches_inline_formula",
+            "test_engage_defaults_set_target_commit_and_position",
+            "test_engage_set_fighting_true_flips_state",
+            "test_engage_set_fighting_false_leaves_state_unchanged",
+            "test_engage_set_position_false_skips_set_target_position"
+          ],
+          "what_i_changed": {
+            "summary": "Created tests/test_wk74_ai_behavior_dedup.py (8 tests) pinning the contract of the two WK74 dedup helpers with minimal fakes (no game.entities.Hero / no pygame). route_to_building (3 tests): monkeypatch ai.behaviors.movement.best_adjacent_tile -> (a) a tile (gx,gy) asserts target_position == adj world-center via TILE_SIZE from config; (b) None asserts building-center; (c) world=None asserts building-center AND best_adjacent_tile is NOT consulted (short-circuit). engage (4 tests) + _commit_until_ms (1 test): default sets target is enemy, _target_commit_until_ms == int(now+int(float(TARGET_COMMIT_WINDOW_S)*1000.0)), exactly one set_target_position((enemy.x,enemy.y)) call, state untouched; set_fighting=True -> HeroState.FIGHTING; set_fighting=False leaves a pre-set MOVING state intact; set_position=False -> no set_target_position call (in-range FIGHTING variant); _commit_until_ms matches the inline formula across 5 now_ms values. No production code touched.",
+            "files_created": [
+              "tests/test_wk74_ai_behavior_dedup.py"
+            ],
+            "files_modified": [],
+            "production_code_edited": false
+          },
+          "dod_gate": {
+            "A_full_suite": "702 passed, 4 skipped, 0 failed (706 collected; +8 new wk74 behavior tests). Zero failures. PASS. NOTE: plan DoD-A quotes baseline '703 passed / 4 skipped' (707 total); actual collected set is 706 (698 pre-W3 + 8). The quoted 703 appears stale vs the live suite; the gate criterion 'all pass / 0 failed' holds.",
+            "B_determinism_guard": "PASS: no violations found (exit 0).",
+            "C_ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded BYTE-IDENTICAL to golden (pin constant unchanged at test_wk67_ai_boundary.py:181). tests/test_wk67_ai_boundary.py = 10 passed. The perfect guard confirms both helpers preserve AI behavior at every wired site. PASS.",
+            "D_qa_smoke_quick": "DONE: PASS (exit 0; base/intent_bounty/hero_stuck_repro/no-enemies/mock-LLM + speed_scaling 0.25/0.5/1.0x + interior_view/quest_panel/conversation/direct_prompt_integration all exit_code=0).",
+            "E_helpers_exist_and_wired": "PASS (verified by W1/W2, re-confirmed): route_to_building present in ai/behaviors/movement.py (single canonical impl); engage + _commit_until_ms present in ai/behaviors/defense.py and used at all 4 defend_* engage decision points (8 call sites). No inline copy remains at unified sites. My tests lock the helper contracts directly.",
+            "F_logs": "This log entry; PM hub close to be recorded by Agent 01.",
+            "verdict": "PASS (DoD A-F all green; digest byte-identical; one non-blocking note: plan's stated 703 baseline is stale vs 706 collected)"
+          },
+          "notes": "Constraint compliance: only tests/test_wk74_ai_behavior_dedup.py created; no production edits; nothing committed. TILE_SIZE=32 and TARGET_COMMIT_WINDOW_S=1.5 pulled live from config / hero_guardrails_tunables (not hardcoded). route_to_building world-falsy test additionally proves best_adjacent_tile is NOT called on that branch (the helper's only non-obvious control-flow detail)."
+        }
+      }
+    },
     "wk73_round_b2_enemy_stats_table": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk73_round_b2_enemy_stats_table.plan.md",

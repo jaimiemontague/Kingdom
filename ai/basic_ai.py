@@ -15,6 +15,7 @@ from ai.behaviors import (
     shopping,
     stuck_recovery,
 )
+from ai.behaviors.movement import route_to_building
 from ai.behaviors.view_compat import as_ai_view, view_to_legacy_context
 from ai.context_builder import ContextBuilder
 from ai.prompt_templates import get_fallback_decision
@@ -485,30 +486,13 @@ class BasicAI:
             hero_dist_home = hero.distance_to(hero.home_building.center_x, hero.home_building.center_y)
             closest_inn = min(inns, key=lambda b: hero.distance_to(b.center_x, b.center_y))
             if hero.distance_to(closest_inn.center_x, closest_inn.center_y) < hero_dist_home:
-                adj = best_adjacent_tile(world, buildings, closest_inn, hero.x, hero.y) if world else None
-                if adj:
-                    hero.target_position = (
-                        adj[0] * TILE_SIZE + TILE_SIZE / 2,
-                        adj[1] * TILE_SIZE + TILE_SIZE / 2,
-                    )
-                else:
-                    hero.target_position = (closest_inn.center_x, closest_inn.center_y)
+                route_to_building(hero, world, buildings, closest_inn)
                 hero.state = HeroState.MOVING
                 hero.target = {"type": "rest_inn", "inn": closest_inn}
                 return
 
         if hero.home_building:
-            if world:
-                adj = best_adjacent_tile(world, buildings, hero.home_building, hero.x, hero.y)
-                if adj:
-                    hero.target_position = (
-                        adj[0] * TILE_SIZE + TILE_SIZE / 2,
-                        adj[1] * TILE_SIZE + TILE_SIZE / 2,
-                    )
-                else:
-                    hero.target_position = (hero.home_building.center_x, hero.home_building.center_y)
-            else:
-                hero.target_position = (hero.home_building.center_x, hero.home_building.center_y)
+            route_to_building(hero, world, buildings, hero.home_building)
             hero.state = HeroState.MOVING
             hero.target = {"type": "going_home"}
 

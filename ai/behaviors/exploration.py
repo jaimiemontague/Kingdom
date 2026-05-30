@@ -15,9 +15,9 @@ from game.entities.buildings.types import BuildingType
 from game.entities.hero import HeroState
 from game.sim.hero_guardrails_tunables import TARGET_COMMIT_WINDOW_S
 from game.sim.timebase import now_ms as sim_now_ms
-from game.systems.navigation import best_adjacent_tile
 from game.world import Visibility
 
+from ai.behaviors.movement import route_to_building
 from ai.behaviors.view_compat import as_ai_view
 
 
@@ -219,18 +219,7 @@ def handle_idle(ai: Any, hero: Any, view: Any) -> None:
         marketplace = ai.shopping_behavior.find_marketplace_with_potions(buildings)
         if marketplace and hero.wants_to_shop(marketplace.can_sell_potions()):
             ai._debug_log(f"{hero.name} -> going shopping")
-            world = view.world
-            if world:
-                adj = best_adjacent_tile(world, buildings, marketplace, hero.x, hero.y)
-                if adj:
-                    hero.target_position = (
-                        adj[0] * TILE_SIZE + TILE_SIZE / 2,
-                        adj[1] * TILE_SIZE + TILE_SIZE / 2,
-                    )
-                else:
-                    hero.target_position = (marketplace.center_x, marketplace.center_y)
-            else:
-                hero.target_position = (marketplace.center_x, marketplace.center_y)
+            route_to_building(hero, view.world, buildings, marketplace)
             hero.state = HeroState.MOVING
             hero.target = {"type": "shopping", "marketplace": marketplace}
             return
@@ -242,18 +231,7 @@ def handle_idle(ai: Any, hero: Any, view: Any) -> None:
         blacksmith = ai.shopping_behavior.find_blacksmith(buildings, hero)
         if blacksmith and hero.gold >= 50:  # Assume upgrades cost at least 50 gold.
             ai._debug_log(f"{hero.name} -> going to Blacksmith for upgrades")
-            world = view.world
-            if world:
-                adj = best_adjacent_tile(world, buildings, blacksmith, hero.x, hero.y)
-                if adj:
-                    hero.target_position = (
-                        adj[0] * TILE_SIZE + TILE_SIZE / 2,
-                        adj[1] * TILE_SIZE + TILE_SIZE / 2,
-                    )
-                else:
-                    hero.target_position = (blacksmith.center_x, blacksmith.center_y)
-            else:
-                hero.target_position = (blacksmith.center_x, blacksmith.center_y)
+            route_to_building(hero, view.world, buildings, blacksmith)
             hero.state = HeroState.MOVING
             hero.target = {"type": "shopping", "blacksmith": blacksmith}
             return
@@ -296,18 +274,7 @@ def handle_idle(ai: Any, hero: Any, view: Any) -> None:
         ]
         if inns and ai._ai_rng.random() < 0.12:  # ~12% chance
             inn = min(inns, key=lambda b: hero.distance_to(b.center_x, b.center_y))
-            world = view.world
-            if world:
-                adj = best_adjacent_tile(world, buildings, inn, hero.x, hero.y)
-                if adj:
-                    hero.target_position = (
-                        adj[0] * TILE_SIZE + TILE_SIZE / 2,
-                        adj[1] * TILE_SIZE + TILE_SIZE / 2,
-                    )
-                else:
-                    hero.target_position = (inn.center_x, inn.center_y)
-            else:
-                hero.target_position = (inn.center_x, inn.center_y)
+            route_to_building(hero, view.world, buildings, inn)
             hero.state = HeroState.MOVING
             hero.target = {"type": "get_drink", "inn": inn}
             return

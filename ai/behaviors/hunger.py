@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from config import FOOD_MEAL_COST_GOLD, TILE_SIZE
+from config import FOOD_MEAL_COST_GOLD
 from game.entities.hero import HeroState
-from game.systems.navigation import best_adjacent_tile
 
+from ai.behaviors.movement import route_to_building
 from ai.behaviors.view_compat import as_ai_view
 from ai.contracts import HeroTask, TargetType, assign_hero_task
 
@@ -80,17 +80,7 @@ def go_to_food_stand(ai: Any, hero: Any, food_stand: Any, view: Any) -> None:
     buildings = view.buildings
     world = view.world
 
-    if world:
-        adj = best_adjacent_tile(world, buildings, food_stand, hero.x, hero.y)
-        if adj:
-            hero.target_position = (
-                adj[0] * TILE_SIZE + TILE_SIZE / 2,
-                adj[1] * TILE_SIZE + TILE_SIZE / 2,
-            )
-        else:
-            hero.target_position = (food_stand.center_x, food_stand.center_y)
-    else:
-        hero.target_position = (food_stand.center_x, food_stand.center_y)
+    route_to_building(hero, world, buildings, food_stand)
 
     hero.state = HeroState.MOVING
     # WK64 (audit item 15): author the task via the typed HeroTask API.

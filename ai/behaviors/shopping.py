@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from config import TILE_SIZE
 from game.entities.hero import HeroState
-from game.systems.navigation import best_adjacent_tile
 
+from ai.behaviors.movement import route_to_building
 from ai.behaviors.view_compat import as_ai_view, view_to_legacy_context
 from ai.contracts import HeroTask, TargetType, assign_hero_task
 from game.sim.hero_commands import HeroPurchaseCommand
@@ -52,17 +51,7 @@ def go_shopping(ai: Any, hero: Any, item_name: str, view: Any) -> None:
                 break
 
     if target_building:
-        if world:
-            adj = best_adjacent_tile(world, buildings, target_building, hero.x, hero.y)
-            if adj:
-                hero.target_position = (
-                    adj[0] * TILE_SIZE + TILE_SIZE / 2,
-                    adj[1] * TILE_SIZE + TILE_SIZE / 2,
-                )
-            else:
-                hero.target_position = (target_building.center_x, target_building.center_y)
-        else:
-            hero.target_position = (target_building.center_x, target_building.center_y)
+        route_to_building(hero, world, buildings, target_building)
         hero.state = HeroState.MOVING
         # WK64 (audit item 15): author the task via the typed HeroTask API.
         # assign_hero_task serializes to the identical legacy dict shape so

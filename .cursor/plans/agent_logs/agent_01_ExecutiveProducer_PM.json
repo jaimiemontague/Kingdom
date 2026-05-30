@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK74 CLOSE): wk74_round_c2_ai_behavior_dedup COMPLETE -- DoD met. Round C-2b AI-behavior dedup: (1) route_to_building (new ai/behaviors/movement.py) unified 7 byte-identical best_adjacent_tile->target_position sites (4 divergent left inline); (2) engage+_commit_until_ms (defense.py) unified 8 engage-enemy sites. ALSO HOTFIXED test_wk73_enemy_stats.py: it exec'd `git show HEAD:enemy.py` and crashed at collection once WK73 was committed (HEAD then = the post-refactor @dataclass source; synthetic-module __module__=None on py3.13) -- this had left main RED after the WK73 commit (5442c37). Agent 11 made the test self-contained via embedded literals. Behavior-preserving: 702 passed/4 skipped/0 failed, determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (the PERFECT guard for AI behavior). Agent 06 (2 gated waves), Agent 11 (hotfix + behavior test + DoD). LESSON: tests that exec `git show HEAD:<file>` for parity break once that file's refactor is committed -- use embedded literals or a PINNED commit, not HEAD. Plan: .cursor/plans/wk74_round_c2_ai_behavior_dedup.plan.md. WK73 was main 5442c37. Committing+pushing (this commit re-greens main). Next: WK75.",
+    "2026-05-30 (Agent 01 WK74 KICKOFF): Round C-2b AI-behavior dedup. (1) route_to_building (new ai/behaviors/movement.py) replacing ~11 copy-pasted best_adjacent_tile->target_position blocks; (2) engage+_commit_until_ms (defense.py) replacing ~8 set-target+commit-window blocks. Digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded is the PERFECT guard (it hashes AI decisions). Headless. Agent 06 (2 gated waves), Agent 11 behavior test+DoD. Plan: .cursor/plans/wk74_round_c2_ai_behavior_dedup.plan.md. WK73 was main 5442c37. NOT YET COMMITTED for WK74.",
     "2026-05-30 (Agent 01 WK73 CLOSE): wk73_round_b2_enemy_stats_table COMPLETE -- DoD met. Round B-2b: collapsed the 7 stat-block Enemy subclasses into one ENEMY_STATS table (EnemyStats dataclass) applied by Enemy.__init__; the 7 are now 1-line shims so lair.py/spawner.py construction is unchanged; register_attacker lifted to the Enemy base (gated on hasattr attackers, behavior-neutral). SkeletonArcher (behavioral kiting) left untouched. Behavior-preserving: 703 passed/4 skipped/0 failed (+36 stat-parity tests comparing __dict__ vs git HEAD for all 8 types), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL. Agent 05 (refactor+self-parity-proof), Agent 11 (parity test + DoD). Plan: .cursor/plans/wk73_round_b2_enemy_stats_table.plan.md. WK72 was main 065efa6. Committing+pushing. SESSION SO FAR: WK68(Round A finish)+WK69(sim split)+WK70(building registry)+WK71(hero split)+WK72(entity dedup)+WK73(enemy stats) all shipped. Next: WK74 (presentation split OR more dedup/registry; remaining: hud/ursina_renderer/engine/input_handler/ursina_app splits, Move 9, world.py split, config package, clusters 3/4/5, Round D AI router/splits, Round E audit, the 21-file zombie purge).",
     "2026-05-30 (Agent 01 WK73 KICKOFF): enemy.py ENEMY_STATS table (Round B-2b). Collapse 7 stat-block Enemy subclasses into one ENEMY_STATS table applied by Enemy.__init__; keep them as 1-line shims (construction sites unchanged); SkeletonArcher behavioral subclass stays. Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), headless. PIVOTED here from the zombie-purge (grep showed the 8 WK34 types are referenced in 21 files -- not cleanly dead; needs its own careful sprint). Agent 05 refactor, Agent 11 stat-parity+DoD. Plan: .cursor/plans/wk73_round_b2_enemy_stats_table.plan.md. WK72 was main 065efa6. NOT YET COMMITTED for WK73.",
     "2026-05-30 (Agent 01 WK72 CLOSE): wk72_round_c2_entity_dedup COMPLETE -- DoD met. Round C-2 entities-units dedup: (1) DifficultySystem.apply_to_enemy consolidated the triplicated HP/attack_power spawn-scaling (spawner/lairs/wave_events, 3 byte-identical blocks -> 1 method); (2) navigation.advance_along_path_to consolidated the path-replan block at Enemy.update + SkeletonArcher.update (2 sites). Agent 05 correctly LEFT guard.py inline (genuine behavior divergence -- unifying would move the digest; flagged as a deliberate-decision follow-up) and left hero/tax_collector out of scope per plan. Behavior-preserving: 667 passed/4 skipped/0 failed (+13 tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL. Agent 05 (2 gated waves), Agent 11 (regression+DoD). Plan: .cursor/plans/wk72_round_c2_entity_dedup.plan.md. WK71 was main 76c38f4. Committing+pushing. Next: WK73 (presentation split e.g. engine.py facades or input_handler package, OR more dedup/registry).",
@@ -3697,6 +3699,67 @@
             "06(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk73_round_b2_enemy_stats_table'].rounds['wk73_kickoff']) + plan .cursor/plans/wk73_round_b2_enemy_stats_table.plan.md; claude-opus-4-8; BEHAVIOR-PRESERVING, digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
+        }
+      }
+    },
+    "wk74_round_c2_ai_behavior_dedup": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T08:30:00Z",
+        "plan_doc": ".cursor/plans/wk74_round_c2_ai_behavior_dedup.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK74 / Round C-2b)",
+        "notes": "Round C-2b AI-behavior dedup: (1) route_to_building(hero,world,buildings,building) in new ai/behaviors/movement.py replacing the ~11 copy-pasted best_adjacent_tile->target_position blocks (exploration/shopping/hunger/journey/bounty/basic_ai); (2) engage(hero,enemy,now_ms)+_commit_until_ms in defense.py replacing the ~8 set-target+commit-window+FIGHTING blocks. The 300-tick AI-decision digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded is the PERFECT guard. Headless. Agent 06 (2 gated waves), Agent 11 (behavior test+DoD).",
+        "definition_of_done": [
+          "A. pytest all pass (703/4/0 baseline)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (verify after each helper)",
+          "D. qa_smoke green",
+          "E. route_to_building + engage helpers exist and replace the inline copies (divergent sites reported)",
+          "F. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "702 passed / 4 skipped / 0 failed",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical -- the perfect guard for AI behavior)",
+          "dedup_1": "route_to_building (new ai/behaviors/movement.py) -- 7 byte-identical best_adjacent_tile->target_position sites unified (exploration x3, shopping, hunger, basic_ai x2); 4 divergent sites correctly left inline (basic_ai is_lair, bounty_pursuit x2, journey -- different locals/fallbacks)",
+          "dedup_2": "engage + _commit_until_ms (ai/behaviors/defense.py) -- 8 engage-enemy sites unified (4 defend_* fns x in-range/out-of-range variants via set_fighting/set_position flags); building-intent-dict sites left inline",
+          "hotfix": "test_wk73_enemy_stats.py FIXED -- it exec'd `git show HEAD:enemy.py` which crashed at collection once WK73 was committed (the @dataclass + synthetic-module __module__=None on py3.13), leaving main RED. Made self-contained via embedded literals (dropped the live git-HEAD exec). Suite count 703->694 (removed 9 fragile git-HEAD tests) then +8 W3 = 702."
+        }
+      },
+      "rounds": {
+        "wk74_kickoff": {
+          "round_meta": {
+            "round_id": "wk74_kickoff",
+            "created_utc": "2026-05-30T08:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk74_round_c2_ai_behavior_dedup.plan.md",
+            "build_target": "route_to_building + engage AI dedup helpers",
+            "goal": "all tests pass; AI plays identically"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical (perfect guard for AI behavior)",
+            "wave_dag": "W1(06 route_to_building)->gate->W2(06 engage)->gate->W3(11 behavior test+DoD)->commit+push",
+            "dispatch_order": [
+              "06 W1",
+              "06 W2",
+              "11 W3"
+            ]
+          },
+          "pm_agent_prompts": {
+            "06": "[Agent 06] Two behavior-preserving AI dedups per plan .cursor/plans/wk74_round_c2_ai_behavior_dedup.plan.md section 1. The 300-tick AI-decision digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded is your PERFECT tripwire -- verify it after EACH helper; any drift means a site wasn't byte-identical. W1: create ai/behaviors/movement.py with route_to_building(hero, world, buildings, building) reproducing EXACTLY the block at exploration.py:224-233 (marketplace canonical): `adj = best_adjacent_tile(world, buildings, building, hero.x, hero.y); if adj: hero.target_position = (<adj world-center math from the canonical>) else: hero.target_position = (building.center_x, building.center_y)`. Replace every IDENTICAL occurrence -- exploration.py marketplace/blacksmith/inn (~224-310) and the same pattern in shopping.py/hunger.py/journey.py/bounty_pursuit.py/basic_ai.py (grep `best_adjacent_tile`). If a site differs (extra logic/different fallback), leave it inline or parameterize WITHOUT changing behavior -- report any divergent site. W2 (after PM gate): add engage(hero, enemy, now_ms, *, set_fighting=False) + _commit_until_ms(now_ms) (in defense.py or ai/behaviors/combat_targeting.py) reproducing `hero.target = enemy; hero._target_commit_until_ms = int(now_ms + int(float(TARGET_COMMIT_WINDOW_S)*1000.0)); hero.set_target_position(enemy.x, enemy.y)` (+ hero.state = HeroState.FIGHTING when set_fighting). Replace the ~8 defense.py occurrences EXACTLY (some set FIGHTING, some don't -- use the flag or set it at the call site). VERIFY each wave: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded UNCHANGED), python -m pytest -q (703 passed), determinism_guard, qa_smoke --quick. STOP after W1 for PM gate. Report per wave: the helper, the sites wired, any site left inline + why, digest, suite totals. DO NOT COMMIT; update agent_06 log (rounds wk74_w1/wk74_w2).",
+            "11": "[Agent 11] W3 (after 06): create tests/test_wk74_ai_behavior_dedup.py -- (a) route_to_building: for a sample building, assert it sets hero.target_position to the adj-tile world-center when best_adjacent_tile returns a tile, and to (building.center_x, building.center_y) when it returns None (monkeypatch best_adjacent_tile to control both branches); assert it matches the pre-dedup math. (b) engage: assert it sets hero.target==enemy, _target_commit_until_ms == now + TARGET_COMMIT_WINDOW_S*1000, set_target_position to enemy coords, and FIGHTING only when set_fighting=True. Run full DoD: pytest (all pass), determinism_guard, digest test (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke. Report PASS/FAIL + DoD A-F. Only your test; no prod edits; DO NOT COMMIT; update agent_11 log (round wk74_w3).",
+            "05": "[Agent 05 CONSULT] available if a route/engage site semantics are unclear. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "06",
+            "11",
+            "05(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk74_round_c2_ai_behavior_dedup'].rounds['wk74_kickoff']) + plan .cursor/plans/wk74_round_c2_ai_behavior_dedup.plan.md; claude-opus-4-8; BEHAVIOR-PRESERVING, digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged (PERFECT guard -- verify after each helper); NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }
