@@ -6,7 +6,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from game.graphics import ursina_renderer as ur
+# WK87: _sync_building_worldspace_ui moved to ursina_building_ui; patch Text/Vec3/scene
+# on the module where the function now reads them ("patch where it's used").
+from game.graphics import ursina_building_ui as ur
 from game.graphics.ursina_renderer import (
     _building_gold_overlay_world_y,
     _sync_building_worldspace_ui,

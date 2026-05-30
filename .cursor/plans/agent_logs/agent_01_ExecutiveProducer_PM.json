@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK87 CLOSE): wk87_round_b_ursina_building_ui COMPLETE -- DoD met. First slice of the ursina_renderer.py (1959 -> 1780 LOC) split: moved the tax-overlay public API (set/is_tax_gold_overlay_held) + building_tax_overlay_snapshot + _sync_building_worldspace_ui + _maybe_log_tax_overlay_debug + overlay-Y helpers + _prefab_local_top_y (8 module fns) into game/graphics/ursina_building_ui.py; re-exported same-object from ursina_renderer so building-sync call sites + tests are unchanged; shared unit-overlay chrome (_configure_ks_overlay/_ensure_ks_name_label/_sync_ks_facing_overlay) stayed. Agent 09 repointed 2 wk61 test monkeypatch targets (patch-where-used). No cycle (ursina_building_ui never imports ursina_renderer). Behavior/visually-preserving: 849 passed/4 skipped/0 failed (+15 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, before/after tax-overlay screenshot BYTE-IDENTICAL (PM + Agent 11 both verified). Agent 09 extract+screenshot, Agent 11 verify. Plan: .cursor/plans/wk87_round_b_ursina_building_ui.plan.md. WK86 was main 3bdb57e. Committing+pushing. SESSION: 20 sprints WK68-87 shipped; suite 601->849; digest b73961 held byte-identical throughout all 20. REMAINING: rest of ursina_renderer.py split (unit-sync/building-sync/frustum/anim/misc-props); hud.py(2477); ursina_terrain_fog_collab/ursina_app; Move 9; world.py fog; context_builder/direct_prompt_validator; ai/vocab.py + TaskRouter; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK88.",
+    "2026-05-30 (Agent 01 WK87 KICKOFF): extract ursina_building_ui.py (Round B-4, first ursina_renderer split slice). Move the tax-overlay public API (set/is_tax_gold_overlay_held) + building_tax_overlay_snapshot + _sync_building_worldspace_ui + _maybe_log_tax_overlay_debug + overlay-Y helpers from ursina_renderer.py (1959 LOC) into game/graphics/ursina_building_ui.py; re-export the public names for ursina_app/lifecycle. Pure-move of module functions; shared unit-overlay chrome stays. Behavior/visually-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded + before/after Ursina screenshots: tax overlay + base labels). Agent 09 extract+screenshot, Agent 11 verify. Plan: .cursor/plans/wk87_round_b_ursina_building_ui.plan.md. WK86 was main 3bdb57e. NOT YET COMMITTED for WK87.",
     "2026-05-30 (Agent 01 WK86 CLOSE): wk86_round_b_worldgen_extract COMPLETE -- DoD met. Moved generate_terrain + generate_heightmap + flatten_building_footprints from game/world.py (483 -> 278 LOC) into game/worldgen.py behind delegating wrappers (pure-move). World.render/render_fog were already moved out in WK66 (L10). Dual heightmap writes (World.heightmap + terrain_height module) + RNG order preserved. TileType lazy-imported inside the fns; World TYPE_CHECKING-only; no cycle (static AST + dynamic both-order). Behavior-preserving: 834 passed/4 skipped/0 failed (+9 seam+snapshot tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, world-snapshot hash pinned (tiles 1418f96... + heightmap 87f69ce...). Agent 03 extract, Agent 11 verify+snapshot. Plan: .cursor/plans/wk86_round_b_worldgen_extract.plan.md. WK85 was main 8c0b8ba. Committing+pushing. SESSION: 19 sprints WK68-86 shipped; suite 601->834; digest b73961 held byte-identical throughout. REMAINING (fresh-context tier): hud.py(2477)/ursina_renderer-body/ursina_terrain_fog_collab/ursina_app SCREENSHOT-HEAVY splits; Move 9; world.py fog state-machine; context_builder/direct_prompt_validator restructures; ai/vocab.py + TaskRouter; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK87.",
     "2026-05-30 (Agent 01 WK86 KICKOFF): world.py worldgen extraction (Round B-3). Move generate_terrain + generate_heightmap from game/world.py (483 LOC) into game/worldgen.py behind delegating wrappers (pure-move). World.render/render_fog already moved out in WK66 (L10 closed); fog state-machine extraction deferred. Digest-guarded (the seeded world is part of the deterministic scenario -- generation drift breaks the digest); headless. Preserve RNG order + the dual heightmap writes (World.heightmap + terrain_height module). Agent 03 extract, Agent 11 verify + world-snapshot pin. Plan: .cursor/plans/wk86_round_b_worldgen_extract.plan.md. WK85 was main 8c0b8ba. NOT YET COMMITTED for WK86.",
     "2026-05-30 (Agent 01 WK85 CLOSE): wk85_round_d_handle_idle_split COMPLETE -- DoD met. Decomposed exploration.handle_idle (128-LOC god-function) into 8 ordered named _idle_* step functions (clear_dangling_bounty, take_bounty, seek_meal, shopping, engage_nearby_enemy, get_drink, visit_poi, patrol_zone) driven by a thin handle_idle iterating _IDLE_STEPS (returns on first True). Same branches/order/effects; shared locals (as_ai_view hoist, enemy scan, now_ms) preserved exactly. Behavior-preserving DECOMPOSITION: 825 passed/4 skipped/0 failed (+18 driver pins), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (PERFECT guard -- handle_idle IS the idle decisions; byte-identical first pass, 0 iterations). Agent 06 decompose, Agent 11 verify. Plan: .cursor/plans/wk85_round_d_handle_idle_split.plan.md. WK84 was main 0748a93. Committing+pushing. SESSION: 18 sprints WK68-85 shipped; suite 601->825; digest b73961 held byte-identical throughout all 18. REMAINING (harder/fresh-context tier): hud.py split (2477) + ursina_renderer body + ursina_terrain_fog_collab + ursina_app (SCREENSHOT-HEAVY); Move 9 (risky reorder); context_builder/direct_prompt_validator restructures; ai/vocab.py + TaskRouter (Move 12); world.py; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK86.",
@@ -4502,6 +4504,67 @@
             "09(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk86_round_b_worldgen_extract'].rounds['wk86_kickoff']) + plan .cursor/plans/wk86_round_b_worldgen_extract.plan.md; claude-opus-4-8; PURE MOVE behavior-preserving, keep wrapper names, TYPE_CHECKING-only World import, preserve RNG order + the dual heightmap writes; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded must stay byte-identical; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
+        }
+      }
+    },
+    "wk87_round_b_ursina_building_ui": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T21:30:00Z",
+        "plan_doc": ".cursor/plans/wk87_round_b_ursina_building_ui.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK87 / Round B-4)",
+        "notes": "Round B-4 (first ursina_renderer split slice): extract the tax-overlay public API + building world-space UI module functions from ursina_renderer.py (1959 LOC) into game/graphics/ursina_building_ui.py; re-export the public *_tax_gold_overlay_held names for ursina_app/lifecycle callers. Pure-move of module functions; shared unit-overlay chrome stays. Behavior/visually-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded + before/after Ursina screenshots: tax overlay + base labels). Agent 09 extract, Agent 11 verify+screenshot.",
+        "definition_of_done": [
+          "A. pytest all pass (834/4/0)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded",
+          "D. qa_smoke green",
+          "E. game/graphics/ursina_building_ui.py exists; *_tax_gold_overlay_held re-exported from ursina_renderer; call sites resolve; ursina_renderer.py smaller; no cycle",
+          "F. before/after Ursina screenshots (tax overlay + base labels) visually identical",
+          "G. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "849 passed / 4 skipped / 0 failed (834 + 15 seam tests)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961... byte-identical",
+          "screenshots": "tax-overlay before/after BYTE-IDENTICAL (same sha256); base identical except a fluctuating debug perf-HUD digit",
+          "ursina_renderer_loc": "1959 -> 1780 (-179)",
+          "result": "tax-overlay public API + building world-space UI (8 module fns) moved to game/graphics/ursina_building_ui.py; re-exported same-object from ursina_renderer so call sites + tests unchanged; shared unit-overlay chrome stayed; no cycle. First slice of the ursina_renderer.py split."
+        }
+      },
+      "rounds": {
+        "wk87_kickoff": {
+          "round_meta": {
+            "round_id": "wk87_kickoff",
+            "created_utc": "2026-05-30T21:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk87_round_b_ursina_building_ui.plan.md",
+            "build_target": "extract ursina_building_ui.py (tax overlay + building world-space UI)",
+            "goal": "all tests pass; render visually identical"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "before/after Ursina screenshots (tax overlay + base labels) identical + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical",
+            "wave_dag": "W1(09 extract+screenshots)->gate->W2(11 verify+screenshot review)->commit",
+            "dispatch_order": [
+              "09 W1",
+              "11 W2"
+            ]
+          },
+          "pm_agent_prompts": {
+            "09": "[Agent 09 ArtDirector] Extract the tax-overlay + building world-space UI MODULE functions out of game/graphics/ursina_renderer.py into a new game/graphics/ursina_building_ui.py per plan .cursor/plans/wk87_round_b_ursina_building_ui.plan.md sections 1-2 (pure move of module-level functions + re-export). FIRST capture the BEFORE screenshots: python tools/run_ursina_capture_once.py --scenario wk61_hold_g_tax_overlay --ticks 480 --no-llm --out docs/screenshots/wk87_before_tax ; and the base overview (default no-scenario path) --out docs/screenshots/wk87_before_base. Then move VERBATIM into ursina_building_ui.py: set_tax_gold_overlay_held (~154), is_tax_gold_overlay_held (~159), the _debug_tax_overlay/_tax_overlay_debug_last_print state, building_tax_overlay_snapshot (~169), _building_gold_overlay_y (~218), _building_gold_overlay_world_y (~227), _sync_building_worldspace_ui (~266-352), _maybe_log_tax_overlay_debug (~353-385). RE-EXPORT set_tax_gold_overlay_held + is_tax_gold_overlay_held (+ building_tax_overlay_snapshot if imported elsewhere) from ursina_renderer (from game.graphics.ursina_building_ui import ...) so ursina_app + engine lifecycle callers of set_tax_gold_overlay_held are unchanged. Update ursina_renderer's building-sync call sites (~1294/1329/1381 _sync_building_worldspace_ui, ~1386 _maybe_log_tax_overlay_debug) to call via the new module/re-export. SHARED chrome helpers (_prefab_local_top_y, _configure_ks_overlay, _sync_ks_facing_overlay, _ensure_ks_name_label) are shared with UNIT rendering -- grep their callers; do NOT move them unless building-only; if _sync_building_worldspace_ui needs them, import them (leaf/lazy) -- pick the cycle-free cut. RULES: ursina_building_ui.py imports leaf deps (ursina, config); NO module-top import of ursina_renderer for anything it needs back; verify fresh import. Move VERBATIM (no position/logic change). AFTER: capture AFTER screenshots (same 2 scenarios, _after suffix), VIEW before vs after -- they MUST be visually identical (tax $N overlay + building name labels). VERIFY: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), python -m pytest -q (834 passed), determinism_guard, qa_smoke --quick, import check (from game.graphics.ursina_renderer import set_tax_gold_overlay_held). If the screenshots differ, you moved/broke something live -- revert+reinvestigate. Report: ursina_building_ui.py + functions moved, the re-exports, which shared helpers you left, ursina_renderer.py new LOC (was 1959), before/after screenshot paths + visual verdict, digest, suite totals, no-cycle. Lane = ursina_renderer.py + new ursina_building_ui.py (+ ursina_unit_overlays.py ONLY if a shared helper's natural home). DO NOT COMMIT; update agent_09 log (round wk87_w1).",
+            "11": "[Agent 11] W2 (after 09): create tests/test_wk87_ursina_building_ui.py: assert game.graphics.ursina_building_ui has the moved functions (set_tax_gold_overlay_held/is_tax_gold_overlay_held/building_tax_overlay_snapshot/_sync_building_worldspace_ui/_maybe_log_tax_overlay_debug); assert set_tax_gold_overlay_held + is_tax_gold_overlay_held are STILL importable from game.graphics.ursina_renderer (re-export) and are the same objects; assert set/is_tax_gold_overlay_held round-trips (set True -> is True -> set False -> is False); AST/import guard ursina_building_ui doesn't import ursina_renderer at module top + no module-load cycle (fresh subprocess both orders). INDEPENDENTLY VIEW Agent 09's before/after screenshots (wk87_before_tax vs wk87_after_tax, wk87_before_base vs wk87_after_base) -- confirm visually identical (tax $N overlay + building labels); written verdict. Full DoD: pytest (all pass), determinism_guard, digest (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke. Report PASS/FAIL + DoD A-G + screenshot verdict. Only your test; no prod edits; DO NOT COMMIT; update agent_11 log (round wk87_w2).",
+            "03": "[Agent 03 CONSULT] available if ursina_building_ui <-> ursina_renderer cycles. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "09",
+            "11",
+            "03(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk87_round_b_ursina_building_ui'].rounds['wk87_kickoff']) + plan .cursor/plans/wk87_round_b_ursina_building_ui.plan.md; claude-opus-4-8; PURE MOVE module functions, re-export the public names, do NOT move shared unit-overlay chrome, lazy/leaf imports to avoid cycle; before/after Ursina screenshots (tax overlay + base labels) MUST match + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }

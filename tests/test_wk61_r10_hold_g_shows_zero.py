@@ -56,11 +56,11 @@ def test_sync_building_worldspace_ui_shows_zero_dollar_while_g_held() -> None:
 
     set_tax_gold_overlay_held(True)
     try:
-        from game.graphics import ursina_renderer as ur
+        from game.graphics import ursina_building_ui as ur
 
         with patch.object(ur, "scene", scene_stub):
-            with patch("game.graphics.ursina_renderer.Text", side_effect=_fake_text):
-                with patch("game.graphics.ursina_renderer.Vec3", side_effect=lambda x, y, z: (x, y, z)):
+            with patch("game.graphics.ursina_building_ui.Text", side_effect=_fake_text):
+                with patch("game.graphics.ursina_building_ui.Vec3", side_effect=lambda x, y, z: (x, y, z)):
                     _sync_building_worldspace_ui(
                         marketplace,
                         "marketplace",
@@ -97,11 +97,11 @@ def test_sync_building_worldspace_ui_zero_stash_uses_dim_grey() -> None:
 
     set_tax_gold_overlay_held(True)
     try:
-        from game.graphics import ursina_renderer as ur
+        from game.graphics import ursina_building_ui as ur
 
         with patch.object(ur, "scene", object()):
-            with patch("game.graphics.ursina_renderer.Text", side_effect=_fake_text):
-                with patch("game.graphics.ursina_renderer.Vec3", side_effect=lambda x, y, z: (x, y, z)):
+            with patch("game.graphics.ursina_building_ui.Text", side_effect=_fake_text):
+                with patch("game.graphics.ursina_building_ui.Vec3", side_effect=lambda x, y, z: (x, y, z)):
                     _sync_building_worldspace_ui(
                         building, "food_stand", ent, is_lair=False, wx=0.0, wz=0.0, terrain_y=0.0, hy=2.0
                     )
@@ -132,11 +132,11 @@ def test_sync_building_worldspace_ui_positive_stash_uses_gold_color() -> None:
 
     set_tax_gold_overlay_held(True)
     try:
-        from game.graphics import ursina_renderer as ur
+        from game.graphics import ursina_building_ui as ur
 
         with patch.object(ur, "scene", object()):
-            with patch("game.graphics.ursina_renderer.Text", side_effect=_fake_text):
-                with patch("game.graphics.ursina_renderer.Vec3", side_effect=lambda x, y, z: (x, y, z)):
+            with patch("game.graphics.ursina_building_ui.Text", side_effect=_fake_text):
+                with patch("game.graphics.ursina_building_ui.Vec3", side_effect=lambda x, y, z: (x, y, z)):
                     _sync_building_worldspace_ui(
                         building, "marketplace", ent, is_lair=False, wx=0.0, wz=0.0, terrain_y=0.0, hy=2.0
                     )
@@ -162,8 +162,8 @@ def test_release_g_hides_existing_gold_label_without_rebuild() -> None:
 
     set_tax_gold_overlay_held(False)
     with patch("ursina.held_keys", {}, create=True):
-        with patch("game.graphics.ursina_renderer.Vec3", side_effect=lambda x, y, z: (x, y, z)):
-            with patch("game.graphics.ursina_renderer.Text", MagicMock()) as mock_text:
+        with patch("game.graphics.ursina_building_ui.Vec3", side_effect=lambda x, y, z: (x, y, z)):
+            with patch("game.graphics.ursina_building_ui.Text", MagicMock()) as mock_text:
                 _sync_building_worldspace_ui(
                     building, "marketplace", ent, is_lair=False, wx=0.0, wz=0.0, terrain_y=0.0, hy=2.0
                 )
