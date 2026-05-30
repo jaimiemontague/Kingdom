@@ -32,17 +32,20 @@ from game.ui.ui_actions import UIAction, normalize_ui_action
 from game.ui.widgets import Button, HPBar, NineSlice, Panel, TextLabel
 
 COLOR_PIN_GOLD = (220, 180, 50)
-WATCH_CARD_HEADER_H = 18
-WATCH_CARD_MAP_H = 160
-WATCH_CARD_STATS_H = 78
-# Snug vitals block when chat band is collapsed (no dead padding under stats rows).
-WATCH_CARD_STATS_COMPACT_H = 58
-WATCH_CARD_CHAT_H = 150
-WATCH_CARD_FULL_H_WITH_CHAT = (
-    WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H + WATCH_CARD_CHAT_H
+# WATCH_CARD_* layout constants moved to game.ui.hud_watch_card (WK96); re-imported
+# here so the names stay module attributes of hud — preserving
+# `from game.ui.hud import WATCH_CARD_*` (tests/test_wk52_watch_card.py) and the
+# bare-name references in the watch-card layout helpers that STAY on HUD.
+from game.ui.hud_watch_card import (
+    WATCH_CARD_HEADER_H,
+    WATCH_CARD_MAP_H,
+    WATCH_CARD_STATS_H,
+    WATCH_CARD_STATS_COMPACT_H,
+    WATCH_CARD_CHAT_H,
+    WATCH_CARD_FULL_H_WITH_CHAT,
+    WATCH_CARD_FULL_H_NO_CHAT,
+    WATCH_CARD_FULL_H,
 )
-WATCH_CARD_FULL_H_NO_CHAT = WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_COMPACT_H
-WATCH_CARD_FULL_H = WATCH_CARD_FULL_H_WITH_CHAT
 HERO_LEFT_MIN_H = 80
 HERO_MENU_CHAT_GAP = 4
 HERO_MENU_CHAT_MIN_H = 152
@@ -1011,159 +1014,8 @@ class HUD:
         minimap_rect: pygame.Rect,
         game_state: dict,
     ) -> None:
-        """Watch card above minimap: header, optional map slot + stats + chat (WK52)."""
-        self._card_slot_kind = "hero"
-        pin = self._pin_slot
-        profiles = game_state.get("hero_profiles_by_id") or {}
-        prof = profiles.get(pin.hero_id)
-
-        cw = minimap_rect.width
-        sh = int(surface.get_height())
-        if self._left_watch_rect is not None:
-            watch_rect = self._left_watch_rect
-            cx = watch_rect.x
-            cy = watch_rect.y
-            ch = watch_rect.height
-            cw = watch_rect.width
-        else:
-            ch = self._effective_watch_card_h(sh)
-            cx = minimap_rect.x
-            cy = minimap_rect.y - ch
-
-        raw_name = pin.pinned_name or "Hero"
-        name_max_w = max(8, cw - 14 - 8)
-        name_sig = (raw_name, name_max_w)
-        if self._watch_name_sig != name_sig or self._watch_name_surf is None:
-            name = raw_name
-            name_surf = self.font_tiny.render(name, True, (200, 195, 220))
-            while name_surf.get_width() > name_max_w and len(name) > 2:
-                name = name[:-1]
-                name_surf = self.font_tiny.render(name + "…", True, (200, 195, 220))
-            self._watch_name_sig = name_sig
-            self._watch_name_surf = name_surf
-        name_surf = self._watch_name_surf
-
-        card_rect, self._watch_card_chevron_rect, body_top = self._info_card.draw_shell(
-            surface,
-            cx=cx,
-            cy=cy,
-            cw=cw,
-            ch=ch,
-            expanded=self._watch_card_expanded,
-            header_h=WATCH_CARD_HEADER_H,
-            name_surf=name_surf,
-            chevron_surf=None,
-            header_close_x=True,
-        )
-        self._watch_card_rect = card_rect
-
-        if not self._watch_card_expanded:
-            return
-
-        map_h, stats_h, chat_h = self._watch_card_body_split(ch)
-        if map_h <= 0:
-            return
-
-        map_rect = pygame.Rect(cx + 2, cy + WATCH_CARD_HEADER_H, cw - 4, map_h)
-        pygame.draw.rect(surface, (8, 10, 16), map_rect)
-        self.watch_card_map_rect = map_rect
-
-        sy = cy + WATCH_CARD_HEADER_H + map_h + 4
-        bar_h = 6
-        gutter = 6
-        half = max(52, (cw - gutter * 3) // 2)
-        left_x = cx + 4
-        right_x = left_x + half + gutter // 2
-        bar_left_w = max(36, half - 4)
-        painted_stats_bottom_for_chat: int | None = None
-        self._chat_open_rect = None
-
-        if stats_h > 0 and prof is not None:
-            vitals = getattr(prof, "vitals", None)
-            prog = getattr(prof, "progression", None)
-            idn = getattr(prof, "identity", None)
-
-            hp = int(getattr(vitals, "hp", 0) if vitals else 0)
-            max_hp = int(getattr(vitals, "max_hp", 1) if vitals else 1)
-            xp = int(getattr(prog, "xp", 0) if prog else 0)
-            xp_to_lv = int(getattr(prog, "xp_to_level", 100) if prog else 100)
-            level = int(getattr(idn, "level", 1) if idn else 1)
-
-            stats_sig = (hp, max_hp, xp, xp_to_lv, level)
-            if self._watch_stats_sig != stats_sig or self._watch_hp_label_surf is None:
-                self._watch_stats_sig = stats_sig
-                self._watch_hp_label_surf = self.font_tiny.render(
-                    f"HP {hp}/{max_hp}", True, (190, 190, 190)
-                )
-                self._watch_xp_label_surf = self.font_tiny.render(
-                    f"XP {xp}/{xp_to_lv}", True, (190, 190, 190)
-                )
-                self._watch_lv_label_surf = self.font_tiny.render(
-                    f"Lvl {level}", True, (220, 200, 120)
-                )
-                self._watch_mana_label_surf = self.font_tiny.render("Mana —", True, (80, 78, 95))
-
-            row1_y = sy
-            surface.blit(self._watch_hp_label_surf, (left_x, row1_y))
-            surface.blit(self._watch_mana_label_surf, (right_x, row1_y))
-            bar_y1 = row1_y + self._watch_hp_label_surf.get_height() + 1
-            HPBar.render(surface, pygame.Rect(left_x, bar_y1, bar_left_w, bar_h), hp, max_hp)
-
-            row2_y = bar_y1 + bar_h + 5
-            surface.blit(self._watch_xp_label_surf, (left_x, row2_y))
-            surface.blit(self._watch_lv_label_surf, (right_x, row2_y))
-
-            if not self._chat_visible:
-                lv_surf = self._watch_lv_label_surf
-                bx = right_x + lv_surf.get_width() + 4
-                bh = max(16, lv_surf.get_height() + 2)
-                bw = max(40, self.font_tiny.size("Chat")[0] + 10)
-                bw = min(bw, cx + cw - bx - 6)
-                btn_r = pygame.Rect(bx, row2_y + max(0, (lv_surf.get_height() - bh) // 2), bw, bh)
-                if btn_r.width > 8 and btn_r.height > 8:
-                    NineSlice.render(surface, btn_r, self._button_tex_normal, border=self._button_slice_border)
-                    chat_lbl = self.font_tiny.render("Chat", True, (210, 205, 230))
-                    surface.blit(
-                        chat_lbl,
-                        (
-                            btn_r.centerx - chat_lbl.get_width() // 2,
-                            btn_r.centery - chat_lbl.get_height() // 2,
-                        ),
-                    )
-                    self._chat_open_rect = btn_r
-
-            bar_y2 = row2_y + self._watch_xp_label_surf.get_height() + 1
-            xp_ratio = max(0.0, min(1.0, xp / max(1, xp_to_lv)))
-            pygame.draw.rect(surface, (40, 40, 55), pygame.Rect(left_x, bar_y2, bar_left_w, bar_h))
-            if xp_ratio > 0:
-                pygame.draw.rect(
-                    surface, (70, 130, 210), pygame.Rect(left_x, bar_y2, int(bar_left_w * xp_ratio), bar_h)
-                )
-            pygame.draw.rect(surface, (20, 20, 30), pygame.Rect(left_x, bar_y2, bar_left_w, bar_h), 1)
-            painted_stats_bottom_for_chat = bar_y2 + bar_h
-        elif stats_h > 0:
-            if self._watch_mana_label_surf is None:
-                self._watch_mana_label_surf = self.font_tiny.render("Mana —", True, (80, 78, 95))
-
-        if chat_h > 0 and self._chat_visible:
-            chat_rect_inside_card = self._watch_chat_band_rect(
-                cx,
-                cy,
-                cw,
-                ch,
-                map_h,
-                stats_h,
-                chat_h,
-                profiles,
-                str(pin.hero_id),
-                painted_stats_bottom_override=painted_stats_bottom_for_chat,
-            )
-            if chat_rect_inside_card is not None:
-                self._watch_card_chat_rect = chat_rect_inside_card
-                self._chat_panel.render_watch_band(
-                    surface, chat_rect_inside_card, game_state, str(pin.hero_id)
-                )
-                self._chat_close_rect = getattr(self._chat_panel, "_watch_band_close_rect", None)
+        from game.ui import hud_watch_card
+        return hud_watch_card.render_hero_watch_card_infocard(self, surface, minimap_rect, game_state)
 
     def _render_card_slot(
         self,
@@ -1171,17 +1023,8 @@ class HUD:
         minimap_rect: pygame.Rect,
         game_state: dict,
     ) -> None:
-        self.watch_card_map_rect = None
-        self._watch_card_rect = None
-        self._watch_card_chevron_rect = None
-        self._watch_card_chat_rect = None
-        self._chat_close_rect = None
-        self._chat_open_rect = None
-        self._card_slot_kind = None
-
-        if self._pin_slot.hero_id is None:
-            return
-        self._render_hero_watch_card_infocard(surface, minimap_rect, game_state)
+        from game.ui import hud_watch_card
+        return hud_watch_card.render_card_slot(self, surface, minimap_rect, game_state)
 
     def _render_watch_card_chrome(
         self,
@@ -1189,8 +1032,8 @@ class HUD:
         minimap_rect: pygame.Rect,
         game_state: dict,
     ) -> None:
-        """WK52: pinned hero watch card above minimap (unaffected by building selection)."""
-        self._render_card_slot(surface, minimap_rect, game_state)
+        from game.ui import hud_watch_card
+        return hud_watch_card.render_watch_card_chrome(self, surface, minimap_rect, game_state)
 
     def _ensure_radar_terrain_surface(self, inner: pygame.Rect, world) -> pygame.Surface | None:
         from game.ui import hud_radar
