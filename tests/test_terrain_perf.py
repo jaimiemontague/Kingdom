@@ -392,7 +392,12 @@ class TestTerrainEntityTracking:
 
         stub_self = type("RendererStub", (), {})()
 
-        with patch.object(ursina_renderer, "camera", fake_cam):
+        # WK88: the frustum math moved to game.graphics.ursina_frustum (behind a
+        # delegating wrapper on UrsinaRenderer); patch the ``camera`` global in
+        # its new home so the FOV-heuristic path sees the fake camera state.
+        import game.graphics.ursina_frustum as ursina_frustum
+
+        with patch.object(ursina_frustum, "camera", fake_cam):
             rect = ursina_renderer.UrsinaRenderer._get_visible_tile_rect(stub_self)
 
         min_tx, min_ty, max_tx, max_ty = rect

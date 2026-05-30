@@ -822,6 +822,62 @@
           ]
         }
       }
+    },
+    "wk88_round_b_ursina_frustum": {
+      "sprint_meta": {
+        "notes": "WK88 Round B-5 (Agent 09): extracted the camera frustum-culling math (_get_visible_tile_rect + _entity_in_view) out of ursina_renderer.py into new game/graphics/ursina_frustum.py. Pure VERBATIM move behind 1-line delegating wrappers (same names). The _frame_visible_rect cache field + its update() assignment stay on the renderer; only the rect-COMPUTE moved. Render visually unchanged (before/after base_overview identical).",
+        "created_utc": "2026-05-30T16:05:15.617147+00:00"
+      },
+      "rounds": {
+        "wk88_w1": {
+          "sprint_id": "wk88_round_b_ursina_frustum",
+          "round_id": "wk88_w1",
+          "status": "done",
+          "role": "WAVE W1 - extract ursina_frustum.py (camera frustum-culling math) from ursina_renderer.py behind delegating wrappers; before/after base_overview screenshot verify; suite+digest+gates.",
+          "what_i_changed": {
+            "game/graphics/ursina_frustum.py (NEW, 208 LOC)": [
+              "MOVED VERBATIM: _get_visible_tile_rect (was renderer ~654-831) -> def get_visible_tile_rect(r) -> tuple[int,int,int,int]: (self.->r.). _entity_in_view (was ~832-838) -> def entity_in_view(r, sim_x, sim_y) -> bool: (self.->r.). Bodies byte-for-byte identical (lens-extrusion strategy 1 + FOV/pitch heuristic strategy 2 + full_rect fallback); the two self.* reads/writes that moved are r._visible_rect_lens_warned (getattr/setattr) and r._frame_visible_rect (read in entity_in_view).",
+              "Module-level leaf deps only: import config; from ursina import camera. math/panda3d.core(Point2,Point3)/ursina.application are imported LOCALLY inside the functions exactly as the original methods did. UrsinaRenderer imported ONLY under if TYPE_CHECKING (from __future__ import annotations). NO module-top import of ursina_renderer -> no cycle."
+            ],
+            "game/graphics/ursina_renderer.py (1780 -> 1602 LOC)": [
+              "Replaced the 2 method bodies (~185 lines) with 1-line lazy-delegating wrappers (SAME names): _get_visible_tile_rect(self){from game.graphics import ursina_frustum; return ursina_frustum.get_visible_tile_rect(self)} and _entity_in_view(self, sim_x, sim_y){...entity_in_view(self, sim_x, sim_y)}.",
+              "UNCHANGED: update() line self._frame_visible_rect = self._get_visible_tile_rect() (~707 post-edit), the _frame_visible_rect cache field on the renderer, the cull_terrain_chunks(self._frame_visible_rect,...) read, and all sync-method self._entity_in_view(...) call sites (~849/1052/1160/1225/1284 post-edit). They call the wrappers."
+            ],
+            "tests/test_terrain_perf.py (cross-lane, 1 patch target repointed)": [
+              "test_visible_rect_reasonable_at_default_camera patched ursina_renderer.camera; the camera read now lives in ursina_frustum, so repointed the monkeypatch to game.graphics.ursina_frustum.camera (patch-where-its-used). No assertion/logic change; required by the move + DoD full-green. Same precedent as WK87 Agent 09 cross_lane_edits_note."
+            ]
+          },
+          "cache_stays_on_renderer": "_frame_visible_rect FIELD + its update() assignment + the cull_terrain_chunks read remain on UrsinaRenderer. Only the rect-COMPUTE moved. _visible_rect_lens_warned is read/written on r (was self) by the moved function.",
+          "verify": {
+            "pytest_wk67_ai_boundary": "10 passed; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded UNCHANGED (constant asserted in test; line 181).",
+            "pytest_full": "849 passed, 4 skipped, 0 failed (158.32s) - matches baseline.",
+            "determinism_guard": "PASS: no violations found (exit 0).",
+            "qa_smoke_quick": "DONE: PASS (exit 0).",
+            "import_check": "from game.graphics.ursina_frustum import get_visible_tile_rect, entity_in_view; import game.graphics.ursina_renderer -> 'ok True True'. Frustum-only fresh import also ok.",
+            "no_cycle": "CONFIRMED - wrapper imports ursina_frustum LAZILY (inside the method); ursina_frustum imports UrsinaRenderer only under TYPE_CHECKING and never imports ursina_renderer at module top. Fresh `import game.graphics.ursina_frustum` and fresh `import game.graphics.ursina_renderer` both succeed independently."
+          },
+          "screenshots": {
+            "before_base": "docs/screenshots/wk88_before/ursina_20260530_095153_459.png",
+            "after_base": "docs/screenshots/wk88_after/ursina_20260530_100347_335.png"
+          },
+          "visual_verdict": "IDENTICAL. Base overview: same revealed green-island terrain footprint, same building cluster (central castle/guild row + house to the right + wood structures), same scattered trees/rocks/props, same fog boundary, same units, and same HUD chrome (Gold 2100, Wave 1, FPS debug panel showing Entities H:0 P:0 G:0, bottom Build/Hire/Bounty bar). The exact same set of entities is culled/visible in the same positions -> frustum culling preserved.",
+          "how_to_test": [
+            "python tools/run_ursina_capture_once.py --ticks 480 --no-llm --out docs/screenshots/wk88_before",
+            "python tools/run_ursina_capture_once.py --ticks 480 --no-llm --out docs/screenshots/wk88_after",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q",
+            "python -m pytest -q",
+            "python tools/determinism_guard.py",
+            "python tools/qa_smoke.py --quick",
+            "python -c \"from game.graphics.ursina_frustum import get_visible_tile_rect, entity_in_view; import game.graphics.ursina_renderer; print('ok', callable(get_visible_tile_rect), callable(entity_in_view))\""
+          ],
+          "blockers": [],
+          "cross_lane_edits_note": "Edited 1 test file (tests/test_terrain_perf.py) to repoint a single monkeypatch target (ursina_renderer.camera -> ursina_frustum.camera) because the patched camera global is now read from the new module (patch-where-its-used). No test logic/assertion changed. Same pattern Agent 09 used in WK87. Flagged for Agent 11 W2 awareness.",
+          "follow_ups_for_PM": [
+            "Agent 11 W2: seam test (get_visible_tile_rect + entity_in_view exist in ursina_frustum; wrappers delegate; no cycle) + full DoD + independently view the before/after base_overview screenshots (must match).",
+            "ursina_anim extraction (WK89: _compute_anim_frame/_facing_from_dto/_base_clip_from_dto); rest of ursina_renderer split (unit/building/misc-props sync) per plan section 7."
+          ]
+        }
+      }
     }
   }
 }

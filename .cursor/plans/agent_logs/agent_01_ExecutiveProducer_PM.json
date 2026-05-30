@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK88 CLOSE): wk88_round_b_ursina_frustum COMPLETE -- DoD met. ursina_renderer split slice 2: moved camera frustum-culling math (_get_visible_tile_rect ~177 LOC + _entity_in_view) from ursina_renderer.py (1780 -> 1602 LOC) into game/graphics/ursina_frustum.py behind delegating wrappers; _frame_visible_rect cache + its update() assignment + the 5 sync-method _entity_in_view call sites stay on the renderer. Agent 09 repointed 1 test_terrain_perf monkeypatch (camera, patch-where-used). No cycle. Behavior/visually-preserving: 857 passed/4 skipped/0 failed (+8 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, before/after base_overview screenshot BYTE-IDENTICAL (PM + Agent 11 both verified). Agent 09 extract+screenshot, Agent 11 verify. Plan: .cursor/plans/wk88_round_b_ursina_frustum.plan.md. WK87 was main 11fea3c. Committing+pushing. SESSION: 21 sprints WK68-88 shipped; suite 601->857; digest b73961 held byte-identical throughout all 21; ursina_renderer 1959->1602 over WK87/88. REMAINING: ursina_anim + rest of ursina_renderer split (unit/building/misc-props sync); hud.py(2477); ursina_terrain_fog_collab/ursina_app; Move 9; world.py fog; context_builder/direct_prompt_validator; ai/vocab.py + TaskRouter; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK89.",
+    "2026-05-30 (Agent 01 WK88 KICKOFF): extract ursina_frustum.py (Round B-5, ursina_renderer split slice 2). Move the camera frustum-culling math (_get_visible_tile_rect ~177 LOC + _entity_in_view) from ursina_renderer.py (1780 LOC) into game/graphics/ursina_frustum.py behind delegating wrappers; _frame_visible_rect cache + its update() assignment stay on the renderer. Pure-move; screenshot-verified (culling invisible if preserved -- before/after base_overview must show same entities). Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded). Agent 09 extract+screenshot, Agent 11 verify. Plan: .cursor/plans/wk88_round_b_ursina_frustum.plan.md. WK87 was main 11fea3c. NOT YET COMMITTED for WK88.",
     "2026-05-30 (Agent 01 WK87 CLOSE): wk87_round_b_ursina_building_ui COMPLETE -- DoD met. First slice of the ursina_renderer.py (1959 -> 1780 LOC) split: moved the tax-overlay public API (set/is_tax_gold_overlay_held) + building_tax_overlay_snapshot + _sync_building_worldspace_ui + _maybe_log_tax_overlay_debug + overlay-Y helpers + _prefab_local_top_y (8 module fns) into game/graphics/ursina_building_ui.py; re-exported same-object from ursina_renderer so building-sync call sites + tests are unchanged; shared unit-overlay chrome (_configure_ks_overlay/_ensure_ks_name_label/_sync_ks_facing_overlay) stayed. Agent 09 repointed 2 wk61 test monkeypatch targets (patch-where-used). No cycle (ursina_building_ui never imports ursina_renderer). Behavior/visually-preserving: 849 passed/4 skipped/0 failed (+15 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, before/after tax-overlay screenshot BYTE-IDENTICAL (PM + Agent 11 both verified). Agent 09 extract+screenshot, Agent 11 verify. Plan: .cursor/plans/wk87_round_b_ursina_building_ui.plan.md. WK86 was main 3bdb57e. Committing+pushing. SESSION: 20 sprints WK68-87 shipped; suite 601->849; digest b73961 held byte-identical throughout all 20. REMAINING: rest of ursina_renderer.py split (unit-sync/building-sync/frustum/anim/misc-props); hud.py(2477); ursina_terrain_fog_collab/ursina_app; Move 9; world.py fog; context_builder/direct_prompt_validator; ai/vocab.py + TaskRouter; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK88.",
     "2026-05-30 (Agent 01 WK87 KICKOFF): extract ursina_building_ui.py (Round B-4, first ursina_renderer split slice). Move the tax-overlay public API (set/is_tax_gold_overlay_held) + building_tax_overlay_snapshot + _sync_building_worldspace_ui + _maybe_log_tax_overlay_debug + overlay-Y helpers from ursina_renderer.py (1959 LOC) into game/graphics/ursina_building_ui.py; re-export the public names for ursina_app/lifecycle. Pure-move of module functions; shared unit-overlay chrome stays. Behavior/visually-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded + before/after Ursina screenshots: tax overlay + base labels). Agent 09 extract+screenshot, Agent 11 verify. Plan: .cursor/plans/wk87_round_b_ursina_building_ui.plan.md. WK86 was main 3bdb57e. NOT YET COMMITTED for WK87.",
     "2026-05-30 (Agent 01 WK86 CLOSE): wk86_round_b_worldgen_extract COMPLETE -- DoD met. Moved generate_terrain + generate_heightmap + flatten_building_footprints from game/world.py (483 -> 278 LOC) into game/worldgen.py behind delegating wrappers (pure-move). World.render/render_fog were already moved out in WK66 (L10). Dual heightmap writes (World.heightmap + terrain_height module) + RNG order preserved. TileType lazy-imported inside the fns; World TYPE_CHECKING-only; no cycle (static AST + dynamic both-order). Behavior-preserving: 834 passed/4 skipped/0 failed (+9 seam+snapshot tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, world-snapshot hash pinned (tiles 1418f96... + heightmap 87f69ce...). Agent 03 extract, Agent 11 verify+snapshot. Plan: .cursor/plans/wk86_round_b_worldgen_extract.plan.md. WK85 was main 8c0b8ba. Committing+pushing. SESSION: 19 sprints WK68-86 shipped; suite 601->834; digest b73961 held byte-identical throughout. REMAINING (fresh-context tier): hud.py(2477)/ursina_renderer-body/ursina_terrain_fog_collab/ursina_app SCREENSHOT-HEAVY splits; Move 9; world.py fog state-machine; context_builder/direct_prompt_validator restructures; ai/vocab.py + TaskRouter; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK87.",
@@ -4565,6 +4567,67 @@
             "03(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk87_round_b_ursina_building_ui'].rounds['wk87_kickoff']) + plan .cursor/plans/wk87_round_b_ursina_building_ui.plan.md; claude-opus-4-8; PURE MOVE module functions, re-export the public names, do NOT move shared unit-overlay chrome, lazy/leaf imports to avoid cycle; before/after Ursina screenshots (tax overlay + base labels) MUST match + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
+        }
+      }
+    },
+    "wk88_round_b_ursina_frustum": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T22:30:00Z",
+        "plan_doc": ".cursor/plans/wk88_round_b_ursina_frustum.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK88 / Round B-5)",
+        "notes": "Round B-5 (ursina_renderer split slice 2): extract the camera frustum-culling math (_get_visible_tile_rect ~177 LOC + _entity_in_view) from ursina_renderer.py (1780 LOC) into game/graphics/ursina_frustum.py behind delegating wrappers; _frame_visible_rect cache stays on the renderer. Pure-move; screenshot-verified (culling invisible if preserved -- same entities visible). Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded). Agent 09 extract+screenshot, Agent 11 verify.",
+        "definition_of_done": [
+          "A. pytest all pass (849/4/0)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded",
+          "D. qa_smoke green",
+          "E. game/graphics/ursina_frustum.py exists; 2 wrappers on UrsinaRenderer; call sites unchanged; ursina_renderer.py smaller; no cycle",
+          "F. before/after base_overview Ursina screenshots visually identical (same entities visible)",
+          "G. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "857 passed / 4 skipped / 0 failed (849 + 8 seam tests)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961... byte-identical",
+          "screenshots": "base_overview before/after BYTE-IDENTICAL (same sha256) -- culling preserved",
+          "ursina_renderer_loc": "1780 -> 1602 (-178)",
+          "result": "camera frustum-culling math (get_visible_tile_rect + entity_in_view) moved to game/graphics/ursina_frustum.py behind delegating wrappers; _frame_visible_rect cache + update() assignment + 5 sync call sites stay on the renderer; no cycle. ursina_renderer split slice 2."
+        }
+      },
+      "rounds": {
+        "wk88_kickoff": {
+          "round_meta": {
+            "round_id": "wk88_kickoff",
+            "created_utc": "2026-05-30T22:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk88_round_b_ursina_frustum.plan.md",
+            "build_target": "extract ursina_frustum.py (culling math)",
+            "goal": "all tests pass; same entities culled/visible"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "before/after base_overview identical (same entities visible) + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical",
+            "wave_dag": "W1(09 extract+screenshots)->gate->W2(11 verify+screenshot review)->commit",
+            "dispatch_order": [
+              "09 W1",
+              "11 W2"
+            ]
+          },
+          "pm_agent_prompts": {
+            "09": "[Agent 09 ArtDirector] Extract the camera frustum-culling math out of game/graphics/ursina_renderer.py (1780 LOC) into a new game/graphics/ursina_frustum.py per plan .cursor/plans/wk88_round_b_ursina_frustum.plan.md sections 1-2 (pure-move of methods behind delegating wrappers). STEP 0 BEFORE screenshot: python tools/run_ursina_capture_once.py --ticks 480 --no-llm --out docs/screenshots/wk88_before (default = base overview). Then move VERBATIM into ursina_frustum.py: _get_visible_tile_rect (~654-831) -> def get_visible_tile_rect(r): ; _entity_in_view (~832-882) -> def entity_in_view(r, sim_x, sim_y): (self.->r.). Leave 1-line delegating wrappers on UrsinaRenderer (same names): _get_visible_tile_rect(self) -> from game.graphics import ursina_frustum; return ursina_frustum.get_visible_tile_rect(self) ; _entity_in_view(self, sim_x, sim_y) -> ...entity_in_view(self, sim_x, sim_y). The update() line self._frame_visible_rect = self._get_visible_tile_rect() (~884) and the sync-method self._entity_in_view(...) calls (~1025/1228/1336/1401/1460) stay UNCHANGED (call the wrappers). Keep the _frame_visible_rect cache FIELD + its update() assignment on the renderer -- only the rect-COMPUTE moves. RULES: ursina_frustum.py imports leaf deps the math uses (ursina camera/scene/Vec3/window, config, math); imports UrsinaRenderer only under TYPE_CHECKING; NO cycle (wrapper imports lazily; module never imports ursina_renderer at top); verify fresh imports. Move VERBATIM (no culling-threshold/logic change). STEP N AFTER screenshot (--out docs/screenshots/wk88_after); VIEW before vs after -- MUST be visually identical (SAME units/buildings visible; culling preserved). If they differ, a camera-state ref broke -- revert+reinvestigate. VERIFY: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), python -m pytest -q (849 passed), determinism_guard, qa_smoke --quick, import check (from game.graphics.ursina_frustum import get_visible_tile_rect, entity_in_view). Report: ursina_frustum.py + the 2 fns, the wrappers, ursina_renderer.py new LOC (was 1780), before/after screenshot paths + visual verdict, digest, suite totals, no-cycle. Lane = ursina_renderer.py + new ursina_frustum.py. DO NOT COMMIT; update agent_09 log (round wk88_w1).",
+            "11": "[Agent 11] W2 (after 09): create tests/test_wk88_ursina_frustum.py: assert game.graphics.ursina_frustum has get_visible_tile_rect + entity_in_view (callable); assert UrsinaRenderer._get_visible_tile_rect + _entity_in_view are delegating wrappers (spy+monkeypatch the module fns -- you may need a lightweight UrsinaRenderer stand-in or object with the needed attrs since constructing a full renderer needs ursina; if too heavy, assert the wrapper bodies import+call the module fn via source inspection / a minimal fake `self`); AST guard ursina_frustum.py has no module-top ursina_renderer import + no module-load cycle (fresh subprocess both orders). INDEPENDENTLY VIEW the before/after screenshots (wk88_before vs wk88_after) -- confirm SAME entities visible; written verdict. Full DoD: pytest (all pass), determinism_guard, digest (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke. Report PASS/FAIL + DoD A-G + screenshot verdict. Only your test; no prod edits; DO NOT COMMIT; update agent_11 log (round wk88_w2).",
+            "10": "[Agent 10 CONSULT] available on culling/perf specifics. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "09",
+            "11",
+            "10(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk88_round_b_ursina_frustum'].rounds['wk88_kickoff']) + plan .cursor/plans/wk88_round_b_ursina_frustum.plan.md; claude-opus-4-8; PURE MOVE, keep wrapper names + the _frame_visible_rect cache on the renderer, TYPE_CHECKING-only import; before/after base_overview MUST match + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }
