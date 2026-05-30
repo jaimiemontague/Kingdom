@@ -2412,6 +2412,52 @@
           "notes_for_pm": "W1 complete and gated. New unused top-level imports remain in engine.py (Visibility, BountyType, HeroClass, BOUNTY_REWARD_LOW/MED/HIGH) - left in place deliberately to keep the move strictly mechanical; harmless (no behavior/lint failure). Hand to Agent 11 (W2) for seam test + sanity screenshot + DoD close."
         }
       }
+    },
+    "wk76_round_b2_engine_selection_facade": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk76_round_b2_engine_selection_facade.plan.md",
+        "created_utc": "2026-05-30T20:00:00Z",
+        "notes": "Round B-2d: continues the game/engine.py (1365 LOC after WK75) god-file split. Extract the 8 try_select_* click/screen selection handlers -> game/engine_facades/selection.py behind 1-line delegating wrappers (WK69/WK75 pure-move pattern). PURE MOVE only: bodies moved verbatim with self.->engine.; wrapper method names kept so input_handler/hud call sites + tests unchanged. The 39x set-one-null-others idiom cleanup is DEFERRED. WK67 AI-decision digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded stays byte-identical. W1 = the extraction (this entry). W2 (Agent 11) adds the seam test + sanity screenshot + DoD gate."
+      },
+      "rounds": {
+        "wk76_w1": {
+          "sprint_id": "wk76_round_b2_engine_selection_facade",
+          "round_id": "wk76_w1",
+          "status": "done",
+          "intelligence": "HIGH",
+          "wave": "Wave W1 - extract selection.py + 8 delegating wrappers out of engine.py. Single-lane mechanical work; STOP after W1 for PM gate (suite + digest) before W2 (Agent 11 seam test + screenshot + DoD).",
+          "summary": "Moved the bodies of the 8 try_select_* methods out of game/engine.py into new game/engine_facades/selection.py behind 1-line delegating wrappers (WK75 pattern). Bodies moved byte-for-byte (self.->engine. only); every selection branch preserved verbatim (the deferred 39x idiom was NOT touched). selection.py imports GameEngine only under TYPE_CHECKING (from __future__ import annotations) and imports only the one leaf its bodies need (config TILE_SIZE, used by try_select_building); the wrappers import the module lazily inside the method body so there is NO import cycle (verified importing selection->engine). All 8 GameEngine method names kept exactly, so input_handler/hud call sites + all tests are unchanged.",
+          "new_modules": {
+            "game/engine_facades/selection.py": "try_select_hero(engine, screen_pos), try_select_hero_at_world(engine, wx, wy, radius=24.0), try_select_tax_collector(engine, screen_pos), try_select_guard(engine, screen_pos), try_select_peasant(engine, screen_pos), try_select_enemy(engine, screen_pos), try_ursina_select_unit_at_screen(engine, screen_pos), try_select_building(engine, screen_pos). Leaf import: config TILE_SIZE. pick_unit_at_screen stays inline-imported inside try_ursina_select_unit_at_screen as in the original."
+          },
+          "wrappers_kept_on_GameEngine": [
+            "try_select_hero(self, screen_pos) -> selection.try_select_hero(self, screen_pos)",
+            "try_select_hero_at_world(self, wx, wy, radius=24.0) -> selection.try_select_hero_at_world(self, wx, wy, radius)",
+            "try_select_tax_collector(self, screen_pos) -> selection.try_select_tax_collector(self, screen_pos)",
+            "try_select_guard(self, screen_pos) -> selection.try_select_guard(self, screen_pos)",
+            "try_select_peasant(self, screen_pos) -> selection.try_select_peasant(self, screen_pos)",
+            "try_select_enemy(self, screen_pos) -> selection.try_select_enemy(self, screen_pos)",
+            "try_ursina_select_unit_at_screen(self, screen_pos) -> selection.try_ursina_select_unit_at_screen(self, screen_pos)",
+            "try_select_building(self, screen_pos) -> selection.try_select_building(self, screen_pos)"
+          ],
+          "private_helpers_moved": "NONE. Grepped engine.py for _select_only/_clear_*_selection/_deselect/def _select - no such private selection helper exists. Each method sets self.selected_* attributes inline; no shared private helper to move. No shared state moved (selected_hero/peasant/enemy/building, building_panel, heroes/guards/peasants/enemies/buildings/tax_collector, window_width/height, _ursina_viewer all stay on GameEngine and are reached via engine.).",
+          "engine_loc": {
+            "before": 1365,
+            "after": 1184,
+            "delta": -181
+          },
+          "verification": {
+            "wk67_digest_test": "10 passed; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded UNCHANGED (constant present at tests/test_wk67_ai_boundary.py:181, runtime digest matches)",
+            "full_suite": "709 passed, 4 skipped, 0 failed (baseline match)",
+            "determinism_guard": "PASS: no violations found",
+            "qa_smoke_quick": "DONE: PASS (exit 0)",
+            "import_check": "from game.engine_facades import selection; all(hasattr(selection,m) for m in [try_select_hero, try_select_building, try_ursina_select_unit_at_screen]) == True; all 8 facade fns + all 8 GameEngine wrappers present",
+            "import_cycle": "none - selection imports GameEngine only under TYPE_CHECKING; wrappers import the module lazily inside the method body; verified import order selection->engine both OK"
+          },
+          "do_not_commit": true,
+          "notes_for_pm": "W1 complete and gated. PURE MOVE; selection logic byte-identical (deferred 39x idiom untouched). No private helper moved (none exists). engine.py 1365 -> 1184 (-181). Hand to Agent 11 (W2) for seam test + sanity screenshot + DoD close."
+        }
+      }
     }
   }
 }

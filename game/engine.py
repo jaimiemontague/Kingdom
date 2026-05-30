@@ -635,225 +635,44 @@ class GameEngine:
         return self.screen_to_world(screen_pos[0], screen_pos[1])
 
     def try_select_hero(self, screen_pos: tuple) -> bool:
-        """Try to select a hero at the given screen position. Returns True if selected.
-
-        WK53 R4: uses 1.5x hero.size as click radius for more forgiving selection on
-        heightmap terrain, and picks the closest hero when multiple overlap.
-        """
-        world_x, world_y = self.pointer_world_xy(screen_pos)
-
-        best = None
-        best_d = float("inf")
-        for hero in self.heroes:
-            if not hero.is_alive:
-                continue
-            d = hero.distance_to(world_x, world_y)
-            # WK53 R4: 1.5x hero.size for forgiving click targets on terrain
-            if d < hero.size * 1.5 and d < best_d:
-                best_d = d
-                best = hero
-
-        if best is not None:
-            self.selected_hero = best
-            self.selected_peasant = None
-            self.selected_enemy = None
-            return True
-
-        return False
+        """Try to select a hero at the given screen position. Returns True if selected."""
+        from game.engine_facades import selection
+        return selection.try_select_hero(self, screen_pos)
 
     def try_select_hero_at_world(self, wx: float, wy: float, radius: float = 24.0) -> bool:
         """Pick the closest live hero within ``radius`` px of world position (watch-card map — WK52)."""
-        best = None
-        lim = float(radius) * float(radius)
-        best_d2 = lim + 1.0
-        for hero in self.heroes:
-            if not getattr(hero, "is_alive", True) or int(getattr(hero, "hp", 0)) <= 0:
-                continue
-            dx = float(getattr(hero, "x", 0.0)) - float(wx)
-            dy = float(getattr(hero, "y", 0.0)) - float(wy)
-            d2 = dx * dx + dy * dy
-            if d2 < best_d2:
-                best_d2 = d2
-                best = hero
-        if best is None:
-            return False
-        self.selected_hero = best
-        self.selected_peasant = None
-        self.selected_building = None
-        self.selected_enemy = None
-        if hasattr(self, "building_panel"):
-            try:
-                self.building_panel.deselect()
-            except Exception:
-                pass
-        return True
+        from game.engine_facades import selection
+        return selection.try_select_hero_at_world(self, wx, wy, radius)
 
     def try_select_tax_collector(self, screen_pos: tuple) -> bool:
         """Try to select the tax collector at the given screen position. Returns True if selected. (wk16)"""
-        if self.tax_collector is None:
-            return False
-        world_x, world_y = self.pointer_world_xy(screen_pos)
-        tc = self.tax_collector
-        if tc.distance_to(world_x, world_y) < tc.size:
-            self.selected_hero = tc  # unified selection state for left panel
-            self.selected_building = None
-            self.selected_peasant = None
-            self.selected_enemy = None
-            return True
-        return False
+        from game.engine_facades import selection
+        return selection.try_select_tax_collector(self, screen_pos)
 
     def try_select_guard(self, screen_pos: tuple) -> bool:
         """Try to select a guard at the given screen position. Returns True if selected."""
-        world_x, world_y = self.pointer_world_xy(screen_pos)
-        best = None
-        best_d = float("inf")
-        for guard in self.guards:
-            if not getattr(guard, "is_alive", True):
-                continue
-            d = guard.distance_to(world_x, world_y)
-            if d < guard.size * 1.5 and d < best_d:
-                best_d = d
-                best = guard
-        if best is not None:
-            self.selected_hero = best
-            self.selected_building = None
-            self.selected_peasant = None
-            self.selected_enemy = None
-            return True
-        return False
+        from game.engine_facades import selection
+        return selection.try_select_guard(self, screen_pos)
 
     def try_select_peasant(self, screen_pos: tuple) -> bool:
         """Try to select a peasant at the given screen position. Returns True if selected."""
-        world_x, world_y = self.pointer_world_xy(screen_pos)
-        for peasant in self.peasants:
-            if getattr(peasant, "is_alive", True) and peasant.distance_to(world_x, world_y) < peasant.size:
-                self.selected_peasant = peasant
-                self.selected_hero = None
-                self.selected_building = None
-                self.selected_enemy = None
-                if hasattr(self, "building_panel"):
-                    try:
-                        self.building_panel.deselect()
-                    except Exception:
-                        pass
-                return True
-        return False
+        from game.engine_facades import selection
+        return selection.try_select_peasant(self, screen_pos)
 
     def try_select_enemy(self, screen_pos: tuple) -> bool:
         """Try to select an enemy at the given screen position. Returns True if selected (WK61)."""
-        world_x, world_y = self.pointer_world_xy(screen_pos)
-        best = None
-        best_d = float("inf")
-        for enemy in self.enemies:
-            if not enemy.is_alive:
-                continue
-            d = enemy.distance_to(world_x, world_y)
-            if d < enemy.size * 1.5 and d < best_d:
-                best_d = d
-                best = enemy
-        if best is not None:
-            self.selected_enemy = best
-            self.selected_hero = None
-            self.selected_building = None
-            self.selected_peasant = None
-            return True
-        return False
+        from game.engine_facades import selection
+        return selection.try_select_enemy(self, screen_pos)
 
     def try_ursina_select_unit_at_screen(self, screen_pos: tuple) -> bool:
         """Ursina-only screen-space unit pick (WK61-R4-BUG-002). Returns True if selected."""
-        if not getattr(self, "_ursina_viewer", False):
-            return False
-        try:
-            from game.graphics.ursina_pick import pick_unit_at_screen
-        except Exception:
-            return False
-
-        hit = pick_unit_at_screen(
-            screen_pos,
-            heroes=self.heroes,
-            enemies=self.enemies,
-            peasants=self.peasants,
-            guards=self.guards,
-            tax_collector=self.tax_collector,
-            virtual_w=int(getattr(self, "window_width", 1920) or 1920),
-            virtual_h=int(getattr(self, "window_height", 1080) or 1080),
-        )
-        if hit is None:
-            return False
-
-        kind, entity = hit
-        if kind == "hero":
-            self.selected_hero = entity
-            self.selected_peasant = None
-            self.selected_enemy = None
-            self.selected_building = None
-        elif kind == "tax_collector":
-            self.selected_hero = entity
-            self.selected_building = None
-            self.selected_peasant = None
-            self.selected_enemy = None
-        elif kind == "guard":
-            self.selected_hero = entity
-            self.selected_building = None
-            self.selected_peasant = None
-            self.selected_enemy = None
-        elif kind == "peasant":
-            self.selected_peasant = entity
-            self.selected_hero = None
-            self.selected_building = None
-            self.selected_enemy = None
-            if hasattr(self, "building_panel"):
-                try:
-                    self.building_panel.deselect()
-                except Exception:
-                    pass
-        elif kind == "enemy":
-            self.selected_enemy = entity
-            self.selected_hero = None
-            self.selected_building = None
-            self.selected_peasant = None
-        else:
-            return False
-        return True
+        from game.engine_facades import selection
+        return selection.try_ursina_select_unit_at_screen(self, screen_pos)
 
     def try_select_building(self, screen_pos: tuple) -> bool:
-        """Try to select a building at the given screen position. Returns True if selected.
-
-        WK53 R4: inflates the building hit-test rect by a margin (half a tile) so that
-        clicks near building edges register reliably. Complex Kenney kitbash models have
-        geometry gaps that caused precise-click misses with the exact footprint rect.
-        """
-        world_x, world_y = self.pointer_world_xy(screen_pos)
-
-        # Margin in sim-pixels: half a tile on each side for forgiving click targets.
-        margin = TILE_SIZE * 0.5
-
-        best = None
-        best_d2 = float("inf")
-
-        for building in self.buildings:
-            rect = building.get_rect()
-            # Inflate rect by margin on all sides for easier clicking
-            if (
-                (rect.x - margin) <= world_x < (rect.x + rect.width + margin)
-                and (rect.y - margin) <= world_y < (rect.y + rect.height + margin)
-            ):
-                # Prefer the building whose center is closest to the click
-                cx = rect.x + rect.width * 0.5
-                cy = rect.y + rect.height * 0.5
-                d2 = (world_x - cx) ** 2 + (world_y - cy) ** 2
-                if d2 < best_d2:
-                    best_d2 = d2
-                    best = building
-
-        if best is not None:
-            self.selected_building = best
-            self.selected_peasant = None
-            self.selected_enemy = None
-            self.building_panel.select_building(best, self.heroes)
-            return True
-
-        return False
+        """Try to select a building at the given screen position. Returns True if selected."""
+        from game.engine_facades import selection
+        return selection.try_select_building(self, screen_pos)
 
     def try_hire_hero(self):
         """Try to hire a hero from the selected guild building or auto-locate one."""

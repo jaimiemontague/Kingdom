@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK76 CLOSE): wk76_round_b2_engine_selection_facade COMPLETE -- DoD met. Extracted the 8 try_select_* selection methods -> game/engine_facades/selection.py behind delegating wrappers (WK75 pure-move pattern; 39x idiom cleanup deferred). engine.py 1365 -> 1184 (-181; cumulative 1678->1184 across WK75+WK76). Behavior-preserving: 720 passed/4 skipped/0 failed (+11 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, no import cycle, sanity screenshot healthy. Agent 03 extract, Agent 11 verify+screenshot. Deferred: engine.py lifecycle facade + __init__ split + 39x idiom cleanup; input_handler package; hud/ursina_renderer/ursina_app splits; Move 9; world.py; config package; Round D AI; zombie purge. Plan: .cursor/plans/wk76_round_b2_engine_selection_facade.plan.md. WK75 was main 6898168. Committing+pushing. Next: WK77.",
+    "2026-05-30 (Agent 01 WK76 KICKOFF): engine.py selection facade (Round B-2d). Extract the 8 try_select_* methods -> game/engine_facades/selection.py behind delegating wrappers (WK75 pure-move pattern); 39x idiom cleanup deferred. Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded). Agent 03 extract, Agent 11 verify+screenshot. Plan: .cursor/plans/wk76_round_b2_engine_selection_facade.plan.md. WK75 was main 6898168. NOT YET COMMITTED for WK76.",
     "2026-05-30 (Agent 01 WK75 CLOSE): wk75_round_b2_engine_actions_facade COMPLETE -- DoD met. First slice of the engine.py god-file split: extracted the actions facade (try_hire_hero/place_building/place_bounty/apply_hud_pin_action -> game/engine_facades/actions.py, apply_hud_pin_action moved verbatim with all 9 branches) + the cheat console (process_command -> game/console.py) behind 1-line delegating wrappers (WK69 pattern). engine.py 1678 -> 1365 (-313). Behavior-preserving: 709 passed/4 skipped/0 failed (+7 seam tests), determinism PASS, qa_smoke PASS, WK68 button tests 12 passed (the key guard since the digest is headless and does not cover UI actions), WK67 digest b73961... BYTE-IDENTICAL, no import cycle, sanity screenshot UI healthy. Agent 03 extract, Agent 11 verify+screenshot. Deferred: engine.py selection facade + the 39x set-one-null-others cleanup, lifecycle facade, __init__ split. Plan: .cursor/plans/wk75_round_b2_engine_actions_facade.plan.md. WK74 was main 0a3a59e. Committing+pushing. Next: WK76.",
     "2026-05-30 (Agent 01 WK75 KICKOFF): engine.py actions facade + console (Round B-2c, first engine.py slice). Extract try_hire_hero/place_building/place_bounty/apply_hud_pin_action -> game/engine_facades/actions.py + process_command -> game/console.py behind delegating wrappers (WK69 pattern). Behavior-preserving; key guard = WK68 button tests (digest is headless, doesn't cover UI actions) + sanity screenshot. Selection/lifecycle facades deferred. Agent 03 extract, Agent 11 verify+screenshot. Plan: .cursor/plans/wk75_round_b2_engine_actions_facade.plan.md. WK74 was main 0a3a59e. NOT YET COMMITTED for WK75.",
     "2026-05-30 (Agent 01 WK74 CLOSE): wk74_round_c2_ai_behavior_dedup COMPLETE -- DoD met. Round C-2b AI-behavior dedup: (1) route_to_building (new ai/behaviors/movement.py) unified 7 byte-identical best_adjacent_tile->target_position sites (4 divergent left inline); (2) engage+_commit_until_ms (defense.py) unified 8 engage-enemy sites. ALSO HOTFIXED test_wk73_enemy_stats.py: it exec'd `git show HEAD:enemy.py` and crashed at collection once WK73 was committed (HEAD then = the post-refactor @dataclass source; synthetic-module __module__=None on py3.13) -- this had left main RED after the WK73 commit (5442c37). Agent 11 made the test self-contained via embedded literals. Behavior-preserving: 702 passed/4 skipped/0 failed, determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (the PERFECT guard for AI behavior). Agent 06 (2 gated waves), Agent 11 (hotfix + behavior test + DoD). LESSON: tests that exec `git show HEAD:<file>` for parity break once that file's refactor is committed -- use embedded literals or a PINNED commit, not HEAD. Plan: .cursor/plans/wk74_round_c2_ai_behavior_dedup.plan.md. WK73 was main 5442c37. Committing+pushing (this commit re-greens main). Next: WK75.",
@@ -3824,6 +3826,66 @@
             "08(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk75_round_b2_engine_actions_facade'].rounds['wk75_kickoff']) + plan .cursor/plans/wk75_round_b2_engine_actions_facade.plan.md; claude-opus-4-8; BEHAVIOR-PRESERVING (keep wrapper names, TYPE_CHECKING-only engine import); WK68 button tests + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded must stay green; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
+        }
+      }
+    },
+    "wk76_round_b2_engine_selection_facade": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T10:30:00Z",
+        "plan_doc": ".cursor/plans/wk76_round_b2_engine_selection_facade.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK76 / Round B-2d)",
+        "notes": "Round B-2d: continue engine.py split -- extract the 8 try_select_* selection methods -> game/engine_facades/selection.py behind 1-line delegating wrappers (WK75 pure-move pattern). PURE MOVE only (39x idiom cleanup deferred). Behavior-preserving. Agent 03 extract, Agent 11 verify+screenshot.",
+        "definition_of_done": [
+          "A. pytest all pass (709/4/0)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded",
+          "D. qa_smoke green",
+          "E. selection.py exists; 8 wrapper names on GameEngine; engine.py smaller; no cycle",
+          "F. sanity screenshot",
+          "G. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "720 passed / 4 skipped / 0 failed (709 + 11 seam tests)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical)",
+          "engine_loc": "1365 -> 1184 (-181); cumulative engine.py 1678 -> 1184 over WK75+WK76",
+          "result": "8 try_select_* methods extracted -> engine_facades/selection.py behind delegating wrappers; no private helper to move; no import cycle; sanity screenshot healthy."
+        }
+      },
+      "rounds": {
+        "wk76_kickoff": {
+          "round_meta": {
+            "round_id": "wk76_kickoff",
+            "created_utc": "2026-05-30T10:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk76_round_b2_engine_selection_facade.plan.md",
+            "build_target": "engine selection facade",
+            "goal": "all tests pass; selection byte-identical"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical",
+            "wave_dag": "W1(03)->gate->W2(11)->commit",
+            "dispatch_order": [
+              "03 W1",
+              "11 W2"
+            ]
+          },
+          "pm_agent_prompts": {
+            "03": "[Agent 03] Extract the 8 try_select_* methods out of game/engine.py into game/engine_facades/selection.py behind 1-line delegating wrappers (WK75 pure-move pattern: facade fn takes the live GameEngine as engine, self.->engine., original becomes a shim). Methods (locate by name, lines ~739-960): try_select_hero, try_select_hero_at_world, try_select_tax_collector, try_select_guard, try_select_peasant, try_select_enemy, try_ursina_select_unit_at_screen, try_select_building. If a private _select_only/_clear helper is used ONLY by these, move it too; if shared with non-moved code, leave it on engine. KEEP method names (input_handler/hud call engine.try_select_*). PURE MOVE -- do NOT change selection logic (the 39x idiom cleanup is deferred). RULES: selection.py imports GameEngine only under TYPE_CHECKING (from __future__ import annotations); copy each methods leaf imports; NO import cycle. VERIFY: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), python -m pytest -q (709 passed), determinism_guard, qa_smoke --quick, and import check. Report: selection.py, the 8 wrappers, engine.py new LOC (was 1365), digest, suite totals, no-cycle. DO NOT COMMIT; update agent_03 log (round wk76_w1).",
+            "11": "[Agent 11] W2 (after 03): create tests/test_wk76_engine_selection_facade.py asserting game.engine_facades.selection has the 8 try_select_* functions and each GameEngine wrapper delegates (spy+monkeypatch). Capture a sanity screenshot: python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk76_selection_facade --size 1920x1080 --ticks 480 -- view it, confirm the game renders normally. Full DoD: pytest (all pass), determinism_guard, digest (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke. Report PASS/FAIL + DoD A-G + screenshot verdict. Only your test+screenshots; no prod edits; DO NOT COMMIT; update agent_11 log (round wk76_w2).",
+            "08": "[Agent 08 CONSULT] available if selection behaves differently. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "03",
+            "11",
+            "08(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints[wk76_round_b2_engine_selection_facade].rounds[wk76_kickoff]) + plan .cursor/plans/wk76_round_b2_engine_selection_facade.plan.md; claude-opus-4-8; PURE MOVE behavior-preserving, keep wrapper names, TYPE_CHECKING-only engine import, digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }
