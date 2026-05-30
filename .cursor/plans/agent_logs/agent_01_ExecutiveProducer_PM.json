@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK82 CLOSE): wk82_round_d_basic_ai_handlers COMPLETE -- DoD met. Extracted BasicAI inline state-machine handlers out of ai/basic_ai.py (515 -> 416 LOC): handle_fighting (+nested _chase_goal_unchanged) -> ai/behaviors/combat.py; handle_retreating + _finalize_deferred_task -> ai/behaviors/recovery.py; BasicAI keeps 3 lazy-import delegating wrappers (update_hero dispatch unchanged). handle_idle/moving/shopping already delegated; handle_resting stays. Behavior-preserving: 793 passed/4 skipped/0 failed (+13 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (the PERFECT guard -- combat/retreat ARE the hashed decisions). Leaf-only imports + TYPE_CHECKING BasicAI import avoided the ai.behaviors.__init__->llm_bridge cycle. Agent 06 extract, Agent 11 verify. Plan: .cursor/plans/wk82_round_d_basic_ai_handlers.plan.md. WK81 was main 2d30f21. Committing+pushing. SESSION: 15 sprints WK68-82 shipped. REMAINING: hud.py split (2477), ursina_renderer body split, ursina_terrain_fog_collab/ursina_app splits, Move 9, world.py, config package, clusters 3/4, rest of Round D (context_builder/direct_prompt_validator/bounty_pursuit/exploration + vocab + TaskRouter), Round E audit, 21-file zombie purge. Next: WK83.",
+    "2026-05-30 (Agent 01 WK82 KICKOFF): basic_ai.py inline-handler extraction (Round D-2). Move handle_fighting (+nested _chase_goal_unchanged), handle_retreating, _finalize_deferred_task out of ai/basic_ai.py into ai/behaviors/combat.py + recovery.py behind thin delegating wrappers (pure-move). handle_idle/moving/shopping already delegate; handle_resting stays. Perfectly digest-guarded (combat/retreat ARE the hashed decisions); headless. Agent 06 extract, Agent 11 verify. Plan: .cursor/plans/wk82_round_d_basic_ai_handlers.plan.md. WK81 was main 2d30f21. NOT YET COMMITTED for WK82.",
     "2026-05-30 (Agent 01 WK81 CLOSE): wk81_round_d_mock_provider_split COMPLETE -- DoD met. Split ai/providers/mock_provider.py (519 -> 129 LOC) into ai/providers/mock/ package: autonomous.py (mock_autonomous_decision), direct_prompt.py (mock_direct_prompt + _hero_ctx/_emit_validated helpers), legacy_decision.py (make_decision), conversation.py (mock_conversation_response), behind a thin MockProvider facade (complete() dispatch unchanged; MockProvider stays at ai/providers/mock_provider.py for the registry import; RNG singleton lazy-imported so the deterministic stream is not forked). Behavior-preserving: 780 passed/4 skipped/0 failed (+22 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL (the PERFECT guard -- the digest hero-decisions ARE this mocks output). Agent 06 extract; Agent 11 W2 created the seam test but hit a transient API 529 on its report -- PM verified the seam test (passes) + ran the full DoD gate directly. Plan: .cursor/plans/wk81_round_d_mock_provider_split.plan.md. WK80 was main 348a6e6. Committing+pushing. SESSION: 14 sprints WK68-81 shipped. REMAINING: hud.py split (2477), ursina_renderer body split, ursina_terrain_fog_collab/ursina_app splits, Move 9, world.py, config package, clusters 3/4, rest of Round D (basic_ai/context_builder/direct_prompt_validator/bounty_pursuit/exploration + vocab + TaskRouter), Round E audit, 21-file zombie purge. Next: WK82.",
     "2026-05-30 (Agent 01 WK81 KICKOFF): mock_provider.py -> ai/providers/mock/ package (Round D-1). Split the 519-LOC MockProvider into autonomous/direct_prompt/legacy_decision/conversation modules behind a thin MockProvider facade (pure-move pattern; MockProvider stays at ai/providers/mock_provider.py for the provider-registry import). The AI-decision digest USES this mock to drive hero decisions -> digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded is a PERFECT guard. Headless. Chosen to conserve context (no screenshots) while continuing the roadmap. Agent 06 extract, Agent 11 verify. Plan: .cursor/plans/wk81_round_d_mock_provider_split.plan.md. WK80 was main 348a6e6. NOT YET COMMITTED for WK81.",
     "2026-05-30 (Agent 01 WK80 CLOSE): wk80_round_b2_ursina_renderer_deadcode COMPLETE -- DoD met. Deleted residual dead code from ursina_renderer.py: the _unit_facing_direction import (:441) + its function in ursina_units_anim.py (dead since WK68 DTO migration), the inert underground-render shell + dead __init__ state (_underground_mgr/_underground_lights/cave-shader-rev -- the render BODY had already died in WK65), and the dead PEASANT_SCALE alias. Grep-proven zero live callers; sim-side poi_interaction/underground_terrain UNTOUCHED. ursina_renderer.py 1979->1959, ursina_units_anim.py -31. Behavior-preserving: 758 passed/4 skipped/0 failed, determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, before/after Ursina screenshots PM-verified PIXEL-IDENTICAL. Agent 09 delete+screenshot; PM verified directly (small deletion, no separate QA wave). NOTE: most of the audit-flagged ~450 ursina dead LOC was already removed in WK65/68 -- only residual remained. Plan: .cursor/plans/wk80_round_b2_ursina_renderer_deadcode.plan.md. WK79 was main a91e8ae. Committing+pushing. SESSION: 13 sprints WK68-80 shipped. REMAINING HIGH-VALUE: ursina_renderer.py BODY split (8 modules), hud.py split (2477), ursina_terrain_fog_collab/ursina_app splits, Move 9, world.py, config package, clusters 3/4, Round D AI router/splits, Round E audit, 21-file zombie purge. Next: WK81.",
@@ -4197,6 +4199,65 @@
             "03(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk81_round_d_mock_provider_split'].rounds['wk81_kickoff']) + plan .cursor/plans/wk81_round_d_mock_provider_split.plan.md; claude-opus-4-8; PURE MOVE behavior-preserving, keep wrapper names + MockProvider's import path, TYPE_CHECKING-only import; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (perfect guard) + qa_smoke must stay green; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
+        }
+      }
+    },
+    "wk82_round_d_basic_ai_handlers": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T16:30:00Z",
+        "plan_doc": ".cursor/plans/wk82_round_d_basic_ai_handlers.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK82 / Round D-2)",
+        "notes": "Round D-2: extract BasicAI's inline state-machine handlers (handle_fighting + nested _chase_goal_unchanged, handle_retreating, _finalize_deferred_task) out of ai/basic_ai.py into ai/behaviors/combat.py + recovery.py behind thin delegating wrappers (pure-move). handle_idle/moving/shopping already delegate; handle_resting stays. Perfectly digest-guarded (combat/retreat ARE the hashed decisions). Headless. Agent 06 extract, Agent 11 verify.",
+        "definition_of_done": [
+          "A. pytest all pass (780/4/0)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (perfect guard)",
+          "D. qa_smoke green",
+          "E. ai/behaviors/combat.py + recovery.py exist; 3 wrappers on BasicAI; basic_ai.py smaller; no cycle",
+          "F. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "793 passed / 4 skipped / 0 failed (780 + 13 seam tests)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961... byte-identical (PERFECT guard -- combat/retreat ARE the hashed decisions)",
+          "basic_ai_loc": "515 -> 416",
+          "result": "BasicAI inline handlers extracted: handle_fighting (+nested _chase_goal_unchanged) -> ai/behaviors/combat.py; handle_retreating + _finalize_deferred_task -> ai/behaviors/recovery.py; 3 delegating wrappers; leaf-only imports + TYPE_CHECKING => no cycle (avoided the ai.behaviors.__init__ llm_bridge cycle)."
+        }
+      },
+      "rounds": {
+        "wk82_kickoff": {
+          "round_meta": {
+            "round_id": "wk82_kickoff",
+            "created_utc": "2026-05-30T16:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk82_round_d_basic_ai_handlers.plan.md",
+            "build_target": "basic_ai inline-handler extraction",
+            "goal": "all tests pass; AI combat/retreat byte-identical"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical (PERFECT guard) + qa_smoke green",
+            "wave_dag": "W1(06)->gate(suite+digest+qa_smoke)->W2(11 verify)->commit",
+            "dispatch_order": [
+              "06 W1",
+              "11 W2"
+            ]
+          },
+          "pm_agent_prompts": {
+            "06": "[Agent 06] Extract BasicAI's inline state-machine handlers out of ai/basic_ai.py into ai/behaviors/ modules (pure-move pattern: function takes the BasicAI as `ai`, self.->ai., original method becomes a 1-line delegating wrapper) per plan .cursor/plans/wk82_round_d_basic_ai_handlers.plan.md sections 1-2. The 300-tick AI-decision digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded is a PERFECT guard (combat/retreat decisions drive it). Create: ai/behaviors/combat.py with handle_fighting(ai, hero, view) <- BasicAI.handle_fighting (basic_ai.py ~344-405, including the nested _chase_goal_unchanged); ai/behaviors/recovery.py with handle_retreating(ai, hero, view) <- handle_retreating (~406-430) AND finalize_deferred_task(ai, hero, view) <- _finalize_deferred_task (~431-454). BasicAI KEEPS handle_fighting/handle_retreating/_finalize_deferred_task as 1-line delegating wrappers (same names -- update_hero's state dispatch calls them unchanged), e.g. def handle_fighting(self, hero, view): from ai.behaviors import combat; return combat.handle_fighting(self, hero, view). Do NOT touch handle_idle/handle_moving/handle_shopping (already delegate) or handle_resting. RULES: combat.py/recovery.py import BasicAI only under TYPE_CHECKING (from __future__ import annotations); copy each handler's leaf imports (defense.engage, HeroState, contracts, etc.); take `ai` as param; NO import cycle -- the audit warns ai.behaviors.__init__ can pull llm_bridge, so import only LEAF helpers and keep the wrapper's import lazy. Move bodies VERBATIM (self.->ai.). VERIFY: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded -- combat/retreat ARE the hashed decisions), python -m pytest -q (780 passed), determinism_guard, qa_smoke --quick, import check. If the digest drifts, a handler body changed -- diff vs original. Report: combat.py/recovery.py + functions, the 3 wrappers, basic_ai.py new LOC (was 515), digest, suite totals, qa_smoke, no-cycle. DO NOT COMMIT; update agent_06 log (round wk82_w1).",
+            "11": "[Agent 11] W2 (after 06): create tests/test_wk82_basic_ai_handlers.py: assert ai.behaviors.combat has handle_fighting and ai.behaviors.recovery has handle_retreating + finalize_deferred_task (callable); assert each BasicAI wrapper (handle_fighting/handle_retreating/_finalize_deferred_task) delegates (spy+monkeypatch the module fn, call the wrapper on a constructed BasicAI, assert invoked with the BasicAI as first arg + args forwarded); AST guard combat.py/recovery.py don't import basic_ai at runtime (TYPE_CHECKING only). Full DoD: pytest (all pass), determinism_guard, digest (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke. NO screenshots. Report PASS/FAIL + DoD A-F. Only your test; no prod edits; DO NOT COMMIT; update agent_11 log (round wk82_w2).",
+            "05": "[Agent 05 CONSULT] available if a handler's behavior is unclear. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "06",
+            "11",
+            "05(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk82_round_d_basic_ai_handlers'].rounds['wk82_kickoff']) + plan .cursor/plans/wk82_round_d_basic_ai_handlers.plan.md; claude-opus-4-8; PURE MOVE behavior-preserving, keep wrapper names, TYPE_CHECKING-only import, leaf imports only (avoid the ai.behaviors.__init__ cycle); digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (perfect guard) must stay byte-identical; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }

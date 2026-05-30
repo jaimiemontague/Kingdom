@@ -27,7 +27,7 @@
             "build_target": "v1.3.0",
             "sent_at_local": "2026-01-21T00:00:00"
           },
-          "prompt_text": "Bug: Heroes ignore bounty flags entirely. Repro: place bounties with B, heroes never pursue. Fix bounty pursuit logic in ai/basic_ai.py or game/systems/bounty.py. Feature (after bug fix): Implement Journey behavior — when hero is full health + recently purchased potions/equipment, trigger journey to explore fog OR attack lair. Class rules: Rogue=few squares into fog, Warrior=10-30 squares or attack lair (prefers fighting), Ranger=limitless exploration (prefers exploring). Acceptance: bounties get pursued, journey triggers after shopping when healthy.",
+          "prompt_text": "Bug: Heroes ignore bounty flags entirely. Repro: place bounties with B, heroes never pursue. Fix bounty pursuit logic in ai/basic_ai.py or game/systems/bounty.py. Feature (after bug fix): Implement Journey behavior \u2014 when hero is full health + recently purchased potions/equipment, trigger journey to explore fog OR attack lair. Class rules: Rogue=few squares into fog, Warrior=10-30 squares or attack lair (prefers fighting), Ranger=limitless exploration (prefers exploring). Acceptance: bounties get pursued, journey triggers after shopping when healthy.",
           "response": {
             "received_at_local": "2026-01-21T18:30:00",
             "status": "complete",
@@ -233,7 +233,7 @@
       "wk15-ux-pacing": {
         "sprint_meta": {
           "plan_ref": ".cursor/plans/wk15_ux_and_pacing_sprint.plan.md",
-          "notes": "wk15 UX Polish & Pacing Tuning — 15C Hero Defense & Research Systems"
+          "notes": "wk15 UX Polish & Pacing Tuning \u2014 15C Hero Defense & Research Systems"
         },
         "rounds": {
           "wk15_r1_15c": {
@@ -260,7 +260,7 @@
               ],
               "how_to_test": [
                 "python tools/qa_smoke.py --quick",
-                "Manual: castle under attack — heroes inside buildings pop out and move to defend; warriors defend farm/food_stand when under attack; Marketplace/Blacksmith/Library research shows delay and progress (Agent 08 progress bar reads research_progress_0_to_1)."
+                "Manual: castle under attack \u2014 heroes inside buildings pop out and move to defend; warriors defend farm/food_stand when under attack; Marketplace/Blacksmith/Library research shows delay and progress (Agent 08 progress bar reads research_progress_0_to_1)."
               ],
               "evidence": [
                 "python tools/qa_smoke.py --quick => PASS (exit_code=0)"
@@ -273,7 +273,7 @@
       "wk14-persona-presence": {
         "sprint_meta": {
           "plan_ref": ".cursor/plans/wk14_persona_presence_sprint_c65cb250.plan.md",
-          "notes": "wk14 Sprint 3 Immersive Kingdom: Persona and Presence — 3A location context + 3C conversation mode"
+          "notes": "wk14 Sprint 3 Immersive Kingdom: Persona and Presence \u2014 3A location context + 3C conversation mode"
         },
         "rounds": {
           "wk14_r1_3a_3c": {
@@ -357,7 +357,7 @@
             "response": {
               "status": "done",
               "what_i_changed": [
-                "ai/context_builder.py: build_hero_stat_block(context) added — compact stat block matching left panel (name, class, level, HP, ATK, DEF, gold, potions, weapon, armor, state, inside). Injected into context['hero_stat_block'].",
+                "ai/context_builder.py: build_hero_stat_block(context) added \u2014 compact stat block matching left panel (name, class, level, HP, ATK, DEF, gold, potions, weapon, armor, state, inside). Injected into context['hero_stat_block'].",
                 "ai/prompt_templates.py: TOOL_ACTIONS (leave_building, move_to, fight, retreat, buy_item, use_potion, explore), OBEY_DEFY_VALUES. SYSTEM_PROMPT extended with obey_defy and tool_action in JSON schema. DECISION_PROMPT now includes hero_stat_block. VALID_ACTIONS extended with leave_building, move_to.",
                 "ai/llm_brain.py: _parse_response now extracts obey_defy and tool_action; accepts tool_action as action when valid; returns dict with action, target, reasoning, obey_defy, tool_action.",
                 "ai/behaviors/llm_bridge.py: apply_llm_decision reads tool_action and obey_defy; handles leave_building (pop_out_of_building, clear pending_task); handles move_to (explore for now)."
@@ -418,7 +418,7 @@
           "round_id": "wk49_r6_readiness_qa_perf",
           "status": "done",
           "what_i_changed": [
-            "docs/ai/hero_profile_llm_readiness.md: LLM readiness review — profile_to_dict suitability, storage vs prompt limits, merge strategy with ContextBuilder, missing fields before Phase 2 adapter."
+            "docs/ai/hero_profile_llm_readiness.md: LLM readiness review \u2014 profile_to_dict suitability, storage vs prompt limits, merge strategy with ContextBuilder, missing fields before Phase 2 adapter."
           ],
           "commands_run": [
             {
@@ -647,7 +647,7 @@
           "status": "done",
           "what_i_changed": [
             "ai/context_builder.py: inject hire/spawn home into known_places_llm (stable place_id) when missing from profile discovery; add hero.home_building_type and hero_home_place_id; distance + inside labels for all guild types.",
-            "ai/direct_prompt_validator.py: _pick_home_place prefers hero_home_place_id / home_building_type (guild/temple) before castle/inn; guild/temple place types map to real move targets (drop incorrect warrior_guild→castle alias).",
+            "ai/direct_prompt_validator.py: _pick_home_place prefers hero_home_place_id / home_building_type (guild/temple) before castle/inn; guild/temple place types map to real move targets (drop incorrect warrior_guild\u2192castle alias).",
             "ai/behaviors/llm_bridge.py: _resolve_move_target supports warrior/ranger/rogue/wizard guild + temple building_type keys.",
             "ai/providers/mock_provider.py + ai/prompt_packs.py: go-home prefers hero home_building_type; direct prompt blob includes hero_home_place_id.",
             "tests: validator + resolve_move_destination coverage for ranger guild home when profile memory lacks the guild."
@@ -707,7 +707,7 @@
           "evidence": {
             "pytest_all": "222 passed",
             "qa_smoke_quick": "PASS (exit 0, DONE: PASS)",
-            "integration_tests": "tests/test_direct_prompt_integration.py — buy potions far + adjacent affordable"
+            "integration_tests": "tests/test_direct_prompt_integration.py \u2014 buy potions far + adjacent affordable"
           },
           "blockers": [],
           "follow_ups": []
@@ -717,7 +717,7 @@
           "round_id": "wk50_r18_direct_prompt_arrival_handlers",
           "status": "done",
           "what_i_changed": [
-            "ai/behaviors/bounty_pursuit.py: WK50 R18 direct_prompt arrivals — go_to_known_place enters nearest matching building (inn via start_resting_at_building + rest_inn pending, castle taxes+rest, shops via enter_building_briefly + SHOPPING).",
+            "ai/behaviors/bounty_pursuit.py: WK50 R18 direct_prompt arrivals \u2014 go_to_known_place enters nearest matching building (inn via start_resting_at_building + rest_inn pending, castle taxes+rest, shops via enter_building_briefly + SHOPPING).",
             "rest_until_healed / seek_healing / retreat sub_intents resolve to start_resting_at_building at home/castle/inn when in range (shared helper with return_home).",
             "explore_direction chains up to 2 extra legs (12 tiles each) along seeded compass bearing so sovereign explore commits do not end at the first waypoint only.",
             "Refactored return_home arrival to shared _find_safety_building_for_arrival; removed unused BuildingType import."
@@ -784,7 +784,7 @@
     "wk61_playtest_polish": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk61_playtest_polish.plan.md",
-        "notes": "WK61 playtest polish — R4 hero idle regression cleanup (Agent 06 AI side)."
+        "notes": "WK61 playtest polish \u2014 R4 hero idle regression cleanup (Agent 06 AI side)."
       },
       "rounds": {
         "wk61_r4_playtest3_regression_cleanup": {
@@ -828,7 +828,7 @@
           "round_id": "wk61_r10_v159_economy_pacing_ux",
           "status": "done",
           "what_i_changed": [
-            "ai/behaviors/hunger.py: deterministic hunger module — find_nearest_food_stand, should_seek_meal (<25% HP gate), go_to_food_stand, try_buy_meal, idle seek + patrol interrupt + arrival purchase.",
+            "ai/behaviors/hunger.py: deterministic hunger module \u2014 find_nearest_food_stand, should_seek_meal (<25% HP gate), go_to_food_stand, try_buy_meal, idle seek + patrol interrupt + arrival purchase.",
             "ai/basic_ai.py: wired hunger_behavior; buy_meal committed destination; maybe_redirect_for_meal before rest/LLM dispatch.",
             "ai/behaviors/exploration.py: hunger check after bounty, before shopping/explore in handle_idle.",
             "ai/behaviors/bounty_pursuit.py: buy_meal arrival handler + non-interrupt list entry.",
@@ -863,7 +863,7 @@
           "round_id": "wk61_r11_playtest_fix_round",
           "status": "done",
           "what_i_changed": [
-            "WK61-R11-BUG-002: ai/behaviors/hunger.py — tick_meal_hunger runs idle/moving/shopping paths; per-hero no-stand logging; shopping target + SHOPPING state interrupt when urgent and gold>=10.",
+            "WK61-R11-BUG-002: ai/behaviors/hunger.py \u2014 tick_meal_hunger runs idle/moving/shopping paths; per-hero no-stand logging; shopping target + SHOPPING state interrupt when urgent and gold>=10.",
             "ai/basic_ai.py: tick_meal_hunger for all non-critical-combat heroes before rest/LLM; early return when buy_meal target set.",
             "ai/behaviors/llm_bridge.py + ai/prompt_templates.py + ai/context_builder.py: fallback seek_meal + LLM apply guard before explore/buy_item.",
             "tests/test_wk61_r11_hunger_live_path.py: update_hero redirect, movement toward stand, shopping interrupt, fallback meal, per-hero logging."
@@ -888,7 +888,7 @@
           ],
           "evidence": {
             "hunger_live_path_pytest": "13 passed (5 new R11 + 8 R10 regression)",
-            "qa_smoke_quick": "FAIL exit 1 — pre-existing unrelated UI/renderer test failures; Agent 06 assignment gates green on scoped pytest"
+            "qa_smoke_quick": "FAIL exit 1 \u2014 pre-existing unrelated UI/renderer test failures; Agent 06 assignment gates green on scoped pytest"
           },
           "blockers": [],
           "follow_ups": [
@@ -1580,6 +1580,50 @@
             "import_check": "from ai.providers.mock_provider import MockProvider; from ai.providers.mock import autonomous, direct_prompt, legacy_decision, conversation -> ok True True True True"
           },
           "constraints_honored": "Did NOT touch other providers (openai/grok/anthropic/base). complete() dispatch/sniffing UNCHANGED. MockProvider still importable from ai/providers/mock_provider.py (provider registry + ai/llm_brain.py + tests import it there). DID NOT COMMIT."
+        }
+      }
+    },
+    "wk82_round_d_basic_ai_handlers": {
+      "sprint_meta": {
+        "sprint_id": "wk82_round_d_basic_ai_handlers",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "title": "WK82 Round D-2 - extract BasicAI inline state-machine handlers into ai/behaviors/combat.py + recovery.py (Agent 06 W1)",
+        "role": "Agent 06 AIBehaviorDirector_LLM",
+        "plan_ref": ".cursor/plans/wk82_round_d_basic_ai_handlers.plan.md"
+      },
+      "rounds": {
+        "wk82_w1": {
+          "round_meta": {
+            "role": "Agent 06 AIBehaviorDirector_LLM",
+            "phase": "W1 - extract handle_fighting (+ nested _chase_goal_unchanged), handle_retreating, _finalize_deferred_task into ai/behaviors/ behind delegating wrappers",
+            "launched_by": "Claude Code Agent-tool subagent (parent Agent 01 PM)",
+            "reports_to": "Agent 01 (PM)",
+            "completed_utc": "2026-05-30T00:00:00Z"
+          },
+          "sprint_id": "wk82_round_d_basic_ai_handlers",
+          "round_id": "wk82_w1",
+          "status": "done",
+          "scope": "Pure-move extraction of three inline state-machine handlers out of ai/basic_ai.py (515 LOC). Each handler body moved VERBATIM (self.->ai.) into a module function taking the BasicAI coordinator as ai; BasicAI keeps each method name as a 1-line lazy-import delegating wrapper so update_hero state dispatch + all callers are unchanged. Lane: ai/basic_ai.py + new ai/behaviors/combat.py + ai/behaviors/recovery.py only. handle_idle/moving/shopping already delegated; handle_resting left inline.",
+          "new_modules": {
+            "ai/behaviors/combat.py": "handle_fighting(ai, hero, view) <- BasicAI.handle_fighting (incl nested _chase_goal_unchanged moved with it). Leaf imports: TILE_SIZE (config), HeroState (game.entities.hero), best_adjacent_tile (game.systems.navigation). BasicAI imported only under TYPE_CHECKING. 83 LOC.",
+            "ai/behaviors/recovery.py": "handle_retreating(ai, hero, view) <- BasicAI.handle_retreating; finalize_deferred_task(ai, hero, view) <- BasicAI._finalize_deferred_task. Leaf imports: TILE_SIZE (config), HeroState (game.entities.hero), get_rng (game.sim.determinism). do_shopping reached via ai.shopping_behavior instance attr (no import). BasicAI under TYPE_CHECKING only. 71 LOC."
+          },
+          "wrappers_in_basic_ai": [
+            "def handle_fighting(self, hero, view): from ai.behaviors import combat; return combat.handle_fighting(self, hero, view)",
+            "def handle_retreating(self, hero, view): from ai.behaviors import recovery; return recovery.handle_retreating(self, hero, view)",
+            "def _finalize_deferred_task(self, hero, view): from ai.behaviors import recovery; return recovery.finalize_deferred_task(self, hero, view)"
+          ],
+          "dead_import_removed": "best_adjacent_tile import dropped from ai/basic_ai.py top (its only use moved into combat.py; get_rng/TILE_SIZE/HeroState still used elsewhere so kept).",
+          "no_import_cycle": "combat.py/recovery.py import basic_ai ONLY under TYPE_CHECKING (verified via AST: 0 runtime basic_ai imports in either). Wrappers import combat/recovery lazily inside the method. Imported only LEAF helpers (config/game.*) -- not the ai.behaviors package facade symbols -- so no llm_bridge symbol dependency is introduced. Standalone import of both modules succeeds with no circular-import error; full suite + qa_smoke green confirm no cycle.",
+          "loc": "ai/basic_ai.py 515 -> 415 LOC; +combat.py 83 +recovery.py 71.",
+          "verification": {
+            "digest_guard": "tests/test_wk67_ai_boundary.py 10 passed - digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded BYTE-IDENTICAL (definitive: combat/retreat decisions drive this 300-tick digest).",
+            "full_suite": "780 passed / 4 skipped / 0 failed (baseline match).",
+            "determinism_guard": "PASS: no violations found.",
+            "qa_smoke_quick": "DONE: PASS (all scenarios exit 0).",
+            "import_check": "from ai.behaviors import combat, recovery; from ai.basic_ai import BasicAI -> hasattr combat.handle_fighting / recovery.handle_retreating / recovery.finalize_deferred_task = True True True"
+          },
+          "constraints_honored": "Did NOT touch handle_idle/handle_moving/handle_shopping/handle_resting. Did NOT modify ai/behaviors/__init__ (kept import-light; new modules not added to facade -- imported lazily by wrappers). Bodies moved VERBATIM. DID NOT COMMIT."
         }
       }
     }

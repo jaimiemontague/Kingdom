@@ -9,6 +9,63 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk82_round_d_basic_ai_handlers": {
+      "sprint_meta": {
+        "sprint_id": "wk82_round_d_basic_ai_handlers",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "goal": "QA W2: seam test for the WK82 BasicAI inline-handler extraction (combat.handle_fighting + recovery.handle_retreating/finalize_deferred_task exist; BasicAI's 3 wrappers delegate; combat.py/recovery.py TYPE_CHECKING-only ai.basic_ai import) + full DoD gate (A-F): full suite, determinism_guard, AI digest byte-identical (b73961...), qa_smoke --quick."
+      },
+      "rounds": {
+        "wk82_w2": {
+          "round_id": "wk82_w2",
+          "sprint_id": "wk82_round_d_basic_ai_handlers",
+          "status": "done",
+          "prompt_summary": "WK82 W2 (QA): create tests/test_wk82_basic_ai_handlers.py -- (1) ai.behaviors.combat exposes handle_fighting (callable); ai.behaviors.recovery exposes handle_retreating + finalize_deferred_task (callable). (2) BasicAI keeps the 3 delegating wrappers (handle_fighting/handle_retreating/_finalize_deferred_task); each wrapper, when its module fn is spied via monkeypatch, fires the module fn exactly once with (self=BasicAI, hero, view) and forwards the return value. (3) AST guard: combat.py + recovery.py do NOT import ai.basic_ai at module load time (TYPE_CHECKING-only). Full DoD gate (suite, determinism_guard, AI digest pin == b73961..., qa_smoke --quick). Only create the test; no production edits; DO NOT COMMIT; no screenshots.",
+          "round_meta": {
+            "wave": "W2 (seam test for the extracted handlers + final DoD gate)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "created_utc": "2026-05-30T00:00:00Z",
+            "depends_on": "wk82 W1 (Agent 06: handle_fighting moved to ai/behaviors/combat.py; handle_retreating + finalize_deferred_task moved to ai/behaviors/recovery.py; BasicAI keeps 3 thin delegating wrappers; basic_ai.py 515->415. Agent 06 verified digest UNCHANGED + 780 passed + qa_smoke PASS.)"
+          },
+          "new_tests": [
+            "test_behavior_module_exposes_public_fn[combat.handle_fighting]",
+            "test_behavior_module_exposes_public_fn[recovery.handle_retreating]",
+            "test_behavior_module_exposes_public_fn[recovery.finalize_deferred_task]",
+            "test_basic_ai_has_wrapper[handle_fighting]",
+            "test_basic_ai_has_wrapper[handle_retreating]",
+            "test_basic_ai_has_wrapper[_finalize_deferred_task]",
+            "test_wrapper_delegates_to_behavior_function[handle_fighting]",
+            "test_wrapper_delegates_to_behavior_function[handle_retreating]",
+            "test_wrapper_delegates_to_behavior_function[_finalize_deferred_task]",
+            "test_no_module_level_basic_ai_import[combat.py]",
+            "test_no_module_level_basic_ai_import[recovery.py]",
+            "test_type_checking_basic_ai_import_present[combat.py]",
+            "test_type_checking_basic_ai_import_present[recovery.py]"
+          ],
+          "what_i_changed": {
+            "summary": "Created tests/test_wk82_basic_ai_handlers.py (13 tests, following the WK81 seam-test pattern). (1) module-surface: ai.behaviors.combat exposes handle_fighting; ai.behaviors.recovery exposes handle_retreating + finalize_deferred_task; all callable. (2) wrapper-surface: BasicAI() exposes handle_fighting/handle_retreating/_finalize_deferred_task. (3) delegation: construct BasicAI() (no llm_brain), monkeypatch the module fn with a spy returning a sentinel, call the wrapper(hero, view) with opaque sentinels; assert the module fn fired exactly once with args[0] is the BasicAI instance, args[1] is hero, args[2] is view, len(args)==3, no kwargs, and the wrapper returns the spy's sentinel (wrappers do lazy `from ai.behaviors import combat/recovery` inside the method body then call module.fn(...), so monkeypatching the module attribute is what they resolve at call time). (4) AST guard: parse combat.py + recovery.py, assert NO module-top-level (non-TYPE_CHECKING) import of ai.basic_ai, AND assert the `from ai.basic_ai import BasicAI` IS present under `if TYPE_CHECKING:` (the audit warns ai.behaviors.__init__ can pull llm_bridge -> the BasicAI import must stay TYPE_CHECKING-only to avoid a module-level cycle). No production code touched.",
+            "files_created": [
+              "tests/test_wk82_basic_ai_handlers.py"
+            ],
+            "files_modified": [],
+            "production_code_edited": false
+          },
+          "dod_gate": {
+            "A_full_suite": "793 passed, 4 skipped, 0 failed in 144.40s. Baseline was 780 passed / 4 skipped; +13 new wk82 seam tests = 793. Zero failures. PASS.",
+            "B_determinism_guard": "PASS: no violations found (exit 0).",
+            "C_ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded BYTE-IDENTICAL to golden (pin constant unchanged at test_wk67_ai_boundary.py:181). tests/test_wk67_ai_boundary.py = 10 passed. This is the PERFECT guard for WK82 -- the moved handlers ARE the hero combat/retreat decisions the 300-tick digest hashes, so an unchanged digest proves the pure move preserved behavior exactly. PASS.",
+            "D_qa_smoke_quick": "DONE: PASS (exit 0; base/intent_bounty/hero_stuck_repro/no-enemies/mock-LLM + speed_scaling 0.25/0.5/1.0x + interior_view/quest_panel/conversation/direct_prompt_integration all exit_code=0).",
+            "E_modules_exist_wrappers_delegate_no_cycle": "PASS. ai/behaviors/combat.py exposes handle_fighting(ai,hero,view) (+ nested _chase_goal_unchanged moved with it); ai/behaviors/recovery.py exposes handle_retreating(ai,hero,view) + finalize_deferred_task(ai,hero,view). BasicAI keeps handle_fighting/handle_retreating/_finalize_deferred_task as 1-line lazy-import delegating wrappers (basic_ai.py:343-353). Both behavior modules import ai.basic_ai ONLY under TYPE_CHECKING (AST-guarded by my tests) + import only leaf helpers (config.TILE_SIZE, game.entities.hero.HeroState, game.systems.navigation.best_adjacent_tile / game.sim.determinism.get_rng) -> no module-level import cycle. basic_ai.py 515->415 LOC.",
+            "F_logs": "This log entry; PM hub close to be recorded by Agent 01.",
+            "verdict": "PASS (DoD A-F all green; AI digest byte-identical b73961...; determinism clean; qa_smoke PASS; 13 new seam tests all pass)"
+          },
+          "notes": "Constraint compliance: only tests/test_wk82_basic_ai_handlers.py created; no production edits; nothing committed; no screenshots (headless seam test). Delegation tests use opaque sentinel hero/view objects -- the spy intercepts before the real handler body runs, so no game-state fakes are needed and the test stays a pure seam check (behavior is covered by the digest + full suite). Note: the W2 prompt described basic_ai.py as 515->415; the live file is 416 lines (the wrappers add a few lines vs a bare deletion) -- non-blocking, consistent with 'smaller ~420' in plan DoD-E."
+        }
+      }
+    },
     "wk74_round_c2_ai_behavior_dedup": {
       "sprint_meta": {
         "sprint_id": "wk74_round_c2_ai_behavior_dedup",

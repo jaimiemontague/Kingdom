@@ -28,7 +28,6 @@ from game.sim.direct_prompt_commit import (
     expire_direct_prompt_commit_if_timed_out,
 )
 from game.sim.timebase import now_ms as sim_now_ms
-from game.systems.navigation import best_adjacent_tile
 
 
 # Deterministic AI RNG stream (isolated from gameplay RNG).
@@ -342,115 +341,16 @@ class BasicAI:
         self.bounty_behavior.handle_moving(self, hero, view)
 
     def handle_fighting(self, hero, view):
-        """Handle fighting state."""
-        # V1.3 extension: prefer using potions before health gets too low.
-        if hero.health_percent < 0.6 and hero.potions > 0:
-            hero.use_potion()
-            self._debug_log(f"{hero.name} -> using potion in combat (health={hero.health_percent:.1%})")
-
-        # Check if target is still valid.
-        # WK61-FIX: Buildings now have is_alive (WK61-BUG-003). Only fight enemies
-        # or lairs; if target is a non-lair building, drop it immediately.
-        if hero.target and hasattr(hero.target, "is_alive"):
-            if hasattr(hero.target, "building_type") and not getattr(hero.target, "is_lair", False):
-                # Non-lair building target in FIGHTING state is invalid — go idle.
-                hero.target = None
-                hero.state = HeroState.IDLE
-                return
-            if not hero.target.is_alive:
-                hero.target = None
-                hero.state = HeroState.IDLE
-                return
-
-            # Check if target in range.
-            dist = hero.distance_to(hero.target.x, hero.target.y)
-            if dist > hero.attack_range:
-                # Move towards target (for lairs/buildings, approach adjacent tile to avoid unreachable goals).
-                buildings = view.buildings
-                world = view.world
-
-                def _chase_goal_unchanged(nx: float, ny: float) -> bool:
-                    """Avoid rewriting target_position every tick when the goal tile is stable (WK22 path churn)."""
-                    prev = getattr(hero, "target_position", None)
-                    if prev is None or world is None:
-                        return False
-                    ngx, ngy = world.world_to_grid(nx, ny)
-                    ogx, ogy = world.world_to_grid(prev[0], prev[1])
-                    return (ngx, ngy) == (ogx, ogy)
-
-                if getattr(hero.target, "is_lair", False):
-                    if world:
-                        adj = best_adjacent_tile(world, buildings, hero.target, hero.x, hero.y)
-                        if adj:
-                            new_tx = adj[0] * TILE_SIZE + TILE_SIZE / 2
-                            new_ty = adj[1] * TILE_SIZE + TILE_SIZE / 2
-                        else:
-                            new_tx, new_ty = hero.target.x, hero.target.y
-                    else:
-                        new_tx, new_ty = hero.target.x, hero.target.y
-                    if _chase_goal_unchanged(new_tx, new_ty):
-                        hero.state = HeroState.MOVING
-                        return
-                    hero.target_position = (new_tx, new_ty)
-                else:
-                    new_tx, new_ty = hero.target.x, hero.target.y
-                    if _chase_goal_unchanged(new_tx, new_ty):
-                        hero.state = HeroState.MOVING
-                        return
-                    hero.target_position = (new_tx, new_ty)
-                hero.state = HeroState.MOVING
-        else:
-            # Find new target.
-            hero.state = HeroState.IDLE
+        from ai.behaviors import combat
+        return combat.handle_fighting(self, hero, view)
 
     def handle_retreating(self, hero, view):
-        """Handle retreating state - flee to safety."""
-        buildings = view.buildings
+        from ai.behaviors import recovery
+        return recovery.handle_retreating(self, hero, view)
 
-        # V1.3 extension: use potion during retreat if available and health is low.
-        if hero.health_percent < 0.7 and hero.potions > 0:
-            hero.use_potion()
-            self._debug_log(f"{hero.name} -> using potion while retreating (health={hero.health_percent:.1%})")
-
-        nearest_safe = None
-        nearest_dist = float("inf")
-
-        for building in buildings:
-            if building.building_type in ["castle", "marketplace"]:
-                dist = hero.distance_to(building.center_x, building.center_y)
-                if dist < nearest_dist:
-                    nearest_dist = dist
-                    nearest_safe = building
-
-        if nearest_safe:
-            if nearest_dist < TILE_SIZE * 2:
-                hero.state = HeroState.IDLE
-            else:
-                hero.target_position = (nearest_safe.center_x, nearest_safe.center_y)
-
-    def _finalize_deferred_task(self, hero, view) -> None:
-        """Run deferred task on pop-out (WK11): shopping purchase, get_drink payment, or clear rest_inn."""
-        pending = getattr(hero, "pending_task", None)
-        pending_building = getattr(hero, "pending_task_building", None)
-        if not pending or not pending_building:
-            return
-        if pending == "shopping":
-            # WK67 Move 6: do_shopping proposes the purchase through the sim-owned
-            # synchronous command sink (view.commands), so it takes the AiGameView
-            # directly now (it projects its own legacy context for the journey
-            # trigger). The view carries no economy/sim/engine.
-            self.shopping_behavior.do_shopping(self, hero, pending_building, view)
-        elif pending == "get_drink":
-            rng = get_rng("ai_basic")
-            cost = int(rng.randint(5, 10))
-            cost = min(cost, hero.gold)
-            hero.gold -= cost
-            current = getattr(pending_building, "gold_earned_from_drinks", 0)
-            setattr(pending_building, "gold_earned_from_drinks", current + cost)
-        # rest_inn: nothing to finalize (healing happened while inside)
-        setattr(hero, "pending_task", None)
-        setattr(hero, "pending_task_building", None)
-        hero.state = HeroState.IDLE
+    def _finalize_deferred_task(self, hero, view):
+        from ai.behaviors import recovery
+        return recovery.finalize_deferred_task(self, hero, view)
 
     def handle_shopping(self, hero, view):
         """Handle shopping state - wait inside or buy at marketplace/blacksmith (WK11: deferred purchase on exit)."""
