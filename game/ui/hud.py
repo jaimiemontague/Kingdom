@@ -850,127 +850,12 @@ class HUD:
         pygame.draw.line(surface, self._frame_highlight, (x, y + 1), (x + width, y + 1), 1)
 
     def _peasant_action_label(self, peasant) -> str:
-        """Return a short player-facing label for the peasant's current action."""
-        if not getattr(peasant, "is_alive", True):
-            return "Dead"
-        state = getattr(peasant, "state", None)
-        state_name = getattr(state, "name", str(state) if state else "") or ""
-        target = getattr(peasant, "target_building", None)
-        btype = ""
-        if target is not None:
-            btype = str(getattr(target, "building_type", getattr(target, "__class__", "").__name__) or "").replace("_", " ").title()
-        if state_name == "DEAD":
-            return "Dead"
-        if state_name == "IN_CASTLE":
-            return "Resting in castle"
-        if state_name == "WORKING":
-            if target is None:
-                return "Working"
-            constructed = getattr(target, "is_constructed", True)
-            if not constructed:
-                return f"Building ({btype})" if btype else "Building"
-            return f"Repairing ({btype})" if btype else "Repairing"
-        if state_name == "MOVING":
-            if target is not None:
-                return f"Going to {btype}" if btype else "Walking"
-            return "Walking"
-        return "Working" if state_name else "Idle"
+        from game.ui import hud_summaries
+        return hud_summaries.peasant_action_label(self, peasant)
 
     def _render_peasant_summary(self, surface: pygame.Surface, peasant, left_rect: pygame.Rect) -> None:
-        """Render a compact peasant info block in the left panel (wk17)."""
-        x = left_rect.x + int(self.theme.margin)
-        y = left_rect.y + int(self.theme.margin)
-        header_h = 26
-        header_rect = pygame.Rect(left_rect.x + 4, y, left_rect.width - 8, header_h)
-        pygame.draw.rect(surface, (35, 35, 45), header_rect)
-        pygame.draw.rect(surface, self._frame_inner, header_rect, 1)
-        pygame.draw.line(
-            surface,
-            self._frame_highlight,
-            (header_rect.left + 1, header_rect.top + 1),
-            (header_rect.right - 2, header_rect.top + 1),
-            1,
-        )
-        TextLabel.render(
-            surface,
-            self.theme.font_title,
-            "Peasant",
-            (x, header_rect.y + (header_rect.height - self.theme.font_title.get_height()) // 2),
-            COLOR_WHITE,
-            shadow_color=(20, 20, 30),
-        )
-        y = header_rect.bottom + 8
-        self._draw_section_divider(surface, x, y, max(0, left_rect.width - int(self.theme.margin) * 2))
-        y += 8
-        TextLabel.render(
-            surface,
-            self.theme.font_small,
-            "Action",
-            (x, y),
-            (180, 180, 200),
-            shadow_color=(20, 20, 30),
-        )
-        y += self.theme.font_small.get_height() + 4
-        action = self._peasant_action_label(peasant)
-        TextLabel.render(
-            surface,
-            self.theme.font_body,
-            action,
-            (x, y),
-            (220, 220, 220),
-            shadow_color=(20, 20, 30),
-        )
-        y += self.theme.font_body.get_height() + 8
-        hp = int(getattr(peasant, "hp", 0) or 0)
-        max_hp = max(1, int(getattr(peasant, "max_hp", 1) or 1))
-        HPBar.render(
-            surface,
-            pygame.Rect(x, y, max(0, left_rect.width - int(self.theme.margin) * 2), 8),
-            hp,
-            max_hp,
-            color_scheme={
-                "bg": (60, 60, 60),
-                "good": (80, 200, 100),
-                "warn": (220, 180, 90),
-                "bad": (220, 80, 80),
-                "border": (20, 20, 25),
-            },
-        )
-
-        # WK46 Stage 3: BuilderPeasant wood inventory (per-peasant, not a player resource).
-        wood = getattr(peasant, "wood_inventory", None)
-        req = getattr(peasant, "required_wood", None)
-        if wood is not None or req is not None:
-            y += 14
-            TextLabel.render(
-                surface,
-                self.theme.font_small,
-                "Wood",
-                (x, y),
-                (180, 180, 200),
-                shadow_color=(20, 20, 30),
-            )
-            y += self.theme.font_small.get_height() + 4
-            if wood is None:
-                wood = 0
-            if req is None:
-                TextLabel.render(
-                    surface,
-                    self.theme.font_body,
-                    f"{int(wood)}",
-                    (x, y),
-                    (220, 220, 220),
-                    shadow_color=(20, 20, 30),
-                )
-            else:
-                TextLabel.render(
-                    surface,
-                    self.theme.font_body,
-                    f"{int(wood)} / {int(req)}",
-                    (x, y),
-                    (220, 220, 220),
-                    shadow_color=(20, 20, 30),
-                )
+        from game.ui import hud_summaries
+        return hud_summaries.render_peasant_summary(self, surface, peasant, left_rect)
 
     def _render_right_panel_overview(
         self, surface: pygame.Surface, right: pygame.Rect, game_state: dict
@@ -1398,65 +1283,8 @@ class HUD:
                 surface.blit(self._recall_flash_overlay, recall_rect.topleft)
 
     def _render_building_summary(self, surface: pygame.Surface, building, rect: pygame.Rect) -> None:
-        x = rect.x + int(self.theme.margin)
-        y = rect.y + self._right_panel_top_pad(rect)
-        btype = str(getattr(building, "building_type", building.__class__.__name__) or "")
-        header_h = 28
-        header_rect = pygame.Rect(rect.x + 6, rect.y + int(self.theme.margin) - 4, rect.width - 12, header_h)
-        pygame.draw.rect(surface, (35, 35, 45), header_rect)
-        pygame.draw.rect(surface, self._frame_inner, header_rect, 1)
-        pygame.draw.line(
-            surface,
-            self._frame_highlight,
-            (header_rect.left + 1, header_rect.top + 1),
-            (header_rect.right - 2, header_rect.top + 1),
-            1,
-        )
-        title = btype.replace("_", " ").title()
-        TextLabel.render(
-            surface,
-            self.theme.font_title,
-            title,
-            (x, header_rect.y + (header_rect.height - self.theme.font_title.get_height()) // 2),
-            COLOR_WHITE,
-            shadow_color=(20, 20, 30),
-        )
-        y = header_rect.bottom + 6
-        self._draw_section_divider(surface, x, y, int(rect.width - int(self.theme.margin) * 2))
-        y += 6
-        TextLabel.render(
-            surface,
-            self.theme.font_small,
-            "Status",
-            (x, y),
-            (180, 180, 200),
-            shadow_color=(20, 20, 30),
-        )
-        y += self.theme.font_small.get_height() + 4
-        hp = int(getattr(building, "hp", 0) or 0)
-        max_hp = int(getattr(building, "max_hp", 0) or 0)
-        TextLabel.render(
-            surface,
-            self.theme.font_body,
-            f"HP: {hp}/{max_hp}",
-            (x, y),
-            (220, 220, 220),
-            shadow_color=(20, 20, 30),
-        )
-        y += self.theme.font_body.get_height() + 6
-        HPBar.render(
-            surface,
-            pygame.Rect(x, y, max(0, rect.width - int(self.theme.margin) * 2), 8),
-            hp,
-            max(1, max_hp),
-            color_scheme={
-                "bg": (60, 60, 60),
-                "good": (80, 200, 100),
-                "warn": (220, 180, 90),
-                "bad": (220, 80, 80),
-                "border": (20, 20, 25),
-            },
-        )
+        from game.ui import hud_summaries
+        return hud_summaries.render_building_summary(self, surface, building, rect)
 
     def _render_help(self, surface: pygame.Surface, origin: tuple[int, int]) -> None:
         x0, y0 = origin
@@ -1576,20 +1404,8 @@ class HUD:
         return hero_rect, chat_rect
 
     def _render_hero_focus_profile(self, surface: pygame.Surface, rect: pygame.Rect, game_state: dict) -> None:
-        """Top half of HERO_FOCUS mode: condensed profile/memory (WK49)."""
-        hero = game_state.get("selected_hero")
-        profile = game_state.get("selected_hero_profile")
-        if hero is None:
-            qh = getattr(self._micro_view, "quest_hero", None)
-            hero = qh
-        if hero is None:
-            return
-        self._hero_panel.render_focus_top(
-            surface,
-            rect,
-            hero,
-            hero_profile=profile,
-        )
+        from game.ui import hud_summaries
+        return hud_summaries.render_hero_focus_profile(self, surface, rect, game_state)
 
     def on_resize(self, screen_width: int, screen_height: int) -> None:
         self.screen_width = int(screen_width)

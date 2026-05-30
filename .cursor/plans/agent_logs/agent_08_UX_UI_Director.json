@@ -1926,6 +1926,64 @@
           "reported_to_pm": "WK94 W1 done: hud.py 2271->2085, hud_toasts.py 260 LOC; 907 passed/4 skipped/0 failed; WK67 digest unchanged; ok1/ok2 both import orders pass; ZERO self. in new module; determinism+qa_smoke green; before/after screenshots captured (HUD chrome identical, toasts not in steady-state). DID NOT COMMIT -- Agent 01 commits after W2 gate."
         }
       }
+    },
+    "wk95_round_b_hud_summaries": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk95_round_b_hud_summaries.plan.md",
+        "created_utc": "2026-05-30T19:30:00Z",
+        "notes": "WK95 Round B-12 (third hud.py split slice): extracted the entity info-card render cluster (4 leaf renderers) from game/ui/hud.py into new game/ui/hud_summaries.py behind 1-line lazy-delegating wrappers. Pure VERBATIM move; shared helpers (_draw_section_divider, _right_panel_top_pad) + ALL state (_frame_inner/_frame_highlight/_micro_view/_hero_panel/theme) stay on HUD, reached via hud. arg. New module real imports: pygame, TextLabel, HPBar, COLOR_WHITE. CRITICAL: kept _render_hero_focus_profile wrapper name (micro_view_manager.py hasattr-caller)."
+      },
+      "rounds": {
+        "wk95_w1": {
+          "sprint_id": "wk95_round_b_hud_summaries",
+          "round_id": "wk95_w1",
+          "status": "done",
+          "task": "Extract the 4 entity info-card renderers out of hud.py (2085 LOC) into game/ui/hud_summaries.py as module functions taking hud as first arg, behind 1-line delegating wrappers keeping exact original method names+signatures. PURE VERBATIM MOVE, render visually unchanged. Third slice of the hud.py god-file split (WK93 radar, WK94 toasts).",
+          "fns_moved": [
+            "_peasant_action_label (hud.py:852) -> hud_summaries.peasant_action_label(hud, peasant) -> str. VERBATIM, self.->hud.",
+            "_render_peasant_summary (879) -> render_peasant_summary(hud, surface, peasant, left_rect). VERBATIM; self._peasant_action_label(...)->hud._peasant_action_label(...) (resolves HUD wrapper->module fn, no recursion); self.theme/_frame_inner/_frame_highlight/_draw_section_divider->hud.*",
+            "_render_building_summary (1400) -> render_building_summary(hud, surface, building, rect). VERBATIM; self._right_panel_top_pad(...)/self._draw_section_divider(...)->hud.*; theme/_frame_inner/_frame_highlight->hud.*",
+            "_render_hero_focus_profile (1578) -> render_hero_focus_profile(hud, surface, rect, game_state). VERBATIM; self._micro_view->hud._micro_view, self._hero_panel.render_focus_top(...)->hud._hero_panel.render_focus_top(...)"
+          ],
+          "wrappers": [
+            "All 4 HUD wrappers keep EXACT original names+signatures (incl. leading-underscore private names + type hints) and lazy-import hud_summaries inside the body, returning the module fn result.",
+            "render() call sites UNCHANGED: hud.py _render_peasant_summary call (left-panel render, was :1712); _render_building_summary call inside _render_right_panel_overview (was :981); _peasant_action_label call inside render_peasant_summary (was :914, now in module fn as hud._peasant_action_label).",
+            "EXTERNAL caller UNCHANGED: game/ui/micro_view_manager.py:119 hasattr(hud, '_render_hero_focus_profile') + :126 hud._render_hero_focus_profile(...) -> wrapper name kept EXACTLY (verified)."
+          ],
+          "stays_on_hud": "CONFIRMED. NOT moved: _draw_section_divider (:846), _right_panel_top_pad (:992), _render_right_panel_overview (:975 orchestrator), and __init__ state _frame_inner/_frame_highlight/_hero_panel/_micro_view/theme. The moved functions reach all of these via the hud arg.",
+          "self_grep": "ZERO occurrences of \"self.\" in game/ui/hud_summaries.py (Grep exit 1, no matches).",
+          "hud_loc": {
+            "before": 2085,
+            "after": 1901,
+            "hud_summaries_new": 230
+          },
+          "no_cycle": "CONFIRMED. hud_summaries.py imports HUD only under TYPE_CHECKING (from __future__ import annotations); runtime imports are pygame + config.COLOR_WHITE + game.ui.widgets (HPBar, TextLabel). widgets does NOT import hud -> no cycle via widgets. Wrappers import hud_summaries lazily inside the method body. Fresh interpreter both orders pass.",
+          "import_check": "python -c \"import game.ui.hud_summaries; import game.ui.hud; print(ok1)\" -> ok1 ; python -c \"import game.ui.hud; import game.ui.hud_summaries; print(ok2)\" -> ok2",
+          "screenshots": {
+            "before": [
+              "docs/screenshots/wk95_before_base/ (base_overview, 4 PNG)",
+              "docs/screenshots/wk95_before_panels/ (ui_panels, 7 PNG)"
+            ],
+            "after": [
+              "docs/screenshots/wk95_after_base/ (4 PNG)",
+              "docs/screenshots/wk95_after_panels/ (7 PNG)"
+            ]
+          },
+          "visual_verdict": "HUD CHROME IDENTICAL. ui_panels_building before/after visually indistinguishable: same 'Inn' building panel (Heroes Inside 0/6, Heals 1 HP/s, Gold from drinks $0, Taxable Gold $0, Demolish + Enter Building buttons), same top/bottom HUD bars, same world. ui_panels_hero before/after also indistinguishable (Gareth hero sheet + stats + minimap + scene). Only visible delta is the perf-overlay frame-time readout (8.9ms->7.3ms, 16->15 PF calls) = run-to-run timing noise, NOT a render regression. CAVEAT (per plan DoD F): the moved summaries are SELECTION-GATED -- _render_peasant_summary, the right-panel _render_building_summary, and _render_hero_focus_profile only render when that entity kind is selected and do NOT appear in a steady-state base_overview/ui_panels capture. So the screenshots prove the scene+HUD chrome are unchanged, they do NOT exercise the moved summary pixels. The real guards are (i) the verbatim move and (ii) Agent 11 W2 behavior test (tests/test_wk95_hud_summaries.py) that renders each summary through the moved path. Stated explicitly, not claiming screenshot proof of the summary pixels.",
+          "verification": {
+            "wk67_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded UNCHANGED (tests/test_wk67_ai_boundary.py: 10 passed)",
+            "full_suite": "943 passed, 4 skipped, 0 failed (194s) -- matches WK94-close baseline (new seam test is Agent 11 W2, not in this run)",
+            "determinism_guard": "PASS: no violations found",
+            "qa_smoke_quick": "DONE: PASS (all scenarios exit_code=0)"
+          },
+          "files_touched": [
+            "game/ui/hud_summaries.py (NEW, 230 LOC)",
+            "game/ui/hud.py (4 method bodies -> 1-line delegating wrappers; -184 LOC, 2085->1901)"
+          ],
+          "committed": false,
+          "reported_to_pm": "WK95 W1 done: hud.py 2085->1901, hud_summaries.py 230 LOC; 943 passed/4 skipped/0 failed; WK67 digest b73961...148ded unchanged; ok1/ok2 both import orders pass; ZERO self. in new module; determinism+qa_smoke green; before/after screenshots captured (HUD chrome identical; summaries selection-gated, absent from steady-state -- behavior test is the guard). DID NOT COMMIT -- Agent 01 commits after W2 gate."
+        }
+      }
     }
   }
 }
