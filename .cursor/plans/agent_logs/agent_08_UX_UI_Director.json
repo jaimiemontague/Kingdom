@@ -2038,6 +2038,58 @@
      "do_not_commit": "true — Agent 01 commits after the W2 gate. Agent 08 did NOT git add/commit."
     }
    }
+  },
+  "wk97_round_b_hud_panel_buttons": {
+   "sprint_meta": {
+    "plan_ref": ".cursor/plans/wk97_round_b_hud_panel_buttons.plan.md",
+    "created_utc": "2026-05-30T23:30:00Z",
+    "notes": "WK97 Round B-14 (fifth hud.py split slice): extracted the panel-chrome BUTTON render cluster (6 fns) + the COLOR_PIN_GOLD constant from game/ui/hud.py into new game/ui/hud_panel_buttons.py. New module OWNS COLOR_PIN_GOLD=(220,180,50) (only consumer was the moved pin renderer; grep confirmed NO other use in game/tests/tools -> deleted from hud.py with NO re-export). Pure VERBATIM move behind 1-line lazy-delegating wrappers; ALL hit-rect/flash STATE (right_close_rect, left_close_rect, pin_button_rect, memorial_btn_rect, memorial_card, _pending_memorial, _recall_flash_end_ms, _recall_label_sig/_surf, _recall_overlay_size, _recall_fallen_overlay, _recall_flash_overlay, _pin_slot, _pin_emoji_font/_size, _button_tex_*, _button_slice_border, _frame_*, _right/_left_close_button, theme) STAYS on HUD, reached via hud. arg; _right_panel_top_pad + handle_click untouched. New module real imports: pygame, sim_now_ms (game.sim.timebase), truncate_panel_line (game.ui.hero_panel), Button/NineSlice/TextLabel (game.ui.widgets). Acyclic: wrappers lazy-import hud_panel_buttons; new module reaches HUD only via param+TYPE_CHECKING (no top-level hud import). trigger_recall_flash wrapper name preserved EXACTLY (game/ui/pin_alert_watcher.py:102 self._hud.trigger_recall_flash())."
+   },
+   "rounds": {
+    "wk97_w1": {
+     "sprint_id": "wk97_round_b_hud_panel_buttons",
+     "round_id": "wk97_w1",
+     "status": "done",
+     "task": "Extract the panel-chrome button render cluster (6 fns) + COLOR_PIN_GOLD out of hud.py (1744 LOC) into NEW game/ui/hud_panel_buttons.py as module functions taking hud first, behind 1-line delegating wrappers keeping exact original method names+signatures; new module owns the constant (no re-export). PURE VERBATIM MOVE, render visually unchanged. Fifth slice of the hud.py god-file split (WK93 radar, WK94 toasts, WK95 summaries, WK96 watch_card).",
+     "constant_moved": "COLOR_PIN_GOLD=(220,180,50): hud.py:34 -> hud_panel_buttons.py module-local. Deleted from hud.py; NO re-export (grep confirmed sole consumer was _render_pin_button:986, now moved; no external/import consumers).",
+     "fns_moved": [
+      "_render_right_close_button (hud.py:886) -> render_right_close_button(hud, surface, right_rect). VERBATIM; self.->hud. (_right_close_button, _button_tex_normal/_hover/_pressed, _button_slice_border, _frame_outer/_inner/_highlight, theme, right_close_rect).",
+      "_render_left_close_button (914) -> render_left_close_button(hud, surface, left_rect). VERBATIM; Button(...) lazy-init block kept verbatim (sets hud._left_close_button); same _button_tex_*/_frame_*/theme/left_close_rect refs.",
+      "_render_pin_button (949) -> render_pin_button(hud, surface, left_rect, game_state). VERBATIM; hasattr(self,...)->hasattr(hud,...), getattr(self,...)->getattr(hud,...); _pin_slot, _pin_emoji_font/_size, pin_button_rect, _frame_*, theme; COLOR_PIN_GOLD now module-local (no hud. prefix).",
+      "trigger_recall_flash (1007) -> trigger_recall_flash(hud). VERBATIM; _recall_flash_end_ms; sim_now_ms() module-level import (no hud. prefix). EXTERNAL caller pin_alert_watcher.py:102 -> wrapper name kept EXACTLY.",
+      "_render_memorial_button (1051) -> render_memorial_button(hud, surface, memorial_rect, game_state). VERBATIM; memorial_btn_rect, _pending_memorial, memorial_card, _button_tex_normal, _button_slice_border, theme.",
+      "_render_recall_button (1073) -> render_recall_button(hud, surface, recall_rect, game_state). VERBATIM; _pin_slot, recall_rect, _recall_label_sig/_surf, _recall_overlay_size, _recall_fallen_overlay, _recall_flash_overlay, _recall_flash_end_ms, _button_tex_pressed/_normal, _button_slice_border, theme; sim_now_ms()+truncate_panel_line() module-level imports (no hud. prefix); the \\u21a9 recall-arrow escape preserved byte-for-byte."
+     ],
+     "wrappers": [
+      "All 6 HUD wrappers keep EXACT original names+signatures+type hints (leading-underscore private names + the public trigger_recall_flash) and lazy-import hud_panel_buttons inside the body, returning the module fn result.",
+      "render() call sites UNCHANGED (1362/1363/1367/1370/1383/1384/1465/1466); pin_alert_watcher.py:102 UNCHANGED."
+     ],
+     "stays_on_hud": "All hit-rect/flash STATE in __init__ (right_close_rect, left_close_rect, pin_button_rect, memorial_btn_rect, memorial_card, _pending_memorial, _recall_flash_end_ms, _recall_flash_overlay, etc.); _right_panel_top_pad (reads self.right_close_rect); handle_click (reads the hit-rects). Untouched.",
+     "verification": {
+      "pytest": "1001 passed, 4 skipped, 0 failed (matches WK96-close baseline) in 189.24s",
+      "wk67_digest": "tests/test_wk67_ai_boundary.py 10 passed; _AI_DECISION_DIGEST == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical, unchanged)",
+      "determinism_guard": "PASS: no violations found",
+      "qa_smoke_quick": "DONE: PASS (exit_code=0 all scenarios)",
+      "import_orders": "ok1 (hud_panel_buttons then hud) and ok2 (hud then hud_panel_buttons) both clean -> no cycle",
+      "zero_self_in_new_module": "grep 'self.' game/ui/hud_panel_buttons.py -> 0 matches",
+      "no_toplevel_hud_import": "grep top-level 'import game.ui.hud'/'from game.ui.hud' outside TYPE_CHECKING -> NONE (only docstring mention + TYPE_CHECKING-guarded HUD import)",
+      "hud_py_loc": "1567 (was 1744; -177)",
+      "hud_panel_buttons_loc": 249
+     },
+     "screenshots": {
+      "capture_cmds": [
+       "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk97_before_base --size 1920x1080 --ticks 480",
+       "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk97_before_panels --size 1920x1080 --ticks 480",
+       "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk97_after_base --size 1920x1080 --ticks 480",
+       "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk97_after_panels --size 1920x1080 --ticks 480"
+      ],
+      "evidence": "docs/screenshots/wk97_before_base, wk97_after_base, wk97_before_panels, wk97_after_panels",
+      "verdict": "BUTTON REGIONS PIXEL-IDENTICAL. Per-region crop diff on ui_panels_hero: left_panel_chrome (close X + pin) PIXEL-IDENTICAL; watch_card_area PIXEL-IDENTICAL; command bar + recall/memorial region (x>=260) PIXEL-IDENTICAL. The only whole-image byte/pixel diffs are in the animated world terrain (grass/foliage flicker) -- present even in world_clean (no-UI) variants -- i.e. capture-time world non-determinism, NOT my pure-move change. 8-px residual at ~(114,987) is dark-green terrain (RGB 11,22,11) at the minimap/world edge, not a button."
+     },
+     "in_scope_note": "Per plan STEP 3, ONLY COLOR_PIN_GOLD was deleted from hud.py. The move leaves 'from game.ui.hero_panel import truncate_panel_line' (hud.py:28) as a now-unused import in hud.py (its sole consumer, the recall button, moved). Left in place (harmless re-export; no behavior/test/digest impact; out of the verbatim-move scope) -- flagged for QA/PM to prune if desired.",
+     "do_not_commit": "Did NOT commit and did NOT git add anything per instructions (Agent 01 commits after the W2 gate)."
+    }
+   }
   }
  }
 }

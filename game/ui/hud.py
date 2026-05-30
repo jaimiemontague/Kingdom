@@ -25,13 +25,11 @@ from game.ui.quest_view_panel import QuestViewPanel
 from game.ui.speed_control import SpeedControlBar
 from game.ui.theme import UITheme
 from game.ui.top_bar import TopBar
-from game.ui.hero_panel import truncate_panel_line
 from game.ui.pin_slot import PinSlot
 from game.ui.info_card import InfoCard
 from game.ui.ui_actions import UIAction, normalize_ui_action
 from game.ui.widgets import Button, HPBar, NineSlice, Panel, TextLabel
 
-COLOR_PIN_GOLD = (220, 180, 50)
 # WATCH_CARD_* layout constants moved to game.ui.hud_watch_card (WK96); re-imported
 # here so the names stay module attributes of hud — preserving
 # `from game.ui.hud import WATCH_CARD_*` (tests/test_wk52_watch_card.py) and the
@@ -884,129 +882,20 @@ class HUD:
         return pad
 
     def _render_right_close_button(self, surface: pygame.Surface, right_rect: pygame.Rect) -> None:
-        x_surf = TextLabel.get_surface(self.theme.font_small, "X", (240, 240, 240))
-        size = max(18, x_surf.get_height() + 6)
-        self._right_close_button.rect = pygame.Rect(
-            int(right_rect.right - size - 6),
-            int(right_rect.y + 6),
-            int(size),
-            int(size),
-        )
-        self._right_close_button.text = "X"
-        self._right_close_button.render(
-            surface,
-            pygame.mouse.get_pos(),
-            texture_normal=self._button_tex_normal,
-            texture_hover=self._button_tex_hover,
-            texture_pressed=self._button_tex_pressed,
-            slice_border=self._button_slice_border,
-            bg_normal=(45, 45, 55),
-            bg_hover=(60, 60, 70),
-            bg_pressed=(70, 70, 85),
-            border_outer=self._frame_outer,
-            border_inner=self._frame_inner,
-            border_highlight=self._frame_highlight,
-            text_color=(240, 240, 240),
-            text_shadow_color=(20, 20, 30),
-        )
-        self.right_close_rect = pygame.Rect(self._right_close_button.rect)
+        from game.ui import hud_panel_buttons
+        return hud_panel_buttons.render_right_close_button(self, surface, right_rect)
 
     def _render_left_close_button(self, surface: pygame.Surface, left_rect: pygame.Rect) -> None:
-        if getattr(self, "_left_close_button", None) is None:
-            self._left_close_button = Button(
-                rect=pygame.Rect(0, 0, 1, 1),
-                text="X",
-                font=self.theme.font_small,
-                enabled=True,
-            )
-        x_surf = TextLabel.get_surface(self.theme.font_small, "X", (240, 240, 240))
-        size = max(18, x_surf.get_height() + 6)
-        self._left_close_button.rect = pygame.Rect(
-            int(left_rect.right - size - 6),
-            int(left_rect.y + 6),
-            int(size),
-            int(size),
-        )
-        self._left_close_button.text = "X"
-        self._left_close_button.render(
-            surface,
-            pygame.mouse.get_pos(),
-            texture_normal=self._button_tex_normal,
-            texture_hover=self._button_tex_hover,
-            texture_pressed=self._button_tex_pressed,
-            slice_border=self._button_slice_border,
-            bg_normal=(45, 45, 55),
-            bg_hover=(60, 60, 70),
-            bg_pressed=(70, 70, 85),
-            border_outer=self._frame_outer,
-            border_inner=self._frame_inner,
-            border_highlight=self._frame_highlight,
-            text_color=(240, 240, 240),
-            text_shadow_color=(20, 20, 30),
-        )
-        self.left_close_rect = pygame.Rect(self._left_close_button.rect)
+        from game.ui import hud_panel_buttons
+        return hud_panel_buttons.render_left_close_button(self, surface, left_rect)
 
     def _render_pin_button(self, surface: pygame.Surface, left_rect: pygame.Rect, game_state: dict) -> None:
-        """WK51: small pin toggle to the left of the panel close button."""
-        sel = game_state.get("selected_hero")
-        if sel is None:
-            self.pin_button_rect = None
-            return
-        pin_size = 20
-        gap = 6
-        x_surf = TextLabel.get_surface(self.theme.font_small, "X", (240, 240, 240))
-        close_size = max(18, x_surf.get_height() + 6)
-        close_x = int(left_rect.right - close_size - 6)
-        pin_x = int(close_x - gap - pin_size)
-        pin_y = int(left_rect.y + 6)
-        self.pin_button_rect = pygame.Rect(pin_x, pin_y, pin_size, pin_size)
-        pr = self.pin_button_rect
-        sel_id = str(getattr(sel, "hero_id", "") or "")
-        pinned = bool(sel_id and self._pin_slot.hero_id == sel_id)
-        cx, cy = pr.centerx, pr.centery
-
-        if not hasattr(self, "_pin_emoji_font") or getattr(self, "_pin_emoji_font_size", 0) != pin_size:
-            try:
-                self._pin_emoji_font = pygame.font.SysFont(
-                    "segoeuiemoji,segoeui,noto color emoji,arial", pin_size
-                )
-            except Exception:
-                self._pin_emoji_font = None
-            self._pin_emoji_font_size = pin_size
-
-        emoji_surf = None
-        if self._pin_emoji_font is not None:
-            try:
-                emoji_surf = self._pin_emoji_font.render("\U0001f4cc", True, (255, 255, 255))
-            except Exception:
-                emoji_surf = None
-
-        if emoji_surf is None or emoji_surf.get_width() <= 4:
-            if pinned:
-                pygame.draw.circle(surface, COLOR_PIN_GOLD, (cx, cy), pin_size // 2 - 1)
-                pygame.draw.circle(surface, self._frame_outer, (cx, cy), pin_size // 2 - 1, 2)
-                col = (255, 255, 255)
-            else:
-                pygame.draw.circle(surface, self._frame_inner, (cx, cy), pin_size // 2 - 1, 2)
-                col = (150, 150, 160)
-            p_surf = TextLabel.get_surface(self.theme.font_small, "P", col)
-            surface.blit(p_surf, (cx - p_surf.get_width() // 2, cy - p_surf.get_height() // 2))
-            return
-
-        dest_pos = (
-            cx - emoji_surf.get_width() // 2,
-            cy - emoji_surf.get_height() // 2,
-        )
-        if pinned:
-            surface.blit(emoji_surf, dest_pos)
-        else:
-            s = emoji_surf.copy()
-            s.set_alpha(128)
-            surface.blit(s, dest_pos)
+        from game.ui import hud_panel_buttons
+        return hud_panel_buttons.render_pin_button(self, surface, left_rect, game_state)
 
     def trigger_recall_flash(self) -> None:
-        """Flash the Recall button red (WK52). Called by PinAlertWatcher."""
-        self._recall_flash_end_ms = int(sim_now_ms()) + 750
+        from game.ui import hud_panel_buttons
+        return hud_panel_buttons.trigger_recall_flash(self)
 
     def _render_hero_watch_card_infocard(
         self,
@@ -1051,79 +940,12 @@ class HUD:
     def _render_memorial_button(
         self, surface: pygame.Surface, memorial_rect: pygame.Rect, game_state: dict
     ) -> None:
-        """Memorial opener when a fallen pin has a pending record."""
-        self.memorial_btn_rect = None
-        if self._pending_memorial is None:
-            return
-        if self.memorial_card.visible:
-            return
-        self.memorial_btn_rect = pygame.Rect(memorial_rect)
-        NineSlice.render(
-            surface, memorial_rect, self._button_tex_normal, border=self._button_slice_border
-        )
-        lbl = self.theme.font_small.render(f"{chr(9904)} Memorial", True, (200, 180, 130))
-        surface.blit(
-            lbl,
-            (
-                memorial_rect.x + (memorial_rect.width - lbl.get_width()) // 2,
-                memorial_rect.y + (memorial_rect.height - lbl.get_height()) // 2,
-            ),
-        )
+        from game.ui import hud_panel_buttons
+        return hud_panel_buttons.render_memorial_button(self, surface, memorial_rect, game_state)
 
     def _render_recall_button(self, surface: pygame.Surface, recall_rect: pygame.Rect, game_state: dict) -> None:
-        """WK51: bottom-bar recall when a hero is pinned."""
-        profiles = game_state.get("hero_profiles_by_id") or {}
-        pin = self._pin_slot
-        if pin.hero_id is None:
-            self.recall_rect = None
-            return
-        hero_alive = pin.hero_id in profiles
-        pin.update_liveness(hero_alive=hero_alive, now_ms=int(sim_now_ms()))
-        if pin.hero_id is None:
-            self.recall_rect = None
-            return
-        self.recall_rect = pygame.Rect(recall_rect)
-        prof = profiles.get(pin.hero_id)
-        name = "Hero"
-        if prof is not None:
-            idn = getattr(prof, "identity", None)
-            if idn is not None:
-                name = str(getattr(idn, "name", "Hero"))
-        fallen = pin.is_fallen()
-        label = f"{name} (fallen)" if fallen else f"\u21a9 {truncate_panel_line(name, max_chars=14)}"
-        sig = (str(pin.hero_id), fallen, label)
-        if self._recall_label_sig != sig or self._recall_label_surf is None:
-            self._recall_label_sig = sig
-            col = (160, 160, 165) if fallen else (240, 240, 240)
-            self._recall_label_surf = self.theme.font_small.render(label, True, col)
-        tex = self._button_tex_pressed if fallen else self._button_tex_normal
-        NineSlice.render(surface, recall_rect, tex, border=self._button_slice_border)
-
-        size = (recall_rect.width, recall_rect.height)
-        if self._recall_overlay_size != size:
-            self._recall_overlay_size = size
-            self._recall_fallen_overlay = pygame.Surface(size, pygame.SRCALPHA)
-            self._recall_fallen_overlay.fill((40, 40, 50, 150))
-            self._recall_flash_overlay = pygame.Surface(size, pygame.SRCALPHA)
-            self._recall_flash_overlay.fill((220, 30, 30, 140))
-
-        if fallen and self._recall_fallen_overlay is not None:
-            surface.blit(self._recall_fallen_overlay, recall_rect.topleft)
-        if self._recall_label_surf is not None:
-            lw, lh = self._recall_label_surf.get_size()
-            surface.blit(
-                self._recall_label_surf,
-                (
-                    recall_rect.x + (recall_rect.width - lw) // 2,
-                    recall_rect.y + (recall_rect.height - lh) // 2,
-                ),
-            )
-        now = int(sim_now_ms())
-        if now < self._recall_flash_end_ms:
-            elapsed = max(0, now - (self._recall_flash_end_ms - 750))
-            pulse = elapsed // 250
-            if pulse % 2 == 0 and self._recall_flash_overlay is not None:
-                surface.blit(self._recall_flash_overlay, recall_rect.topleft)
+        from game.ui import hud_panel_buttons
+        return hud_panel_buttons.render_recall_button(self, surface, recall_rect, game_state)
 
     def _render_building_summary(self, surface: pygame.Surface, building, rect: pygame.Rect) -> None:
         from game.ui import hud_summaries
