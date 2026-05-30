@@ -1802,6 +1802,66 @@
           "notes": "G1 (scroll/clip rect convention) was already landed; G2 builds on it -- the hire rect uses the identical panel_y+local.y-menu_scroll_px convention and is gated by _rect_in_viewport in both handle_click and update_hover. H1 was a latent issue (Agent 11 owns the formal paused-click test). DO NOT COMMIT per PM gate."
         }
       }
+    },
+    "wk93_round_b_hud_radar": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk93_round_b_hud_radar.plan.md",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "notes": "WK93 Round B-10 (first hud.py split slice): extracted the radar-minimap cluster from game/ui/hud.py into new game/ui/hud_radar.py behind 1-line delegating wrappers. Pure VERBATIM move; cache state stays on HUD; screenshot-verified minimap identical."
+      },
+      "rounds": {
+        "wk93_w1": {
+          "sprint_id": "wk93_round_b_hud_radar",
+          "round_id": "wk93_w1",
+          "status": "done",
+          "task": "Extract radar-minimap cluster out of hud.py (2477 LOC) into game/ui/hud_radar.py as functions taking hud, behind delegating wrappers. PURE VERBATIM MOVE, render visually unchanged. First slice of the hud.py god-file split.",
+          "fns_moved": [
+            "world_to_radar(wx,wy,inner,world_w,world_h) -- module fn (hud.py:59) -> hud_radar.world_to_radar (VERBATIM). Re-exported from hud.py because tests/test_wk52_watch_card.py does .",
+            "_ensure_radar_terrain_surface (method ~1502-1557) -> ensure_radar_terrain_surface(hud, inner, world); self.->hud. for cache reads/writes (hud._radar_terrain_cache_key / hud._radar_terrain_surface). VERBATIM body.",
+            "_render_radar_minimap (method ~1559-1713) -> render_radar_minimap(hud, surface, minimap_rect, game_state); calls ensure_radar_terrain_surface + world_to_radar; reads hud._pin_slot; draws building/POI/enemy/hero dots. VERBATIM body."
+          ],
+          "wrappers": [
+            "HUD._ensure_radar_terrain_surface(self, inner, world) -> lazy ; return hud_radar.ensure_radar_terrain_surface(self, inner, world)",
+            "HUD._render_radar_minimap(self, surface, minimap_rect, game_state) -> lazy import; return hud_radar.render_radar_minimap(self, surface, minimap_rect, game_state)",
+            "Render call site at hud.py:1903 (self._render_radar_minimap(surface, minimap, game_state)) UNCHANGED. Cache fields _radar_terrain_cache_key/_radar_terrain_surface stay on HUD __init__ (hud.py:275-276)."
+          ],
+          "world_to_radar_reexport": "YES -- required. tests/test_wk52_watch_card.py imports world_to_radar from game.ui.hud. hud.py now does  at module top (re-export). Verified same fn object (wtr is world_to_radar == True). test_wk52_watch_card.py: 21 passed.",
+          "hud_loc": {
+            "before": 2477,
+            "after": 2271,
+            "hud_radar_new": 244
+          },
+          "no_cycle": "CONFIRMED. hud_radar.py imports HUD only under TYPE_CHECKING (from __future__ import annotations); never imports hud at module top. Wrappers import hud_radar lazily inside the method. hud.py re-exports world_to_radar from hud_radar at top -- safe (hud_radar has no runtime hud import). Fresh  and  both succeed independently.",
+          "import_check": "from game.ui.hud_radar import world_to_radar, ensure_radar_terrain_surface, render_radar_minimap; import game.ui.hud -> ok",
+          "screenshots": {
+            "before": [
+              "docs/screenshots/wk93_before_base/ (base_overview, 4 PNG)",
+              "docs/screenshots/wk93_before_panels/ (ui_panels, 7 PNG)"
+            ],
+            "after": [
+              "docs/screenshots/wk93_after_base/",
+              "docs/screenshots/wk93_after_panels/"
+            ],
+            "crops": [
+              "docs/screenshots/wk93_minimap_crop_before.png",
+              "docs/screenshots/wk93_minimap_crop_after.png (6x upscaled minimap corner)"
+            ]
+          },
+          "visual_verdict": "MINIMAP IDENTICAL. ui_panels_hero.png + ui_panels_hidden.png are BYTE-IDENTICAL before vs after (sha256). Upscaled minimap-corner crops (before vs after) show identical terrain underlay, identical 5 red enemy dots, identical hero(gold)/building(blue-grey/cyan)/POI cluster. The only sub-pixel deltas (~210-254px in the minimap band) are run-to-run sim non-determinism: an after-vs-after2 capture of the SAME code shows the same-magnitude diff in the same band (and world_clean.png, which has NO HUD, also diffs in the world center). Refactor introduces no visual change.",
+          "verification": {
+            "wk67_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded UNCHANGED (tests/test_wk67_ai_boundary.py: 10 passed)",
+            "full_suite": "897 passed, 4 skipped, 0 failed (177s) -- matches baseline",
+            "determinism_guard": "PASS: no violations found",
+            "qa_smoke_quick": "DONE: PASS (all scenarios exit_code=0)"
+          },
+          "files_touched": [
+            "game/ui/hud.py (wrappers + re-export; -206 LOC)",
+            "game/ui/hud_radar.py (NEW, 244 LOC)"
+          ],
+          "committed": false,
+          "reported_to_pm": "Round wk93_w1 complete: 3 fns moved VERBATIM behind wrappers, world_to_radar re-exported (test_wk52 importer), hud.py 2477->2271, no cycle, minimap identical (byte-identical hero/hidden + crop-verified), digest unchanged, 897 passed."
+        }
+      }
     }
   }
 }
