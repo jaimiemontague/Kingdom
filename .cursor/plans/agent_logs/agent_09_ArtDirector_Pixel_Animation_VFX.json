@@ -938,6 +938,69 @@
           ]
         }
       }
+    },
+    "wk90_round_b_ursina_misc_props": {
+      "sprint_meta": {
+        "notes": "WK90 Round B-7 (Agent 09): pure-moved the 3 misc-prop per-frame sync methods (_sync_snapshot_projectiles, _sync_snapshot_bounties, _sync_snapshot_rubble) out of game/graphics/ursina_renderer.py into a NEW game/graphics/ursina_misc_props_sync.py as module functions taking the renderer (r) + args, behind 1-line lazy-delegating wrappers (SAME names) on UrsinaRenderer. update() call sites unchanged. Renderer state (_projectile_tex, _entity_render collab, _bounty_entities, _rubble_entities, the _BOUNTY_* visual constants) STAYS on the renderer; the new module reads/writes via r.*. PURE VERBATIM move (one local rename: rubble per-record loop var r->rec to avoid shadowing the renderer param r; logic byte-identical). Render visually unchanged (before/after combat+base identical). ursina_renderer.py 1461 -> 1306 LOC; new ursina_misc_props_sync.py = 228 LOC.",
+        "created_utc": "2026-05-30T18:10:00+00:00"
+      },
+      "rounds": {
+        "wk90_w1": {
+          "sprint_id": "wk90_round_b_ursina_misc_props",
+          "round_id": "wk90_w1",
+          "status": "done",
+          "role": "WAVE W1 - extract the 3 misc-prop sync fns (projectiles+bounties+rubble) from ursina_renderer.py into new ursina_misc_props_sync.py behind delegating wrappers; before/after combat+base screenshot verify; suite+digest+gates+no-cycle.",
+          "what_i_changed": {
+            "game/graphics/ursina_misc_props_sync.py (NEW, 228 LOC)": [
+              "MOVED VERBATIM (method->fn): _sync_snapshot_projectiles (was renderer ~1244-1282) -> sync_snapshot_projectiles(r, snapshot, active_ids). self.->r.; reads/writes r._projectile_tex, calls r._entity_render.get_or_create_entity/apply_pixel_billboard_settings/sync_billboard_entity exactly as self.*. Body byte-for-byte identical.",
+              "MOVED VERBATIM (method->fn): _sync_snapshot_bounties (was renderer ~1294-1366) -> sync_snapshot_bounties(r, snapshot, active_ids). self.->r.; reads r._bounty_entities + the _BOUNTY_* class constants via r._BOUNTY_POLE_HEIGHT/_RADIUS/_FLAG_SCALE/_FLAG_OFFSET_Y/_TEXT_OFFSET_Y. pole+gold-pennant+$reward-text assembly + claimed/expired removal unchanged.",
+              "MOVED VERBATIM (method->fn): _sync_snapshot_rubble (was renderer ~1372-1427) -> sync_snapshot_rubble(r, snapshot). self.->r.; reads/writes r._rubble_entities. ONE local rename: the per-record loop var was named r in the original (renderer was self), which would now shadow the renderer param r, so the record var is rec (active_ids/center_px/rng/_rock_stems/3-rock loop logic byte-identical, deterministic random.Random(rec.record_id) preserved).",
+              "PROJECTILE_BILLBOARD_SCALE (=0.075) + PROJECTILE_BILLBOARD_Y (=ENEMY_SCALE*0.5) recomputed locally from config (identical to the renderer module-level values) so the module is self-contained with NO import of ursina_renderer.",
+              "Leaf deps: ursina (Entity/Vec3/color/Text/scene), ursina.shaders.unlit_shader, config, TerrainTextureBridge, sprite_unlit_shader, vfx.get_projectile_billboard_surface, ursina_coords.sim_px_to_world_xz, ursina_environment._environment_model_path, terrain_height.get_terrain_height/is_initialized. UrsinaRenderer imported ONLY under TYPE_CHECKING (from __future__ import annotations). No module-top import of ursina_renderer."
+            ],
+            "game/graphics/ursina_renderer.py (1461 -> 1306 LOC)": [
+              "Replaced _sync_snapshot_projectiles method body with 1-line lazy-delegating wrapper (SAME name): {from game.graphics import ursina_misc_props_sync; return ursina_misc_props_sync.sync_snapshot_projectiles(self, snapshot, active_ids)}.",
+              "Replaced _sync_snapshot_bounties method body with 1-line lazy-delegating wrapper (SAME name): {... return ursina_misc_props_sync.sync_snapshot_bounties(self, snapshot, active_ids)}.",
+              "Replaced _sync_snapshot_rubble method body with 1-line lazy-delegating wrapper (SAME name): {... return ursina_misc_props_sync.sync_snapshot_rubble(self, snapshot)}.",
+              "KEPT on the renderer class: the _BOUNTY_POLE_HEIGHT/_POLE_RADIUS/_FLAG_SCALE/_FLAG_OFFSET_Y/_TEXT_OFFSET_Y constants (now read by the moved bounty fn via r._BOUNTY_*).",
+              "UNCHANGED: update()-pipeline call sites self._sync_snapshot_projectiles(...)/self._sync_snapshot_bounties(...)/self._sync_snapshot_rubble(...); the _projectile_tex/_entity_render/_bounty_entities/_rubble_entities fields + their init/cleanup. Existing imports (PROJECTILE_BILLBOARD_*, get_projectile_billboard_surface, TerrainTextureBridge, sprite/unlit shaders, _environment_model_path) left as-is (still used by other renderer methods or kept as public module constants); pure move, no cleanup."
+            ]
+          },
+          "state_stays_on_renderer": "_projectile_tex (cached projectile billboard texture), _entity_render (UrsinaEntityRenderCollab), _bounty_entities (bid->[pole,flag,text]), _rubble_entities (record_id->[rocks]), and the _BOUNTY_* visual constants ALL stay on UrsinaRenderer; the moved fns read/write them via r.*. Only the per-frame sync COMPUTE moved.",
+          "verify": {
+            "pytest_wk67_ai_boundary": "10 passed; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded UNCHANGED (constant asserted in test, line 181).",
+            "pytest_full": "867 passed, 4 skipped, 0 failed (167.79s) - matches baseline exactly.",
+            "determinism_guard": "PASS: no violations found (exit 0).",
+            "qa_smoke_quick": "DONE: PASS (exit 0).",
+            "import_check": "from game.graphics.ursina_misc_props_sync import sync_snapshot_projectiles, sync_snapshot_bounties, sync_snapshot_rubble; import game.graphics.ursina_renderer -> ok.",
+            "no_cycle": "CONFIRMED - wrappers import ursina_misc_props_sync LAZILY (inside each method); ursina_misc_props_sync imports UrsinaRenderer only under TYPE_CHECKING (the 3 fns take r), NO module-top import of ursina_renderer. Both import orders succeed in fresh interpreters: (A) misc_props_sync then renderer -> A ok; (B) renderer then misc_props_sync -> B ok.",
+            "renderer_loc": "ursina_renderer.py 1461 -> 1306 LOC (-155). new ursina_misc_props_sync.py = 228 LOC."
+          },
+          "screenshots": {
+            "before_combat": "docs/screenshots/wk90_before_combat/ursina_melee_combat_20260530_105147_164.png",
+            "after_combat": "docs/screenshots/wk90_after_combat/ursina_melee_combat_20260530_110216_206.png",
+            "before_base": "docs/screenshots/wk90_before_base/ursina_20260530_105209_056.png",
+            "after_base": "docs/screenshots/wk90_after_base/ursina_20260530_110238_102.png"
+          },
+          "visual_verdict": "IDENTICAL (PASS - no crash/regression). COMBAT: same castle, same warrior in strike pose with sword extended striking the goblin to the right (green health bar + S + Goblin name label), same terrain/gem-cluster/rock-prop scatter, same HUD (Gold 2100 | Heroes 1 | Enemies 1). BASE: same island terrain + building cluster (castle/houses) + fog-of-war disc + HUD/command bar (Gold 2100, Build/Hire/Bounty) + frame-time debug overlay (Entities H:0 P:0 G:0). NOTE: bounties/rubble are not present in these scenarios (no bounty placed, no building destroyed) per plan - so their render paths can't be shown here; the pure-VERBATIM move + 867-green suite + scene-unchanged screenshots are the guard. Projectiles aren't airborne in the frozen strike-pose frame, but the projectile fn ran without crash and the scene is unchanged.",
+          "how_to_test": [
+            "python tools/run_ursina_capture_once.py --scenario ursina_melee_combat --ticks 240 --no-llm --out docs/screenshots/wk90_before_combat",
+            "python tools/run_ursina_capture_once.py --ticks 480 --no-llm --out docs/screenshots/wk90_before_base",
+            "(make the move) then same 2 captures with _after suffix; VIEW before vs after - scene must be identical",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q",
+            "python -m pytest -q",
+            "python tools/determinism_guard.py",
+            "python tools/qa_smoke.py --quick",
+            "python -c \"from game.graphics.ursina_misc_props_sync import sync_snapshot_projectiles, sync_snapshot_bounties, sync_snapshot_rubble; import game.graphics.ursina_renderer; print('ok')\""
+          ],
+          "blockers": [],
+          "cross_lane_edits_note": "NONE. Stayed strictly in lane: game/graphics/ursina_renderer.py + NEW game/graphics/ursina_misc_props_sync.py. No test files touched. Did NOT commit.",
+          "follow_ups_for_PM": [
+            "Agent 11 W2: seam test tests/test_wk90_ursina_misc_props.py (3 fns exist+callable in ursina_misc_props_sync; the 3 UrsinaRenderer wrappers delegate; no module-top ursina_renderer import + no load cycle both orders) + full DoD + independently VIEW before/after combat+base screenshots (must match).",
+            "Rest of ursina_renderer split per plan section 7: unit-sync (_sync_snapshot_heroes/enemies/peasants/guards/tax_collector) + building-sync slices; then hud.py / ursina_terrain_fog_collab / ursina_app."
+          ]
+        }
+      }
     }
   }
 }

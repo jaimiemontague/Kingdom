@@ -1242,49 +1242,15 @@ class UrsinaRenderer:
 
 
     def _sync_snapshot_projectiles(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
-        # Projectiles — VFX arrows as textured billboards (WK5 colors via get_projectile_billboard_surface)
-        if self._projectile_tex is None:
-            psurf = get_projectile_billboard_surface()
-            self._projectile_tex = TerrainTextureBridge.surface_to_texture(
-                psurf, cache_key=("ursina", "projectile_arrow_billboard_v1")
-            )
-        ptex = self._projectile_tex
-        for proj in getattr(snapshot, "vfx_projectiles", ()) or ():
-            s = PROJECTILE_BILLBOARD_SCALE
-            ent, obj_id = self._entity_render.get_or_create_entity(
-                proj,
-                model="quad",
-                col=color.white,
-                scale=(s, s, 1),
-                texture=ptex,
-                billboard=True,
-            )
-            if not getattr(ent, "_ks_billboard_configured", False):
-                ent.model = "quad"
-                ent.billboard = True
-                self._entity_render.apply_pixel_billboard_settings(ent)
-                ent._ks_billboard_configured = True
-            # Draw above the floor plane: tiny Y (s*0.5) caused depth-fighting with terrain; stack with units.
-            if not getattr(ent, "_ks_projectile_depth", False):
-                ent.set_depth_test(False)
-                ent.render_queue = 2
-                ent._ks_projectile_depth = True
-            wx, wz = sim_px_to_world_xz(proj.x, proj.y)
-            proj_terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
-            self._entity_render.sync_billboard_entity(
-                ent,
-                tex=ptex,
-                tint_col=color.white,
-                scale_xyz=(s, s, 1),
-                pos_xyz=(wx, proj_terrain_y + PROJECTILE_BILLBOARD_Y, wz),
-                shader=sprite_unlit_shader,
-            )
-            active_ids.add(obj_id)
+        # WK90 (Agent 09): pure-moved to ursina_misc_props_sync.sync_snapshot_projectiles.
+        from game.graphics import ursina_misc_props_sync
+        return ursina_misc_props_sync.sync_snapshot_projectiles(self, snapshot, active_ids)
 
     # ------------------------------------------------------------------
     # WK60 Feature 7: Bounty flag 3D rendering
     # ------------------------------------------------------------------
-    # Constants for bounty flag visual elements
+    # Constants for bounty flag visual elements (read by
+    # ursina_misc_props_sync.sync_snapshot_bounties via ``r._BOUNTY_*``).
     _BOUNTY_POLE_HEIGHT = 0.6
     _BOUNTY_POLE_RADIUS = 0.02
     _BOUNTY_FLAG_SCALE = (0.18, 0.12, 0.01)
@@ -1292,139 +1258,18 @@ class UrsinaRenderer:
     _BOUNTY_TEXT_OFFSET_Y = 0.12  # text sits above pole top
 
     def _sync_snapshot_bounties(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
-        """Create/update/remove 3D bounty flag entities for each unclaimed bounty."""
-        import ursina
-
-        # WK66 Move 3: consume frozen BountyDTOs (bounty_id/claimed/x/y/reward) — the
-        # Ursina flag shows only $reward (not responders/tier), and none of those
-        # fields are mutated during the render pass, so this is behavior-identical.
-        # WK68 R3 (Agent 03): the live ``snapshot.bounties`` fallback was deleted with
-        # the live entity tuples (L1); ``bounty_dtos`` is always present now.
-        bounties = getattr(snapshot, "bounty_dtos", ()) or ()
-
-        # Build set of currently active bounty IDs
-        active_bounty_ids: set[int] = set()
-        for b in bounties:
-            bid = getattr(b, "bounty_id", None)
-            if bid is None:
-                continue
-            if getattr(b, "claimed", False):
-                continue
-            active_bounty_ids.add(bid)
-
-            bx = float(getattr(b, "x", 0))
-            by = float(getattr(b, "y", 0))
-            reward = int(getattr(b, "reward", 0))
-
-            wx, wz = sim_px_to_world_xz(bx, by)
-            terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
-
-            if bid in self._bounty_entities:
-                # Update existing entities positions (in case bounty moved, unlikely but safe)
-                parts = self._bounty_entities[bid]
-                pole_y = terrain_y + self._BOUNTY_POLE_HEIGHT * 0.5
-                parts[0].position = Vec3(wx, pole_y, wz)  # pole
-                parts[1].position = Vec3(wx + 0.08, terrain_y + self._BOUNTY_POLE_HEIGHT - self._BOUNTY_FLAG_OFFSET_Y, wz)  # flag
-                parts[2].position = Vec3(wx, terrain_y + self._BOUNTY_POLE_HEIGHT + self._BOUNTY_TEXT_OFFSET_Y, wz)  # text
-            else:
-                # Create new flag assembly: pole + pennant + reward text
-                pole = Entity(
-                    model="cube",
-                    color=color.rgb(0.4, 0.25, 0.1),  # brown
-                    scale=Vec3(self._BOUNTY_POLE_RADIUS * 2, self._BOUNTY_POLE_HEIGHT, self._BOUNTY_POLE_RADIUS * 2),
-                    position=Vec3(wx, terrain_y + self._BOUNTY_POLE_HEIGHT * 0.5, wz),
-                    shader=unlit_shader,
-                )
-                # Gold pennant flag — offset slightly to the side of the pole
-                flag = Entity(
-                    model="quad",
-                    color=color.rgb(1.0, 0.84, 0.0),  # gold
-                    scale=Vec3(*self._BOUNTY_FLAG_SCALE),
-                    position=Vec3(wx + 0.08, terrain_y + self._BOUNTY_POLE_HEIGHT - self._BOUNTY_FLAG_OFFSET_Y, wz),
-                    billboard=True,
-                    shader=unlit_shader,
-                )
-                # Reward text label above the flag
-                reward_text = Text(
-                    text=f"${reward}",
-                    position=(0, 0),
-                    scale=1.0,
-                    color=color.rgb(1.0, 0.84, 0.0),
-                    billboard=True,
-                    parent=scene,
-                )
-                reward_text.world_position = Vec3(wx, terrain_y + self._BOUNTY_POLE_HEIGHT + self._BOUNTY_TEXT_OFFSET_Y, wz)
-                reward_text.world_scale = Vec3(0.15, 0.15, 0.15)
-
-                self._bounty_entities[bid] = [pole, flag, reward_text]
-
-        # Remove entities for claimed/expired bounties
-        removed_ids = set(self._bounty_entities.keys()) - active_bounty_ids
-        for bid in removed_ids:
-            parts = self._bounty_entities.pop(bid)
-            for part in parts:
-                ursina.destroy(part)
+        # WK90 (Agent 09): pure-moved to ursina_misc_props_sync.sync_snapshot_bounties.
+        from game.graphics import ursina_misc_props_sync
+        return ursina_misc_props_sync.sync_snapshot_bounties(self, snapshot, active_ids)
 
     # ------------------------------------------------------------------
     # WK61-FEAT-004: Rubble rendering (destroyed building debris)
     # ------------------------------------------------------------------
 
     def _sync_snapshot_rubble(self, snapshot: "SimStateSnapshot") -> None:
-        """Create/destroy rubble entity groups from snapshot.rubble_records."""
-        import ursina as _ursina
-        import random as _random
-
-        rubble_records = getattr(snapshot, 'rubble_records', ())
-        active_ids = {r.record_id for r in rubble_records}
-
-        # Remove expired rubble
-        for rid in list(self._rubble_entities.keys()):
-            if rid not in active_ids:
-                for ent in self._rubble_entities[rid]:
-                    _ursina.destroy(ent)
-                del self._rubble_entities[rid]
-
-        # Create new rubble
-        for r in rubble_records:
-            if r.record_id in self._rubble_entities:
-                continue  # already rendered
-
-            entities = []
-            # Convert grid position to world position using the same
-            # coordinate system as buildings (sim pixels -> Ursina X/Z).
-            ts = float(config.TILE_SIZE)
-            center_px_x = r.grid_x * ts + (r.width_tiles * ts) * 0.5
-            center_px_y = r.grid_y * ts + (r.height_tiles * ts) * 0.5
-            wx, wz = sim_px_to_world_xz(center_px_x, center_px_y)
-            terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
-
-            # Place 3 small rock models scattered within footprint
-            rng = _random.Random(r.record_id)  # deterministic per rubble
-            footprint_world = r.width_tiles * 0.5  # half-extent in world units
-
-            _rock_stems = [
-                'rock_smallA', 'rock_smallB', 'rock_smallC',
-                'rock_smallD', 'rock_smallE', 'rock_smallF',
-            ]
-
-            for _i in range(3):
-                offset_x = rng.uniform(-footprint_world * 0.3, footprint_world * 0.3)
-                offset_z = rng.uniform(-footprint_world * 0.3, footprint_world * 0.3)
-                rock_stem = rng.choice(_rock_stems)
-                rock_model = _environment_model_path(rock_stem)
-                rock_scale = rng.uniform(0.8, 1.5)
-                rock_rot = rng.uniform(0, 360)
-
-                rock = Entity(
-                    model=rock_model,
-                    position=(wx + offset_x, terrain_y + 0.1, wz + offset_z),
-                    scale=rock_scale,
-                    rotation_y=rock_rot,
-                    color=color.rgb(0.6, 0.55, 0.5),  # dusty gray-brown
-                )
-                entities.append(rock)
-
-            self._rubble_entities[r.record_id] = entities
+        # WK90 (Agent 09): pure-moved to ursina_misc_props_sync.sync_snapshot_rubble.
+        from game.graphics import ursina_misc_props_sync
+        return ursina_misc_props_sync.sync_snapshot_rubble(self, snapshot)
 
     def _update_debug_status_text(self, snapshot: "SimStateSnapshot") -> None:
         # WK68 R2 (Agent 09): counts from the frozen DTO tuples (same values as the live
