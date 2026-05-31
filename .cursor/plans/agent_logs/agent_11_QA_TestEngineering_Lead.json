@@ -32,13 +32,41 @@
      "prompt_summary": "WK104 W2: author tests/test_wk104_ursina_terrain_growth_sync.py modeled EXACTLY on tests/test_wk92_ursina_unit_sync.py (SDL_VIDEODRIVER=dummy top; object.__new__ owner; monkeypatch-spy; AST checks; subprocess both-orders). Assert (1) EXISTENCE: sync_dynamic_trees/sync_log_stacks exist+callable+owner-first in growth_sync; _InstancedTreeStub in new module AND back-import from fog_collab is the SAME object; (2) WRAPPERS DELEGATE: bare collab spy + AST that each wrapper calls ursina_terrain_growth_sync.<fn>(self,...); (3) AST NO-CYCLE: no module-top runtime fog_collab import in new module (TYPE_CHECKING OK); (4) NO CYCLE: fresh subprocess both orders rc0; (5) BACK-IMPORT SOURCE GUARD: fog_collab source contains the _InstancedTreeStub back-import line; (6) TERRAIN_CHUNK_SIZE MIRROR: ==16 and NOT back-imported. Run full DoD A-H minus deferred G; do NOT run live ursina screenshots; do NOT fix W1 code; DO NOT COMMIT.",
      "what_i_changed": "Authored tests/test_wk104_ursina_terrain_growth_sync.py (15 tests covering existence/owner-first sig, _InstancedTreeStub back-import same-object identity, both wrapper-delegation runtime spies + source AST delegation check, AST no-module-top-fog_collab-import guard, both-orders fresh-subprocess no-cycle, back-import source-line guard, TERRAIN_CHUNK_SIZE==16 mirror + not-back-imported AST guard). Test reads source with encoding='utf-8-sig' because ursina_terrain_fog_collab.py carries a UTF-8 BOM that breaks ast.parse under plain utf-8 (WK92's renderer file has no BOM, so utf-8-sig is the BOM-tolerant fix in the TEST, not a change to W1 code). No production code touched.",
      "commands_run": [
-      {"cmd": "python -m pytest tests/test_wk104_ursina_terrain_growth_sync.py -q", "exit_code": 0, "result": "15 passed"},
-      {"cmd": "python -m pytest -q", "exit_code": 0, "result": "1208 passed, 4 skipped, 0 failed (baseline 1193 + 15 new)"},
-      {"cmd": "python tools/determinism_guard.py", "exit_code": 0, "result": "PASS: no violations found"},
-      {"cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q", "exit_code": 0, "result": "10 passed; digest pin b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged (literal at line 181)"},
-      {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "result": "DONE: PASS"},
-      {"cmd": "python -c \"import game.graphics.ursina_terrain_growth_sync; import game.graphics.ursina_terrain_fog_collab; print('IMPORT_OK')\"", "exit_code": 0, "result": "IMPORT_OK"},
-      {"cmd": "python -c \"import game.graphics.ursina_terrain_fog_collab; import game.graphics.ursina_terrain_growth_sync; print('IMPORT_OK2')\"", "exit_code": 0, "result": "IMPORT_OK2"}
+      {
+       "cmd": "python -m pytest tests/test_wk104_ursina_terrain_growth_sync.py -q",
+       "exit_code": 0,
+       "result": "15 passed"
+      },
+      {
+       "cmd": "python -m pytest -q",
+       "exit_code": 0,
+       "result": "1208 passed, 4 skipped, 0 failed (baseline 1193 + 15 new)"
+      },
+      {
+       "cmd": "python tools/determinism_guard.py",
+       "exit_code": 0,
+       "result": "PASS: no violations found"
+      },
+      {
+       "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+       "exit_code": 0,
+       "result": "10 passed; digest pin b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged (literal at line 181)"
+      },
+      {
+       "cmd": "python tools/qa_smoke.py --quick",
+       "exit_code": 0,
+       "result": "DONE: PASS"
+      },
+      {
+       "cmd": "python -c \"import game.graphics.ursina_terrain_growth_sync; import game.graphics.ursina_terrain_fog_collab; print('IMPORT_OK')\"",
+       "exit_code": 0,
+       "result": "IMPORT_OK"
+      },
+      {
+       "cmd": "python -c \"import game.graphics.ursina_terrain_fog_collab; import game.graphics.ursina_terrain_growth_sync; print('IMPORT_OK2')\"",
+       "exit_code": 0,
+       "result": "IMPORT_OK2"
+      }
      ],
      "evidence": {
       "dod_A_full_suite": "1208 passed / 4 skipped / 0 failed (195.99s)",
@@ -4953,6 +4981,62 @@
      "how_to_test": "python -m pytest tests/test_wk103_hud_menu_scroll.py -q ; python -m pytest -q ; python tools/determinism_guard.py ; python -m pytest tests/test_wk67_ai_boundary.py -q ; python -m pytest tests/test_wk52_r10_menu_scroll.py -q ; python tools/qa_smoke.py --quick",
      "blockers": "none",
      "follow_ups": "Pivot to ursina god-files (NEW verify model -- ursina screenshots + runtime-import smoke, NOT pygame digest): WK104 FOG/C (sync_dynamic_trees+sync_log_stacks+_InstancedTreeStub -> game/graphics/ursina_terrain_growth_sync.py) FIRST, then FOG/A+FOG/B, then ursina_app APP/C. DEFER: handle_click redesign (hud.py:999, not a pure move). De-slop: delete dead WATCH_MINIMAP_SIZE (hud.py:57).",
+     "production_code_edited": false
+    }
+   }
+  },
+  "wk105_round_b_ursina_app_debug_probe": {
+   "sprint_meta": {
+    "sprint_id": "wk105_round_b_ursina_app_debug_probe",
+    "created_utc": "2026-05-31T12:00:00Z",
+    "goal": "QA W2: verify WK105 Round B-22 dead-by-default VERBATIM owner-arg move of the 8-member env-gated debug/FPS-probe+auto-screenshot cluster out of game/graphics/ursina_app.py into a NEW game/graphics/ursina_app_debug_probe.py. 7 instance fns become owner-first module functions (self.->owner.); _save_window_screenshot_sync moves as a plain (base,out_path) module fn (was @staticmethod). UrsinaApp keeps 8 1-line lazy-delegating wrappers (7 instance + 1 @staticmethod). Heavy imports (ursina/panda3d/game.entities/game.world) stay function-local; UrsinaApp imported only under TYPE_CHECKING. Cluster is dead-by-default -> normal play unaffected. Author fresh seam test from WK104 template; live Ursina screenshots DEFERRED to Jaimie."
+   },
+   "rounds": {
+    "wk105_w2": {
+     "sprint_id": "wk105_round_b_ursina_app_debug_probe",
+     "round_id": "wk105_w2",
+     "status": "done",
+     "round_meta": {
+      "wave": "W2 (fresh seam test from WK104 template + full DoD gate A-F + H; live Ursina screenshots DEFERRED to Jaimie -- dead-by-default)",
+      "role": "Agent 11 QA_TestEngineering_Lead",
+      "model": "claude-opus-4-8[1m]",
+      "behavior_preserving": true,
+      "production_code_edited": false,
+      "depends_on": "wk105 W1 (Agent 09 ArtDirector extracted the 8-member debug/FPS-probe cluster from game/graphics/ursina_app.py into NEW game/graphics/ursina_app_debug_probe.py behind 8 delegating wrappers; PM verbatim-diff-reviewed)."
+     },
+     "prompt_summary": "PM-assigned (agent_01 PM log, sprint wk105_round_b_ursina_app_debug_probe, round wk105_kickoff): author tests/test_wk105_ursina_app_debug_probe.py copying the 5 WK104 test classes -- (1) EXISTENCE: 7 instance fns owner-first via inspect.signature on game.graphics.ursina_app_debug_probe; _save_window_screenshot_sync exists+callable but (base,out_path) NOT owner-first; (2) WRAPPERS DELEGATE: object.__new__(UrsinaApp) bare instance, monkeypatch each module fn to a sentinel, assert app forwarded as owner + remaining args (incl staticmethod path with no owner) + AST check; (3) AST no-cycle guard -- no module-top runtime import game.graphics.ursina_app, TYPE_CHECKING UrsinaApp permitted; (4) fresh-subprocess BOTH import orders SDL dummy rc0; (5) wrapper-source guard -- each wrapper references ursina_app_debug_probe.<fn>; (6) FPS-trio behavior -- hand-set _fps_probe_* and assert _record_fps_probe_sample grows samples (skip-on-mismatch). Run full DoD A-F + H. DEFER live screenshots to Jaimie; do NOT run run_ursina_capture_once.py. DO NOT COMMIT.",
+     "what_i_changed": "Added tests/test_wk105_ursina_app_debug_probe.py (30 cases incl parametrized; NEW file -- the only file I touched). NO production code edited.",
+     "commands_run": [
+      "python -m pytest tests/test_wk105_ursina_app_debug_probe.py -q  -> 30 passed",
+      "python -m pytest -q  -> 1238 passed, 4 skipped, 0 failed in 211.85s",
+      "python tools/determinism_guard.py  -> PASS: no violations found",
+      "python -m pytest tests/test_wk67_ai_boundary.py -q  -> 10 passed (digest unchanged)",
+      "python tools/qa_smoke.py --quick  -> DONE: PASS",
+      "SDL_VIDEODRIVER=dummy python -c \"import ursina_app_debug_probe; import ursina_app\" -> IMPORT_OK / reverse -> IMPORT_OK2"
+     ],
+     "verdict": "PASS",
+     "dod_results": {
+      "A_full_pytest": "1238 passed, 4 skipped, 0 failed in 211.85s (above the expected ~1218+; baseline 1208 at WK104 close + the new wk105 seam cases).",
+      "B_determinism_guard": "PASS: [determinism_guard] PASS: no violations found (exit 0; excludes game/graphics/**).",
+      "C_wk67_digest": "10 passed; digest byte-identical to golden pin b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (embedded at tests/test_wk67_ai_boundary.py:181) -- UNCHANGED.",
+      "D_qa_smoke_quick": "DONE: PASS (exit 0) across all profiles incl mock-LLM + speed-scaling + interior/quest/conversation/direct_prompt scenarios.",
+      "E_import_smoke_both_orders": "IMPORT_OK (ursina_app_debug_probe -> ursina_app) and IMPORT_OK2 (ursina_app -> ursina_app_debug_probe) both succeed under SDL_VIDEODRIVER=dummy. No module-load cycle.",
+      "F_structure": "8 members live in game/graphics/ursina_app_debug_probe.py (7 instance fns owner-first + _save_window_screenshot_sync as a plain (base,out_path) module fn). 8 wrappers on UrsinaApp (7 instance @985-1011 + 1 @staticmethod _save_window_screenshot_sync @1013-1016), exact names/signatures. Staying call sites reference self.<name> -> reach wrappers unchanged (__init__ 187/192/204; run() stage/install/sample/auto-screenshot calls at 1072/1077/1091/1114/1146/1159/1162 -- line numbers shifted by the ~281-LOC shrink but the self. references are intact). Module-top imports are ONLY os/time/typing/config + __future__ -- NO module-top ursina/panda3d/game.entities/game.world (all heavy imports function-local). ZERO self. in the 7 moved instance fns (only in the docstring). ursina_app.py = 1272 LOC.",
+      "G_screenshots_DEFERRED": "DEFERRED to Jaimie per [[feedback_ursina_deferred_screenshots]]. The 8-member cluster is dead-by-default (every entry gated behind a KINGDOM_URSINA_* env flag or the auto-exit path) -> normal-play rendering path is provably untouched, so normal before/after captures are unchanged. The only debug-layout capture (KINGDOM_URSINA_PREFAB_TEST_LAYOUT=1 ... run_ursina_capture_once.py) needs a real GPU/window the headless agents lack -- NOT run by me. Flag: DEFERRED-NEEDS-DISPLAY.",
+      "H_logs": "This agent 11 log entry. New seam test added. PM hub close is Agent 01."
+     },
+     "evidence": {
+      "new_test": "tests/test_wk105_ursina_app_debug_probe.py (30 cases, all pass)",
+      "no_cycle": "IMPORT_OK (debug_probe->app) + IMPORT_OK2 (app->debug_probe) both rc0 under SDL dummy; plus in-test fresh-subprocess both orders",
+      "digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (unchanged)",
+      "ursina_app_py_loc": 1272,
+      "new_module_defs": 8,
+      "wrappers": "7 instance + 1 @staticmethod (_save_window_screenshot_sync)",
+      "screenshots": "DEFERRED to Jaimie (dead-by-default; needs display)"
+     },
+     "how_to_test": "python -m pytest tests/test_wk105_ursina_app_debug_probe.py -q ; python -m pytest -q ; python tools/determinism_guard.py ; python -m pytest tests/test_wk67_ai_boundary.py -q ; python tools/qa_smoke.py --quick ; (set SDL_VIDEODRIVER=dummy) python -c \"import game.graphics.ursina_app_debug_probe; import game.graphics.ursina_app; print('IMPORT_OK')\" + reverse",
+     "blockers": "none",
+     "follow_ups": "Next ursina god-file slices (deferred-screenshot, in order): WK106 FOG/A-WHOLE (ursina_terrain_fog_collab.py L351-656 -> ursina_terrain_fog_visibility.py; mirror TERRAIN_CHUNK_SIZE, back-import _InstancedTreeStub, RETARGET tests/test_terrain_perf.py:300 patch.object to new module). Then WK107 FOG/B (build_3d_terrain + ground-mesh + grass + batch helper). Then ursina_app HUD/env cluster (HOT-PATH L267-315 -- scope carefully, do NOT fold into debug_probe). DEFER: handle_click redesign (hud.py:1058). De-slop: delete dead WATCH_MINIMAP_SIZE (hud.py:57).",
      "production_code_edited": false
     }
    }
