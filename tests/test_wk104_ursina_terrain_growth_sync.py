@@ -23,13 +23,16 @@ collab state via ``owner._r._tree_entities`` / ``owner._r._terrain_entity`` /
 STAY on ``UrsinaTerrainFogCollab``; the functions reach them via ``owner``.
 
 THE BACK-IMPORT (critical — invisible to import smoke): ``_InstancedTreeStub`` moved
-OUT of ``ursina_terrain_fog_collab.py``, but STAYING code there still constructs it
-(``build_3d_terrain``) and ``isinstance``-checks it (``cull_terrain_chunks``), so
-``ursina_terrain_fog_collab.py`` MUST keep a top-level
+OUT of ``ursina_terrain_fog_collab.py``. The code that constructs it (``build_3d_terrain``)
+and ``isinstance``-checks it (``cull_terrain_chunks`` / ``_build_terrain_chunks``) later
+migrated out of fog_collab too: into ``ursina_terrain_build`` (build_3d_terrain, WK108) and
+``ursina_terrain_fog_visibility`` (cull/_build_terrain_chunks, WK106). Each of those consumer
+modules MUST keep a top-level
 ``from game.graphics.ursina_terrain_growth_sync import _InstancedTreeStub`` (a one-way
-edge: fog_collab -> growth_sync; growth_sync never imports fog_collab at runtime, so
-acyclic). WITHOUT this line those staying methods raise ``NameError`` at call time —
-which NO headless test catches at runtime, so test (5) statically asserts the line.
+edge -> growth_sync; growth_sync never imports them at runtime, so acyclic). fog_collab no
+longer references the stub, so it correctly no longer carries the import. WITHOUT this line
+those consumer methods raise ``NameError`` at call time — which NO headless test catches at
+runtime, so test (5) statically asserts the line in each consumer module.
 
 This guards the refactor SEAM, not the rendering behaviour itself. ursina render code
 is NOT covered by the WK67 digest, ``determinism_guard`` (which excludes
@@ -48,7 +51,8 @@ headless agents lack). What this test proves:
   ``ursina_terrain_fog_collab`` (the dependency points one way; a ``TYPE_CHECKING``-only
   import of ``UrsinaTerrainFogCollab`` is allowed and is NOT a runtime import);
 * a fresh interpreter can import both modules in EITHER order (no module-load cycle);
-* the back-import line is present in ``ursina_terrain_fog_collab.py`` source;
+* the back-import line is present in each stub-consumer module source
+  (``ursina_terrain_fog_visibility`` / ``ursina_terrain_build``);
 * ``TERRAIN_CHUNK_SIZE`` is mirrored locally (== 16) and is NOT back-imported from
   ``ursina_terrain_fog_collab`` (no back-edge).
 """
@@ -118,17 +122,25 @@ def test_instanced_tree_stub_exists_in_new_module() -> None:
 
 
 def test_instanced_tree_stub_back_import_is_same_object() -> None:
-    """The back-import resolves: ``from game.graphics.ursina_terrain_fog_collab import
-    _InstancedTreeStub`` succeeds and is the SAME class object as
-    ``ursina_terrain_growth_sync._InstancedTreeStub``. This proves fog_collab's staying
-    code (build_3d_terrain / cull_terrain_chunks) sees the relocated class, not a copy."""
-    from game.graphics.ursina_terrain_fog_collab import (
-        _InstancedTreeStub as fog_collab_stub,
+    """The relocated ``_InstancedTreeStub`` is a SINGLE shared class object, not a copy.
+    Its consumers migrated OUT of ursina_terrain_fog_collab: cull_terrain_chunks /
+    _build_terrain_chunks -> ursina_terrain_fog_visibility (WK106); build_3d_terrain ->
+    ursina_terrain_build (WK108). Each back-imports the stub from ursina_terrain_growth_sync
+    and must resolve to the same object (no duplicate class)."""
+    from game.graphics.ursina_terrain_fog_visibility import (
+        _InstancedTreeStub as vis_stub,
+    )
+    from game.graphics.ursina_terrain_build import (
+        _InstancedTreeStub as build_stub,
     )
 
-    assert fog_collab_stub is growth_sync._InstancedTreeStub, (
-        "_InstancedTreeStub imported from ursina_terrain_fog_collab is NOT the same "
+    assert vis_stub is growth_sync._InstancedTreeStub, (
+        "_InstancedTreeStub imported from ursina_terrain_fog_visibility is NOT the same "
         "object as ursina_terrain_growth_sync._InstancedTreeStub (back-import broken)"
+    )
+    assert build_stub is growth_sync._InstancedTreeStub, (
+        "_InstancedTreeStub imported from ursina_terrain_build is NOT the same object "
+        "as ursina_terrain_growth_sync._InstancedTreeStub (back-import broken)"
     )
 
 
@@ -290,23 +302,28 @@ def test_fresh_subprocess_imports_both_orders(first: str, second: str) -> None:
 # ---------------------------------------------------------------------------
 # (5) BACK-IMPORT SOURCE GUARD — the silent-NameError back-edge no runtime test catches
 # ---------------------------------------------------------------------------
-def test_fog_collab_source_contains_back_import_line() -> None:
-    """Static-source guard: ``ursina_terrain_fog_collab.py`` MUST contain the line
+def test_back_import_line_present_in_stub_consumers() -> None:
+    """Static-source guard: every module that constructs / ``isinstance``-checks
+    ``_InstancedTreeStub`` MUST contain the line
     ``from game.graphics.ursina_terrain_growth_sync import _InstancedTreeStub``.
+    Without it those methods raise ``NameError`` at CALL time — a path no headless
+    import-smoke or seam test exercises, so we pin it in the source text. The consumers
+    migrated out of ursina_terrain_fog_collab in WK106/WK108: _build_terrain_chunks /
+    cull_terrain_chunks (ursina_terrain_fog_visibility) and build_3d_terrain
+    (ursina_terrain_build). fog_collab no longer references the stub, so it correctly
+    no longer carries the import."""
+    import game.graphics.ursina_terrain_fog_visibility as vis_mod
+    import game.graphics.ursina_terrain_build as build_mod
 
-    Without it, the staying methods that construct/``isinstance``-check the stub
-    (build_3d_terrain / cull_terrain_chunks) raise ``NameError`` at CALL time — a path
-    no headless import-smoke or seam test exercises, so we pin it in the source text."""
-    src_path = Path(sys.modules[UrsinaTerrainFogCollab.__module__].__file__)
-    src = src_path.read_text(encoding="utf-8-sig")
     needle = (
         "from game.graphics.ursina_terrain_growth_sync import _InstancedTreeStub"
     )
-    assert needle in src, (
-        "ursina_terrain_fog_collab.py is missing the _InstancedTreeStub back-import "
-        f"line ({needle!r}); build_3d_terrain / cull_terrain_chunks would NameError "
-        "at call time"
-    )
+    for mod in (vis_mod, build_mod):
+        src = Path(mod.__file__).read_text(encoding="utf-8-sig")
+        assert needle in src, (
+            f"{mod.__name__} is missing the _InstancedTreeStub back-import line "
+            f"({needle!r}); its stub consumer would NameError at call time"
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -51,6 +51,7 @@ import config
 import game.graphics.ursina_renderer as ursina_renderer
 import game.graphics.ursina_terrain_fog_collab as tfc
 import game.graphics.ursina_terrain_fog_visibility as tfv
+import game.graphics.ursina_terrain_build as ttb
 from game.graphics.ursina_terrain_fog_collab import (
     TERRAIN_CHUNK_SIZE,
     UrsinaTerrainFogCollab,
@@ -215,24 +216,24 @@ class TestTerrainEntityTracking:
         # ``track_visibility_gated_terrain(path_ent, ...)`` call from Fix 1B)
         # run unchanged. The original invariant — that PATH tiles appear as
         # tracked keys — is exactly what this test exercises for WK58-BUG-003.
-        with patch.object(tfc, "Entity", _FakeEntity), patch.object(
-            tfc, "_finalize_kenney_scatter_entity", lambda *a, **kw: None
+        with patch.object(ttb, "Entity", _FakeEntity), patch.object(
+            ttb, "_finalize_kenney_scatter_entity", lambda *a, **kw: None
         ), patch.object(
-            tfc,
+            ttb,
             "_environment_grass_and_doodad_model_lists",
             lambda: (["grass_model"], ["doodad_model"]),
         ), patch.object(
-            tfc, "_environment_tree_model_list", lambda: ["tree_model"]
+            ttb, "_environment_tree_model_list", lambda: ["tree_model"]
         ), patch.object(
-            tfc, "_environment_model_path", lambda kind: f"fake_{kind}"
+            ttb, "_environment_model_path", lambda kind: f"fake_{kind}"
         ), patch.object(
-            tfc, "_building_occupied_tiles", lambda buildings: set()
+            ttb, "_building_occupied_tiles", lambda buildings: set()
         ), patch.object(
             UrsinaTerrainFogCollab,
             "_build_terrain_ground_mesh",
             lambda *a, **kw: None,
         ), patch.object(
-            UrsinaTerrainFogCollab,
+            ttb,
             "_batch_static_terrain_for_chunks",
             lambda *a, **kw: None,
         ):
@@ -547,7 +548,7 @@ class TestTerrainChunkBatching:
 
         # Patch ``Entity`` so the batch parents are also fake (no real Ursina
         # init); the batcher calls Entity(parent=root, name=..., add_to_scene_entities=False).
-        with patch.object(tfc, "Entity", _BatchFakeEntity):
+        with patch.object(ttb, "Entity", _BatchFakeEntity):
             fake_root = _BatchFakeEntity(name="terrain_3d_root")
             collab._batch_static_terrain_for_chunks(fake_root, tw, th)
 

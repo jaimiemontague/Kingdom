@@ -9,6 +9,110 @@
   "Structure nests rounds inside sprints to keep history organized."
  ],
  "sprints": {
+  "wk108_round_b_ursina_terrain_build": {
+   "sprint_meta": {
+    "notes": "WK108 Round B W1 (Agent 09): the LARGEST ursina pure-move of the marathon. Extracted the 2-method terrain-CONSTRUCTION cluster (_batch_static_terrain_for_chunks + build_3d_terrain, was L386-536 + L629-885) from ursina_terrain_fog_collab.py into NEW ursina_terrain_build.py behind 2 lazy-delegating wrappers. Behavior-preserving (self->owner + the ONE intra-slice call to a direct module fn). Plus a grep-proven orphan-import sweep on fog_collab (the whole ursina_environment helper block + Path + px_to_world + TileType + _InstancedTreeStub all became orphans). Headless gates only; live ursina screenshots DEFERRED to Jaimie per memory feedback_ursina_deferred_screenshots.",
+    "created_utc": "2026-05-31T00:00:00.000000+00:00"
+   },
+   "rounds": {
+    "wk108_w1": {
+     "sprint_id": "wk108_round_b_ursina_terrain_build",
+     "round_id": "wk108_w1",
+     "status": "done",
+     "role": "WAVE W1 - extract _batch_static_terrain_for_chunks + build_3d_terrain from ursina_terrain_fog_collab.py into NEW ursina_terrain_build.py behind 2 delegating wrappers; grep-proven orphan-import sweep on fog_collab; behavior-preserving pure-move; headless gates only (live ursina screenshots DEFERRED to Jaimie).",
+     "what_i_changed": {
+      "game/graphics/ursina_terrain_build.py (NEW, 467 LOC)": [
+       "Header docstring + top-level imports + TYPE_CHECKING block per plan section 3 (verbatim). Did NOT import Vec2/TerrainTextureBridge/pygame/Visibility/TERRAIN_CHUNK_SIZE (not used by these 2 methods).",
+       "2 module-level def fn(owner, ...) functions: _batch_static_terrain_for_chunks FIRST then build_3d_terrain (matches class order; avoids forward-ref). self.->owner. per the Owner Attribute Map (section 2); docstrings/comments/try-except shapes/blank lines/comments VERBATIM.",
+       "4 wrapper calls KEPT as owner.<wrapper>(...): owner._build_terrain_ground_mesh (L264), owner.track_visibility_gated_terrain (x6: L291/307/346/404/433/448), owner._ensure_instanced_nature_renderer (L358), owner._build_terrain_chunks (L456).",
+       "The ONE intra-slice call rewritten to a DIRECT module fn: _batch_static_terrain_for_chunks(owner, root, tw, th) at L455 (co-resident, no wrapper round-trip). Preserved the owner._r._terrain_entity = root (L454) BEFORE the L455 batch call.",
+       "Function-local import kept function-local: from game.graphics.terrain_height import get_terrain_height, init_heightmap, is_initialized stays inside build_3d_terrain (NOT hoisted; AST confirms it is not a top-level node)."
+      ],
+      "game/graphics/ursina_terrain_fog_collab.py (EDIT, 911 -> 482 LOC)": [
+       "Deleted the 2 method bodies (was L386-536 + L629-885) and replaced IN PLACE with 2 one-line lazy-delegating wrappers (same names + byte-for-byte signatures) per plan section 4.",
+       "Did NOT touch any other method (ensure_fog_overlay, ensure_grid_debug_overlay, and all WK104/106/107 wrappers stay verbatim).",
+       "Orphan-import sweep (grep-proven, section 4): REMOVED Path; removed px_to_world from the ursina_coords import (kept SCALE, sim_px_to_world_xz); removed the ENTIRE ursina_environment import block (all 18 names orphaned); removed TileType from the game.world import (kept Visibility); removed the _InstancedTreeStub back-import line + its 4-line WK104 comment block. KEPT all names with staying body refs."
+      ]
+     },
+     "how_to_test": [
+      "python -c \"import game.graphics.ursina_terrain_build\"  -> build import OK",
+      "python -c \"import game.graphics.ursina_terrain_fog_collab\"  -> fog_collab import OK",
+      "python -c \"import game.graphics.ursina_terrain_fog_collab; import game.graphics.ursina_terrain_build; print('A ok')\"  -> A ok",
+      "python -c \"import game.graphics.ursina_terrain_build; import game.graphics.ursina_terrain_fog_collab; print('B ok')\"  -> B ok",
+      "python -c \"import ast,io; t=ast.parse(io.open('game/graphics/ursina_terrain_build.py',encoding='utf-8-sig').read()); print('self_ids=', sum(1 for n in ast.walk(t) if isinstance(n, ast.Name) and n.id=='self'))\"  -> self_ids= 0",
+      "python -m pytest tests/test_terrain_perf.py -q  -> 2 failed, 5 passed (EXPECTED pre-Agent-11 retarget; test NOT edited)"
+     ],
+     "evidence": {
+      "import_smoke": {
+       "build": "build import OK",
+       "fog_collab": "fog_collab import OK",
+       "order_A": "A ok",
+       "order_B": "B ok"
+      },
+      "ast_no_self": {
+       "command": "python -c \"import ast,io; ... n.id=='self'\"",
+       "self_ids": 0,
+       "fn_first_params": "all owner"
+      },
+      "ast_acyclic_and_local_import": {
+       "fog_collab_top_level_import_of_build": 0,
+       "terrain_height_top_level_present": false,
+       "terrain_height_in_source_text": true,
+       "note": "fog_collab imports ursina_terrain_build LAZILY inside the 2 wrappers; terrain_height import is function-local inside build_3d_terrain."
+      },
+      "test_terrain_perf": {
+       "command": "python -m pytest tests/test_terrain_perf.py -q",
+       "result": "2 failed, 5 passed, 1 warning in 2.03s",
+       "status": "EXPECTED FAILURE pre-Agent-11 (section 5 retarget not yet landed)",
+       "failures": [
+        "tests/test_terrain_perf.py::TestTerrainEntityTracking::test_path_entities_are_tracked",
+        "tests/test_terrain_perf.py::TestTerrainChunkBatching::test_static_entity_count_reduced"
+       ],
+       "root_cause": "Test still patches tfc.Entity / tfc._batch_static_terrain_for_chunks (old module namespace). The moved build_3d_terrain/_batch_static_terrain_for_chunks now resolve Entity and the batcher in ursina_terrain_build's globals, so the tfc patches no longer intercept -> real Entity()/batcher run against _FakeEntity/_BatchFakeEntity and raise TypeError (NodePath.reparent_to). Goes green once Agent 11 retargets tfc->ttb (plan section 5).",
+       "test_edited": false
+      },
+      "orphan_import_sweep": {
+       "removed": [
+        "Path (from pathlib) -- L6 import-only, zero body refs",
+        "px_to_world (from game.graphics.ursina_coords) -- import-only; kept SCALE + sim_px_to_world_xz on same line",
+        "ENTIRE ursina_environment block (18 names): GROUND_PROP_FLOWER_LOG_MUSHROOM_SCALE, GRASS_SCATTER_SCALE_MULTIPLIER, ROCK_SCALE_MULTIPLIER, TERRAIN_SCALE_MULTIPLIER, TREE_SCALE_MULTIPLIER, _building_occupied_tiles, _environment_grass_and_doodad_model_lists, _environment_model_path, _environment_tree_model_list, _finalize_kenney_scatter_entity, _grass_clump_offset, _grass_density_budget, _grass_scatter_jitter, _grass_tile_selected, _scatter_model_index, _stem_is_flower_ground_scatter, _stem_is_log_or_mushroom_ground_scatter -- all import-only, zero body refs",
+        "TileType (from game.world) -- import-only; kept Visibility on same line",
+        "_InstancedTreeStub (from ursina_terrain_growth_sync) + its 4-line WK104 back-import comment -- build_3d_terrain was its last fog_collab consumer; cull_terrain_chunks (the isinstance check the comment referenced) already moved to ursina_terrain_fog_visibility in WK106, so zero staying refs"
+       ],
+       "kept_because_still_used": {
+        "os": "L95 os.environ (static batch size), L399/L420 grid-debug env reads",
+        "pygame": "L203 pygame.image.frombuffer (ensure_fog_overlay)",
+        "config": "L178/L211 etc (ensure_fog_overlay + grid-debug)",
+        "Entity": "L314 fog quad, L465 grid-debug mesh entity",
+        "Vec2": "L328/329/342/343 fog texture transforms",
+        "color": "L320 color.white, L467 color.rgba",
+        "TerrainTextureBridge": "L206 refresh_surface_texture (ensure_fog_overlay)",
+        "SCALE": "L214/215 + grid-debug world-coord math",
+        "sim_px_to_world_xz": "L218 fog quad center",
+        "Visibility": "L190/191 _VIS_VAL/_SEEN_VAL pixel LUT (ensure_fog_overlay)",
+        "unlit_shader": "L334 fog quad shader, L468 grid-debug shader",
+        "FOG_TEX_BRIDGE_KEY": "L206 cache_key (module const, kept)",
+        "TERRAIN_CHUNK_SIZE": "module const re-exported; tools/perf_render_benchmark.py:183 imports it"
+       },
+       "external_reexport_check": "grep `from game.graphics.ursina_terrain_fog_collab import <name>` repo-wide -> only TERRAIN_CHUNK_SIZE (tools/perf_render_benchmark.py) + UrsinaTerrainFogCollab (ursina_renderer.py + tests); NONE of the removed names are re-imported externally."
+      },
+      "wrapper_calls_stayed_owner": "confirmed: _build_terrain_ground_mesh, track_visibility_gated_terrain (x6), _ensure_instanced_nature_renderer, _build_terrain_chunks all stay owner.<wrapper>(...); ONLY the L455 _batch_static_terrain_for_chunks call became a direct module fn.",
+      "function_local_import_terrain_height": "confirmed function-local inside build_3d_terrain (NOT hoisted).",
+      "loc": {
+       "ursina_terrain_build.py": 467,
+       "ursina_terrain_fog_collab.py": "911 -> 482"
+      }
+     },
+     "did_not_commit": true,
+     "did_not_touch_tests": true,
+     "files_touched": [
+      "game/graphics/ursina_terrain_build.py (NEW)",
+      "game/graphics/ursina_terrain_fog_collab.py (EDIT)"
+     ],
+     "screenshots": "DEFERRED to Jaimie end-of-marathon test (headless ursina, no GPU) per memory feedback_ursina_deferred_screenshots"
+    }
+   }
+  },
   "wk80_round_b2_ursina_renderer_deadcode": {
    "sprint_meta": {
     "notes": "WK80 Round B-2 W1 (Agent 09): grep-guarded dead-code deletion from ursina_renderer.py (split-prep). Deleted the dead _unit_facing_direction path (import + source fn), the already-no-op underground RENDER shell (method + 2 call sites + dead __init__ state), and the dead PEASANT_SCALE constant. Behavior byte-identical (WK67 digest unchanged); before/after Ursina base-overview screenshots pixel-identical. SIM-side dungeon (poi_interaction) UNTOUCHED.",
