@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from game.ui.widgets import HPBar, NineSlice
+from game.ui.hud_layout import HERO_LEFT_MIN_H, RADAR_MINIMAP_H
 
 if TYPE_CHECKING:
     from game.ui.hud import HUD
@@ -233,3 +234,85 @@ def render_watch_card_chrome(
 ) -> None:
     """WK52: pinned hero watch card above minimap (unaffected by building selection)."""
     render_card_slot(hud, surface, minimap_rect, game_state)
+
+
+def effective_card_full_h(hud: "HUD") -> int:
+    return WATCH_CARD_FULL_H_WITH_CHAT if hud._chat_visible else WATCH_CARD_FULL_H_NO_CHAT
+
+
+def desired_watch_card_expanded_h(hud: "HUD") -> int:
+    """Natural expanded height: no slack band under stats when chat is collapsed (WK52 R13)."""
+    stats_blk = WATCH_CARD_STATS_H if hud._chat_visible else WATCH_CARD_STATS_COMPACT_H
+    h = WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + stats_blk
+    if hud._chat_visible:
+        h += WATCH_CARD_CHAT_H
+    return h
+
+
+def effective_watch_card_h(hud: "HUD", screen_h: int) -> int:
+    """Pinned watch-card height from layout split or legacy cap when layout not computed yet."""
+    if hud._left_watch_rect is not None and hud._left_watch_rect.height > 0:
+        return int(hud._left_watch_rect.height)
+    if hud._pin_slot.hero_id is None:
+        return 0
+    top_h = int(getattr(hud.theme, "top_bar_h", 48))
+    minimap_y = screen_h - int(RADAR_MINIMAP_H)
+    if hud._watch_card_expanded:
+        want = hud._desired_watch_card_expanded_h()
+    else:
+        want = WATCH_CARD_HEADER_H
+    min_top = top_h + HERO_LEFT_MIN_H
+    max_ch = minimap_y - min_top
+    return min(want, max(WATCH_CARD_HEADER_H, max_ch))
+
+
+def watch_card_body_split(hud: "HUD", ch: int) -> tuple[int, int, int]:
+    if ch <= WATCH_CARD_HEADER_H or not hud._watch_card_expanded:
+        return (0, 0, 0)
+    inner = ch - WATCH_CARD_HEADER_H
+    map_h = min(WATCH_CARD_MAP_H, inner)
+    inner -= map_h
+    stats_cap = WATCH_CARD_STATS_H if hud._chat_visible else WATCH_CARD_STATS_COMPACT_H
+    stats_h = min(stats_cap, inner)
+    inner -= stats_h
+    if hud._chat_visible:
+        chat_h = max(0, inner)
+    else:
+        chat_h = 0
+    return (map_h, stats_h, chat_h)
+
+
+def watch_chat_band_rect(
+    hud: "HUD",
+    cx: int,
+    cy: int,
+    cw: int,
+    ch: int,
+    map_h: int,
+    stats_h: int,
+    chat_h: int,
+    profiles: dict,
+    hero_id: str,
+    painted_stats_bottom_override: int | None = None,
+) -> pygame.Rect | None:
+    """Screen-space rect for WK52 chat band; matches slack absorption in _render_watch_card_chrome."""
+    if not hero_id or not hud._watch_card_expanded or chat_h <= 0 or map_h <= 0:
+        return None
+    sy = cy + WATCH_CARD_HEADER_H + map_h + 4
+    allotted_stats_bottom = cy + WATCH_CARD_HEADER_H + map_h + stats_h
+    default_top = allotted_stats_bottom
+    prof = profiles.get(hero_id)
+    painted_bottom: int | None = painted_stats_bottom_override
+    if painted_bottom is None and stats_h > 0 and prof is not None:
+        lab_h = hud.font_tiny.get_height()
+        bar_h = 6
+        row1_y = sy
+        bar_y1 = row1_y + lab_h + 1
+        row2_y = bar_y1 + bar_h + 5
+        bar_y2 = row2_y + lab_h + 1
+        painted_bottom = bar_y2 + bar_h
+    chat_y = max(sy, painted_bottom + 2) if painted_bottom is not None else default_top
+    chat_h_draw = max(0, cy + ch - chat_y)
+    if chat_h_draw <= 0:
+        return None
+    return pygame.Rect(cx + 2, chat_y, cw - 4, chat_h_draw)

@@ -21,6 +21,8 @@ RADAR_MINIMAP_H = 180
 RADAR_MINIMAP_W = LEFT_COL_W
 RECALL_BTN_W = 180
 MEMORIAL_BTN_W = 90
+# Left-column main-panel minimum height (relocated from hud.py in WK98; hud.py re-imports+re-exports it).
+HERO_LEFT_MIN_H = 80
 
 
 @dataclass(slots=True)

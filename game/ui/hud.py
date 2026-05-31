@@ -11,6 +11,7 @@ from game.ui.hero_panel import HeroPanel
 from game.ui.enemy_panel import EnemyPanel
 from game.ui.chat_panel import ChatPanel
 from game.ui.hud_layout import (
+    HERO_LEFT_MIN_H,
     HUDLayout,
     HUDLayoutManager,
     LEFT_COL_W,
@@ -44,7 +45,6 @@ from game.ui.hud_watch_card import (
     WATCH_CARD_FULL_H_NO_CHAT,
     WATCH_CARD_FULL_H,
 )
-HERO_LEFT_MIN_H = 80
 HERO_MENU_CHAT_GAP = 4
 HERO_MENU_CHAT_MIN_H = 152
 HERO_MENU_CHAT_PREFERRED_H = 220
@@ -387,7 +387,8 @@ class HUD:
         surface.blit(text_surf, (x, y))
 
     def effective_card_full_h(self) -> int:
-        return WATCH_CARD_FULL_H_WITH_CHAT if self._chat_visible else WATCH_CARD_FULL_H_NO_CHAT
+        from game.ui import hud_watch_card
+        return hud_watch_card.effective_card_full_h(self)
 
     def notify_poi_discovered(self, poi_name: str, interaction_type: str = "") -> None:
         from game.ui import hud_toasts
@@ -418,43 +419,16 @@ class HUD:
         return hud_toasts.render_poi_toasts(self, surface)
 
     def _desired_watch_card_expanded_h(self) -> int:
-        """Natural expanded height: no slack band under stats when chat is collapsed (WK52 R13)."""
-        stats_blk = WATCH_CARD_STATS_H if self._chat_visible else WATCH_CARD_STATS_COMPACT_H
-        h = WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + stats_blk
-        if self._chat_visible:
-            h += WATCH_CARD_CHAT_H
-        return h
+        from game.ui import hud_watch_card
+        return hud_watch_card.desired_watch_card_expanded_h(self)
 
     def _effective_watch_card_h(self, screen_h: int) -> int:
-        """Pinned watch-card height from layout split or legacy cap when layout not computed yet."""
-        if self._left_watch_rect is not None and self._left_watch_rect.height > 0:
-            return int(self._left_watch_rect.height)
-        if self._pin_slot.hero_id is None:
-            return 0
-        top_h = int(getattr(self.theme, "top_bar_h", 48))
-        minimap_y = screen_h - int(RADAR_MINIMAP_H)
-        if self._watch_card_expanded:
-            want = self._desired_watch_card_expanded_h()
-        else:
-            want = WATCH_CARD_HEADER_H
-        min_top = top_h + HERO_LEFT_MIN_H
-        max_ch = minimap_y - min_top
-        return min(want, max(WATCH_CARD_HEADER_H, max_ch))
+        from game.ui import hud_watch_card
+        return hud_watch_card.effective_watch_card_h(self, screen_h)
 
     def _watch_card_body_split(self, ch: int) -> tuple[int, int, int]:
-        if ch <= WATCH_CARD_HEADER_H or not self._watch_card_expanded:
-            return (0, 0, 0)
-        inner = ch - WATCH_CARD_HEADER_H
-        map_h = min(WATCH_CARD_MAP_H, inner)
-        inner -= map_h
-        stats_cap = WATCH_CARD_STATS_H if self._chat_visible else WATCH_CARD_STATS_COMPACT_H
-        stats_h = min(stats_cap, inner)
-        inner -= stats_h
-        if self._chat_visible:
-            chat_h = max(0, inner)
-        else:
-            chat_h = 0
-        return (map_h, stats_h, chat_h)
+        from game.ui import hud_watch_card
+        return hud_watch_card.watch_card_body_split(self, ch)
 
     def _watch_chat_band_rect(
         self,
@@ -469,27 +443,10 @@ class HUD:
         hero_id: str,
         painted_stats_bottom_override: int | None = None,
     ) -> pygame.Rect | None:
-        """Screen-space rect for WK52 chat band; matches slack absorption in _render_watch_card_chrome."""
-        if not hero_id or not self._watch_card_expanded or chat_h <= 0 or map_h <= 0:
-            return None
-        sy = cy + WATCH_CARD_HEADER_H + map_h + 4
-        allotted_stats_bottom = cy + WATCH_CARD_HEADER_H + map_h + stats_h
-        default_top = allotted_stats_bottom
-        prof = profiles.get(hero_id)
-        painted_bottom: int | None = painted_stats_bottom_override
-        if painted_bottom is None and stats_h > 0 and prof is not None:
-            lab_h = self.font_tiny.get_height()
-            bar_h = 6
-            row1_y = sy
-            bar_y1 = row1_y + lab_h + 1
-            row2_y = bar_y1 + bar_h + 5
-            bar_y2 = row2_y + lab_h + 1
-            painted_bottom = bar_y2 + bar_h
-        chat_y = max(sy, painted_bottom + 2) if painted_bottom is not None else default_top
-        chat_h_draw = max(0, cy + ch - chat_y)
-        if chat_h_draw <= 0:
-            return None
-        return pygame.Rect(cx + 2, chat_y, cw - 4, chat_h_draw)
+        from game.ui import hud_watch_card
+        return hud_watch_card.watch_chat_band_rect(
+            self, cx, cy, cw, ch, map_h, stats_h, chat_h, profiles, hero_id, painted_stats_bottom_override
+        )
 
     def _left_column_segments_open(self, game_state: dict | None) -> tuple[bool, bool]:
         """Return (main_panel_open, watch_card_open) for left-column split layout."""
