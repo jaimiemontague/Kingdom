@@ -15,6 +15,11 @@ from game.ui.hud_layout import (
     HUDLayout,
     HUDLayoutManager,
     LEFT_COL_W,
+    LEFT_SPLIT_DEFAULT_FRAC_MAIN,
+    LEFT_SPLIT_DEFAULT_FRAC_MAIN_SOLO,
+    LEFT_SPLIT_DEFAULT_FRAC_WATCH,
+    LEFT_SPLIT_HANDLE_H,
+    LEFT_SPLIT_HANDLE_HIT_H,
     MEMORIAL_BTN_W,
     RADAR_MINIMAP_H,
     RADAR_MINIMAP_W,
@@ -50,11 +55,6 @@ HERO_MENU_CHAT_MIN_H = 152
 HERO_MENU_CHAT_PREFERRED_H = 220
 HERO_MENU_HERO_MIN_H = 120
 WATCH_MINIMAP_SIZE = LEFT_COL_W
-LEFT_SPLIT_HANDLE_H = 4
-LEFT_SPLIT_HANDLE_HIT_H = 8
-LEFT_SPLIT_DEFAULT_FRAC_MAIN = 0.55
-LEFT_SPLIT_DEFAULT_FRAC_WATCH = 0.45
-LEFT_SPLIT_DEFAULT_FRAC_MAIN_SOLO = 0.72
 
 
 # world_to_radar moved to game.ui.hud_radar (WK93); re-exported here for the
@@ -449,39 +449,12 @@ class HUD:
         )
 
     def _left_column_segments_open(self, game_state: dict | None) -> tuple[bool, bool]:
-        """Return (main_panel_open, watch_card_open) for left-column split layout."""
-        gs = game_state or {}
-        main_open = (
-            gs.get("selected_hero") is not None
-            or gs.get("selected_peasant") is not None
-            or gs.get("selected_enemy") is not None
-            or gs.get("selected_building") is not None
-        )
-        watch_open = self._pin_slot.hero_id is not None
-        return main_open, watch_open
+        from game.ui import hud_left_layout
+        return hud_left_layout.left_column_segments_open(self, game_state)
 
     def _normalized_left_split_fracs(self, main_open: bool, watch_open: bool) -> dict[str, float]:
-        if main_open and not watch_open:
-            solo = max(
-                0.05,
-                min(
-                    0.95,
-                    float(
-                        self._left_split_fracs.get("main_solo", LEFT_SPLIT_DEFAULT_FRAC_MAIN_SOLO)
-                    ),
-                ),
-            )
-            return {"main_solo": solo}
-        keys: list[str] = []
-        if main_open:
-            keys.append("main")
-        if watch_open:
-            keys.append("watch")
-        if not keys:
-            return {}
-        raw = {k: max(0.05, float(self._left_split_fracs.get(k, 0.5))) for k in keys}
-        total = sum(raw.values())
-        return {k: raw[k] / total for k in keys}
+        from game.ui import hud_left_layout
+        return hud_left_layout.normalized_left_split_fracs(self, main_open, watch_open)
 
     def _layout_left_column_segments(
         self,
@@ -489,147 +462,24 @@ class HUD:
         minimap: pygame.Rect,
         game_state: dict | None,
     ) -> tuple[pygame.Rect, pygame.Rect | None, pygame.Rect | None]:
-        """Allocate main + watch rects above the fixed minimap using session split fractions."""
-        available = max(0, minimap.y - top_h)
-        main_open, watch_open = self._left_column_segments_open(game_state)
-        self._left_main_rect = None
-        self._left_watch_rect = None
-        self._left_split_handle_rects = {}
-
-        if available <= 0 or (not main_open and not watch_open):
-            left = pygame.Rect(0, top_h, LEFT_COL_W, available)
-            self._last_left_rect = left if main_open else None
-            return left, None, None
-
-        fracs = self._normalized_left_split_fracs(main_open, watch_open)
-        main_h = watch_h = 0
-
-        if main_open and watch_open:
-            main_h = max(HERO_LEFT_MIN_H, int(round(fracs["main"] * available)))
-            watch_h = available - main_h
-            if watch_h < WATCH_CARD_HEADER_H:
-                watch_h = WATCH_CARD_HEADER_H
-                main_h = max(HERO_LEFT_MIN_H, available - watch_h)
-            if main_h < HERO_LEFT_MIN_H:
-                main_h = HERO_LEFT_MIN_H
-                watch_h = max(WATCH_CARD_HEADER_H, available - main_h)
-        elif main_open:
-            if self._should_render_hero_menu_chat_popup(game_state or {}):
-                main_h = available
-            else:
-                solo_frac = fracs.get("main_solo", LEFT_SPLIT_DEFAULT_FRAC_MAIN_SOLO)
-                main_h = max(HERO_LEFT_MIN_H, int(round(float(solo_frac) * available)))
-                main_h = min(main_h, available)
-        else:
-            watch_h = available
-
-        main_rect: pygame.Rect | None = None
-        watch_rect: pygame.Rect | None = None
-        y = top_h
-
-        if main_open:
-            main_rect = pygame.Rect(0, y, LEFT_COL_W, main_h)
-            self._left_main_rect = main_rect
-            self._last_left_rect = main_rect
-            if watch_open:
-                divider = pygame.Rect(0, y + main_h - LEFT_SPLIT_HANDLE_H, LEFT_COL_W, LEFT_SPLIT_HANDLE_H)
-                self._left_split_handle_rects["main_bottom"] = divider
-                self._left_split_handle_rects["watch_top"] = divider
-            else:
-                solo_handle = pygame.Rect(
-                    0,
-                    y + main_h - LEFT_SPLIT_HANDLE_HIT_H,
-                    LEFT_COL_W,
-                    LEFT_SPLIT_HANDLE_HIT_H,
-                )
-                self._left_split_handle_rects["main_solo"] = solo_handle
-            y += main_h
-
-        if watch_open:
-            watch_y = y if main_open else minimap.y - watch_h
-            watch_rect = pygame.Rect(0, watch_y, LEFT_COL_W, watch_h)
-            self._left_watch_rect = watch_rect
-            bottom_handle = pygame.Rect(
-                0, watch_y + watch_h - LEFT_SPLIT_HANDLE_H, LEFT_COL_W, LEFT_SPLIT_HANDLE_H
-            )
-            self._left_split_handle_rects["watch_bottom"] = bottom_handle
-            if not main_open:
-                self._last_left_rect = watch_rect
-
-        left = main_rect or watch_rect or pygame.Rect(0, top_h, LEFT_COL_W, available)
-        return left, main_rect, watch_rect
+        from game.ui import hud_left_layout
+        return hud_left_layout.layout_left_column_segments(self, top_h, minimap, game_state)
 
     def _render_left_split_handles(self, surface: pygame.Surface) -> None:
-        """Draw thin resize bars on open left-column segment boundaries (WK61-R10)."""
-        for key, rect in self._left_split_handle_rects.items():
-            if rect.width <= 0 or rect.height <= 0:
-                continue
-            hover = key == self._left_split_drag_kind
-            color = (120, 130, 160) if hover else (70, 78, 98)
-            pygame.draw.rect(surface, color, rect)
-            mid_y = rect.centery
-            pygame.draw.line(
-                surface,
-                (150, 160, 190) if hover else (95, 105, 130),
-                (rect.x + 8, mid_y),
-                (rect.right - 8, mid_y),
-                1,
-            )
+        from game.ui import hud_left_layout
+        return hud_left_layout.render_left_split_handles(self, surface)
 
     def handle_sidebar_split_pointer_down(self, pos: tuple[int, int], game_state: dict) -> bool:
-        """Begin dragging a left-column split handle; returns True if consumed."""
-        if self._left_split_drag_kind is not None:
-            return True
-        x, y = int(pos[0]), int(pos[1])
-        for key, rect in self._left_split_handle_rects.items():
-            if rect.collidepoint(x, y):
-                self._left_split_drag_kind = key
-                self._left_split_drag_start_y = y
-                self._left_split_drag_main_h0 = int(self._left_main_rect.height) if self._left_main_rect else 0
-                self._left_split_drag_watch_h0 = int(self._left_watch_rect.height) if self._left_watch_rect else 0
-                return True
-        return False
+        from game.ui import hud_left_layout
+        return hud_left_layout.handle_sidebar_split_pointer_down(self, pos, game_state)
 
     def handle_sidebar_split_pointer_move(self, pos: tuple[int, int], game_state: dict) -> bool:
-        """Update split fractions while dragging; returns True if consumed."""
-        if self._left_split_drag_kind is None:
-            return False
-        top_h = int(getattr(self.theme, "top_bar_h", 48))
-        minimap_y = self.screen_height - int(RADAR_MINIMAP_H)
-        available = max(0, minimap_y - top_h)
-        if available <= 0:
-            return True
-        dy = int(pos[1]) - self._left_split_drag_start_y
-        kind = self._left_split_drag_kind
-        if kind in ("main_bottom", "watch_top"):
-            new_main_h = max(HERO_LEFT_MIN_H, min(available - WATCH_CARD_HEADER_H, self._left_split_drag_main_h0 + dy))
-            new_watch_h = available - new_main_h
-        elif kind == "watch_bottom":
-            new_watch_h = max(
-                WATCH_CARD_HEADER_H,
-                min(available - HERO_LEFT_MIN_H, self._left_split_drag_watch_h0 + dy),
-            )
-            new_main_h = available - new_watch_h
-        elif kind == "main_solo":
-            new_main_h = max(
-                HERO_LEFT_MIN_H,
-                min(available, self._left_split_drag_main_h0 + dy),
-            )
-            self._left_split_fracs["main_solo"] = float(new_main_h) / float(available)
-            return True
-        else:
-            return True
-        if new_main_h > 0 and new_watch_h > 0:
-            self._left_split_fracs["main"] = float(new_main_h) / float(available)
-            self._left_split_fracs["watch"] = float(new_watch_h) / float(available)
-        return True
+        from game.ui import hud_left_layout
+        return hud_left_layout.handle_sidebar_split_pointer_move(self, pos, game_state)
 
     def handle_sidebar_split_pointer_up(self) -> bool:
-        """End split-handle drag; returns True if a drag was active."""
-        if self._left_split_drag_kind is None:
-            return False
-        self._left_split_drag_kind = None
-        return True
+        from game.ui import hud_left_layout
+        return hud_left_layout.handle_sidebar_split_pointer_up(self)
 
     def _layout_rects_for_screen(
         self, w: int, h: int, *, show_right_panel: bool, game_state: dict | None = None

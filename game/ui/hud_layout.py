@@ -23,6 +23,12 @@ RECALL_BTN_W = 180
 MEMORIAL_BTN_W = 90
 # Left-column main-panel minimum height (relocated from hud.py in WK98; hud.py re-imports+re-exports it).
 HERO_LEFT_MIN_H = 80
+# Left-column split-handle sizes + default split fractions (relocated from hud.py in WK99; hud re-imports+re-exports).
+LEFT_SPLIT_HANDLE_H = 4
+LEFT_SPLIT_HANDLE_HIT_H = 8
+LEFT_SPLIT_DEFAULT_FRAC_MAIN = 0.55
+LEFT_SPLIT_DEFAULT_FRAC_WATCH = 0.45
+LEFT_SPLIT_DEFAULT_FRAC_MAIN_SOLO = 0.72
 
 
 @dataclass(slots=True)

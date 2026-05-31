@@ -63,7 +63,7 @@
           "round_id": "wk50_r11_bugfix_direct_prompt_execution",
           "status": "done",
           "what_i_changed": [
-            "game/ui/chat_panel.py: format_direct_prompt_hint() gates success copy on physical_committed; compact lines \u2014 Order applied, Redirected \u2014 safer option/path, Refused \u2014 \u2026, Not applied \u2014 no action committed; chat-only remains no hint.",
+            "game/ui/chat_panel.py: format_direct_prompt_hint() gates success copy on physical_committed; compact lines — Order applied, Redirected — safer option/path, Refused — …, Not applied — no action committed; chat-only remains no hint.",
             "game/engine.py: _poll_conversation_response runs apply_validated_direct_prompt_physical before receive_response; passes physical_committed in direct_feedback.",
             "game/sim/direct_prompt_exec.py: apply_validated_direct_prompt_physical returns bool (sovereign attach or inferred fallback apply) for UI contract (minimal sim wiring for feedback; primary UI ask in r11).",
             "tests/test_chat_direct_feedback.py: physical_committed cases + tool-not-committed line; tests/test_wk50_direct_prompt_engine_resolve.py: assert apply returns True."
@@ -135,7 +135,7 @@
             "screenshots_before": "docs/screenshots/wk51_r6_pin_before/ui_panels_hero.png (Pin/P not visible in header)",
             "screenshots_after": "docs/screenshots/wk51_r6_pin_after/ui_panels_hero.png (P pin control visible beside close X)",
             "qa_smoke_quick": "python tools/qa_smoke.py --quick exit_code=0 PASS",
-            "renderer_note": "capture_screenshots uses shared HUD on pygame framebuffer; Ursina overlays same HUD raster \u2014 layering fix applies to both paths."
+            "renderer_note": "capture_screenshots uses shared HUD on pygame framebuffer; Ursina overlays same HUD raster — layering fix applies to both paths."
           },
           "blockers": [],
           "follow_ups": []
@@ -178,9 +178,9 @@
           ],
           "evidence": {
             "emoji_render_probe": "SysFont(...) render('\\U0001f4cc', size=20) -> width=12,height=24 (emoji path active; not P fallback)",
-            "screenshots_before": "docs/screenshots/wk51_r7_pin_before/ui_panels_hero.png \u2014 left hero header pin slot shows prior circle+P treatment when scenario selects hero",
-            "screenshots_after": "docs/screenshots/wk51_r7_pin_after/ui_panels_hero.png \u2014 pin shows pushpin emoji (small header chrome; verify in-image zoom if needed)",
-            "scenario_note": "ui_panels may not exercise every pin state; Jaimie manual: python main.py --renderer pygame --no-llm \u2014 select hero, confirm \ud83d\udccc beside X, pinned brighter than unpinned",
+            "screenshots_before": "docs/screenshots/wk51_r7_pin_before/ui_panels_hero.png — left hero header pin slot shows prior circle+P treatment when scenario selects hero",
+            "screenshots_after": "docs/screenshots/wk51_r7_pin_after/ui_panels_hero.png — pin shows pushpin emoji (small header chrome; verify in-image zoom if needed)",
+            "scenario_note": "ui_panels may not exercise every pin state; Jaimie manual: python main.py --renderer pygame --no-llm — select hero, confirm 📌 beside X, pinned brighter than unpinned",
             "qa_smoke_quick": "python3 tools/qa_smoke.py --quick exit_code=0 PASS"
           },
           "blockers": [],
@@ -239,7 +239,7 @@
           "evidence": {
             "qa_smoke": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
             "pytest_wk52": "python3 -m pytest tests/test_wk52_watch_card.py tests/test_wk52_memorial_card.py -v exit_code=0 (10 passed)",
-            "screenshots_wk52": "docs/screenshots/wk52_phase3/ \u2014 wk52_watch_card_expanded.png (card+map+bars), wk52_watch_card_minimized.png (14px tab), wk52_pin_radar_minimap.png (dots), wk52_memorial_card.png (Farewell overlay)"
+            "screenshots_wk52": "docs/screenshots/wk52_phase3/ — wk52_watch_card_expanded.png (card+map+bars), wk52_watch_card_minimized.png (14px tab), wk52_pin_radar_minimap.png (dots), wk52_memorial_card.png (Farewell overlay)"
           },
           "blockers": [],
           "follow_ups": [],
@@ -254,7 +254,7 @@
           "round_id": "wk52_r3_layout_fixes",
           "status": "done",
           "what_i_changed": [
-            "game/ui/hud.py: _layout_rects_for_screen \u2014 minimap Rect(0, h-size, size, size) flush left+bottom; left_h always capped with cap_y=minimap.y then min(card_top) when pinned so Heroes column never dips into minimap when unpinned",
+            "game/ui/hud.py: _layout_rects_for_screen — minimap Rect(0, h-size, size, size) flush left+bottom; left_h always capped with cap_y=minimap.y then min(card_top) when pinned so Heroes column never dips into minimap when unpinned",
             "game/ui/hud.py: render() draws _panel_minimap + _render_radar_minimap before _render_watch_card_chrome so watch chrome is not occluded by minimap panel/radar",
             "game/engine_facades/render_coordinator.py: _render_hero_minimap blit uses temporary surface clip to dest rect (cross-domain minimal; Agent 03 may review)",
             "tools/screenshot_scenarios.py: wk52_pin_alerts adds Shot wk52_left_menu_unpinned.png via _prep_base + unpin (no pin)",
@@ -324,11 +324,11 @@
           "round_id": "wk52_r4_remove_right_menu",
           "status": "done",
           "what_i_changed": [
-            "D1 game/ui/hud.py handle_click ~1288\u20131320: watch-card chevron-only hit + return watch_card_chevron_toggle; game/input_handler.py ~380\u2013384 consumes so LMB does not fall through; tests/test_wk52_watch_card.py test_watch_card_chevron_returns_consume_action + test_toggle_right_panel_is_noop_for_compatibility.",
-            "D2 game/engine_facades/render_coordinator.py _render_hero_minimap ~195\u2013201: cache watch_card_map_world_center / watch_card_map_world_wh on HUD after blit; game/ui/hud.py handle_click returns select_hero_at_world dict; game/engine.py try_select_hero_at_world (~537\u2013568); game/game_commands.py protocol + EngineBacked delegate; game/input_handler.py resolver ~385\u2013387.",
-            "D3 game/ui/hud.py _ensure_radar_terrain_surface (~801\u2013855) + _render_radar_minimap (~856+): cached per (inner size, world dims) terrain sampling (grass/water/TREE dot pass, UNSEEN dim, MOUNTAIN placeholder branch + TODO); blit before entity dots; is_revealed uses Visibility.UNSEEN.",
-            "D4 game/ui/hud.py constants _layout_rects_for_screen ~267\u2013304: right_w=0 always; speed_rect re-anchored; render() drops _panel_right + micro_view right path; toggle_right_panel pass; virtual_pointer_in_hud_chrome: full watch card rect + chat dock, no right panel; game/input_handler.py dropped right_panel_visible on enter_building; engine try_select_* recall no right_panel/hero_focus.",
-            "D5 CHAT_DOCK_H/RADAR_MINIMAP_H/_chat_dock_rect; game/ui/hud.py render ~1200\u20131210 chat dock + game/ui/chat_panel.py render_idle_dock + target_rect param rename; tools/screenshot_scenarios.py _prep_base no hero_focus/right_panel."
+            "D1 game/ui/hud.py handle_click ~1288–1320: watch-card chevron-only hit + return watch_card_chevron_toggle; game/input_handler.py ~380–384 consumes so LMB does not fall through; tests/test_wk52_watch_card.py test_watch_card_chevron_returns_consume_action + test_toggle_right_panel_is_noop_for_compatibility.",
+            "D2 game/engine_facades/render_coordinator.py _render_hero_minimap ~195–201: cache watch_card_map_world_center / watch_card_map_world_wh on HUD after blit; game/ui/hud.py handle_click returns select_hero_at_world dict; game/engine.py try_select_hero_at_world (~537–568); game/game_commands.py protocol + EngineBacked delegate; game/input_handler.py resolver ~385–387.",
+            "D3 game/ui/hud.py _ensure_radar_terrain_surface (~801–855) + _render_radar_minimap (~856+): cached per (inner size, world dims) terrain sampling (grass/water/TREE dot pass, UNSEEN dim, MOUNTAIN placeholder branch + TODO); blit before entity dots; is_revealed uses Visibility.UNSEEN.",
+            "D4 game/ui/hud.py constants _layout_rects_for_screen ~267–304: right_w=0 always; speed_rect re-anchored; render() drops _panel_right + micro_view right path; toggle_right_panel pass; virtual_pointer_in_hud_chrome: full watch card rect + chat dock, no right panel; game/input_handler.py dropped right_panel_visible on enter_building; engine try_select_* recall no right_panel/hero_focus.",
+            "D5 CHAT_DOCK_H/RADAR_MINIMAP_H/_chat_dock_rect; game/ui/hud.py render ~1200–1210 chat dock + game/ui/chat_panel.py render_idle_dock + target_rect param rename; tools/screenshot_scenarios.py _prep_base no hero_focus/right_panel."
           ],
           "commands_run": [
             {
@@ -386,7 +386,7 @@
           },
           "blockers": [],
           "follow_ups": [
-            "Agent 07/Agent 03: INTERIOR/QUEST micro_view had relied on wide right chrome \u2014 pygame path no longer renders that column; revisit fullscreen interior if still a product requirement."
+            "Agent 07/Agent 03: INTERIOR/QUEST micro_view had relied on wide right chrome — pygame path no longer renders that column; revisit fullscreen interior if still a product requirement."
           ],
           "how_to_test": [
             "python3 -m pytest tests/ -v",
@@ -398,10 +398,10 @@
           "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
           "round_id": "wk52_r5_corner_layout",
           "status": "done",
-          "chevron_root_cause": "(a) Layout recompute: WATCH_CARD_FULL_H grew to 352 and bottom-anchored minimap; _effective_watch_card_h caps watch-card height with min_top = top_bar + HERO_LEFT_MIN_H so left_h = card_top - top_h never collapses to 0 when toggling expanded \u2014 Heroes panel keeps a minimum readable column. Not (b) input pass-through (already consumed), not (c) expand flag listeners, not (d) render order.",
+          "chevron_root_cause": "(a) Layout recompute: WATCH_CARD_FULL_H grew to 352 and bottom-anchored minimap; _effective_watch_card_h caps watch-card height with min_top = top_bar + HERO_LEFT_MIN_H so left_h = card_top - top_h never collapses to 0 when toggling expanded — Heroes panel keeps a minimum readable column. Not (b) input pass-through (already consumed), not (c) expand flag listeners, not (d) render order.",
           "what_i_changed": [
-            "D1 game/ui/hud.py ~25\u201334, ~251\u2013275, ~279\u2013295, ~360\u2013380, ~700\u2013838, ~1295\u20131300: corner stack \u2014 minimap Rect(0, h-RADAR_MINIMAP_H, LEFT_COL_W, RADAR_MINIMAP_H); removed standalone CHAT_DOCK/_chat_dock_rect; WATCH_CARD_CHAT_H=96, WATCH_CARD_FULL_H includes chat; _watch_card_body_split + chat inside _render_watch_card_chrome via ChatPanel.render / render_idle_dock; _watch_card_chat_rect; virtual_pointer regions; render() no separate chat strip",
-            "D2 game/ui/hud.py _effective_watch_card_h, layout cap_y uses effective ch; game/ui/hud.py handle_click chat hits _watch_card_chat_rect; tests/test_wk52_watch_card.py \u2014 geometry updates + test_chevron_toggle_keeps_left_panel_and_selection (two toggles, re-render for chevron center)"
+            "D1 game/ui/hud.py ~25–34, ~251–275, ~279–295, ~360–380, ~700–838, ~1295–1300: corner stack — minimap Rect(0, h-RADAR_MINIMAP_H, LEFT_COL_W, RADAR_MINIMAP_H); removed standalone CHAT_DOCK/_chat_dock_rect; WATCH_CARD_CHAT_H=96, WATCH_CARD_FULL_H includes chat; _watch_card_body_split + chat inside _render_watch_card_chrome via ChatPanel.render / render_idle_dock; _watch_card_chat_rect; virtual_pointer regions; render() no separate chat strip",
+            "D2 game/ui/hud.py _effective_watch_card_h, layout cap_y uses effective ch; game/ui/hud.py handle_click chat hits _watch_card_chat_rect; tests/test_wk52_watch_card.py — geometry updates + test_chevron_toggle_keeps_left_panel_and_selection (two toggles, re-render for chevron center)"
           ],
           "commands_run": [
             {
@@ -469,10 +469,10 @@
           "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
           "round_id": "wk52_r6_chat_polish",
           "status": "done",
-          "chat_render_root_cause": "(a) In-card path called ChatPanel.render only when is_active(); otherwise render_idle_dock painted a flat dark fill with no placeholder or history/input chrome. Full ChatPanel.render was also unsuitable for the ~96px band (48px header + end button). Fix: dedicated render_watch_band() with divider, message area, and \"> Type to chat\u2026\" placeholder when idle; compact history+input when conversation matches pinned hero.",
+          "chat_render_root_cause": "(a) In-card path called ChatPanel.render only when is_active(); otherwise render_idle_dock painted a flat dark fill with no placeholder or history/input chrome. Full ChatPanel.render was also unsuitable for the ~96px band (48px header + end button). Fix: dedicated render_watch_band() with divider, message area, and \"> Type to chat…\" placeholder when idle; compact history+input when conversation matches pinned hero.",
           "what_i_changed": [
-            "D1 game/ui/chat_panel.py ~229\u2013367: added render_watch_band() \u2014 top divider, scrollable message region (when convo active for pinned hero), input row with placeholder or cursor; clears header/end hit rects for watch-band layout. game/ui/hud.py ~832\u2013841 _render_watch_card_chrome: always render_watch_band into _watch_card_chat_rect (replaces render_idle_dock / conditional full render). game/ui/hud.py handle_click ~1422\u20131448: chat rect starts conversation with pinned hero when idle; delegates handle_click when chat active for pinned hero. tests/test_wk52_watch_card.py: test_watch_card_chat_band_draws_non_background_pixels.",
-            "D2 game/ui/pin_slot.py: PinSlot._just_pinned flag set in pin(), cleared in unpin(). game/ui/hud.py render(): moved pin/memorial/alert block before _compute_layout; consume _just_pinned \u2192 _watch_card_expanded=True so first-frame layout matches expanded card. tests/test_wk52_watch_card.py: test_watch_card_auto_expand_on_pin_edge."
+            "D1 game/ui/chat_panel.py ~229–367: added render_watch_band() — top divider, scrollable message region (when convo active for pinned hero), input row with placeholder or cursor; clears header/end hit rects for watch-band layout. game/ui/hud.py ~832–841 _render_watch_card_chrome: always render_watch_band into _watch_card_chat_rect (replaces render_idle_dock / conditional full render). game/ui/hud.py handle_click ~1422–1448: chat rect starts conversation with pinned hero when idle; delegates handle_click when chat active for pinned hero. tests/test_wk52_watch_card.py: test_watch_card_chat_band_draws_non_background_pixels.",
+            "D2 game/ui/pin_slot.py: PinSlot._just_pinned flag set in pin(), cleared in unpin(). game/ui/hud.py render(): moved pin/memorial/alert block before _compute_layout; consume _just_pinned → _watch_card_expanded=True so first-frame layout matches expanded card. tests/test_wk52_watch_card.py: test_watch_card_auto_expand_on_pin_edge."
           ],
           "commands_run": [
             {
@@ -508,7 +508,7 @@
             "screenshot_verdict": {
               "wk52_watch_card_expanded.png": {
                 "verdict": "PASS",
-                "note": "Chat band shows visible \"> Type to chat\u2026\" placeholder; minimap bottom-left; HP|Mana and XP|Lvl two-column rows intact."
+                "note": "Chat band shows visible \"> Type to chat…\" placeholder; minimap bottom-left; HP|Mana and XP|Lvl two-column rows intact."
               },
               "wk52_watch_card_minimized.png": {
                 "verdict": "PASS",
@@ -542,7 +542,7 @@
           "round_id": "wk52_r7_chat_grow",
           "status": "done",
           "what_i_changed": [
-            "D1 game/ui/hud.py lines ~25\u201329: WATCH_CARD_CHAT_H=150 (was 96), WATCH_CARD_FULL_H=406 (derived sum HEADER 18 + MAP 160 + STATS 78 + CHAT 150).",
+            "D1 game/ui/hud.py lines ~25–29: WATCH_CARD_CHAT_H=150 (was 96), WATCH_CARD_FULL_H=406 (derived sum HEADER 18 + MAP 160 + STATS 78 + CHAT 150).",
             "D1 game/ui/hud.py: _watch_chat_band_rect(...) + HUD virtual_pointer chrome use same geom; painted_stats_bottom_override pulls chat divider up below stats ink (removes pre-chat slack gap). _render_watch_card_chrome delegates rect to helper.",
             "D1 game/ui/chat_panel.py render_watch_band: msg vs input sizing from divider/input gaps; idle path draws horizontal stripe chrome + centered \"No messages yet\" muted hint.",
             "D1 tests/test_wk52_watch_card.py: WATCH_CARD_CHAT_H>=130; test_render_watch_band_empty_history_has_visual_chrome_r7; repaired auto-expand test closure."
@@ -676,7 +676,7 @@
               },
               "wk52_building_card.png": {
                 "verdict": "PASS",
-                "note": "Castle InfoCard in left slot above minimap; Status/HP body; no chat; Heroes left column pixel-matches panel bg vs expanded at y\u2248120; corner minimap."
+                "note": "Castle InfoCard in left slot above minimap; Status/HP body; no chat; Heroes left column pixel-matches panel bg vs expanded at y≈120; corner minimap."
               }
             }
           },
@@ -697,7 +697,7 @@
           "building_display_name_path": "game.ui.hud.building_display_name(building): optional callable get_display_name(); else display_name; else building_type resolved with getattr(bt, 'value', bt) so Python 3.12 str(Enum) never yields 'BuildingType.CASTLE' in the label; then replace('_',' ').title(). HUD._building_display_name delegates to this helper.",
           "real_click_screenshot_method": "scenario_wk52_pin_alerts._apply_building_card: eng.screenshot_hide_ui=False; sx,sy = int((castle.center_x - camera_x)*zoom), int((castle.center_y - camera_y)*zoom); eng.try_select_building((sx, sy)); on False fallback eng.selected_building=castle and building_panel.select_building(castle, heroes). Matches input_handler world path that clears hero via _clear_hero_selection inside try_select_building.",
           "what_i_changed": [
-            "D-A game/ui/chat_panel.py render_watch_band (~398\u2013408): X close drawn last after message chrome and input row; 14\u00d714 inset 3px dark (20,20,28) rounded rect + (60,60,80) border; glyph stays ~ same size; _watch_band_close_rect matches button for hit tests.",
+            "D-A game/ui/chat_panel.py render_watch_band (~398–408): X close drawn last after message chrome and input row; 14×14 inset 3px dark (20,20,28) rounded rect + (60,60,80) border; glyph stays ~ same size; _watch_band_close_rect matches button for hit tests.",
             "D-B game/ui/hud.py: module-level building_display_name(); _building_display_name delegates; _render_building_card_infocard uses cx=minimap_rect.x and cw=LEFT_COL_W (224); render() masks selected_hero/selected_peasant to None when selected_building present so left column matches real click (no hybrid hero panel + building card).",
             "D-B tools/screenshot_scenarios.py: _apply_building_card uses try_select_building synthetic screen coords (above).",
             "Tests tests/test_wk52_watch_card.py: test_building_display_name_resolves_enum_value, test_chat_close_x_renders_on_top_of_band; building card width assert LEFT_COL_W."
@@ -750,8 +750,8 @@
               "capture_out": "docs/screenshots/wk52_phase3/iter_1",
               "git_commit": "c482181",
               "observations": {
-                "wk52_watch_card_expanded.png": "Chat band shows brown message region with horizontal stripes and 'No messages yet'. Top-right of that band has a small dark rounded square with a light X fully on top; adjacent pixel left (213,807) reads brown (60,55,45) while button interior (218,808) reads card-dark (18,18,28) \u2014 X/chrome is not occluded by message fill.",
-                "wk52_building_card.png": "Header text reads 'Castle' in the purple header strip (not truncated Buildingtype). Card body shows only building stats (Type castle, HP bar) \u2014 no hero minimap, no two-column HP/XP grid, no chat band. Card right edge aligns with minimap; sampling y\u2248800 shows InfoCard edge (70,65,90) at x\u2248223 and map green at x\u2265224 \u2014 width 224px. Left column above card is empty panel (no hero detail) matching cleared hero selection path.",
+                "wk52_watch_card_expanded.png": "Chat band shows brown message region with horizontal stripes and 'No messages yet'. Top-right of that band has a small dark rounded square with a light X fully on top; adjacent pixel left (213,807) reads brown (60,55,45) while button interior (218,808) reads card-dark (18,18,28) — X/chrome is not occluded by message fill.",
+                "wk52_building_card.png": "Header text reads 'Castle' in the purple header strip (not truncated Buildingtype). Card body shows only building stats (Type castle, HP bar) — no hero minimap, no two-column HP/XP grid, no chat band. Card right edge aligns with minimap; sampling y≈800 shows InfoCard edge (70,65,90) at x≈223 and map green at x≥224 — width 224px. Left column above card is empty panel (no hero detail) matching cleared hero selection path.",
                 "other_shots_r8": "Minimized/radar/memorial/unpinned PNGs in iter_1 match R8 layouts; no regressions spotted in quick visual pass."
               },
               "verdict": "PASS",
@@ -766,11 +766,11 @@
             "screenshot_verdict": {
               "wk52_watch_card_expanded.png": {
                 "verdict": "PASS",
-                "note": "Chat band X fully visible on dark 14\u00d714 button; draw order fixed; not covered by brown message chrome."
+                "note": "Chat band X fully visible on dark 14×14 button; draw order fixed; not covered by brown message chrome."
               },
               "wk52_building_card.png": {
                 "verdict": "PASS",
-                "note": "Title 'Castle'; card width 224px \u00b11 vs LEFT_COL_W; building-only body; try_select_building scenario path; no hero map/stats/chat inside card."
+                "note": "Title 'Castle'; card width 224px ±1 vs LEFT_COL_W; building-only body; try_select_building scenario path; no hero map/stats/chat inside card."
               },
               "wk52_watch_card_minimized.png": {
                 "verdict": "PASS",
@@ -806,7 +806,7 @@
           "what_i_changed": [
             "BUG A game/ui/hud.py: Removed building InfoCard path (_render_building_card_infocard, building stats body, layout/pointer building branch); card slot is pinned hero only; no masking of selected_hero when selected_building; chat/watch hits no longer gated on selected_building.",
             "BUG B game/ui/building_panel.py: panel_width=LEFT_COL_W (import from hud); demolish/enter button width fits column; render_hero_row wraps potions/stack for narrow width; vertical scroll via menu_scroll_px + clipped blit to viewport_h.",
-            "BUG C game/ui/info_card.py + hud.py: draw_shell(..., header_close_x=True) draws 14\u00d714 dark X like chat band; watch card name_max_w accounts for close button.",
+            "BUG C game/ui/info_card.py + hud.py: draw_shell(..., header_close_x=True) draws 14×14 dark X like chat band; watch card name_max_w accounts for close button.",
             "BUG D game/ui/hero_panel.py: viewport clip + y-scroll_off for body; menu_scroll_px clamp; apply_menu_scroll. game/input_handler.py: WHEEL routes to hud.handle_menu_scroll before zoom when over hero left or building panel.",
             "tools/screenshot_scenarios.py: removed wk52_building_card.png shot and _apply_building_card.",
             "tests: test_wk52_watch_card.py updated (building card tests removed); tests/test_wk52_r10_menu_scroll.py added."
@@ -855,7 +855,7 @@
               ],
               "capture_out": "docs/screenshots/wk52_phase3/iter_1",
               "observations": {
-                "wk52_watch_card_expanded.png": "Purple header shows hero name Reed and a small dark square X top-right; body has minimap, HP/XP, chat band with inner X \u2014 no Castle/building card.",
+                "wk52_watch_card_expanded.png": "Purple header shows hero name Reed and a small dark square X top-right; body has minimap, HP/XP, chat band with inner X — no Castle/building card.",
                 "wk52_watch_card_minimized.png": "Thin header strip only with X; no building card.",
                 "wk52_pin_radar_minimap.png": "Radar minimap + expanded watch card; no building card overlay.",
                 "wk52_left_menu_unpinned.png": "Heroes list text sits inside brown left panel; no lines leaking below panel bottom in this frame.",
@@ -910,9 +910,9 @@
           "round_id": "wk52_r12_menu_scroll_wheel",
           "status": "done",
           "what_i_changed": [
-            "Root cause: Ursina `UrsinaApp._engine_screen_pos_for_pointer` maps motion to world-relative screen coords unless HUD chrome or opaque UI; WHEEL used `_last_ui_cursor_pos` from that motion (wrong coords) or `pygame.mouse.get_pos()` (invalid in Ursina). `virtual_pointer_in_hud_chrome` already treats `selected_building` as left-column chrome in this tree \u2014 R12 fixes wheel coordinate source + Ursina pre-queue consume.",
-            "game/input_handler.py: WHEEL routing uses `input_manager.get_mouse_pos()` first (virtual framebuffer pixels) \u2014 ~77-92.",
-            "game/graphics/ursina_app.py: `_handle_ursina_input` (~552-565) consumes scroll up/down via `handle_menu_scroll(get_mouse_pos(), \u2026)` and returns early so WHEEL is not queued.",
+            "Root cause: Ursina `UrsinaApp._engine_screen_pos_for_pointer` maps motion to world-relative screen coords unless HUD chrome or opaque UI; WHEEL used `_last_ui_cursor_pos` from that motion (wrong coords) or `pygame.mouse.get_pos()` (invalid in Ursina). `virtual_pointer_in_hud_chrome` already treats `selected_building` as left-column chrome in this tree — R12 fixes wheel coordinate source + Ursina pre-queue consume.",
+            "game/input_handler.py: WHEEL routing uses `input_manager.get_mouse_pos()` first (virtual framebuffer pixels) — ~77-92.",
+            "game/graphics/ursina_app.py: `_handle_ursina_input` (~552-565) consumes scroll up/down via `handle_menu_scroll(get_mouse_pos(), …)` and returns early so WHEEL is not queued.",
             "game/ui/hud.py: added `is_mouse_over_menu`, `scroll_active_menu`; `handle_menu_scroll` uses `is_mouse_over_menu` before applying scroll.",
             "tests/test_wk52_r10_menu_scroll.py: virtual_pointer + building selection, is_mouse_over_menu, scroll_active_menu clamp, mock zoom skip test."
           ],
@@ -947,7 +947,7 @@
           "evidence": {
             "pytest_full": "python3 -m pytest tests/ -q exit_code=0 (266 passed)",
             "qa_smoke": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
-            "ursina_wheel_zoom_path": "Wheel zoom invokes `GameEngine.zoom_by` from `InputHandler.process_events()` WHEEL branch (game/input_handler.py ~69-93). FOV sync follows in `UrsinaApp.update` via `_sync_ursina_camera_fov_from_zoom` (game/graphics/ursina_app.py ~1031-1044). R12 intercept: `UrsinaApp._handle_ursina_input` (game/graphics/ursina_app.py ~552-565) calls `hud.handle_menu_scroll(self.input_manager.get_mouse_pos(), \u2026)` on scroll up/down and returns before `ursina_key_to_input_event` queues WHEEL."
+            "ursina_wheel_zoom_path": "Wheel zoom invokes `GameEngine.zoom_by` from `InputHandler.process_events()` WHEEL branch (game/input_handler.py ~69-93). FOV sync follows in `UrsinaApp.update` via `_sync_ursina_camera_fov_from_zoom` (game/graphics/ursina_app.py ~1031-1044). R12 intercept: `UrsinaApp._handle_ursina_input` (game/graphics/ursina_app.py ~552-565) calls `hud.handle_menu_scroll(self.input_manager.get_mouse_pos(), …)` on scroll up/down and returns before `ursina_key_to_input_event` queues WHEEL."
           },
           "blockers": [],
           "follow_ups": [],
@@ -964,9 +964,9 @@
           "status": "done",
           "what_i_changed": [
             "Item A: Default `_chat_visible` False; on `_just_pinned` force collapsed chat (`render` clears `_chat_visible`); expanded watch card still auto-opens on pin.",
-            "Item B: `chat_band_close` / `chat_band_open` returned from HUD but did not consume LMB \u2014 input fell through to `building_panel.handle_click` and cleared menus; fixed early `return` in `game/input_handler.py`. Memorial-card-hit ordering unchanged.",
+            "Item B: `chat_band_close` / `chat_band_open` returned from HUD but did not consume LMB — input fell through to `building_panel.handle_click` and cleared menus; fixed early `return` in `game/input_handler.py`. Memorial-card-hit ordering unchanged.",
             "Item C: `_desired_watch_card_expanded_h` + `_watch_card_body_split` use compact stats band (`WATCH_CARD_STATS_COMPACT_H`) when chat collapsed so shell height matches painted vitals (no dead slack); dynamic split skips chat slack when `_chat_visible` False.",
-            "Item D: `game/ui/building_interior_overlay.py` \u2014 Memorial-style fullscreen scrim + centered card, occupants from `building.occupants`, Close unpause; `HUD.building_interior_overlay`; Enter Building keeps selection/panel (`input_handler` no longer deselects or opens micro interior); pause via `apply_hud_pin_action(open_building_interior|close_building_interior_unpause)` in `game/engine.py`; paused LMB gate + generic pause tint skip in `render_coordinator`; HUD render/hit-test/virtual chrome + memorialfullscreen routing.",
+            "Item D: `game/ui/building_interior_overlay.py` — Memorial-style fullscreen scrim + centered card, occupants from `building.occupants`, Close unpause; `HUD.building_interior_overlay`; Enter Building keeps selection/panel (`input_handler` no longer deselects or opens micro interior); pause via `apply_hud_pin_action(open_building_interior|close_building_interior_unpause)` in `game/engine.py`; paused LMB gate + generic pause tint skip in `render_coordinator`; HUD render/hit-test/virtual chrome + memorialfullscreen routing.",
             "tools/screenshot_scenarios.py: `wk52_pin_alerts` adds `wk52_building_interior.png` (`_apply_building_interior`).",
             "tests: `test_building_interior_overlay.py`; `test_wk52_watch_card` updates (`_just_pinned` harness, `WATCH_CARD_STATS_COMPACT_H`, chat-visible tests)."
           ],
@@ -1001,7 +1001,7 @@
             "qa_smoke": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
             "pytest": "python3 -m pytest tests/ -q exit_code=0 PASS",
             "capture_wk52": "SDL_VIDEODRIVER=dummy python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480 exit_code=0; see docs/screenshots/wk52_phase3/wk52_building_interior.png (overlay + warrior guild interior heading)",
-            "cross_domain": "game/engine.py, game/input_handler.py, game/engine_facades/render_coordinator.py (Agents 03 consult); tools/screenshot_scenarios.py (Agent 12 owns tools \u2014 sprint-required scenario hook)."
+            "cross_domain": "game/engine.py, game/input_handler.py, game/engine_facades/render_coordinator.py (Agents 03 consult); tools/screenshot_scenarios.py (Agent 12 owns tools — sprint-required scenario hook)."
           },
           "blockers": [],
           "follow_ups": [],
@@ -1019,7 +1019,7 @@
           "what_i_changed": [
             "BUG A+B game/ui/building_panel.py: render() accepts left_rect matching HUD `_layout_rects_for_screen`; panel_x/y/width/layout height from rect (no floating over map); `_fallback_left_rect` for callers without HUD.",
             "game/engine_facades/render_coordinator.py: pass hud._last_left_rect into BuildingPanel.render.",
-            "game/ui/hud.py: skip HeroPanel when selected_building \u2014 left column mutually exclusive display; watch card unchanged.",
+            "game/ui/hud.py: skip HeroPanel when selected_building — left column mutually exclusive display; watch card unchanged.",
             "BUG C game/ui/hud.py: handle_menu_scroll tests building-panel hit BEFORE hero; consumes wheel inside building viewport even when content has no overflow; hero left column consumes wheel when selected (scroll or flat chrome).",
             "tools/screenshot_scenarios.py: wk52_pin_alerts adds wk52_building_menu.png shot (pinned + warrior guild).",
             "tests/test_wk52_r10_menu_scroll.py: test_hud_handle_menu_scroll_building_panel_consume_without_content_scroll.",
@@ -1071,7 +1071,7 @@
                 "wk52_watch_card_expanded.png": "Pinned hero + chat band; unchanged layout.",
                 "wk52_left_menu_unpinned.png": "Hero list in left gutter; unchanged.",
                 "wk52_memorial_card.png": "Memorial full-screen epitaph overlay; regression OK.",
-                "bug_c_verify": "Unit test asserts handle_menu_scroll returns True over building viewport with _menu_max_scroll=0 \u2014 wheel suppressed path without needing Ursina replay."
+                "bug_c_verify": "Unit test asserts handle_menu_scroll returns True over building viewport with _menu_max_scroll=0 — wheel suppressed path without needing Ursina replay."
               },
               "verdict": "PASS",
               "code_notes": "Overlap was oversized viewport + overlay draw order vs watch card; Ursina zoom path used same InputHandler but wrong hit rect + zoom was not suppressed when overflow=0."
@@ -1104,7 +1104,7 @@
           "blockers": [],
           "follow_ups": [],
           "recommended_next_actions": [
-            "Jaimie: python3 main.py (Ursina) \u2014 hover Warrior Guild/building sheet and scroll wheel; confirm no map zoom unless pointer leaves menu."
+            "Jaimie: python3 main.py (Ursina) — hover Warrior Guild/building sheet and scroll wheel; confirm no map zoom unless pointer leaves menu."
           ],
           "how_to_test": [
             "python3 -m pytest tests/ -v",
@@ -1117,7 +1117,7 @@
     "v16_r5_hud_perf_worldspace_ui": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/hud_ui_performance_issue_resolution.md",
-        "notes": "v1.6 Round 5 \u2014 World-Space UI as Native Ursina Entities (Phase 2)"
+        "notes": "v1.6 Round 5 — World-Space UI as Native Ursina Entities (Phase 2)"
       },
       "rounds": {
         "r5_round2_building_labels_and_hero_labels": {
@@ -1157,7 +1157,7 @@
     "wk60_v159_gameplay_fun": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/v1.6_gameplay_fun_roadmap.plan.md",
-        "notes": "WK60 'Make It Fun' \u2014 R2 UI integration: wave toasts, guild N/8, difficulty menu, DEV MODE label"
+        "notes": "WK60 'Make It Fun' — R2 UI integration: wave toasts, guild N/8, difficulty menu, DEV MODE label"
       },
       "rounds": {
         "wk60_r2_ui_integration": {
@@ -1165,11 +1165,11 @@
           "round_id": "wk60_r2_ui_integration",
           "status": "done",
           "what_i_changed": [
-            "TASK 1 \u2014 WAVE WARNING HUD TOASTS: game/ui/hud.py: Added wave toast system (on_wave_incoming, on_wave_cleared, _render_wave_toast) \u2014 prominent centered banner with fade-in/out, countdown timer for incoming waves, gold-colored clear reward. game/engine.py: Subscribed to 'wave_incoming' and 'wave_cleared' EventBus events, routed to HUD via _on_wave_incoming_event and _on_wave_cleared_event handlers.",
-            "TASK 2 \u2014 GUILD N/8 DISPLAY: game/ui/building_renderers/guild_panel.py: Replaced 'Total Heroes: N' with 'Heroes: N/max_heroes' using building.heroes_hired and building.max_heroes attributes from HiringBuilding mixin. Text turns red when guild is at capacity.",
-            "TASK 3 \u2014 GUILD IS FULL FEEDBACK: Already implemented by Agent 05 in game/engine.py try_hire_hero() line ~835 (hud.add_message 'Guild is full!' with red color + ui_error SFX). No additional work needed \u2014 verified routing works through existing hud_message system.",
-            "TASK 4 \u2014 DIFFICULTY MENU IN PAUSE MENU: game/ui/pause_menu.py: Added 'difficulty' page button to main menu (6 buttons total). New _render_difficulty_page method with Easy/Normal/Hard selection buttons (current highlighted blue, disabled grayed), Lock Difficulty button (red-tinted), description text. Added _render_difficulty_confirm_dialog for lock confirmation overlay with 'Yes, Lock It' / 'Cancel' buttons. handle_click updated for difficulty page: level selection, lock prompt, confirmation dialog. Wired difficulty_system parameter through constructor. game/engine.py: PauseMenu constructor now passes difficulty_system=self.difficulty_system.",
-            "TASK 5 \u2014 DEV MODE HUD LABEL: game/ui/hud.py: Added _render_dev_mode_label method \u2014 renders '[DEV MODE]' in top-right corner with semi-transparent background when config.DEV_MODE is True. Called from render() alongside wave toast."
+            "TASK 1 — WAVE WARNING HUD TOASTS: game/ui/hud.py: Added wave toast system (on_wave_incoming, on_wave_cleared, _render_wave_toast) — prominent centered banner with fade-in/out, countdown timer for incoming waves, gold-colored clear reward. game/engine.py: Subscribed to 'wave_incoming' and 'wave_cleared' EventBus events, routed to HUD via _on_wave_incoming_event and _on_wave_cleared_event handlers.",
+            "TASK 2 — GUILD N/8 DISPLAY: game/ui/building_renderers/guild_panel.py: Replaced 'Total Heroes: N' with 'Heroes: N/max_heroes' using building.heroes_hired and building.max_heroes attributes from HiringBuilding mixin. Text turns red when guild is at capacity.",
+            "TASK 3 — GUILD IS FULL FEEDBACK: Already implemented by Agent 05 in game/engine.py try_hire_hero() line ~835 (hud.add_message 'Guild is full!' with red color + ui_error SFX). No additional work needed — verified routing works through existing hud_message system.",
+            "TASK 4 — DIFFICULTY MENU IN PAUSE MENU: game/ui/pause_menu.py: Added 'difficulty' page button to main menu (6 buttons total). New _render_difficulty_page method with Easy/Normal/Hard selection buttons (current highlighted blue, disabled grayed), Lock Difficulty button (red-tinted), description text. Added _render_difficulty_confirm_dialog for lock confirmation overlay with 'Yes, Lock It' / 'Cancel' buttons. handle_click updated for difficulty page: level selection, lock prompt, confirmation dialog. Wired difficulty_system parameter through constructor. game/engine.py: PauseMenu constructor now passes difficulty_system=self.difficulty_system.",
+            "TASK 5 — DEV MODE HUD LABEL: game/ui/hud.py: Added _render_dev_mode_label method — renders '[DEV MODE]' in top-right corner with semi-transparent background when config.DEV_MODE is True. Called from render() alongside wave toast."
           ],
           "commands_run": [
             {
@@ -1186,7 +1186,7 @@
             }
           ],
           "evidence": {
-            "pytest": "python -m pytest tests/ -x -q --tb=short exit_code=0 (339 passed \u2014 same count as baseline)",
+            "pytest": "python -m pytest tests/ -x -q --tb=short exit_code=0 (339 passed — same count as baseline)",
             "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 DONE: PASS",
             "files_modified": [
               "game/ui/hud.py (wave toast system + DEV MODE label)",
@@ -1197,9 +1197,9 @@
           },
           "blockers": [],
           "follow_ups": [
-            "Jaimie manual test: python main.py --no-llm \u2014 open ESC menu, verify Difficulty page shows Easy/Normal/Hard selector + Lock button. Change difficulty and observe lock confirmation.",
-            "Jaimie manual test: python main.py --no-llm \u2014 wait 3 minutes for first wave, verify centered toast banner with countdown.",
-            "Jaimie manual test: $env:KINGDOM_DEV_MODE='1'; python main.py --no-llm \u2014 verify [DEV MODE] label in top-right.",
+            "Jaimie manual test: python main.py --no-llm — open ESC menu, verify Difficulty page shows Easy/Normal/Hard selector + Lock button. Change difficulty and observe lock confirmation.",
+            "Jaimie manual test: python main.py --no-llm — wait 3 minutes for first wave, verify centered toast banner with countdown.",
+            "Jaimie manual test: $env:KINGDOM_DEV_MODE='1'; python main.py --no-llm — verify [DEV MODE] label in top-right.",
             "Jaimie manual test: select a guild building, verify Heroes: N/8 display."
           ],
           "recommended_next_actions": [],
@@ -1213,7 +1213,7 @@
     "wk61_playtest_polish": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk61_playtest_polish.plan.md",
-        "notes": "WK61 R1: playtest polish \u2014 3 UI items (taxable gold bug, hero chat button, enemy click panel)"
+        "notes": "WK61 R1: playtest polish — 3 UI items (taxable gold bug, hero chat button, enemy click panel)"
       },
       "rounds": {
         "wk61_r1_ui_polish": {
@@ -1225,7 +1225,7 @@
             "WK61-FEAT-005 game/ui/hero_panel.py: Added 'Chat' button at bottom of _render_standard_hero(); new _chat_button_rect + _current_hero state; handle_click() returns start_conversation action dict. game/ui/hud.py: handle_click routes hero panel chat button clicks to start_conversation action (existing input_handler processing opens ChatPanel).",
             "WK61-FEAT-006 (A) game/engine.py: Added selected_enemy property forwarding to sim; try_select_enemy() method with distance-based picking (1.5x size radius); all try_select_* methods now clear selected_enemy on success. game/sim_engine.py: Added selected_enemy=None to __init__. game/engine.py get_game_state: exposes selected_enemy in game_state dict.",
             "WK61-FEAT-006 (B) game/input_handler.py: Added enemy to click cascade after peasant, before building (try_select_enemy); _clear_hero_selection clears selected_enemy; close_selection clears selected_enemy; empty-space click clears selected_enemy.",
-            "WK61-FEAT-006 (C) game/ui/enemy_panel.py (NEW): EnemyPanel class renders enemy info in left column (224px) \u2014 enemy type name (camelCase split), HP bar (red), attack damage, speed, state, current target. Follows HeroPanel rendering patterns (TextLabel, HPBar, section dividers, theme fonts).",
+            "WK61-FEAT-006 (C) game/ui/enemy_panel.py (NEW): EnemyPanel class renders enemy info in left column (224px) — enemy type name (camelCase split), HP bar (red), attack damage, speed, state, current target. Follows HeroPanel rendering patterns (TextLabel, HPBar, section dividers, theme fonts).",
             "WK61-FEAT-006 (D) game/ui/hud.py: Import + instantiate EnemyPanel; render() shows enemy panel in left column when selected_enemy set (mutually exclusive with hero/peasant panels); close button renders for enemy panel; virtual_pointer_in_hud_chrome includes selected_enemy; show_left message offset includes selected_enemy."
           ],
           "commands_run": [
@@ -1250,7 +1250,7 @@
               "game/sim_engine.py (selected_enemy init)",
               "game/input_handler.py (enemy in click cascade, clear in _clear_hero_selection/close_selection/empty click)",
               "game/ui/hero_panel.py (Chat button rendering + handle_click)",
-              "game/ui/enemy_panel.py (NEW \u2014 EnemyPanel class)",
+              "game/ui/enemy_panel.py (NEW — EnemyPanel class)",
               "game/ui/hud.py (EnemyPanel import/instantiation/rendering/click routing/chrome checks)"
             ],
             "files_not_committed": true
@@ -1273,12 +1273,12 @@
             "status": "done",
             "what_i_changed": [
               "game/ui/hero_panel.py: Added _chat_button_visible flag; handle_click now checks button is visible within viewport before accepting click. Fixed viewport-aware hit testing so chat button only responds when actually on-screen.",
-              "game/input_handler.py: Fixed enemy selection being immediately wiped \u2014 _clear_hero_selection() no longer clears selected_enemy (call sites that need full clear do it explicitly). Fixed start_conversation action to auto-pin hero, expand watch card, and open chat band so clicking Chat on hero panel actually shows the conversation.",
+              "game/input_handler.py: Fixed enemy selection being immediately wiped — _clear_hero_selection() no longer clears selected_enemy (call sites that need full clear do it explicitly). Fixed start_conversation action to auto-pin hero, expand watch card, and open chat band so clicking Chat on hero panel actually shows the conversation.",
               "game/ui/building_renderers/economic_panel.py: _render_taxable_gold now always renders the line (even when $0) so player can see the field exists. Added fallback to stash_gold attribute. Added defensive guard for missing font/surface."
             ],
             "bugs_found_and_fixed": {
               "item1_chat_button": {
-                "root_cause": "Two issues: (1) Chat button click worked but conversation only renders in pinned watch card chat band \u2014 if hero not pinned, nothing visible happened. (2) No viewport-visibility check meant off-screen buttons could register false hits.",
+                "root_cause": "Two issues: (1) Chat button click worked but conversation only renders in pinned watch card chat band — if hero not pinned, nothing visible happened. (2) No viewport-visibility check meant off-screen buttons could register false hits.",
                 "fix": "Auto-pin hero + expand watch card + open chat band when start_conversation fires. Added _chat_button_visible flag gated by viewport bounds."
               },
               "item2_enemy_click": {
@@ -1368,7 +1368,7 @@
           "blockers": [],
           "follow_ups": [
             "Agent 05 data fix (TaxStashMixin on marketplace/blacksmith) required for non-zero taxable gold in live play; UI now reads stored_tax_gold correctly.",
-            "Jaimie manual: select hero, click Chat \u2014 verify popup opens and hero is NOT pinned unless Pin was clicked separately."
+            "Jaimie manual: select hero, click Chat — verify popup opens and hero is NOT pinned unless Pin was clicked separately."
           ],
           "recommended_next_actions": []
         },
@@ -1433,7 +1433,7 @@
           "round_id": "wk61_r9_hero_chat_readable_layout",
           "status": "done",
           "what_i_changed": [
-            "WK61-R9-BUG-001 game/ui/hud.py: Replaced cramped below-minimap chat popup with in-column split layout \u2014 hero sheet shrinks to scrollable top band (min 120px) and chat reserves 152\u2013220px with divider; wheel scroll routes to hero band only when pointer over hero rect.",
+            "WK61-R9-BUG-001 game/ui/hud.py: Replaced cramped below-minimap chat popup with in-column split layout — hero sheet shrinks to scrollable top band (min 120px) and chat reserves 152–220px with divider; wheel scroll routes to hero band only when pointer over hero rect.",
             "tools/screenshot_scenarios.py: Added wk61_hero_menu_chat scenario with sample conversation at 1024x576 and 1920x1080; Shot width/height optional fields for per-shot capture size.",
             "tools/capture_screenshots.py: Apply per-shot width/height overrides and HUD resize hook before each capture.",
             "tests/test_wk61_r9_hero_chat_readable_layout.py: Split rect sizing at 576p/1080p and render integration test.",
@@ -1584,7 +1584,7 @@
           "evidence": {
             "pytest_sidebar": "test_wk61_r10_sidebar_layout.py 4 passed; test_wk61_r11_sidebar_main_solo_handle.py 4 passed",
             "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 DONE: PASS",
-            "screenshots": "docs/screenshots/wk61_r11_sidebar/ \u2014 ui_panels_hero.png shows unpinned Gareth column with resize handle bar above minimap gap; ui_panels_sidebar_split.png pinned split unchanged",
+            "screenshots": "docs/screenshots/wk61_r11_sidebar/ — ui_panels_hero.png shows unpinned Gareth column with resize handle bar above minimap gap; ui_panels_sidebar_split.png pinned split unchanged",
             "handle_probe": "main_solo handle rect (0,653,224,8) at default 0.72 frac; handle pixel sum=330 (visible chrome)",
             "ursina_note": "Agent 03 wires Ursina LMB pointer routing to handle_sidebar_split_pointer_*; HUD layout + handle_click contract complete."
           },
@@ -1611,7 +1611,7 @@
             "NEW game/ui/ui_actions.py: Typed UIAction(frozen dataclass, slots=True) with kind:str and payload:object|None; normalize_ui_action() converts legacy str/dict/None returns to UIAction or None.",
             "NEW game/ui/hud_layout.py: HUDLayout(dataclass, slots=True) holding top_bar, bottom_bar, left_panel, right_panel, minimap, command_bar, speed_control, recall_button, memorial_button rects; HUDLayoutManager.compute() pure-geometry function from screen_w/h and theme metrics; authoritative LEFT_COL_W, RADAR_MINIMAP_H, RADAR_MINIMAP_W, RECALL_BTN_W, MEMORIAL_BTN_W constants.",
             "MODIFIED game/ui/hud.py: Imports UIAction, normalize_ui_action, HUDLayout, HUDLayoutManager, and layout constants from new modules; removed duplicate constant definitions (LEFT_COL_W, RADAR_MINIMAP_H, RADAR_MINIMAP_W); HUD.__init__ creates _layout_mgr = HUDLayoutManager(); _layout_rects_for_screen delegates core rectangle math to HUDLayoutManager.compute() then overlays left-column segment allocation.",
-            "NEW tests/test_wk62_hud_layout_ui_actions.py: 20 tests \u2014 UIAction construction/frozen/equality, normalize_ui_action 7 cases, HUDLayoutManager geometry for 1920x1080/800x600/custom theme, rect non-overlap, button adjacency, speed control position, backward-compat imports from hud.py."
+            "NEW tests/test_wk62_hud_layout_ui_actions.py: 20 tests — UIAction construction/frozen/equality, normalize_ui_action 7 cases, HUDLayoutManager geometry for 1920x1080/800x600/custom theme, rect non-overlap, button adjacency, speed control position, backward-compat imports from hud.py."
           ],
           "commands_run": [
             {
@@ -2033,9 +2033,9 @@
             "before_panels": "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk96_before_panels --size 1920x1080 --ticks 480",
             "after_base": "docs/screenshots/wk96_after_base",
             "after_panels": "docs/screenshots/wk96_after_panels",
-            "visual_verdict": "ui_panels_hero before/after: region-diff of static UI chrome is IDENTICAL \u2014 top bar, hero panel (Gareth: XP 0/100 bar, HP 60/60 bar, Vitals/Economy/Gear/Intent, blue Chat button), watch-card-above-minimap region (0,560,230,900), and command bar all byte-identical. Full-frame diffs confined to the live-animating world (moving units/dust/hero positions on wall-clock) + a single 6x6px minimap entity blip; zero UI regression. Watch card renders identically."
+            "visual_verdict": "ui_panels_hero before/after: region-diff of static UI chrome is IDENTICAL — top bar, hero panel (Gareth: XP 0/100 bar, HP 60/60 bar, Vitals/Economy/Gear/Intent, blue Chat button), watch-card-above-minimap region (0,560,230,900), and command bar all byte-identical. Full-frame diffs confined to the live-animating world (moving units/dust/hero positions on wall-clock) + a single 6x6px minimap entity blip; zero UI regression. Watch card renders identically."
           },
-          "do_not_commit": "true \u2014 Agent 01 commits after the W2 gate. Agent 08 did NOT git add/commit."
+          "do_not_commit": "true — Agent 01 commits after the W2 gate. Agent 08 did NOT git add/commit."
         }
       }
     },
@@ -2137,6 +2137,59 @@
               "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk98_before_panels --size 1920x1080 --ticks 480"
             ],
             "screenshot_verdict": "ui_panels_hero.png byte-identical before/after (sha 852a66bc137de875). ui_panels_sidebar_split.png: WATCH-CARD region (header bar, map slot frame, HP/Mana row + HP bar, XP/Lvl/Chat-button row, chat band split down to footer) pixel-identical in position/heights/body-split via left-column crop comparison; the only diffs are sim/world content rendered INTO the fixed card layout (unit positions in map slot, HP/XP/Gold/Taxed values) = sim non-determinism, NOT geometry. Card geometry from the moved helpers is unchanged."
+          },
+          "do_not_commit": true
+        }
+      }
+    },
+    "wk99_round_b_hud_left_layout": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk99_round_b_hud_left_layout.plan.md",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "notes": "WK99 Round B-16 (seventh hud.py split slice; second of the left-column/layout cluster): extracted the LEFT-COLUMN SPLIT cluster (7 methods) out of game/ui/hud.py into a NEW game/ui/hud_left_layout.py, and relocated the 5 LEFT_SPLIT_* constants from hud.py to the authoritative game/ui/hud_layout.py. Pure VERBATIM move behind 1-line lazy-delegating wrappers (WK93-98 pattern). Constants: LEFT_SPLIT_HANDLE_H=4, LEFT_SPLIT_HANDLE_HIT_H=8, LEFT_SPLIT_DEFAULT_FRAC_MAIN=0.55, LEFT_SPLIT_DEFAULT_FRAC_WATCH=0.45, LEFT_SPLIT_DEFAULT_FRAC_MAIN_SOLO=0.72 added to hud_layout.py under HERO_LEFT_MIN_H; DELETED from hud.py own defs (was lines 53-57); all 5 ADDED to hud.py from-game.ui.hud_layout import block so bare names resolve in __init__ (322-324) AND from game.ui.hud import LEFT_SPLIT_* still works (test_wk61_r10/r11). HERO_MENU_*/WATCH_MINIMAP_SIZE STAY in hud.py. New hud_left_layout.py imports only leaves (hud_layout, hud_watch_card) at top + TYPE_CHECKING HUD; 7 fns appended as hud-first module functions; every self.->hud.; inter-helper calls -> hud._left_column_segments_open / hud._normalized_left_split_fracs (re-enter via wrappers); hud._should_render_hero_menu_chat_popup stays on HUD; consts referenced bare. 9 drag-state fields + _left_main/watch_rect + _left_split_handle_rects + _last_left_rect + screen_height + theme reached via hud. The 3 PUBLIC handle_sidebar_split_pointer_down/move/up wrapper names kept EXACT (ursina_app/mouse/input_handler call via hasattr/getattr). hud.py 1523->1373 LOC; hud_left_layout.py NEW 209 LOC."
+      },
+      "rounds": {
+        "wk99_w1": {
+          "sprint_id": "wk99_round_b_hud_left_layout",
+          "round_id": "wk99_w1",
+          "status": "done",
+          "task": "Extract the left-column split cluster (7 methods, ~155 LOC) from hud.py into NEW game/ui/hud_left_layout.py + relocate 5 LEFT_SPLIT_* constants to hud_layout.py, behind 1-line delegating wrappers (exact names+signatures, incl 3 public handle_sidebar_split_pointer_*). PURE VERBATIM MOVE, render+drag behavior unchanged. Seventh slice of the hud.py god-file split.",
+          "constants_moved": "LEFT_SPLIT_HANDLE_H=4, LEFT_SPLIT_HANDLE_HIT_H=8, LEFT_SPLIT_DEFAULT_FRAC_MAIN=0.55, LEFT_SPLIT_DEFAULT_FRAC_WATCH=0.45, LEFT_SPLIT_DEFAULT_FRAC_MAIN_SOLO=0.72: hud.py:53-57 -> hud_layout.py (after HERO_LEFT_MIN_H). hud.py re-imports all 5 via the existing from game.ui.hud_layout import (...) block so from game.ui.hud import LEFT_SPLIT_* still resolves + __init__ 322-324 defaults resolve (const-ok: hud_layout==hud; H==4, MAIN_SOLO==0.72).",
+          "fns_moved": [
+            "_left_column_segments_open (hud.py:451) -> left_column_segments_open(hud, game_state)",
+            "_normalized_left_split_fracs (hud.py:463) -> normalized_left_split_fracs(hud, main_open, watch_open)",
+            "_layout_left_column_segments (hud.py:486) -> layout_left_column_segments(hud, top_h, minimap, game_state)",
+            "_render_left_split_handles (hud.py:562) -> render_left_split_handles(hud, surface)",
+            "handle_sidebar_split_pointer_down (hud.py:579, PUBLIC) -> handle_sidebar_split_pointer_down(hud, pos, game_state)",
+            "handle_sidebar_split_pointer_move (hud.py:593, PUBLIC) -> handle_sidebar_split_pointer_move(hud, pos, game_state)",
+            "handle_sidebar_split_pointer_up (hud.py:627, PUBLIC) -> handle_sidebar_split_pointer_up(hud)"
+          ],
+          "verification": {
+            "zero_self_in_7_fns": "PASS (grep self. in hud_left_layout.py -> No matches / 0 occurrences)",
+            "no_toplevel_hud_import": "PASS (only TYPE_CHECKING block: from game.ui.hud import HUD at line 19; no module-top import game.ui.hud)",
+            "import_orders": "ok1 (hud_left_layout,hud) + ok2 (hud,hud_left_layout) both PASS",
+            "const_ok": "PASS (LEFT_SPLIT_HANDLE_H==4 and LEFT_SPLIT_DEFAULT_FRAC_MAIN_SOLO==0.72 from both hud_layout and hud)",
+            "pytest": "1071 passed, 4 skipped, 0 failed (188.37s) -- baseline (no new test yet; that is Agent 11 W2)",
+            "determinism_guard": "PASS: no violations found",
+            "wk67_digest": "10 passed; digest constant b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical",
+            "qa_smoke_quick": "DONE: PASS",
+            "hud_py_loc": 1373,
+            "hud_left_layout_py_loc": 209
+          },
+          "evidence": {
+            "before": [
+              "docs/screenshots/wk99_before_base",
+              "docs/screenshots/wk99_before_panels"
+            ],
+            "after": [
+              "docs/screenshots/wk99_after_base",
+              "docs/screenshots/wk99_after_panels"
+            ],
+            "capture_cmds": [
+              "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk99_before_base --size 1920x1080 --ticks 480",
+              "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk99_before_panels --size 1920x1080 --ticks 480"
+            ],
+            "screenshot_verdict": "ui_panels_hero.png + ui_panels_hidden.png byte-identical before/after (md5). ui_panels_sidebar_split.png: LEFT COLUMN split is layout-identical -- main hero panel (Gareth header + stats rows) flush-left at x=0 same width/height/position; watch card below it same position/size; the divider/resize-handle bar between main panel and watch card + the watch-bottom handle at the same y; chat band same position/size; all left-column elements flush-left x=0 and non-overlapping (stacked). The differing pixels in the left band (per-pixel diff: y 128-178 + 504-542 = live hero HP/XP/stat text; y 342-495 = watch-card live world-minimap map slot showing unit positions; y 952-1044 = chat-band message text) are sim/world content rendered INTO the fixed left-column layout = sim non-determinism, NOT geometry. Static chrome (panel frames, dividers, handle bars, left edges) pixel-identical. Layout from the moved cluster unchanged."
           },
           "do_not_commit": true
         }
