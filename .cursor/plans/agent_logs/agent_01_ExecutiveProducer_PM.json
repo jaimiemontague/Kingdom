@@ -5,6 +5,7 @@
   "name": "ExecutiveProducer_PM"
  },
  "notes": [
+  "2026-05-31 (Agent 01 WK108 CLOSED 0eaf55f + WK109 KICKOFF): WK108 shipped+pushed (0eaf55f, FOG/B-2 build_3d_terrain + _batch_static_terrain_for_chunks -> ursina_terrain_build.py; fog_collab 910->482; suite ->1300; digest byte-identical; PM verbatim both faithful; 8-point test_terrain_perf retarget + WK104 back-import invariant reconciled by updating the test to follow migrated consumers). MILESTONE: fog_collab 1783 (pre-WK104) -> 482. WK109 KICKOFF = FOG/C finale: ensure_fog_overlay + ensure_grid_debug_overlay (~315 LOC) -> ursina_fog_overlay.py. Cleanest move (only self._r, no own-slots, no intra-calls; pre-grounded agent a82bdea0d0fc5e898). Orphan sweep + FOG_TEX_BRIDGE_KEY relocation; test_terrain_perf L719-720 shared-object patches retarget tfc->ufo. After WK109 fog_collab = __init__ + wrappers (stateful facade) = god-file DONE. Then pivot to ursina_app.py / non-render headless roadmap. Dispatching Agent 09 (W1).",
   "2026-05-31 (Agent 01 WK107 CLOSED 9893836 + WK108 KICKOFF): WK107 shipped+pushed (9893836, FOG/B-1 ground-mesh/grass/cave-shader -> ursina_terrain_ground_mesh.py; fog_collab 1184->910 incl -3 dead-import cleanup; suite ->1288; digest byte-identical; PM verbatim-diff all 3 faithful; no test retarget needed). WK108 KICKOFF = FOG/B-2: build_3d_terrain + _batch_static_terrain_for_chunks (~408 LOC) -> ursina_terrain_build.py. Pre-grounded (agent a32f75b16ecbb88f1): one-way build->batch (L873 becomes direct module fn); build calls WK106/107 wrappers via owner.X; CRITICAL 8-point test_terrain_perf retarget, esp L235-238 class-method patch of _batch_static_terrain_for_chunks -> ttb module fn (build's direct call bypasses the class wrapper; miss=passes-but-wrong). Agent 09 also sweeps fog_collab orphan imports. After WK108 the god-file is essentially decomposed (only __init__ + ensure_fog_overlay + ensure_grid_debug + wrappers remain; WK109 takes those). Dispatching Agent 09 (W1).",
   "2026-05-31 (Agent 01 WK106 CLOSED 29590e8 + WK107 KICKOFF): WK106 shipped+pushed (29590e8, FOG/A visibility/cull/instanced-fog -> ursina_terrain_fog_visibility.py; fog_collab 1455->1184; suite ->1272; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical; PM verbatim-diff gate all 9 faithful). WK107 KICKOFF = FOG/B-1: 3 ground-surface helpers (_build_terrain_ground_mesh/update_cave_entrance_shader/_apply_grass_texture, L889-1177, ~286 LOC) -> ursina_terrain_ground_mesh.py. SAFEST FOG/B sub-slice: NO test retarget (build_3d_terrain stays calling self->wrapper; tfc.Entity/_environment_* patches still hit staying build). 3 methods touch only self._r.* + 1 intra _apply_grass_texture; function-local imports stay local. WK108 will be the riskier build_3d_terrain+_batch_static move (needs the 8-patch test_terrain_perf retarget). Dispatching Agent 09 (W1).",
   "2026-05-31 (Agent 01 WK105 CLOSED f649a5c + WK106 KICKOFF): WK105 shipped+pushed (f649a5c, ursina_app debug/FPS probe -> ursina_app_debug_probe.py; ursina_app 1528->1272; 8th sprint this turn; suite ->1238; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical). WK106 KICKOFF = FOG/A: 9-method visibility/cull/instanced-fog cluster (fog_collab L351-656, ~300 LOC) -> NEW ursina_terrain_fog_visibility.py via pure-move-behind-wrappers. Grounded directly (line nums stable since WK104): owner-slot vs _r-attr map locked; one-way coupling confirmed; test_terrain_perf L300 patch RETARGET to tfv is the key hazard; TERRAIN_CHUNK_SIZE kept-in-fog_collab+mirrored; _InstancedTreeStub kept-back-imported both sides; remove only the now-unused _set_static_prop_fog_tint import name from fog_collab. Deferred-screenshot model (memory feedback_ursina_deferred_screenshots). Dispatching Agent 09 (W1).",
@@ -5898,7 +5899,7 @@
      "import_smoke_both_orders": "order A + order B clean (no cycle); AST self-id in new module == 0",
      "live_screenshots": "DEFERRED to Jaimie end-of-marathon test (hot-path ursina render, no GPU in agent)",
      "milestone": "fog_collab 1783 (pre-WK104) -> 482: god-file essentially decomposed. Remaining: __init__ + ensure_fog_overlay + ensure_grid_debug_overlay + WK104/106/107/108 wrappers. WK109 takes the 2 overlay methods.",
-     "commit_sha": "recorded in WK109 kickoff note"
+     "commit_sha": "0eaf55f (pushed 9893836..0eaf55f main->main)"
     }
    },
    "rounds": {
@@ -5917,6 +5918,63 @@
      "pm_agent_prompts": {
       "09": "Onboard agent-09 rules; plan sections 1-4. Create ursina_terrain_build.py (2 owner-arg fns, batch first then build; terrain_height stays function-local); replace fog_collab L386-536 + L629-885 with 2 wrappers; grep-proven orphan-import sweep. DO NOT COMMIT. DO NOT edit tests (they'll fail until W2).",
       "11": "Onboard agent-11 rules; plan sections 5-7. Apply the 8-point test_terrain_perf retarget (alias ttb + 7 module-global + 1 class-method; keep _build_terrain_ground_mesh class patch); create test_wk108 seam test; full DoD. DO NOT COMMIT."
+     },
+     "pm_commits": [
+      "0eaf55f (pushed)"
+     ]
+    }
+   }
+  },
+  "wk109_round_b_ursina_fog_overlay": {
+   "sprint_meta": {
+    "status": "closed_success",
+    "created_utc": "2026-05-31",
+    "plan_doc": ".cursor/plans/wk109_round_b_ursina_fog_overlay.plan.md",
+    "goal": "FOG/C finale: extract the last 2 real-body methods (ensure_fog_overlay L96-320 + ensure_grid_debug_overlay L364-453, ~315 LOC) into NEW game/graphics/ursina_fog_overlay.py via pure-move-behind-wrappers. After this fog_collab = __init__ + wrappers (stateful facade); the #1 god-file is fully decomposed. Behavior-preserving.",
+    "version_target": "internal-refactor (no version bump)",
+    "verification_class": "ursina render -> deferred-screenshot model",
+    "notes": "EASIEST move of the series (grounding agent a82bdea0d0fc5e898): both methods touch ONLY self._r.* (zero own-slots), make ZERO intra-class calls, don't call each other -> free functions, no owner.wrapper calls, every self._r.X->owner._r.X (incl getattr comma-forms). One module (shared imports). FOG_TEX_BRIDGE_KEY moves to new module. Function-local imports stay local (panda3d.core TransparencyAttrib/SamplerState[unused]/TextureStage, import ursina as u, from ursina import Mesh). Orphan sweep from fog_collab: pygame, config, Entity/Vec2/color, TerrainTextureBridge, SCALE/sim_px_to_world_xz, Visibility, unlit_shader, FOG_TEX_BRIDGE_KEY (KEEP os[__init__], TERRAIN_CHUNK_SIZE[test+WK106]). test_terrain_perf retarget: the L719-720 patches hit SHARED objects (real pygame.image + TerrainTextureBridge class) so only the HANDLE retargets tfc->ufo (add import game.graphics.ursina_fog_overlay as ufo); direct ensure_fog_overlay calls L725-726 hit wrappers unchanged. PM verbatim gate EXPECTS ZERO diffs (no intra-call rewrites). After WK109 -> ursina_app.py is next big target.",
+    "definition_of_done": [
+     "python -m pytest -q ALL pass (0 fail); test_terrain_perf.py GREEN after L719-720 ufo retarget",
+     "determinism_guard clean; WK67 digest byte-identical; qa_smoke --quick green",
+     "import smoke + both fresh-subprocess orders (no cycle); AST self-id in new module == 0",
+     "tests/test_wk109_ursina_fog_overlay.py passes (fn-exists/owner-first/wrapper-delegation x2 + AST no-self + AST no-cycle + function-local-import guard + FOG_TEX_BRIDGE_KEY const + both-orders)",
+     "Agent 01 PM verbatim-diff gate: BOTH methods ZERO diffs (cleanest of series; only self._r->owner._r)",
+     "Live before/after Ursina screenshots DEFERRED to Jaimie"
+    ],
+    "closeout_evidence": {
+     "fog_collab_loc": "482 -> 170 (-312; now __init__ + 18 wrappers + __future__/os/TERRAIN_CHUNK_SIZE header only)",
+     "new_module_loc": "game/graphics/ursina_fog_overlay.py = 352",
+     "pm_verbatim_diff_gate": "PASS — BOTH methods IDENTICAL after canonicalization (zero diffs; cleanest of the series, only self._r->owner._r, no intra-call rewrites)",
+     "orphan_sweep": "removed from fog_collab: pygame, config, Entity/Vec2/color, TerrainTextureBridge, SCALE/sim_px_to_world_xz, Visibility, unlit_shader, FOG_TEX_BRIDGE_KEY (moved to new module); kept os (__init__) + TERRAIN_CHUNK_SIZE (test + WK106 mirror)",
+     "test_terrain_perf_retarget": "L719-720 shared-object patch handles retargeted tfc->ufo (real pygame.image + TerrainTextureBridge class); 1 failed -> 7 passed",
+     "full_suite": "1314 passed, 4 skipped, 0 failed",
+     "new_seam_test": "tests/test_wk109_ursina_fog_overlay.py = 14 passed",
+     "determinism_guard": "PASS (no violations)",
+     "wk67_digest": "byte-identical b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (re-run by Agent 01)",
+     "qa_smoke_quick": "DONE: PASS",
+     "import_smoke_both_orders": "order A + order B clean (no cycle); AST self-id in new module == 0",
+     "live_screenshots": "DEFERRED to Jaimie end-of-marathon test (hot-path ursina render, no GPU in agent)",
+     "MILESTONE": "ursina_terrain_fog_collab.py 1783 (pre-WK104) -> 170: the #1 audit god-file FULLY DECOMPOSED into 5 focused leaf modules (ursina_terrain_growth_sync WK104, ursina_terrain_fog_visibility WK106, ursina_terrain_ground_mesh WK107, ursina_terrain_build WK108, ursina_fog_overlay WK109) + a thin stateful facade (UrsinaTerrainFogCollab = __init__ + delegating wrappers, holding the __slots__ state the module-fns read/write via owner.*). 6 sprints WK104/106/107/108/109 (WK105 was ursina_app debug probe).",
+     "commit_sha": "recorded in next kickoff note"
+    }
+   },
+   "rounds": {
+    "wk109_round_b_kickoff": {
+     "round_meta": {
+      "round": "wk109_round_b_kickoff",
+      "status": "closed_success",
+      "created_utc": "2026-05-31",
+      "agents": [
+       "09 (W1 extract + orphan sweep)",
+       "11 (W2 patch retarget + seam test + DoD)"
+      ],
+      "model": "claude-opus-4-8"
+     },
+     "pm_status_summary": "WK108 shipped (0eaf55f); fog_collab 1783->482. WK109 = FOG/C finale: ensure_fog_overlay + ensure_grid_debug_overlay -> ursina_fog_overlay.py. Cleanest move (only self._r, no intra-calls). Pre-grounded by agent a82bdea0d0fc5e898. Sequence: Agent 09 extract+sweep -> Agent 01 verbatim-diff gate (expect zero diffs) -> Agent 11 ufo patch retarget + seam test + full DoD -> commit+push. MILESTONE: fog_collab god-file fully decomposed -> 5 modules + thin facade.",
+     "pm_agent_prompts": {
+      "09": "Onboard agent-09 rules; plan sections 1-3. Create ursina_fog_overlay.py (2 owner-arg free fns, only self._r->owner._r; FOG_TEX_BRIDGE_KEY moves here; panda3d/ursina/Mesh imports stay function-local); replace fog_collab L96-320 + L364-453 with 2 wrappers; grep-proven orphan sweep. DO NOT COMMIT. DO NOT edit tests.",
+      "11": "Onboard agent-11 rules; plan sections 4-6. Retarget test_terrain_perf L719-720 tfc->ufo (add ufo alias); create test_wk109 seam test; full DoD. DO NOT COMMIT."
      },
      "pm_commits": [
       "pending push — SHA in next kickoff note"

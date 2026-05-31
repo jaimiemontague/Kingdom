@@ -52,6 +52,7 @@ import game.graphics.ursina_renderer as ursina_renderer
 import game.graphics.ursina_terrain_fog_collab as tfc
 import game.graphics.ursina_terrain_fog_visibility as tfv
 import game.graphics.ursina_terrain_build as ttb
+import game.graphics.ursina_fog_overlay as ufo
 from game.graphics.ursina_terrain_fog_collab import (
     TERRAIN_CHUNK_SIZE,
     UrsinaTerrainFogCollab,
@@ -716,8 +717,8 @@ class TestFogOverlayPerf:
             upload_calls["count"] += 1
             return _FakeFogTexture()
 
-        with patch.object(tfc.pygame.image, "frombuffer", _spy_frombuffer), \
-             patch.object(tfc.TerrainTextureBridge, "refresh_surface_texture", _spy_refresh):
+        with patch.object(ufo.pygame.image, "frombuffer", _spy_frombuffer), \
+             patch.object(ufo.TerrainTextureBridge, "refresh_surface_texture", _spy_refresh):
             # First call: under the bug, this runs the full body. Under the
             # fix, this ALSO runs because (revision unchanged AND _fog_entity
             # is None) — wait, the gate must early-out when revision matches.

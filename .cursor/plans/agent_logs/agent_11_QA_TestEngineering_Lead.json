@@ -5215,6 +5215,42 @@
           "wk108_round_b_followup_2026-05-31": "Cross-sprint cleanup (PM Agent 01 resolution of the bounced WK108 orphan-import conflict): the WK108 orphan sweep removed the now-dead _InstancedTreeStub back-import from game/graphics/ursina_terrain_fog_collab.py, which broke 2 tests in tests/test_wk104_ursina_terrain_growth_sync.py. Agent 01 chose to UPDATE the WK104 tests to follow the migrated consumers (NOT restore the dead import). Applied 2 exact edits to tests/test_wk104_ursina_terrain_growth_sync.py ONLY: (1) test_instanced_tree_stub_back_import_is_same_object now asserts the stub is the SAME object via back-imports from ursina_terrain_fog_visibility (cull/_build_terrain_chunks, WK106) AND ursina_terrain_build (build_3d_terrain, WK108); (2) renamed test_fog_collab_source_contains_back_import_line -> test_back_import_line_present_in_stub_consumers, now a static-source guard over BOTH consumer modules. Also updated the module docstring prose (cosmetic). Verified: test_wk104 15 passed; FULL suite 1300 passed, 4 skipped, 0 failed; qa_smoke --quick DONE: PASS; test_wk67 digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded PASS; determinism_guard PASS. Touched ONLY tests/test_wk104_ursina_terrain_growth_sync.py; DID NOT commit."
         }
       }
+    },
+    "wk109_round_b_ursina_fog_overlay": {
+      "sprint_meta": {
+        "sprint_id": "wk109_round_b_ursina_fog_overlay",
+        "created_utc": "2026-05-31T22:30:00Z",
+        "goal": "QA W2 (FOG/C-2): retarget tests/test_terrain_perf.py (plan section 4) for the WK109 VERBATIM owner-arg move of the final 2 real-body methods -- ensure_fog_overlay (L96-320) + ensure_grid_debug_overlay (L364-453) -- from game/graphics/ursina_terrain_fog_collab.py into NEW game/graphics/ursina_fog_overlay.py (Agent 09 W1 already did the extraction + fog_collab orphan-import sweep incl. moving FOG_TEX_BRIDGE_KEY; passed Agent 01 verbatim-diff gate -- ZERO diffs). Author tests/test_wk109_ursina_fog_overlay.py seam test (mirror test_wk108). Run full DoD (plan section 6). Live Ursina screenshots DEFERRED to Jaimie. MILESTONE: ursina_terrain_fog_collab.py god-file fully decomposed."
+      },
+      "rounds": {
+        "wk109_w2": {
+          "sprint_id": "wk109_round_b_ursina_fog_overlay",
+          "round_id": "wk109_w2",
+          "status": "done",
+          "round_meta": {
+            "wave": "W2 (test_terrain_perf 2-patch handle retarget + fresh seam test from WK108 template + full DoD; live Ursina screenshots DEFERRED to Jaimie)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "depends_on": "wk109 W1 (Agent 09 ArtDirector extracted ensure_fog_overlay + ensure_grid_debug_overlay + FOG_TEX_BRIDGE_KEY into NEW game/graphics/ursina_fog_overlay.py behind 2 lazy-delegating wrappers + swept fog_collab orphan imports pygame/config/Entity-Vec2-color/TerrainTextureBridge/SCALE-sim_px_to_world_xz/Visibility/unlit_shader; passed Agent 01 PM verbatim-diff gate -- ZERO diffs, both faithful)."
+          },
+          "prompt_summary": "PM-assigned (agent_01 PM log, sprint wk109_round_b_ursina_fog_overlay, pm_agent_prompts[11]): apply plan section 4 retarget to tests/test_terrain_perf.py (add ufo alias; retarget the 2 SHARED-object patches at ~L719-720 from tfc.pygame.image/tfc.TerrainTextureBridge to ufo.* because Agent 09 swept those imports out of fog_collab -> tfc.pygame/tfc.TerrainTextureBridge now AttributeError); create tests/test_wk109_ursina_fog_overlay.py seam test mirroring test_wk108; run full DoD (plan section 6). DO NOT COMMIT; touch ONLY the two test files.",
+          "what_i_changed": "Edited tests/test_terrain_perf.py (the section-4 retarget, both landed): (1) added 'import game.graphics.ursina_fog_overlay as ufo' after the ttb import (~L55); (2) retargeted the 2 patch.object handles in TestFogOverlayPerf::test_ensure_fog_overlay_early_out_post_heightmap (L719-720): patch.object(tfc.pygame.image,'frombuffer',...) -> patch.object(ufo.pygame.image,'frombuffer',...) and patch.object(tfc.TerrainTextureBridge,'refresh_surface_texture',...) -> patch.object(ufo.TerrainTextureBridge,'refresh_surface_texture',...). These patch SHARED objects (the real pygame.image module + the TerrainTextureBridge class), so retargeting the HANDLE to the module that now keeps the imports is semantics-preserving. Left the direct collab.ensure_fog_overlay(...) calls (L725-726, hit the wrapper) UNCHANGED; left the 'from ...fog_collab import (TERRAIN_CHUNK_SIZE, UrsinaTerrainFogCollab)' import UNCHANGED; KEPT 'import ...fog_collab as tfc' (now the only tfc. uses were these 2 patches, so the as-tfc alias is harmlessly unused -- plan section 4 step 3 explicitly permits keeping it). CREATED tests/test_wk109_ursina_fog_overlay.py (14 cases, mirror of test_wk108): fn-exists (2), owner-first (2), wrapper-delegation (2, via object.__new__(UrsinaTerrainFogCollab)+sentinel stub; ensure_fog_overlay(object(),0), ensure_grid_debug_overlay(object(),())), AST no-self (1), AST no-cycle (2: no fog_collab module-top import of ursina_fog_overlay; new module imports UrsinaTerrainFogCollab only under TYPE_CHECKING), function-local-import guard (2, parametrized: 'from panda3d.core import TransparencyAttrib' AND 'from ursina import Mesh' present in source but NEITHER a top-level node), constant check (1: ufo.FOG_TEX_BRIDGE_KEY == 'kingdom_ursina_fog_overlay'), fresh-subprocess both orders (2). SDL/audio dummy set at top.",
+          "dod_results": {
+            "test_terrain_perf_before": "1 failed, 6 passed (TestFogOverlayPerf::test_ensure_fog_overlay_early_out_post_heightmap; AttributeError: module ...fog_collab has no attribute 'pygame' -- matches Agent 09's expected-failure note)",
+            "test_terrain_perf_after": "7 passed (2-patch handle retarget landed; GREEN)",
+            "test_wk109_seam": "14 passed",
+            "full_suite": "1314 passed, 4 skipped, 0 failed, 1 warning (215.14s). No failures -- the WK108 cross-sprint WK104 back-import conflict was already resolved last sprint; this slice (fog overlay) does not touch the _InstancedTreeStub back-import.",
+            "determinism_guard": "PASS: no violations found (exit 0)",
+            "wk67_digest": "1 passed (test_ai_decision_digest_is_stable; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded)",
+            "qa_smoke_quick": "DONE: PASS (all profiles exit_code=0; determinism_guard stage clean)"
+          },
+          "blocker_for_pm": null,
+          "constraints_honored": "Touched ONLY tests/test_terrain_perf.py (section-4 retarget) + NEW tests/test_wk109_ursina_fog_overlay.py. Did NOT edit game/graphics/*. Did NOT commit/add/push/checkout. Did NOT iterate beyond the gates.",
+          "milestone_note": "WK109 completes the ursina_terrain_fog_collab.py god-file decomposition (1783 LOC pre-WK104 -> thin stateful facade = __init__ + delegating wrappers). Behavior split across 5 focused leaf modules: ursina_terrain_growth_sync, ursina_terrain_fog_visibility, ursina_terrain_ground_mesh, ursina_terrain_build, ursina_fog_overlay. Live before/after Ursina render captures DEFERRED to Jaimie's end-of-marathon test pass (deferred-screenshot model per feedback_ursina_deferred_screenshots; headless agents lack a real GPU/window)."
+        }
+      }
     }
   }
 }
