@@ -694,13 +694,12 @@ class HUD:
         surface.blit(self._help_panel_cache, (x0, y0))
 
     def add_message(self, text: str, color: tuple[int, int, int] = COLOR_WHITE) -> None:
-        self.messages.append({"text": text, "color": color, "time": pygame.time.get_ticks()})
-        if len(self.messages) > 5:
-            self.messages.pop(0)
+        from game.ui import hud_messages
+        return hud_messages.add_message(self, text, color)
 
     def update(self) -> None:
-        current_time = pygame.time.get_ticks()
-        self.messages = [msg for msg in self.messages if current_time - msg["time"] < self.message_duration]
+        from game.ui import hud_messages
+        return hud_messages.update_messages(self)
 
     def toggle_help(self) -> None:
         self.show_help = not self.show_help
@@ -737,14 +736,8 @@ class HUD:
         self.screen_height = int(screen_height)
 
     def render_messages(self, surface: pygame.Surface, left_rect: pygame.Rect | None = None) -> None:
-        y_offset = self.top_bar_height + 10
-        x_offset = 10
-        if left_rect and left_rect.width > 0:
-            x_offset = left_rect.right + 10
-        for msg in self.messages:
-            text = self.font_small.render(msg["text"], True, msg["color"])
-            surface.blit(text, (x_offset, y_offset))
-            y_offset += 18
+        from game.ui import hud_messages
+        return hud_messages.render_messages(self, surface, left_rect)
 
     def render(self, surface: pygame.Surface, game_state: dict) -> None:
         # Right panel vanishes when nothing is selected (maximize map view)

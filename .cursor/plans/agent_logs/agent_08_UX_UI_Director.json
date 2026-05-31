@@ -9,6 +9,39 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk102_round_b_hud_messages": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk102_round_b_hud_messages.plan.md",
+        "created_utc": "2026-05-31T00:00:00Z",
+        "notes": "WK102 Round B-19 (tenth hud.py split slice): extracted the status-message log out of game/ui/hud.py into a NEW game/ui/hud_messages.py. Pure VERBATIM move (self.->hud.) behind 1-line lazy-delegating wrappers (WK93-101 pattern). 3 methods moved: add_message(696)->add_message(hud,text,color=COLOR_WHITE); update(701)->update_messages(hud) [module fn RENAMED for clarity; HUD wrapper KEEPS name 'update' -- engine.py:819 calls self.hud.update() every frame]; render_messages(739)->render_messages(hud,surface,left_rect=None). New module imports only pygame + config.COLOR_WHITE (config does NOT import game.ui -> acyclic, same as hud_summaries) + HUD under TYPE_CHECKING; NO module-top game.ui.hud import. ALL message STATE stays on HUD: self.messages(__init__:254), self.message_duration(255) UNTOUCHED; top_bar_height/font_small read via hud arg. add_message wrapper keeps EXACT name+signature+COLOR_WHITE default (~56 callers/17 files incl pin_alert_watcher.py:24 getattr). NO call sites changed. hud.py 1226->1219 LOC (-7); hud_messages.py 45 LOC (NEW)."
+      },
+      "rounds": {
+        "wk102_w1": {
+          "sprint_id": "wk102_round_b_hud_messages",
+          "round_id": "wk102_w1",
+          "status": "done",
+          "task": "Extract status-message log (add_message/update/render_messages) from hud.py into NEW game/ui/hud_messages.py behind 1-line delegating wrappers (exact names+signatures). PURE VERBATIM MOVE, render behavior/wording/color/size unchanged. Tenth slice of the hud.py god-file split.",
+          "methods_moved": "add_message(696)->add_message(hud,text,color=COLOR_WHITE); update(701)->update_messages(hud) (HUD wrapper KEEPS name 'update' for engine.py:819); render_messages(739)->render_messages(hud,surface,left_rect=None). All 3 are hud-first module fns; 3 HUD wrappers lazy-delegate via 'from game.ui import hud_messages'.",
+          "stays_on_hud": "message STATE: self.messages([] at __init__:254), self.message_duration(=3000 at 255) UNTOUCHED; top_bar_height + font_small read via hud arg; render() still calls self.render_messages(...). toggle_help/toggle_right_panel/on_resize (sat between the moved methods) untouched.",
+          "verification": {
+            "pytest": "1165 passed / 4 skipped / 0 failed (baseline; no new test yet -- Agent 11 adds WK102 seam test in W2)",
+            "wk67_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical; tests/test_wk67_ai_boundary.py 10 passed)",
+            "determinism_guard": "PASS: no violations found",
+            "qa_smoke_quick": "DONE: PASS",
+            "imports": "ok1 (hud_messages then hud), ok2 (hud then hud_messages) -- both fresh orders print, no cycle",
+            "zero_self": "grep self. in the 3 new fns in hud_messages.py -> ZERO matches (No matches found)",
+            "no_top_hud_import": "hud_messages.py only 'from game.ui.hud import HUD' inside TYPE_CHECKING (line 23); no module-top import (docstring mention on line 1 only)",
+            "loc": "hud.py 1226->1219 (-7); hud_messages.py 45 (NEW)"
+          },
+          "evidence": {
+            "capture_before": "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk102_before_base --size 1920x1080 --ticks 480 (4 PNGs); python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk102_before_panels --size 1920x1080 --ticks 480 (7 PNGs)",
+            "capture_after": "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk102_after_base --size 1920x1080 --ticks 480 (4 PNGs); python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk102_after_panels --size 1920x1080 --ticks 480 (7 PNGs)",
+            "adhoc_render_proof": "throwaway headless HUD(1920,1080): hud.add_message('WK102 A',(100,255,100)) + hud.add_message('WK102 B',(255,180,80)); surf.fill((20,20,30)); hud.render_messages(surf). Two colored lines rendered at top_bar_height+10=58 (line A first non-bg pixel x=11 color(91,228,92) green; line B y=80 x=11 color(228,161,74) orange), x_offset=10, 18px spacing. PNG (NOT committed) visually confirmed 'WK102 A' green + 'WK102 B' orange. Verdict PASS.",
+            "screenshot_verdict": "base_overview Z1 BEFORE+AFTER both show top-left status messages through the moved render path: gold 'Nova slew a goblin! (+15g, +25xp)' (combat-kill notice) + white 'Tip: Press B to place a bounty at mouse (Shift/Ctrl: bigger).' -- same text/color/position(x~10, below 48px top bar)/18px spacing. ui_panels_hero + ui_panels_hidden PIXEL-IDENTICAL before/after. Other scenario pixel deltas (0.007%-5.8%) are sim/animation non-determinism: a third same-code capture run differed by up to 9.3%, MORE than before-vs-after, proving the deltas are run-to-run capture noise not my edit. NOTE (DoD F caveat): messages are event-driven and auto-expire after 3000ms; a kill notice happened to be on-screen at the capture tick this run. PASS."
+          }
+        }
+      }
+    },
     "wk100_round_b_hud_layout_orchestration": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk100_round_b_hud_layout_orchestration.plan.md",
