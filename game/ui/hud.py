@@ -12,6 +12,10 @@ from game.ui.enemy_panel import EnemyPanel
 from game.ui.chat_panel import ChatPanel
 from game.ui.hud_layout import (
     HERO_LEFT_MIN_H,
+    HERO_MENU_CHAT_GAP,
+    HERO_MENU_CHAT_MIN_H,
+    HERO_MENU_CHAT_PREFERRED_H,
+    HERO_MENU_HERO_MIN_H,
     HUDLayout,
     HUDLayoutManager,
     LEFT_COL_W,
@@ -50,10 +54,6 @@ from game.ui.hud_watch_card import (
     WATCH_CARD_FULL_H_NO_CHAT,
     WATCH_CARD_FULL_H,
 )
-HERO_MENU_CHAT_GAP = 4
-HERO_MENU_CHAT_MIN_H = 152
-HERO_MENU_CHAT_PREFERRED_H = 220
-HERO_MENU_HERO_MIN_H = 120
 WATCH_MINIMAP_SIZE = LEFT_COL_W
 
 
@@ -715,50 +715,18 @@ class HUD:
         return bool(self._chat_visible and self._watch_card_expanded)
 
     def _should_render_hero_menu_chat_popup(self, game_state: dict) -> bool:
-        cp = self._chat_panel
-        sel = game_state.get("selected_hero")
-        if cp is None or not cp.is_active() or sel is None:
-            return False
-        if game_state.get("selected_building") is not None:
-            return False
-        hid = str(getattr(sel, "hero_id", "") or "")
-        chat_hid = str(getattr(cp.hero_target, "hero_id", "") or "")
-        if hid != chat_hid:
-            return False
-        return not self._uses_pinned_watch_card_chat(hid)
+        from game.ui import hud_left_layout
+        return hud_left_layout.should_render_hero_menu_chat_popup(self, game_state)
 
     def _hero_menu_chat_desired_h(self, left_h: int) -> int:
-        """Vertical space to reserve for in-column hero-menu chat (WK61-R9)."""
-        if left_h <= 0:
-            return 0
-        pref = min(
-            HERO_MENU_CHAT_PREFERRED_H,
-            max(HERO_MENU_CHAT_MIN_H, int(left_h * 0.38)),
-        )
-        max_chat = max(HERO_MENU_CHAT_MIN_H, left_h - HERO_MENU_HERO_MIN_H - HERO_MENU_CHAT_GAP)
-        return max(HERO_MENU_CHAT_MIN_H, min(pref, max_chat))
+        from game.ui import hud_left_layout
+        return hud_left_layout.hero_menu_chat_desired_h(self, left_h)
 
     def _hero_menu_chat_split_rects(
         self, left: pygame.Rect
     ) -> tuple[pygame.Rect, pygame.Rect] | None:
-        """Split left column: shrunk scrollable hero sheet + readable chat band."""
-        if left.width <= 0 or left.height <= 0:
-            return None
-        chat_h = self._hero_menu_chat_desired_h(left.height)
-        hero_h = left.height - chat_h - HERO_MENU_CHAT_GAP
-        if hero_h < HERO_MENU_HERO_MIN_H:
-            hero_h = max(HERO_MENU_HERO_MIN_H, left.height - HERO_MENU_CHAT_MIN_H - HERO_MENU_CHAT_GAP)
-            chat_h = left.height - hero_h - HERO_MENU_CHAT_GAP
-        if chat_h < HERO_MENU_CHAT_MIN_H or hero_h < HERO_LEFT_MIN_H:
-            return None
-        hero_rect = pygame.Rect(left.x, left.y, left.width, hero_h)
-        chat_rect = pygame.Rect(
-            left.x + 4,
-            left.y + hero_h + HERO_MENU_CHAT_GAP,
-            left.width - 8,
-            chat_h,
-        )
-        return hero_rect, chat_rect
+        from game.ui import hud_left_layout
+        return hud_left_layout.hero_menu_chat_split_rects(self, left)
 
     def _render_hero_focus_profile(self, surface: pygame.Surface, rect: pygame.Rect, game_state: dict) -> None:
         from game.ui import hud_summaries

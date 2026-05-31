@@ -2244,6 +2244,39 @@
           "do_not_commit": true
         }
       }
+    },
+    "wk101_round_b_hud_hero_menu_layout": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk101_round_b_hud_hero_menu_layout.plan.md",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "notes": "WK101 Round B-18 (ninth hud.py split slice): folded the 3 hero-menu-chat-popup layout helpers out of game/ui/hud.py into the EXISTING game/ui/hud_left_layout.py, and relocated the 4 HERO_MENU_* constants from hud.py to the authoritative game/ui/hud_layout.py. Pure VERBATIM move behind 1-line lazy-delegating wrappers (WK93-100 pattern). Constants HERO_MENU_CHAT_GAP=4, HERO_MENU_CHAT_MIN_H=152, HERO_MENU_CHAT_PREFERRED_H=220, HERO_MENU_HERO_MIN_H=120 added to hud_layout.py under LEFT_SPLIT_* block; DELETED from hud.py own defs (was lines 53-56); all 4 ADDED to hud.py from-game.ui.hud_layout import (sorted) so from game.ui.hud import HERO_MENU_CHAT_MIN_H/HERO_MENU_HERO_MIN_H still resolve (test_wk61_r9). 4 names also added to hud_left_layout.py hud_layout import block. 3 fns appended to hud_left_layout.py as hud-first module functions: should_render_hero_menu_chat_popup(hud,game_state), hero_menu_chat_desired_h(hud,left_h), hero_menu_chat_split_rects(hud,left); every self.->hud.; inter-helper call -> hud._hero_menu_chat_desired_h (re-enters via wrapper); hud._chat_panel via attr (not imported); hud._uses_pinned_watch_card_chat STAYS on HUD; consts referenced bare. split_rects ONLY RETURNS (hero_rect,chat_rect)|None -- the _hero_menu_hero_rect/_hero_menu_chat_rect state ASSIGNMENTS stay in render() (hud.py 848/849/855/856). WATCH_MINIMAP_SIZE untouched at hud.py:57 (dead, separate de-slop). hud.py 1258->1226 LOC (-32); hud_left_layout.py 367->420 LOC (+53); hud_layout.py 143->148 (+4 consts +1 comment)."
+      },
+      "rounds": {
+        "wk101_w1": {
+          "sprint_id": "wk101_round_b_hud_hero_menu_layout",
+          "round_id": "wk101_w1",
+          "status": "done",
+          "task": "Fold 3 hero-menu-chat-popup layout helpers from hud.py into EXISTING game/ui/hud_left_layout.py + relocate 4 HERO_MENU_* constants to hud_layout.py, behind 1-line delegating wrappers (exact names+signatures). PURE VERBATIM MOVE, render behavior unchanged. Ninth slice of the hud.py god-file split.",
+          "constants_moved": "HERO_MENU_CHAT_GAP=4, HERO_MENU_CHAT_MIN_H=152, HERO_MENU_CHAT_PREFERRED_H=220, HERO_MENU_HERO_MIN_H=120: hud.py:53-56 -> hud_layout.py (after LEFT_SPLIT_*). hud.py re-imports all 4 via existing from-game.ui.hud_layout import block (re-export for test_wk61_r9). hud_left_layout.py also imports all 4.",
+          "methods_moved": "_should_render_hero_menu_chat_popup(717)->should_render_hero_menu_chat_popup(hud,game_state); _hero_menu_chat_desired_h(730)->hero_menu_chat_desired_h(hud,left_h); _hero_menu_chat_split_rects(741)->hero_menu_chat_split_rects(hud,left). All appended to hud_left_layout.py; 3 HUD wrappers lazy-delegate.",
+          "stays_on_hud": "_uses_pinned_watch_card_chat(712); the _hero_menu_hero_rect/_hero_menu_chat_rect state assignments in render() (848/849/855/856); WATCH_MINIMAP_SIZE(57, dead, untouched).",
+          "verification": {
+            "pytest": "1135 passed / 4 skipped / 0 failed (baseline, no new test yet -- Agent 11 adds WK101 seam test in W2)",
+            "wk67_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical; tests/test_wk67_ai_boundary.py 10 passed)",
+            "determinism_guard": "PASS: no violations found",
+            "qa_smoke_quick": "DONE: PASS",
+            "imports": "ok1 (hud_left_layout then hud), ok2 (hud then hud_left_layout), const-ok (both import paths == literals; a==152,b==120)",
+            "zero_self": "grep self. in the 3 new fns in hud_left_layout.py -> ZERO matches",
+            "no_top_hud_import": "hud_left_layout.py only from game.ui.hud import HUD inside TYPE_CHECKING (line 25); no module-top import",
+            "loc": "hud.py 1258->1226 (-32); hud_left_layout.py 367->420 (+53); hud_layout.py 143->148 (+5)"
+          },
+          "evidence": {
+            "capture_before": "python tools/capture_screenshots.py --scenario wk61_hero_menu_chat --seed 42 --out docs/screenshots/wk101_before --size 1920x1080 --ticks 480 -> wk61_hero_menu_chat_1024.png + wk61_hero_menu_chat_1920.png",
+            "capture_after": "python tools/capture_screenshots.py --scenario wk61_hero_menu_chat --seed 42 --out docs/screenshots/wk101_after --size 1920x1080 --ticks 480 -> wk61_hero_menu_chat_1024.png + wk61_hero_menu_chat_1920.png",
+            "screenshot_verdict": "BOTH resolutions: in-column SPLIT pixel-identical. Upper hero sheet (Sir Aldric/Warrior Lv.1/id/Pers/XP/HP/Vitals/Economy), divider at same y, lower readable chat band (understood my liege/LLM not available/Frame Time/End Conversation panel). Hero/chat not overlapping, left edges flush at x=0, divider same y at 1920 AND 1024. Only deltas = sim non-determinism (HP 57->58/60 at 1920; minimap dot + world hero label shifts) outside the split region. PASS."
+          }
+        }
+      }
     }
   }
 }

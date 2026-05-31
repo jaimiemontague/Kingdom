@@ -29,6 +29,11 @@ LEFT_SPLIT_HANDLE_HIT_H = 8
 LEFT_SPLIT_DEFAULT_FRAC_MAIN = 0.55
 LEFT_SPLIT_DEFAULT_FRAC_WATCH = 0.45
 LEFT_SPLIT_DEFAULT_FRAC_MAIN_SOLO = 0.72
+# Hero-menu in-column chat split sizing (relocated from hud.py in WK101; hud re-imports+re-exports HERO_MENU_CHAT_MIN_H + HERO_MENU_HERO_MIN_H for test_wk61_r9).
+HERO_MENU_CHAT_GAP = 4
+HERO_MENU_CHAT_MIN_H = 152
+HERO_MENU_CHAT_PREFERRED_H = 220
+HERO_MENU_HERO_MIN_H = 120
 
 
 @dataclass(slots=True)

@@ -4752,6 +4752,59 @@
           "production_code_edited": false
         }
       }
+    },
+    "wk101_round_b_hud_hero_menu_layout": {
+      "sprint_meta": {
+        "sprint_id": "wk101_round_b_hud_hero_menu_layout",
+        "created_utc": "2026-05-30T05:58:36Z",
+        "goal": "QA W2: verify WK101 Round B-18 behavior-preserving VERBATIM MOVE of the 3 hero-menu-chat-popup layout helpers (_should_render_hero_menu_chat_popup, _hero_menu_chat_desired_h, _hero_menu_chat_split_rects) out of game/ui/hud.py into the EXISTING game/ui/hud_left_layout.py as hud-first module functions, + relocation of the 4 HERO_MENU_* constants from hud.py into game/ui/hud_layout.py (hud re-imports+re-exports). HUD keeps 3 1-line lazy-delegating wrappers (exact private names). _uses_pinned_watch_card_chat + the _hero_menu_chat_rect/_hero_menu_hero_rect STATE ASSIGNMENTS stay in render(); split_rects only RETURNS. Dead WATCH_MINIMAP_SIZE untouched. Ninth hud.py slice. Author seam+behavior test, run full DoD A-G, independently view before/after wk61_hero_menu_chat at 1024+1920."
+      },
+      "rounds": {
+        "wk101_w2": {
+          "sprint_id": "wk101_round_b_hud_hero_menu_layout",
+          "round_id": "wk101_w2",
+          "status": "done",
+          "round_meta": {
+            "wave": "W2 (seam+behavior test + full DoD gate + INDEPENDENT before/after screenshot review at both resolutions)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "depends_on": "wk101 W1 (Agent 08 moved the 3 hero-menu-chat-popup layout helpers from game/ui/hud.py into game/ui/hud_left_layout.py behind 1-line lazy-delegating wrappers; relocated 4 HERO_MENU_* constants into hud_layout.py with hud re-import+re-export)."
+          },
+          "prompt_summary": "PM-assigned (agent_01 PM log, sprint wk101_round_b_hud_hero_menu_layout, round wk101_kickoff): author tests/test_wk101_hud_hero_menu_layout.py (1 EXISTENCE: 3 fns on hud_left_layout, hud-first; 2 CONSTANT RELOCATION: 4 HERO_MENU_* importable from BOTH hud_layout AND hud, col-0 in hud_layout, NO col-0 def in hud.py, WATCH_MINIMAP_SIZE still in hud.py; 3 WRAPPERS DELEGATE via monkeypatch spy; 4 AST no-cycle guard + both fresh-subprocess import orders; 5 headless BEHAVIOR: _should_render_hero_menu_chat_popup({}) False, _hero_menu_chat_desired_h int+0-floor, _hero_menu_chat_split_rects shape+minimums+no-state-mutation). Run full DoD A-G, independently view before/after wk61_hero_menu_chat at 1024+1920. DO NOT COMMIT.",
+          "what_i_changed": "Added tests/test_wk101_hud_hero_menu_layout.py (30 cases, NEW file -- the only file I touched). NO production code edited. Coverage: existence (3 fns hud-first via inspect.signature), constant relocation (4 HERO_MENU_* importable+identical object from hud_layout AND hud re-export; source-level col-0 check in hud_layout; regex assert NO col-0 HERO_MENU_*= in hud.py; WATCH_MINIMAP_SIZE still present), 3 wrappers delegate (monkeypatch each hud_left_layout.<fn> with a sentinel spy, call wrapper, assert fired+self-first), AST no-cycle (no module-top game.ui.hud import; TYPE_CHECKING from game.ui.hud import HUD permitted) + both fresh-subprocess import orders rc0, behavior (headless HUD(1920,1080): empty-state popup False; desired_h int+0; split_rects None-or-pair honouring HERO_MENU_HERO_MIN_H/CHAT_MIN_H mirroring test_wk61_r9; + a no-mutation guard proving split_rects does NOT touch _hero_menu_chat_rect/_hero_menu_hero_rect).",
+          "commands_run": [
+            "python -m pytest tests/test_wk101_hud_hero_menu_layout.py -q  -> 30 passed",
+            "python -m pytest -q  -> 1165 passed, 4 skipped, 0 failed in 200.61s",
+            "python tools/determinism_guard.py  -> PASS: no violations found",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q  -> 10 passed (digest unchanged)",
+            "python tools/qa_smoke.py --quick  -> DONE: PASS",
+            "SDL_VIDEODRIVER=dummy python -c import hud_left_layout;import hud -> ok1 / reverse -> ok2"
+          ],
+          "verdict": "PASS",
+          "dod_results": {
+            "A_full_pytest": "1165 passed, 4 skipped, 0 failed in 200.61s (baseline 1135 at WK100 close + 30 new wk101 seam+behavior cases = 1165; exceeds the ~1145+ the plan predicted). Live guards pass within the run: tests/test_wk61_r9_hero_chat_readable_layout.py (the two HERO_MENU_* re-exports + _hero_menu_chat_split_rects height asserts) + test_wk61_r4_ui_regressions.",
+            "B_determinism_guard": "PASS: [determinism_guard] PASS: no violations found (exit 0).",
+            "C_wk67_digest": "10 passed; digest byte-identical to the golden pin b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (confirmed at tests/test_wk67_ai_boundary.py:181) -- UNCHANGED.",
+            "D_qa_smoke_quick": "DONE: PASS (exit 0) across all profiles incl mock-LLM + speed-scaling + interior/quest/conversation scenarios.",
+            "E_structure": "3 fns live in game/ui/hud_left_layout.py (should_render_hero_menu_chat_popup@374 hud-first; hero_menu_chat_desired_h@388; hero_menu_chat_split_rects@400). 4 HERO_MENU_* live col-0 in hud_layout.py (lines 33-36: GAP=4/MIN_H=152/PREFERRED_H=220/HERO_MIN_H=120); removed from hud.py own defs (no col-0 HERO_MENU_*= match) + re-imported by hud.py (hud_layout import block lines 13-31) so from game.ui.hud import HERO_MENU_CHAT_MIN_H/HERO_MENU_HERO_MIN_H resolve. 3 wrappers in hud.py (_should_render_hero_menu_chat_popup@717; _hero_menu_chat_desired_h@721; _hero_menu_chat_split_rects@725 -- only RETURNS). _uses_pinned_watch_card_chat STAYS on HUD@712. _hero_menu_chat_rect/_hero_menu_hero_rect STATE ASSIGNMENTS stay in render() (hud.py:816/817/823/824) + __init__ (316/317). Dead WATCH_MINIMAP_SIZE untouched @hud.py:57. hud.py = 1226 LOC. No cycle: both fresh import orders rc 0 (ok1 + ok2); hud_left_layout has only TYPE_CHECKING from game.ui.hud import HUD (line 24-25). Call sites UNCHANGED.",
+            "F_screenshots": "PASS -- the in-column hero/chat split is pixel-identical in position+height at BOTH resolutions. Reviewed independently via Read: wk101_before vs wk101_after for wk61_hero_menu_chat_1024.png AND _1920.png. Alignment-first verdict: (1024) upper hero sheet (Sir Aldric card: Warrior Lv.1/HP 60-60/Vitals/Economy + round portrait+name row ~y256-290) and lower chat band (understood my liege / LLM not available / End Conversation ~y310-400) -- divider at the SAME y, left edges flush at x=0, no overlap, identical before/after. (1920) same split, divider+heights identical before/after (hero sheet top, chat band start, End Conversation row all match). Only deltas are sim non-determinism: HP regen (57-60 vs 58-60), wandering hero sprite world position, gold-pickup floating text, minimap dots, enemy/wave counters -- NONE in the HUD left column.",
+            "G_logs": "This entry; PM hub closeout pending."
+          },
+          "evidence": {
+            "new_test": "tests/test_wk101_hud_hero_menu_layout.py (30 cases, all pass)",
+            "screenshots_before": "docs/screenshots/wk101_before/wk61_hero_menu_chat_1024.png + _1920.png",
+            "screenshots_after": "docs/screenshots/wk101_after/wk61_hero_menu_chat_1024.png + _1920.png",
+            "no_cycle": "ok1 (hud_left_layout->hud) + ok2 (hud->hud_left_layout) both rc0",
+            "digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (unchanged)"
+          },
+          "how_to_test": "python -m pytest tests/test_wk101_hud_hero_menu_layout.py -q ; python -m pytest -q ; python tools/determinism_guard.py ; python -m pytest tests/test_wk67_ai_boundary.py -q ; python tools/qa_smoke.py --quick",
+          "blockers": "none",
+          "follow_ups": "WK102 messages -> game/ui/hud_messages.py (widest blast radius, preserve add_message). De-slop: delete dead WATCH_MINIMAP_SIZE (still present untouched in hud.py:57).",
+          "production_code_edited": false
+        }
+      }
     }
   }
 }

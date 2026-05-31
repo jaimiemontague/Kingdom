@@ -10,6 +10,10 @@ from game.sim.timebase import now_ms as sim_now_ms
 from game.ui.micro_view_manager import ViewMode
 from game.ui.hud_layout import (
     HERO_LEFT_MIN_H,
+    HERO_MENU_CHAT_GAP,
+    HERO_MENU_CHAT_MIN_H,
+    HERO_MENU_CHAT_PREFERRED_H,
+    HERO_MENU_HERO_MIN_H,
     LEFT_COL_W,
     LEFT_SPLIT_DEFAULT_FRAC_MAIN_SOLO,
     LEFT_SPLIT_HANDLE_H,
@@ -365,3 +369,52 @@ def virtual_pointer_in_hud_chrome(
         if help_r.collidepoint(x, y):
             return True
     return False
+
+
+def should_render_hero_menu_chat_popup(hud, game_state: dict) -> bool:
+    cp = hud._chat_panel
+    sel = game_state.get("selected_hero")
+    if cp is None or not cp.is_active() or sel is None:
+        return False
+    if game_state.get("selected_building") is not None:
+        return False
+    hid = str(getattr(sel, "hero_id", "") or "")
+    chat_hid = str(getattr(cp.hero_target, "hero_id", "") or "")
+    if hid != chat_hid:
+        return False
+    return not hud._uses_pinned_watch_card_chat(hid)
+
+
+def hero_menu_chat_desired_h(hud, left_h: int) -> int:
+    """Vertical space to reserve for in-column hero-menu chat (WK61-R9)."""
+    if left_h <= 0:
+        return 0
+    pref = min(
+        HERO_MENU_CHAT_PREFERRED_H,
+        max(HERO_MENU_CHAT_MIN_H, int(left_h * 0.38)),
+    )
+    max_chat = max(HERO_MENU_CHAT_MIN_H, left_h - HERO_MENU_HERO_MIN_H - HERO_MENU_CHAT_GAP)
+    return max(HERO_MENU_CHAT_MIN_H, min(pref, max_chat))
+
+
+def hero_menu_chat_split_rects(
+    hud, left: pygame.Rect
+) -> tuple[pygame.Rect, pygame.Rect] | None:
+    """Split left column: shrunk scrollable hero sheet + readable chat band."""
+    if left.width <= 0 or left.height <= 0:
+        return None
+    chat_h = hud._hero_menu_chat_desired_h(left.height)
+    hero_h = left.height - chat_h - HERO_MENU_CHAT_GAP
+    if hero_h < HERO_MENU_HERO_MIN_H:
+        hero_h = max(HERO_MENU_HERO_MIN_H, left.height - HERO_MENU_CHAT_MIN_H - HERO_MENU_CHAT_GAP)
+        chat_h = left.height - hero_h - HERO_MENU_CHAT_GAP
+    if chat_h < HERO_MENU_CHAT_MIN_H or hero_h < HERO_LEFT_MIN_H:
+        return None
+    hero_rect = pygame.Rect(left.x, left.y, left.width, hero_h)
+    chat_rect = pygame.Rect(
+        left.x + 4,
+        left.y + hero_h + HERO_MENU_CHAT_GAP,
+        left.width - 8,
+        chat_h,
+    )
+    return hero_rect, chat_rect
