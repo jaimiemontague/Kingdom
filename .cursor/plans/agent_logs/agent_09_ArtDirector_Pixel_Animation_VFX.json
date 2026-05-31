@@ -1227,6 +1227,60 @@
           ]
         }
       }
+    },
+    "wk106_round_b_ursina_terrain_fog_visibility": {
+      "sprint_meta": {
+        "notes": "WK106 Round B (Agent 09, W1): third ursina god-file slice. Pure-moved the 9-method visibility/cull/instanced-fog cluster (was ursina_terrain_fog_collab.py L351-656) into a NEW game/graphics/ursina_terrain_fog_visibility.py as owner-arg module functions: _apply_prop_visibility_state, track_visibility_gated_terrain, untrack_visibility_gated_terrain, sync_terrain_prop_tile_visibility, sync_visibility_gated_terrain, _build_terrain_chunks, cull_terrain_chunks, _ensure_instanced_nature_renderer, _sync_instanced_trees_fog (same order). Mechanical self.->owner. : owner._r.X for renderer state (_visibility_gated_terrain, _visibility_gated_terrain_by_tile, _terrain_visibility_revision_seen, _terrain_visible_tiles_seen, _tree_entities); owner.X for collab slots (_terrain_chunks, _visible_chunks, _chunks_built, _last_cull_fog_revision, _instanced_trees_on, _instanced_nature_renderer, _tree_instance_ids, _instanced_trees_last_fog_rev). The 4 getattr comma-forms rewritten (getattr(owner,'_chunks_built',False); getattr(owner._r,'_terrain_visibility_revision_seen',-1) x2; getattr(owner,'_instanced_trees_last_fog_rev',-1)). Intra-cluster calls -> DIRECT module fns (not owner.fn): _apply_prop_visibility_state(owner,...), sync_terrain_prop_tile_visibility(owner,...), _sync_instanced_trees_fog(owner,...). _apply_prop_visibility_state kept owner param for signature uniformity though body uses only ent. isinstance(ent,_InstancedTreeStub) and os.environ.get(...) UNCHANGED (resolved from new module top-level imports). New module imports _set_static_prop_fog_tint from ursina_environment + _InstancedTreeStub from ursina_terrain_growth_sync + config + Visibility; UrsinaTerrainFogCollab + Entity under TYPE_CHECKING only; TERRAIN_CHUNK_SIZE=16 mirrored (NOT back-imported). fog_collab.py: deleted the single import line _set_static_prop_fog_tint, (now 0 matches); kept TERRAIN_CHUNK_SIZE=16 (L47) + _InstancedTreeStub back-import (L43); replaced the 9 bodies with 9 one-line lazy-delegating wrappers (from game.graphics import ursina_terrain_fog_visibility inside body -> one-way edge, no cycle), signatures byte-for-byte. ursina_terrain_fog_collab.py 1455 -> 1184 LOC (-271); new ursina_terrain_fog_visibility.py = 350 LOC. NO self.X found that was neither owner slot nor self._r.X (zero ambiguity). DID NOT COMMIT, DID NOT touch tests/. Live before/after Ursina screenshots DEFERRED to Jaimie's end test (headless env, no GPU).",
+        "created_utc": "2026-05-31T13:24:47.090962-06:00"
+      },
+      "rounds": {
+        "wk106_w1": {
+          "sprint_id": "wk106_round_b_ursina_terrain_fog_visibility",
+          "round_id": "wk106_w1",
+          "status": "done",
+          "role": "WAVE W1 - extract the 9-method visibility-gating + chunk-culling + instanced-tree-fog cluster (L351-656) from ursina_terrain_fog_collab.py into NEW ursina_terrain_fog_visibility.py behind 9 delegating wrappers; headless gates only (live ursina screenshots DEFERRED to Jaimie).",
+          "what_i_changed": {
+            "game/graphics/ursina_terrain_fog_visibility.py (NEW, 350 LOC)": [
+              "Header docstring + imports + TYPE_CHECKING block + TERRAIN_CHUNK_SIZE=16 mirror per plan section 3 (verbatim).",
+              "9 module-level def fn(owner, ...) functions converted from the class methods, same order, self.->owner. per the Owner Attribute Map (section 2), docstrings/comments/try-except VERBATIM.",
+              "Intra-cluster calls rewritten to direct module fns: _apply_prop_visibility_state(owner,...), sync_terrain_prop_tile_visibility(owner,...), _sync_instanced_trees_fog(owner,...)."
+            ],
+            "game/graphics/ursina_terrain_fog_collab.py (EDIT, 1455 -> 1184 LOC)": [
+              "Deleted the single now-unused import line `_set_static_prop_fog_tint,` from the ursina_environment import block.",
+              "Deleted the 9 method bodies (was L351-656) and replaced IN PLACE with 9 one-line lazy-delegating wrappers (same names + byte-for-byte signatures) per plan section 4.3.",
+              "KEPT TERRAIN_CHUNK_SIZE=16 (canonical def, imported by test) and the _InstancedTreeStub back-import (still used by staying build_3d_terrain)."
+            ]
+          },
+          "how_to_test": [
+            "python -c \"import game.graphics.ursina_terrain_fog_visibility\"",
+            "python -c \"import game.graphics.ursina_terrain_fog_collab\"",
+            "python -c \"import game.graphics.ursina_terrain_fog_collab; import game.graphics.ursina_terrain_fog_visibility; print('order A ok')\"",
+            "python -c \"import game.graphics.ursina_terrain_fog_visibility; import game.graphics.ursina_terrain_fog_collab; print('order B ok')\"",
+            "grep -n self game/graphics/ursina_terrain_fog_visibility.py  (expect ZERO)",
+            "grep -n _set_static_prop_fog_tint game/graphics/ursina_terrain_fog_collab.py  (expect ZERO)",
+            "python -m pytest tests/test_terrain_perf.py -q",
+            "python -m pytest tests/test_wk104_ursina_terrain_growth_sync.py -q"
+          ],
+          "evidence": {
+            "import_fog_visibility": "IMPORT_VIS_OK (no error)",
+            "import_fog_collab": "IMPORT_COLLAB_OK (no error)",
+            "import_order_A": "order A ok",
+            "import_order_B": "order B ok",
+            "grep_self_new_module": "0 matches (zero `self` anywhere in ursina_terrain_fog_visibility.py)",
+            "grep_set_static_prop_fog_tint_collab": "0 matches (removed import; both call sites moved out)",
+            "pytest_test_terrain_perf": "1 failed, 6 passed (1 warning) in 2.92s. EXPECTED failure: test_culling_reapplies_after_fog_change -> AttributeError: ursina_terrain_fog_collab module has no attribute '_set_static_prop_fog_tint' because the test still patches the OLD module. Plan section 5 patch-retarget is Agent 11's W2 job; did NOT edit the test.",
+            "pytest_wk104_growth_sync": "15 passed (1 warning) in 6.40s (back-import neighbor still green)",
+            "loc_new_module": 350,
+            "loc_fog_collab_after": 1184,
+            "live_screenshots": "DEFERRED to Jaimie's end-of-marathon test pass (headless agent, no GPU; per memory feedback_ursina_deferred_screenshots)."
+          },
+          "constraints_honored": [
+            "DID NOT COMMIT (no git add/commit/push/checkout).",
+            "DID NOT edit any file under tests/.",
+            "Touched ONLY ursina_terrain_fog_visibility.py (new) and ursina_terrain_fog_collab.py (edit)."
+          ]
+        }
+      }
     }
   }
 }

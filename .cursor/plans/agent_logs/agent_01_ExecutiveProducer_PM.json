@@ -5,6 +5,7 @@
   "name": "ExecutiveProducer_PM"
  },
  "notes": [
+  "2026-05-31 (Agent 01 WK105 CLOSED f649a5c + WK106 KICKOFF): WK105 shipped+pushed (f649a5c, ursina_app debug/FPS probe -> ursina_app_debug_probe.py; ursina_app 1528->1272; 8th sprint this turn; suite ->1238; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical). WK106 KICKOFF = FOG/A: 9-method visibility/cull/instanced-fog cluster (fog_collab L351-656, ~300 LOC) -> NEW ursina_terrain_fog_visibility.py via pure-move-behind-wrappers. Grounded directly (line nums stable since WK104): owner-slot vs _r-attr map locked; one-way coupling confirmed; test_terrain_perf L300 patch RETARGET to tfv is the key hazard; TERRAIN_CHUNK_SIZE kept-in-fog_collab+mirrored; _InstancedTreeStub kept-back-imported both sides; remove only the now-unused _set_static_prop_fog_tint import name from fog_collab. Deferred-screenshot model (memory feedback_ursina_deferred_screenshots). Dispatching Agent 09 (W1).",
   "2026-05-31 (Agent 01 WK104 CLOSED 6909891 + WK105 KICKOFF; next-ursina-slice grounding wyua6vsrw): WK104 shipped+pushed (6909891, first ursina slice; fog_collab 1783->1454; suite 1193->1208; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical; PM verbatim-diff gate confirmed faithful; live screenshots DEFERRED to Jaimie). Ran a 3-agent grounding (wyua6vsrw) on the next ursina slices. FINDINGS: FOG/A<->FOG/B coupling is strictly ONE-WAY (FOG/B build_3d_terrain calls into FOG/A; FOG/A never calls build) so FOG/A is a bounded standalone slice (~330 LOC, L351-656) -- but it is HOT-PATH render. APP/C (ursina_app.py debug/FPS-probe scaffolding, 8 methods L985-1272, ~281 LOC) is DEAD-BY-DEFAULT (env-gated), ZERO external callers, no back-import/constants/slots -> the SAFEST deferred-screenshot slice. WK105 = APP/C -> NEW game/graphics/ursina_app_debug_probe.py: 7 instance methods self.->owner. + _save_window_screenshot_sync (the lone @staticmethod, moves as a plain module fn, wrapper stays @staticmethod). Intra-cluster calls (_maybe_auto_screenshot_then_quit -> _print_fps_probe_summary + _save_window_screenshot_sync) direct. Keep heavy imports (ursina/panda3d/game.entities) FUNCTION-LOCAL. ZERO external callers (all call sites in ursina_app __init__ 187/192/204 + run 1328-1418, reach wrappers as self.<name>). ursina_app has NO existing seam harness -> author fresh from test_wk104 template (object.__new__(UrsinaApp)). Headless-importable verified. Verify (headless): import smoke both orders + new seam test + suite + digest + qa_smoke + PM verbatim-diff. Live screenshots DEFERRED (dead-by-default -> normal play unaffected). Plan: .cursor/plans/wk105_round_b_ursina_app_debug_probe.plan.md. Then WK106 FOG/A-WHOLE (has REAL test_terrain_perf coverage; RETARGET its L300 _set_static_prop_fog_tint patch to the new module), WK107 FOG/B.",
   "2026-05-31 (Agent 01 URSINA GROUNDING -- WK104 readiness + verification-model constraint): Ran a 3-agent grounding workflow (wcbas8d3f) on the ursina god-files. FOG/C = sync_dynamic_trees (ursina_terrain_fog_collab.py L1525-1688) + sync_log_stacks (L1690-1783) + class _InstancedTreeStub (L44-124); owner is UrsinaTerrainFogCollab (__slots__), state via self._r.* (parent renderer) + self.* (own slots). Verdict GO as an owner-arg pure-move (same shape WK87-92 shipped): module fns def fn(owner, world, snapshot...), self.->owner.; new module game/graphics/ursina_terrain_growth_sync.py; keep 1-line wrappers sync_dynamic_trees/sync_log_stacks (ursina_renderer.py:580/582 call them via self._terrain_fog); cross-calls to FOG/A (track/untrack_visibility_gated_terrain, sync_terrain_prop_tile_visibility, _ensure_instanced_nature_renderer) stay on owner, reached via owner.<m>. WATCH-OUTS: (1) _InstancedTreeStub is constructed by STAYING sites (cull_terrain_chunks L574, build_3d_terrain L1148) -> after moving the class, ursina_terrain_fog_collab.py MUST re-import _InstancedTreeStub from the new growth_sync module (one-way edge, acyclic) or those NameError at call time (invisible to import smoke). (2) TERRAIN_CHUNK_SIZE: mirror as a local =16 in the new module, do NOT back-import from fog_collab (cycle). (3) deferred function-local imports (import ursina as u; the terrain_height import) carried VERBATIM inside the moved fns, not hoisted. (4) 4 shared owner __slots__ (_instanced_trees_on/_instanced_nature_renderer/_tree_instance_ids/_instanced_trees_last_fog_rev) stay on owner. VERIFICATION MODEL (WK87-92 proven, runs HEADLESS here): A pytest suite, B determinism_guard (EXCLUDES game/graphics/**), C WK67 digest (pure sim/AI -- unaffected), D qa_smoke --quick, E NEW import-only seam test tests/test_wk104_*.py modeled on tests/test_wk92_ursina_unit_sync.py (fn-exists + wrapper-delegation AST/monkeypatch on object.__new__(UrsinaTerrainFogCollab) + fresh-subprocess both-orders no-cycle), + headless import smoke. Both ursina_terrain_fog_collab + ursina_app import cleanly headless (import ursina != Ursina() window). BLOCKER: DoD step F = before/after LIVE Ursina screenshots via tools/run_ursina_capture_once.py (scenarios wk61_hold_g_tax_overlay + ursina_melee_combat) REQUIRES a real GPU/window; this headless agent env CANNOT run it (no Xvfb in tools/). Per the screenshot-verify memory, render slices should not be marked done on import+seam+verbatim-diff alone. ASKING USER how to resolve (proceed w/ deferred screenshots for their end-test vs. pivot to headless-verifiable roadmap items vs. they run captures). ALT if deferring ursina: de-slop delete dead WATCH_MINIMAP_SIZE (hud.py:57, zero consumers; flip tests/test_wk101_hud_hero_menu_layout.py assert-present to assert-absent) -- fully headless-verifiable.",
   "2026-05-31 (Agent 01 WK102 CLOSED c3a883f + WK103 KICKOFF): WK102 shipped+pushed (c3a883f) -- status-message log (add_message/update/render_messages) extracted to NEW hud_messages.py; hud.py 1226->1219; suite 1165->1188; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical. WK103 NOW (grounding rank #3): extract the mouse-wheel menu-scroll router (is_mouse_over_menu@970 / scroll_active_menu@1000 / handle_menu_scroll@1016, ~87 LOC) into NEW game/ui/hud_menu_scroll.py behind 3 wrappers. Trio inter-calls (scroll->handle->is_mouse_over) so move as ONE unit. Module imports only pygame. ALL state (_last_left_rect/_hero_menu_chat_rect/_hero_menu_hero_rect/_hero_panel) stays on HUD; building_panel/game_state are PARAMS. CRITICAL: PUBLIC handle_menu_scroll reached by input_handler.py:127 + ursina_app.py:830 + a MagicMock in test_wk52_r10:151 -> wrapper name EXACT. Strong guard: test_wk52_r10_menu_scroll.py (8 assertions, both building-panel + hero-menu wheel paths + input wiring). Wheel-scroll is INPUT behavior not static visual -> screenshot caveat. Plan: .cursor/plans/wk103_round_b_hud_menu_scroll.plan.md. AFTER WK103 hud.py ~1132 -- audit #1 god-file well within target; remaining hud.py work is the DEFERRED handle_click@1058 redesign (not a pure move). NEXT: pivot to the ursina god-files (NEW verify model: ursina screenshots + runtime-import smoke, NOT pygame digest) -- WK104 FOG/C (sync_dynamic_trees+sync_log_stacks+_InstancedTreeStub -> ursina_terrain_growth_sync.py ~258 LOC) first, then FOG/A+B, then ursina_app APP/C. Re-run a grounding sweep before the ursina slices. De-slop: delete dead WATCH_MINIMAP_SIZE@57.",
@@ -5745,6 +5746,64 @@
      "pm_universal_prompt": "Onboard via .cursor/rules; model claude-opus-4-8; PURE VERBATIM owner-arg MOVE (7 instance fns self.->owner.; _save_window_screenshot_sync = plain module fn, wrapper stays @staticmethod); intra-cluster calls direct (not owner.*); keep heavy imports (ursina/panda3d/game.entities) FUNCTION-LOCAL; do NOT fold in the HUD/env staticmethods L267-315 (hot-path); TYPE_CHECKING-only UrsinaApp import; ZERO self. in the 7 instance fns; live Ursina screenshots DEFERRED to Jaimie (dead-by-default -> normal play unaffected) -- flag, do not block; update your own log; DO NOT COMMIT.",
      "pm_commits": [
       "WK105 Round B-22: extract ursina_app_debug_probe.py (8 dead-by-default debug/FPS-probe members) -- second ursina slice; live screenshots DEFERRED to Jaimie (committed + pushed this round; see git log)"
+     ]
+    }
+   }
+  },
+  "wk106_round_b_ursina_terrain_fog_visibility": {
+   "sprint_meta": {
+    "status": "closed_success",
+    "created_utc": "2026-05-31",
+    "plan_doc": ".cursor/plans/wk106_round_b_ursina_terrain_fog_visibility.plan.md",
+    "goal": "FOG/A: extract the 9-method visibility-gating + frustum chunk-culling + instanced-tree-fog cluster (ursina_terrain_fog_collab.py L351-656, ~300 LOC) into NEW game/graphics/ursina_terrain_fog_visibility.py via the pure-move-behind-wrappers pattern (owner-arg module fns + 1-line lazy-delegating class wrappers, EXACT names/signatures). Behavior-preserving; NOT a redesign.",
+    "version_target": "internal-refactor (no version bump)",
+    "verification_class": "ursina render -> deferred-screenshot model (headless gates + PM verbatim-diff + DEFERRED live captures)",
+    "notes": "One-way coupling CONFIRMED (FOG/A is a leaf; FOG/B build_3d_terrain calls INTO FOG/A). Owner slots -> owner.X: _terrain_chunks,_visible_chunks,_chunks_built,_last_cull_fog_revision,_instanced_trees_on,_instanced_nature_renderer,_tree_instance_ids,_instanced_trees_last_fog_rev. Parent renderer -> owner._r.X: _visibility_gated_terrain,_visibility_gated_terrain_by_tile,_terrain_visibility_revision_seen,_terrain_visible_tiles_seen,_tree_entities. HAZARDS: (a) RETARGET tests/test_terrain_perf.py L300 patch.object(tfc,'_set_static_prop_fog_tint') -> new module tfv (moved sync fns resolve the name in their own globals); (b) keep TERRAIN_CHUNK_SIZE=16 in fog_collab (test imports it) AND mirror locally in new module; (c) keep _InstancedTreeStub back-import in fog_collab (build_3d_terrain L1071 constructs it) AND back-import it in new module; (d) remove only the now-unused _set_static_prop_fog_tint name from fog_collab's ursina_environment import block; (e) 4 getattr comma-forms (self/self._r) must be rewritten, not just dotted self.; (f) intra-cluster calls -> direct module fns.",
+    "definition_of_done": [
+     "python -m pytest -q ALL pass (~1268; 0 fail); test_terrain_perf.py GREEN after patch retarget",
+     "python tools/determinism_guard.py clean (excludes game/graphics/**)",
+     "WK67 digest byte-identical via pytest tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable",
+     "python tools/qa_smoke.py --quick green",
+     "headless import smoke + fresh-subprocess BOTH orders (no cycle)",
+     "grep 'self' ursina_terrain_fog_visibility.py == 0",
+     "tests/test_wk106_ursina_terrain_fog_visibility.py passes (fn-exists, owner-first, wrapper-delegation, AST no-self, AST no-cycle, back-import source guard, constant mirror, both-orders)",
+     "Agent 01 PM verbatim-diff gate: ALL 9 members faithful (only sig + intra-call + getattr diffs)",
+     "Live before/after Ursina screenshots DEFERRED to Jaimie (no GPU in agent)"
+    ],
+    "closeout_evidence": {
+     "fog_collab_loc": "1455 -> 1184 (-271)",
+     "new_module_loc": "game/graphics/ursina_terrain_fog_visibility.py = 350",
+     "pm_verbatim_diff_gate": "PASS — all 9 functions faithful (5 identical after canonicalization; sync_terrain_prop_tile_visibility/sync_visibility_gated_terrain/cull_terrain_chunks show ONLY expected intra-cluster method->function call rewrites; 4 getattr comma-forms converted correctly; 0 unexpected diffs)",
+     "full_suite": "1272 passed, 4 skipped, 0 failed",
+     "new_seam_test": "tests/test_wk106_ursina_terrain_fog_visibility.py = 34 passed (fn-exists/owner-first/wrapper-delegation x9 + AST-no-self + AST-no-module-top-import + TYPE_CHECKING-only + back-import-source-guard + constant-mirror + both-orders)",
+     "test_terrain_perf": "7 passed after L300 patch retarget tfc->tfv (hazard fixed)",
+     "determinism_guard": "PASS (no violations; excludes game/graphics/**)",
+     "wk67_digest": "byte-identical b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (pytest test_ai_decision_digest_is_stable, re-run by Agent 01)",
+     "qa_smoke_quick": "DONE: PASS",
+     "import_smoke_both_orders": "order A + order B clean (no cycle); grep 'self' new module = 0",
+     "live_screenshots": "DEFERRED to Jaimie end-of-marathon test (hot-path ursina render, no GPU in agent) per memory feedback_ursina_deferred_screenshots",
+     "commit_sha": "recorded in WK107 kickoff note"
+    }
+   },
+   "rounds": {
+    "wk106_round_b_kickoff": {
+     "round_meta": {
+      "round": "wk106_round_b_kickoff",
+      "status": "closed_success",
+      "created_utc": "2026-05-31",
+      "agents": [
+       "09 (W1 extract)",
+       "11 (W2 seam test + patch retarget + DoD)"
+      ],
+      "model": "claude-opus-4-8"
+     },
+     "pm_status_summary": "WK105 shipped (f649a5c). WK106 = FOG/A, the 9-method visibility/cull/instanced-fog cluster -> ursina_terrain_fog_visibility.py. Riskiest ursina slice (hot-path render w/ real existing headless coverage in test_terrain_perf.py). Sequence: Agent 09 extract -> Agent 01 PM verbatim-diff gate -> Agent 11 seam test + the test_terrain_perf patch retarget + full DoD -> Agent 01 commit+push (deferred screenshots).",
+     "pm_agent_prompts": {
+      "09": "Onboard via .cursor/rules/agent-09-artdirector-onboarding.mdc; follow plan doc sections 1-4 + 6. Create ursina_terrain_fog_visibility.py (9 owner-arg fns, mirror growth_sync shape); edit fog_collab.py (remove _set_static_prop_fog_tint import name; replace L351-656 with 9 lazy-delegating wrappers). Self-verify per 6. DO NOT COMMIT. DO NOT edit tests.",
+      "11": "Onboard via .cursor/rules/agent-11-qa-onboarding.mdc; follow plan doc section 5 + 6 + 7. Retarget test_terrain_perf.py L300 patch to tfv; create test_wk106 seam test (mirror test_wk104); run full DoD. DO NOT COMMIT."
+     },
+     "pm_commits": [
+      "pending push — SHA recorded in next kickoff note"
      ]
     }
    }

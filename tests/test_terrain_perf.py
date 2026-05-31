@@ -50,6 +50,7 @@ pygame.init()
 import config
 import game.graphics.ursina_renderer as ursina_renderer
 import game.graphics.ursina_terrain_fog_collab as tfc
+import game.graphics.ursina_terrain_fog_visibility as tfv
 from game.graphics.ursina_terrain_fog_collab import (
     TERRAIN_CHUNK_SIZE,
     UrsinaTerrainFogCollab,
@@ -297,7 +298,7 @@ class TestTerrainEntityTracking:
         # ``_set_static_prop_fog_tint`` calls into ursina_environment helpers
         # that read ``ent.color``; we don't care about tint here, only about
         # ``ent.enabled``. Patch it out for both arms of the sync.
-        with patch.object(tfc, "_set_static_prop_fog_tint", lambda *a, **kw: None):
+        with patch.object(tfv, "_set_static_prop_fog_tint", lambda *a, **kw: None):
             # Step 1: initial fog sync (everything UNSEEN -> everything disabled)
             collab.sync_visibility_gated_terrain(world, fog_revision=0)
             for ent, _, _ in in_view_ents + out_view_ents:

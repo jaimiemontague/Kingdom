@@ -5040,6 +5040,64 @@
      "production_code_edited": false
     }
    }
+  },
+  "wk106_round_b_ursina_terrain_fog_visibility": {
+   "sprint_meta": {
+    "sprint_id": "wk106_round_b_ursina_terrain_fog_visibility",
+    "created_utc": "2026-05-31T18:00:00Z",
+    "goal": "QA W2 (FOG/A): verify WK106 Round B VERBATIM owner-arg move of the 9-method visibility-gating + frustum chunk-culling + instanced-tree-fog cluster (game/graphics/ursina_terrain_fog_collab.py L351-656) into NEW game/graphics/ursina_terrain_fog_visibility.py. Each method -> owner-first module fn (self.->owner.); UrsinaTerrainFogCollab keeps 9 1-line lazy-delegating wrappers (exact names/signatures). Two tasks beyond the seam test: (A) RETARGET the tests/test_terrain_perf.py:300 patch.object(_set_static_prop_fog_tint) from old module tfc to new module tfv (the moved sync fns resolve that name in the NEW module globals); (B) author tests/test_wk106_ursina_terrain_fog_visibility.py (fn-exists/owner-first/wrapper-delegation/AST-no-self/AST-no-cycle/back-import/constant-mirror/both-orders). Live Ursina screenshots DEFERRED to Jaimie."
+   },
+   "rounds": {
+    "wk106_w2": {
+     "sprint_id": "wk106_round_b_ursina_terrain_fog_visibility",
+     "round_id": "wk106_w2",
+     "status": "done",
+     "round_meta": {
+      "wave": "W2 (test_terrain_perf patch retarget + fresh seam test from WK104 template + full DoD; live Ursina screenshots DEFERRED to Jaimie)",
+      "role": "Agent 11 QA_TestEngineering_Lead",
+      "model": "claude-opus-4-8[1m]",
+      "behavior_preserving": true,
+      "production_code_edited": false,
+      "depends_on": "wk106 W1 (Agent 09 ArtDirector extracted the 9-method visibility/cull/instanced-fog cluster from game/graphics/ursina_terrain_fog_collab.py L351-656 into NEW game/graphics/ursina_terrain_fog_visibility.py behind 9 lazy-delegating wrappers; passed Agent 01 PM verbatim-diff gate -- all 9 faithful)."
+     },
+     "prompt_summary": "PM-assigned (agent_01 PM log, sprint wk106_round_b_ursina_terrain_fog_visibility, round wk106_round_b_kickoff, pm_agent_prompts[11]): retarget tests/test_terrain_perf.py L300 patch to tfv; create tests/test_wk106 seam test mirroring test_wk104; run full DoD (plan section 7). DO NOT COMMIT; touch ONLY the two test files.",
+     "what_i_changed": "Edited tests/test_terrain_perf.py: added 'import game.graphics.ursina_terrain_fog_visibility as tfv' after the tfc import, and retargeted the L300 patch from patch.object(tfc, '_set_static_prop_fog_tint', ...) to patch.object(tfv, ...). The other tfc. patches (ensure_fog_overlay: pygame.image.frombuffer / TerrainTextureBridge.refresh_surface_texture) left untouched -- ensure_fog_overlay STAYED in fog_collab. Added tests/test_wk106_ursina_terrain_fog_visibility.py (34 cases incl parametrized). NO production code (game/graphics/*) edited.",
+     "commands_run": [
+      "python -m pytest tests/test_terrain_perf.py -q  -> 7 passed (before retarget AND after; test only asserts ent.enabled so it was already green; retarget makes the patch effective again as the plan mandates)",
+      "python -m pytest tests/test_wk106_ursina_terrain_fog_visibility.py -q  -> 34 passed",
+      "python -m pytest -q  -> 1272 passed, 4 skipped, 0 failed in 224.62s",
+      "python tools/determinism_guard.py  -> [determinism_guard] PASS: no violations found",
+      "python -m pytest tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable -q  -> 1 passed (digest unchanged)",
+      "python tools/qa_smoke.py --quick  -> DONE: PASS"
+     ],
+     "verdict": "PASS",
+     "dod_results": {
+      "A_full_pytest": "1272 passed, 4 skipped, 0 failed in 224.62s. test_terrain_perf.py GREEN (7 passed) after the patch retarget. Count rose from WK105 close (1238) by +34 (the new wk106 seam cases).",
+      "B_determinism_guard": "[determinism_guard] PASS: no violations found (exit 0; excludes game/graphics/**, so this slice is out of scope but the rest is clean).",
+      "C_wk67_digest": "tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable -> 1 passed; keystone digest byte-identical to golden pin b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (embedded at tests/test_wk67_ai_boundary.py:181) -- UNCHANGED.",
+      "D_qa_smoke_quick": "DONE: PASS (exit 0) across all profiles incl speed-scaling 0.5x/1.0x, interior_view, quest_panel, conversation (mock-LLM), direct_prompt_integration.",
+      "E_seam_test": "tests/test_wk106_ursina_terrain_fog_visibility.py -> 34 passed. Coverage: 9 fn-exists (inspect.isfunction) + 9 owner-first (signature first param == owner) + 9 wrapper-delegation (monkeypatch module fn to sentinel-recording stub; call wrapper on object.__new__(UrsinaTerrainFogCollab); assert return IS sentinel AND recorded arg[0] IS the instance) + 1 AST-no-self (utf-8-sig parse; zero ast.Name id==self) + 1 AST-no-module-top-import (tree.body only; fog_collab has no top-level import of fog_visibility -- edge is lazy in wrapper bodies) + 1 AST-TYPE_CHECKING-only (fog_visibility imports UrsinaTerrainFogCollab only under if TYPE_CHECKING) + 1 back-import source guard (from ...ursina_terrain_growth_sync import _InstancedTreeStub present AND no class _InstancedTreeStub defined locally) + 1 constant mirror (tfv.TERRAIN_CHUNK_SIZE == tfc.TERRAIN_CHUNK_SIZE == 16) + 2 fresh-subprocess both import orders (rc0, ok marker).",
+      "F_structure": "grep self game/graphics/ursina_terrain_fog_visibility.py -> ZERO matches (every self. rewritten to owner.). 9 module-level owner-first fns in the new module; 9 1-line lazy-delegating wrappers on UrsinaTerrainFogCollab at fog_collab.py L350-386 (exact names/signatures incl keyword-only form on _apply_prop_visibility_state). _set_static_prop_fog_tint resolves in the new module globals; the test_terrain_perf patch now correctly targets tfv.",
+      "G_screenshots_DEFERRED": "DEFERRED to Jaimie per [[feedback_ursina_deferred_screenshots]]. Behavior-preserving owner-arg move of hot-path render code; headless agents have no GPU/window (run_ursina_capture_once.py scenarios wk61_hold_g_tax_overlay / ursina_melee_combat cannot run in-agent). Flag: DEFERRED-NEEDS-DISPLAY.",
+      "H_logs": "This agent 11 log entry. Two test files touched (tests/test_terrain_perf.py retarget + NEW tests/test_wk106_ursina_terrain_fog_visibility.py). PM hub close is Agent 01."
+     },
+     "evidence": {
+      "new_test": "tests/test_wk106_ursina_terrain_fog_visibility.py (34 cases, all pass)",
+      "retargeted_test": "tests/test_terrain_perf.py (added tfv import + L300 patch retarget to tfv; 7 passed)",
+      "no_cycle": "in-test fresh-subprocess both orders (fog_collab->fog_visibility and reverse) rc0 with ok marker under SDL dummy",
+      "digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (unchanged)",
+      "new_module_defs": 9,
+      "wrappers": 9,
+      "self_in_new_module": 0,
+      "screenshots": "DEFERRED to Jaimie (hot-path render; needs display)"
+     },
+     "how_to_test": "python -m pytest tests/test_terrain_perf.py -q ; python -m pytest tests/test_wk106_ursina_terrain_fog_visibility.py -q ; python -m pytest -q ; python tools/determinism_guard.py ; python -m pytest tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable -q ; python tools/qa_smoke.py --quick",
+     "blockers": "none",
+     "note_terrain_perf_pre_state": "test_culling_reapplies_after_fog_change passed BEFORE the retarget too, because it asserts only ent.enabled (not color); the real _set_static_prop_fog_tint helper mutates _FakeEntity.color harmlessly (it has a _FakeColor) so enabled-state behavior is identical whether the patch lands on the old or new module. The retarget is still correct + required (plan section 5): it makes the patch actually intercept where the moved sync fns now resolve the name, so the test stays a true characterization (no real tint helper invoked).",
+     "follow_ups": "Next ursina god-file slices (deferred-screenshot, in order): WK107 = FOG/B (~640 LOC: build_3d_terrain + _build_terrain_ground_mesh + _apply_grass_texture + _batch_static_terrain_for_chunks + cave-entrance shader-input block; FOG/B calls into the now-wrapped FOG/A cluster -- clean; consider ursina_terrain_build.py). Then ursina_app HUD/env cluster (hot-path -- scope carefully). DEFER: handle_click redesign (hud.py -- NOT a pure move). De-slop: delete dead WATCH_MINIMAP_SIZE (hud.py:57; flip tests/test_wk101_hud_hero_menu_layout.py assert-present->assert-absent).",
+     "production_code_edited": false
+    }
+   }
   }
  }
 }
