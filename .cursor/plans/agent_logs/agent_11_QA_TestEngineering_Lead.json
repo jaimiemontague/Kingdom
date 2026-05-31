@@ -9,6 +9,62 @@
   "Structure nests rounds inside sprints to keep history organized."
  ],
  "sprints": {
+  "wk104_round_b_ursina_terrain_growth_sync": {
+   "sprint_meta": {
+    "sprint_id": "wk104_round_b_ursina_terrain_growth_sync",
+    "created_utc": "2026-05-31T18:00:00Z",
+    "goal": "QA W2: verify WK104 Round B-21 behavior-preserving VERBATIM owner-arg move of the dynamic-growth sync cluster (sync_dynamic_trees, sync_log_stacks, class _InstancedTreeStub) out of game/graphics/ursina_terrain_fog_collab.py (1783->1454 LOC) into the new game/graphics/ursina_terrain_growth_sync.py. The two fns are owner-arg module functions (every self.->owner.; reached via owner.* / owner._r.*); _InstancedTreeStub moved byte-identical (keeps its own self -- it is a class). UrsinaTerrainFogCollab keeps 2 one-line delegating wrappers (exact names sync_dynamic_trees/sync_log_stacks) so ursina_renderer.py:580/582 call sites are unchanged. fog_collab.py adds a top-level back-import `from game.graphics.ursina_terrain_growth_sync import _InstancedTreeStub` (one-way edge; staying build_3d_terrain/cull_terrain_chunks would NameError without it). TERRAIN_CHUNK_SIZE mirrored locally (==16), NOT back-imported. First ursina god-file slice. Live before/after Ursina screenshots DEFERRED to Jaimie (need GPU)."
+   },
+   "rounds": {
+    "wk104_w2": {
+     "sprint_id": "wk104_round_b_ursina_terrain_growth_sync",
+     "round_id": "wk104_kickoff",
+     "status": "done",
+     "round_meta": {
+      "wave": "W2 (seam test + full DoD gate A-H minus deferred G)",
+      "role": "Agent 11 QA_TestEngineering_Lead",
+      "model": "claude-opus-4-8[1m]",
+      "behavior_preserving": true,
+      "production_code_edited": false,
+      "created_utc": "2026-05-31T18:00:00Z",
+      "depends_on": "wk104 W1 (Agent 09 ArtDirector extracted sync_dynamic_trees + sync_log_stacks + class _InstancedTreeStub into game/graphics/ursina_terrain_growth_sync.py owner-arg pure-move, behind 2 delegating wrappers, + added _InstancedTreeStub back-import to ursina_terrain_fog_collab.py). PM verified the verbatim diff (byte-identical mod self->owner; zero residual self)."
+     },
+     "prompt_summary": "WK104 W2: author tests/test_wk104_ursina_terrain_growth_sync.py modeled EXACTLY on tests/test_wk92_ursina_unit_sync.py (SDL_VIDEODRIVER=dummy top; object.__new__ owner; monkeypatch-spy; AST checks; subprocess both-orders). Assert (1) EXISTENCE: sync_dynamic_trees/sync_log_stacks exist+callable+owner-first in growth_sync; _InstancedTreeStub in new module AND back-import from fog_collab is the SAME object; (2) WRAPPERS DELEGATE: bare collab spy + AST that each wrapper calls ursina_terrain_growth_sync.<fn>(self,...); (3) AST NO-CYCLE: no module-top runtime fog_collab import in new module (TYPE_CHECKING OK); (4) NO CYCLE: fresh subprocess both orders rc0; (5) BACK-IMPORT SOURCE GUARD: fog_collab source contains the _InstancedTreeStub back-import line; (6) TERRAIN_CHUNK_SIZE MIRROR: ==16 and NOT back-imported. Run full DoD A-H minus deferred G; do NOT run live ursina screenshots; do NOT fix W1 code; DO NOT COMMIT.",
+     "what_i_changed": "Authored tests/test_wk104_ursina_terrain_growth_sync.py (15 tests covering existence/owner-first sig, _InstancedTreeStub back-import same-object identity, both wrapper-delegation runtime spies + source AST delegation check, AST no-module-top-fog_collab-import guard, both-orders fresh-subprocess no-cycle, back-import source-line guard, TERRAIN_CHUNK_SIZE==16 mirror + not-back-imported AST guard). Test reads source with encoding='utf-8-sig' because ursina_terrain_fog_collab.py carries a UTF-8 BOM that breaks ast.parse under plain utf-8 (WK92's renderer file has no BOM, so utf-8-sig is the BOM-tolerant fix in the TEST, not a change to W1 code). No production code touched.",
+     "commands_run": [
+      {"cmd": "python -m pytest tests/test_wk104_ursina_terrain_growth_sync.py -q", "exit_code": 0, "result": "15 passed"},
+      {"cmd": "python -m pytest -q", "exit_code": 0, "result": "1208 passed, 4 skipped, 0 failed (baseline 1193 + 15 new)"},
+      {"cmd": "python tools/determinism_guard.py", "exit_code": 0, "result": "PASS: no violations found"},
+      {"cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q", "exit_code": 0, "result": "10 passed; digest pin b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged (literal at line 181)"},
+      {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "result": "DONE: PASS"},
+      {"cmd": "python -c \"import game.graphics.ursina_terrain_growth_sync; import game.graphics.ursina_terrain_fog_collab; print('IMPORT_OK')\"", "exit_code": 0, "result": "IMPORT_OK"},
+      {"cmd": "python -c \"import game.graphics.ursina_terrain_fog_collab; import game.graphics.ursina_terrain_growth_sync; print('IMPORT_OK2')\"", "exit_code": 0, "result": "IMPORT_OK2"}
+     ],
+     "evidence": {
+      "dod_A_full_suite": "1208 passed / 4 skipped / 0 failed (195.99s)",
+      "dod_B_determinism_guard": "PASS: no violations found",
+      "dod_C_wk67_digest": "tests/test_wk67_ai_boundary.py 10 passed; digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (unchanged)",
+      "dod_D_qa_smoke_quick": "DONE: PASS",
+      "dod_E_import_smoke_both_orders": "IMPORT_OK (growth_sync->fog_collab) and IMPORT_OK2 (fog_collab->growth_sync)",
+      "dod_F_structure": "3 members in growth_sync (sync_dynamic_trees, sync_log_stacks, _InstancedTreeStub); 2 wrappers on UrsinaTerrainFogCollab at fog_collab.py:1448/1452 (exact names); ursina_renderer.py:580 self._terrain_fog.sync_dynamic_trees / :582 self._terrain_fog.sync_log_stacks UNCHANGED; _InstancedTreeStub back-import present at fog_collab.py:43; TERRAIN_CHUNK_SIZE==16 mirrored locally (NOT back-imported); zero self. in both moved module fns (owner-first sigs (owner, world, snapshot_*) -> None); ursina_terrain_fog_collab.py == 1454 LOC; new module 376 LOC",
+      "dod_G_deferred": "DEFERRED to Jaimie's display machine: live before/after Ursina captures via tools/run_ursina_capture_once.py (scenarios wk61_hold_g_tax_overlay + ursina_melee_combat). NOT run by headless agent (no GPU/window). ursina render code has NO headless render coverage.",
+      "dod_H_seam_test": "tests/test_wk104_ursina_terrain_growth_sync.py authored; 15 passed"
+     },
+     "blockers": [],
+     "follow_ups": [
+      "DEFERRED-NEEDS-DISPLAY: Jaimie runs live before/after Ursina captures (run_ursina_capture_once.py, wk61_hold_g_tax_overlay + ursina_melee_combat) at end-of-marathon test pass to verify terrain/trees/log-pile render fidelity.",
+      "Next ursina slices (all deferred-screenshot): FOG/A visibility-gating + chunk-culling (~480 LOC), FOG/B terrain-mesh build (~640 LOC), ursina_app APP/C debug/FPS scaffolding (~290 LOC, needs a NEW seam test)."
+     ],
+     "how_to_test": [
+      "python -m pytest tests/test_wk104_ursina_terrain_growth_sync.py -q",
+      "python -m pytest -q",
+      "python tools/determinism_guard.py",
+      "python -m pytest tests/test_wk67_ai_boundary.py -q",
+      "python tools/qa_smoke.py --quick"
+     ]
+    }
+   }
+  },
   "wk102_round_b_hud_messages": {
    "sprint_meta": {
     "sprint_id": "wk102_round_b_hud_messages",
