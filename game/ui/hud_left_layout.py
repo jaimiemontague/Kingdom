@@ -6,6 +6,8 @@ leaf modules + TYPE_CHECKING HUD.
 from __future__ import annotations
 from typing import TYPE_CHECKING
 import pygame
+from game.sim.timebase import now_ms as sim_now_ms
+from game.ui.micro_view_manager import ViewMode
 from game.ui.hud_layout import (
     HERO_LEFT_MIN_H,
     LEFT_COL_W,
@@ -207,3 +209,159 @@ def handle_sidebar_split_pointer_up(hud) -> bool:
         return False
     hud._left_split_drag_kind = None
     return True
+
+
+def layout_rects_for_screen(
+    hud, w: int, h: int, *, show_right_panel: bool, game_state: dict | None = None
+) -> tuple[
+    pygame.Rect,
+    pygame.Rect,
+    pygame.Rect,
+    pygame.Rect,
+    pygame.Rect,
+    pygame.Rect,
+    pygame.Rect,
+    pygame.Rect,
+    pygame.Rect,
+]:
+    """Geometry only — shared by _compute_layout and Ursina pointer routing.
+
+    Delegates core rectangle math to HUDLayoutManager, then overlays the
+    left-column segment allocation which depends on game state.
+    """
+    top_h = int(getattr(hud.theme, "top_bar_h", 48))
+    bottom_h = int(getattr(hud.theme, "bottom_bar_h", 96))
+    margin = int(getattr(hud.theme, "margin", 8))
+    gutter = int(getattr(hud.theme, "gutter", 8))
+
+    _ = show_right_panel  # right chrome retired (WK52 R4)
+
+    layout = hud._layout_mgr.compute(
+        w, h,
+        top_bar_h=top_h,
+        bottom_bar_h=bottom_h,
+        margin=margin,
+        gutter=gutter,
+    )
+
+    hud._watch_card_chat_rect = None
+
+    # Left-column segments depend on game_state (selected hero/building/pin).
+    left, _main_rect, _watch_rect = hud._layout_left_column_segments(
+        top_h, layout.minimap, game_state
+    )
+
+    return (
+        layout.top_bar,
+        layout.bottom_bar,
+        left,
+        layout.right_panel,
+        layout.minimap,
+        layout.command_bar,
+        layout.speed_control,
+        layout.recall_button,
+        layout.memorial_button,
+    )
+
+
+def compute_layout(
+    hud, surface: pygame.Surface, game_state: dict | None = None
+) -> tuple[
+    pygame.Rect,
+    pygame.Rect,
+    pygame.Rect,
+    pygame.Rect,
+    pygame.Rect,
+    pygame.Rect,
+    pygame.Rect,
+    pygame.Rect,
+    pygame.Rect,
+]:
+    """Compute UI rects from current surface size. Returns top, bottom, left, right, minimap, command, speed_rect."""
+    w, h = surface.get_width(), surface.get_height()
+    hud.screen_width = int(w)
+    hud.screen_height = int(h)
+    show_right = getattr(hud, "_show_right_panel", hud.right_panel_visible)
+    top, bottom, left, right, minimap, command, speed_rect, recall, memorial = hud._layout_rects_for_screen(
+        w, h, show_right_panel=show_right, game_state=game_state
+    )
+    hud.side_panel_width = right.width
+    return top, bottom, left, right, minimap, command, speed_rect, recall, memorial
+
+
+def virtual_pointer_in_hud_chrome(
+    hud, pos: tuple[int, int], surface: pygame.Surface, game_state: dict
+) -> bool:
+    """True if virtual-screen coords lie over HUD chrome (use UI pixel coords, not world raycast).
+
+    Anti-aliased or icon pixels can have alpha < 24; alpha-only hit tests miss command buttons (e.g. Bounty).
+    """
+    x, y = int(pos[0]), int(pos[1])
+    w, h = surface.get_width(), surface.get_height()
+    if w <= 0 or h <= 0 or not (0 <= x < w and 0 <= y < h):
+        return False
+    has_right_content = hud._micro_view.mode != ViewMode.OVERVIEW
+    show_right = hud.right_panel_visible and has_right_content
+    _ = show_right  # Tab/no-op; no right chrome hit region (WK52 R4)
+    top, bottom, left, right, minimap, command, speed_rect, recall, memorial = hud._layout_rects_for_screen(
+        w, h, show_right_panel=bool(hud.right_panel_visible), game_state=game_state
+    )
+    profiles = game_state.get("hero_profiles_by_id") or {}
+    pin = hud._pin_slot
+    if pin.hero_id is not None:
+        hero_alive = pin.hero_id in profiles
+        pin.update_liveness(hero_alive=hero_alive, now_ms=int(sim_now_ms()))
+    mem_ov = getattr(hud, "memorial_card", None)
+    if mem_ov is not None and getattr(mem_ov, "visible", False):
+        return True
+    regions = [top, bottom, minimap, command, speed_rect]
+    if pin.hero_id is not None:
+        regions.append(recall)
+        regions.append(memorial)
+    bio = getattr(hud, "building_interior_overlay", None)
+    if bio is not None and getattr(bio, "visible", False):
+        return True
+    dco = getattr(hud, "demolish_confirm_overlay", None)
+    if dco is not None and getattr(dco, "visible", False):
+        return True
+    if pin.hero_id is not None:
+        ch = hud._effective_watch_card_h(h)
+        if ch > 0:
+            if hud._left_watch_rect is not None:
+                regions.append(pygame.Rect(hud._left_watch_rect))
+            else:
+                regions.append(pygame.Rect(minimap.x, minimap.y - ch, minimap.width, ch))
+        map_h, stats_h, chat_h = hud._watch_card_body_split(ch)
+        if chat_h > 0 and hud._chat_visible:
+            cx, cy = minimap.x, minimap.y - ch
+            cbr = hud._watch_chat_band_rect(
+                cx,
+                cy,
+                minimap.width,
+                ch,
+                map_h,
+                stats_h,
+                chat_h,
+                profiles,
+                str(pin.hero_id),
+            )
+            if cbr is not None:
+                regions.append(cbr)
+    if (
+        game_state.get("selected_hero") is not None
+        or game_state.get("selected_peasant") is not None
+        or game_state.get("selected_building") is not None
+        or game_state.get("selected_enemy") is not None
+    ):
+        regions.append(left)
+    for r in regions:
+        if r.collidepoint(x, y):
+            return True
+    for handle in hud._left_split_handle_rects.values():
+        if handle.collidepoint(x, y):
+            return True
+    if hud.show_help:
+        help_r = pygame.Rect(max(0, w - 320), 0, min(320, w), min(520, h))
+        if help_r.collidepoint(x, y):
+            return True
+    return False

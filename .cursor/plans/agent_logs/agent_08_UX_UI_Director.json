@@ -9,6 +9,56 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk100_round_b_hud_layout_orchestration": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk100_round_b_hud_layout_orchestration.plan.md",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "notes": "WK100 Round B-17 (eighth hud.py split slice; THIRD and FINAL of the left-column/layout cluster): moved the 3 LAYOUT-ORCHESTRATION methods (_layout_rects_for_screen, _compute_layout, virtual_pointer_in_hud_chrome) out of game/ui/hud.py into the EXISTING game/ui/hud_left_layout.py (WK99 module), behind 1-line lazy-delegating wrappers (WK93-99 pattern). PURE VERBATIM MOVE (every self.->hud.). Added ONLY 2 imports to hud_left_layout.py after import pygame: `from game.sim.timebase import now_ms as sim_now_ms` + `from game.ui.micro_view_manager import ViewMode` (both leaves; micro_view_manager verified NO hud import -> acyclic). 3 fns appended at END of hud_left_layout.py as hud-first module functions; docstrings copied verbatim; full multi-line 9-tuple return annotations preserved; ViewMode/sim_now_ms referenced module-level (no hud. prefix). State/instances via hud.: theme, _layout_mgr (HUDLayoutManager INSTANCE reached via attribute, NOT imported), _watch_card_chat_rect, screen_width/height, _show_right_panel, right_panel_visible, side_panel_width, _micro_view, _pin_slot, memorial_card, building_interior_overlay, demolish_confirm_overlay, _left_watch_rect, _chat_visible, _left_split_handle_rects, show_help. Method calls -> hud. wrappers: hud._layout_left_column_segments, hud._layout_rects_for_screen (compute_layout/virtual_pointer re-enter via hud. wrapper), hud._effective_watch_card_h, hud._watch_card_body_split, hud._watch_chat_band_rect. getattr(self,...)->getattr(hud,...). HUD keeps the 3 wrapper names+signatures EXACT incl PUBLIC virtual_pointer_in_hud_chrome (ursina_app.py:727 pointer routing) + keyword-only `*, show_right_panel` on _layout_rects_for_screen. ALL state + _layout_mgr stay on HUD. No call sites changed. hud.py 1373->1258 LOC; hud_left_layout.py 209->367 LOC. Completes the left-column/layout cluster extraction."
+      },
+      "rounds": {
+        "wk100_w1": {
+          "sprint_id": "wk100_round_b_hud_layout_orchestration",
+          "round_id": "wk100_w1",
+          "status": "done",
+          "task": "Move the 3 layout-orchestration methods (_layout_rects_for_screen, _compute_layout, virtual_pointer_in_hud_chrome) from hud.py into the existing game/ui/hud_left_layout.py behind 1-line delegating wrappers (exact names+signatures, incl PUBLIC virtual_pointer_in_hud_chrome + keyword-only show_right_panel). Add 2 leaf imports (sim_now_ms, ViewMode). PURE VERBATIM MOVE; layout + pointer hit-test behavior unchanged. Eighth hud.py slice; final of the left-column/layout cluster.",
+          "imports_added": "hud_left_layout.py (after import pygame): `from game.sim.timebase import now_ms as sim_now_ms` + `from game.ui.micro_view_manager import ViewMode`. Both leaves; micro_view_manager imports only enum/typing/pygame/config/timebase (no hud) -> acyclic.",
+          "fns_moved": [
+            "_layout_rects_for_screen (hud.py:484) -> layout_rects_for_screen(hud, w, h, *, show_right_panel, game_state=None) [show_right_panel KEYWORD-ONLY preserved]",
+            "_compute_layout (hud.py:536) -> compute_layout(hud, surface, game_state=None)",
+            "virtual_pointer_in_hud_chrome (hud.py:560, PUBLIC) -> virtual_pointer_in_hud_chrome(hud, pos, surface, game_state)"
+          ],
+          "verification": {
+            "zero_self_in_3_fns": "PASS (grep self. in hud_left_layout.py -> No matches / 0 occurrences)",
+            "no_toplevel_hud_import": "PASS (only TYPE_CHECKING block: from game.ui.hud import HUD at line 21; no module-top import game.ui.hud / from game.ui.hud)",
+            "import_orders": "ok1 (hud_left_layout,hud) + ok2 (hud,hud_left_layout) both PASS -- no cycle",
+            "pytest": "1115 passed, 4 skipped, 0 failed (186.99s) -- baseline (no new test yet; that is Agent 11 W2)",
+            "determinism_guard": "[determinism_guard] PASS: no violations found",
+            "wk67_digest": "10 passed; digest constant b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical",
+            "qa_smoke_quick": "DONE: PASS",
+            "hud_py_loc": 1258,
+            "hud_left_layout_py_loc": 367
+          },
+          "evidence": {
+            "before": [
+              "docs/screenshots/wk100_before_base",
+              "docs/screenshots/wk100_before_panels"
+            ],
+            "after": [
+              "docs/screenshots/wk100_after_base",
+              "docs/screenshots/wk100_after_panels"
+            ],
+            "capture_cmds": [
+              "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk100_before_base --size 1920x1080 --ticks 480",
+              "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk100_before_panels --size 1920x1080 --ticks 480",
+              "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk100_after_base --size 1920x1080 --ticks 480",
+              "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk100_after_panels --size 1920x1080 --ticks 480"
+            ],
+            "screenshot_verdict": "_compute_layout drives EVERY HUD rect every frame, so the whole HUD was checked before/after. ui_panels_hero: top bar (Gold/Heroes/Enemies/Wave), left hero panel (Gareth) flush-left at x=0, watch-card/chat band bottom-left, bottom command bar (Build/Hire/Bounty), and bottom-right speed-control cluster ALL pixel-identical in position. ui_panels_sidebar_split: split left column (upper main hero panel + lower watch-card with split divider), chat band, top bar, bottom bar (recall/memorial buttons present on the left), and bottom-right speed cluster ALL position-identical. base_overview Z1 ui_default (no selection): top bar, FPS/message panel bottom-left, bottom command bar, and bottom-right speed cluster position-identical. Only world-band content (units/roads/buildings) + tick deltas differ = sim non-determinism, NOT layout. Static HUD chrome (top bar, bottom-bar button row, minimap, left column) pixel-identical. Layout orchestration trio unchanged by the move."
+          },
+          "do_not_commit": true
+        }
+      }
+    },
     "wk50_llm_context_direct_prompts": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md",

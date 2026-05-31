@@ -4690,6 +4690,68 @@
           "notes": "Pure-move seam verification; no production code edited, did not commit, did not git add (Agent 01 commits at sprint close). KEY SEAM NOTES: (a) the 3 PUBLIC wrappers (handle_sidebar_split_pointer_down/move/up) keep EXACT public names because the input layer (game/input/mouse.py, game/input_handler.py, game/graphics/ursina_app.py) reaches them via hasattr/getattr -- a renamed wrapper would silently no-op sidebar drag; the delegation test patches all 3 + asserts fired, and test_wk61_r10/r11 drive the full down/move/up through HUD as the live guard. (b) the 5 LEFT_SPLIT_* relocated to hud_layout.py (the authoritative layout-constants module, same WK98 HERO_LEFT_MIN_H pattern) and hud.py RE-IMPORTS them at top level -- the re-export test asserts both game.ui.hud_layout AND game.ui.hud expose the literals 4/8/0.55/0.45/0.72 (value-equality; the relocation must keep __init__ split-frac defaults + test_wk61_r10/r11 from-imports resolving). (c) the 7 wrappers do a LAZY function-local from game.ui import hud_left_layout then call the module attr, so the delegation spies monkeypatch the names ON hud_left_layout (patch-where-used) and the cycle is broken (hud->hud_left_layout one-way; hud_left_layout imports only leaf hud_layout+hud_watch_card + TYPE_CHECKING HUD). (d) behavior test mirrors test_wk61_r10 both-segments-open setup (hud._pin_slot.hero_id set for watch + gs selected_hero for main) on a real headless HUD(1920,1080) under SDL_VIDEODRIVER=dummy, exercising layout->down->move->up->render through the moved path. No regressions found; all 7 DoD criteria A-G hold."
         }
       }
+    },
+    "wk100_round_b_hud_layout_orchestration": {
+      "sprint_meta": {
+        "sprint_id": "wk100_round_b_hud_layout_orchestration",
+        "created_utc": "2026-05-30T23:55:00Z",
+        "goal": "QA W2: verify WK100 Round B-17 behavior-preserving VERBATIM MOVE of the layout-orchestration trio (_layout_rects_for_screen, _compute_layout, virtual_pointer_in_hud_chrome) out of game/ui/hud.py into the EXISTING game/ui/hud_left_layout.py (WK99 module) as hud-first module functions (layout_rects_for_screen with KEYWORD-ONLY show_right_panel; compute_layout; PUBLIC virtual_pointer_in_hud_chrome used by ursina_app.py:727 pointer routing). HUD keeps 3 1-line lazy-delegating wrappers (exact names, incl the PUBLIC virtual_pointer_in_hud_chrome + keyword-only show_right_panel); all state + the HUDLayoutManager instance (hud._layout_mgr) stay on HUD. Eighth hud.py slice; completes the left-column/layout cluster. Author seam+behavior test, run full DoD A-G, independently view before/after screenshots."
+      },
+      "rounds": {
+        "wk100_w2": {
+          "sprint_id": "wk100_round_b_hud_layout_orchestration",
+          "round_id": "wk100_w2",
+          "status": "done",
+          "round_meta": {
+            "wave": "W2 (seam+behavior test + full DoD gate + INDEPENDENT before/after screenshot review)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "depends_on": "wk100 W1 (Agent 08 moved the 3 layout-orchestration methods from game/ui/hud.py into game/ui/hud_left_layout.py behind 1-line lazy-delegating wrappers; added 2 module imports sim_now_ms + ViewMode; all state + _layout_mgr stay on HUD)."
+          },
+          "prompt_summary": "PM-assigned (agent_01 PM log, sprint wk100_round_b_hud_layout_orchestration, round wk100_kickoff): author tests/test_wk100_hud_layout_orchestration.py (1 EXISTENCE: 3 fns on hud_left_layout, hud-first, show_right_panel KEYWORD_ONLY; 2 WRAPPERS DELEGATE via monkeypatch spy incl PUBLIC virtual_pointer_in_hud_chrome; 3 AST no-cycle guard + both fresh-subprocess import orders; 4 headless BEHAVIOR: _compute_layout -> 9 pygame.Rect + screen_w/h + top.y==0 + bottom.bottom==1080, _layout_rects_for_screen(show_right_panel=False) -> 9 rects, virtual_pointer_in_hud_chrome True inside left when hero selected). Run full DoD A-G. DO NOT COMMIT.",
+          "what_i_changed": "Added tests/test_wk100_hud_layout_orchestration.py (20 cases, NEW file -- the only file I touched). NO production code edited. Note: the PM-suggested empty-gs->False assertion was split into its OWN no-pin case -- with _pin_slot.hero_id set the verbatim-moved watch-card hit-region (driven by _pin_slot.hero_id, NOT game_state; _left_watch_rect covers the whole left column) correctly returns True for a left-column point regardless of gs. This matches HEAD:game/ui/hud.py byte-for-byte (the move is faithful) and mirrors test_wk52_r10:96 (which toggles a selected_building, never a pin) by isolating the selection-driven left-panel behavior on a no-pin HUD.",
+          "commands_run": [
+            "python -m pytest tests/test_wk100_hud_layout_orchestration.py -q  (20 passed)",
+            "python -m pytest -q  (1135 passed, 4 skipped, 0 failed)",
+            "python tools/determinism_guard.py  (exit 0)",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q  (10 passed)",
+            "python tools/qa_smoke.py --quick  (DONE: PASS, exit 0)",
+            "python -c \"import game.ui.hud_left_layout; import game.ui.hud; print('ok1')\"  (rc 0)",
+            "python -c \"import game.ui.hud; import game.ui.hud_left_layout; print('ok2')\"  (rc 0)"
+          ],
+          "verdict": "PASS",
+          "dod_results": {
+            "A_full_pytest": "1135 passed, 4 skipped, 0 failed in 189.12s (baseline 1115 at WK99 close + 20 new wk100 seam+behavior cases = 1135; exceeds the ~1125+ the plan predicted). Live guards pass within the run: tests/test_wk52_r10_menu_scroll.py (virtual_pointer + _compute_layout True/False hits) + tests/test_wk61_r10/r11 (sidebar layout).",
+            "B_determinism_guard": "PASS: [determinism_guard] PASS: no violations found (exit 0).",
+            "C_wk67_digest": "10 passed; digest byte-identical to the golden pin b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (confirmed at tests/test_wk67_ai_boundary.py:181) -- UNCHANGED.",
+            "D_qa_smoke_quick": "DONE: PASS (exit 0) across all profiles incl mock-LLM + speed-scaling + interior/quest/conversation scenarios.",
+            "E_structure": "3 fns live in game/ui/hud_left_layout.py (layout_rects_for_screen@214 hud-first + KEYWORD-ONLY show_right_panel; compute_layout@267; virtual_pointer_in_hud_chrome@292). 3 wrappers in hud.py (_layout_rects_for_screen@484 keeps *, show_right_panel keyword-only; _compute_layout@500; PUBLIC virtual_pointer_in_hud_chrome@516). Call sites UNCHANGED (hud.py:827 render -> _compute_layout; ursina_app.py:727 -> eng.hud.virtual_pointer_in_hud_chrome). ZERO `self.` in the 3 moved fns (grep clean). hud.py = 1258 LOC. No cycle: both fresh import orders rc 0 (ok1 + ok2). 2 module imports added (sim_now_ms from game.sim.timebase; ViewMode from game.ui.micro_view_manager); TYPE_CHECKING-only `from game.ui.hud import HUD` permitted.",
+            "F_screenshots": "PASS -- HUD layout pixel-identical across all 4 before/after pairs. Reviewed independently via Read: wk100_before/after_panels (ui_panels_hero + ui_panels_sidebar_split) and wk100_before/after_base (base_overview Z1 + Z2 ui_default). sha256 differs (expected -- world/unit/stat content is sim non-determinism). Verified identical POSITIONS for: top bar (Gold/Heroes/Enemies/Wave + Quit + banner rules), tip text, bottom-bar button row (Build/Hire/Bounty + recall/memorial), minimap bottom-left, speed-control cluster (|| > >> >>> >>>> + Normal) bottom-right, and the left column -- incl the sidebar_split main-panel/watch-card split + handle. Only world content + a transient toast line + hero labels differ. No layout regression. Since _compute_layout drives EVERY rect every frame, identical chrome = the move preserved all layout math.",
+            "G_log": "This entry; JSON validated with python -m json.tool."
+          },
+          "evidence": {
+            "new_test_file": "tests/test_wk100_hud_layout_orchestration.py (20 cases)",
+            "pytest_count": "1135 passed, 4 skipped, 0 failed",
+            "wk67_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (unchanged)",
+            "no_cycle": "ok1 + ok2 (both fresh import orders rc 0)",
+            "hud_py_loc": 1258,
+            "screenshot_verdict": "PASS (HUD layout pixel-identical; deltas = sim non-determinism)"
+          },
+          "how_to_test": [
+            "python -m pytest tests/test_wk100_hud_layout_orchestration.py -q",
+            "python -m pytest -q",
+            "python tools/qa_smoke.py --quick",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q"
+          ],
+          "blockers": [],
+          "follow_ups": [
+            "None for this slice. Left-column/layout cluster extraction is DONE. Remaining hud.py targets per plan: messages (add_message/render_messages); input-router (handle_click + menu-scroll helpers); hero-menu-chat-popup layout."
+          ],
+          "production_code_edited": false
+        }
+      }
     }
   }
 }
