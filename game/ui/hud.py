@@ -973,29 +973,8 @@ class HUD:
         game_state: dict,
         building_panel,
     ) -> bool:
-        """True if ``pos`` (``engine.screen`` / virtual framebuffer pixels) is over a menu that captures wheel."""
-        x, y = int(pos[0]), int(pos[1])
-        lr = self._last_left_rect
-        if (
-            building_panel is not None
-            and getattr(building_panel, "visible", False)
-            and getattr(building_panel, "selected_building", None) is not None
-        ):
-            bx = int(getattr(building_panel, "panel_x", 0))
-            by = int(getattr(building_panel, "panel_y", 0))
-            bw = int(getattr(building_panel, "panel_width", 0))
-            bh = int(getattr(building_panel, "panel_height", 0))
-            if bw > 0 and bh >= 0 and pygame.Rect(bx, by, bw, bh).collidepoint(x, y):
-                return True
-        if (
-            lr is not None
-            and lr.collidepoint(x, y)
-            and game_state.get("selected_hero") is not None
-            and game_state.get("selected_peasant") is None
-            and game_state.get("selected_building") is None
-        ):
-            return True
-        return False
+        from game.ui import hud_menu_scroll
+        return hud_menu_scroll.is_mouse_over_menu(self, pos, game_state, building_panel)
 
     def scroll_active_menu(
         self,
@@ -1004,14 +983,8 @@ class HUD:
         game_state: dict,
         building_panel,
     ) -> bool:
-        """Scroll the menu under ``pointer_pos``.
-
-        ``direction`` +1 moves content downward (wheel ``wheel_y=-1``); -1 moves content up.
-        """
-        wheel_y = -int(direction)
-        if wheel_y == 0:
-            return False
-        return self.handle_menu_scroll(pointer_pos, wheel_y, game_state, building_panel)
+        from game.ui import hud_menu_scroll
+        return hud_menu_scroll.scroll_active_menu(self, direction, pointer_pos, game_state, building_panel)
 
     def handle_menu_scroll(
         self,
@@ -1020,40 +993,8 @@ class HUD:
         game_state: dict,
         building_panel,
     ) -> bool:
-        if wheel_y == 0:
-            return False
-        if not self.is_mouse_over_menu(pos, game_state, building_panel):
-            return False
-        x, y = int(pos[0]), int(pos[1])
-        lr = self._last_left_rect
-        if (
-            building_panel is not None
-            and getattr(building_panel, "visible", False)
-            and getattr(building_panel, "selected_building", None) is not None
-        ):
-            bx = int(getattr(building_panel, "panel_x", 0))
-            by = int(getattr(building_panel, "panel_y", 0))
-            bw = int(getattr(building_panel, "panel_width", 0))
-            bh = int(getattr(building_panel, "panel_height", 0))
-            if bw > 0 and bh >= 0 and pygame.Rect(bx, by, bw, bh).collidepoint(x, y):
-                if building_panel.apply_menu_scroll(int(wheel_y)):
-                    return True
-                return True
-        if (
-            lr is not None
-            and game_state.get("selected_hero") is not None
-            and game_state.get("selected_peasant") is None
-            and game_state.get("selected_building") is None
-        ):
-            hmcr = getattr(self, "_hero_menu_chat_rect", None)
-            if hmcr is not None and hmcr.collidepoint(x, y):
-                return True
-            hero_rect = getattr(self, "_hero_menu_hero_rect", None) or lr
-            if hero_rect.collidepoint(x, y):
-                if self._hero_panel.apply_menu_scroll(int(wheel_y)):
-                    return True
-                return True
-        return False
+        from game.ui import hud_menu_scroll
+        return hud_menu_scroll.handle_menu_scroll(self, pos, wheel_y, game_state, building_panel)
 
     def handle_click(self, mouse_pos: tuple[int, int], game_state: dict) -> str | None:
         x = int(mouse_pos[0])

@@ -9,6 +9,39 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk103_round_b_hud_menu_scroll": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk103_round_b_hud_menu_scroll.plan.md",
+        "created_utc": "2026-05-31T00:00:00Z",
+        "notes": "WK103 Round B-20 (eleventh hud.py split slice): extracted the mouse-wheel menu-scroll router out of game/ui/hud.py into a NEW game/ui/hud_menu_scroll.py. Pure VERBATIM move (self.->hud.) behind 1-line lazy-delegating wrappers (WK93-102 pattern; idiom mirrored from hud_messages.py). 3 methods moved as a unit (they inter-call): is_mouse_over_menu(970)->is_mouse_over_menu(hud,pos,game_state,building_panel); scroll_active_menu(1000)->scroll_active_menu(hud,direction,pointer_pos,game_state,building_panel); handle_menu_scroll(1016)->handle_menu_scroll(hud,pos,wheel_y,game_state,building_panel). New module imports ONLY pygame + HUD under TYPE_CHECKING; NO module-top game.ui.hud import. ALL state stays on HUD: hud._last_left_rect/_hero_menu_chat_rect/_hero_menu_hero_rect/_hero_panel reached via hud arg; building_panel/game_state are bare PARAMETERS; pygame.Rect bare. Inter-helper calls became hud.handle_menu_scroll (scroll_active_menu->) + hud.is_mouse_over_menu (handle_menu_scroll->), both via wrappers. handle_menu_scroll wrapper name+signature kept EXACT -- PUBLIC, called by game/input_handler.py:127 + game/graphics/ursina_app.py:830 + tests/test_wk52_r10_menu_scroll.py (incl :151 MagicMock replacement). handle_click (hud.py:1058) NOT moved -- stays on HUD. NO call sites changed. hud.py 1219->1160 LOC (-59); hud_menu_scroll.py 108 LOC (NEW)."
+      },
+      "rounds": {
+        "wk103_w1": {
+          "sprint_id": "wk103_round_b_hud_menu_scroll",
+          "round_id": "wk103_w1",
+          "status": "done",
+          "task": "Extract mouse-wheel menu-scroll router (is_mouse_over_menu/scroll_active_menu/handle_menu_scroll) from hud.py into NEW game/ui/hud_menu_scroll.py behind 1-line delegating wrappers (exact names+signatures). PURE VERBATIM MOVE, wheel routing behavior/logic unchanged. Eleventh slice of the hud.py god-file split.",
+          "methods_moved": "is_mouse_over_menu(970)->is_mouse_over_menu(hud,pos,game_state,building_panel); scroll_active_menu(1000)->scroll_active_menu(hud,direction,pointer_pos,game_state,building_panel); handle_menu_scroll(1016)->handle_menu_scroll(hud,pos,wheel_y,game_state,building_panel). All 3 hud-first module fns; 3 HUD wrappers lazy-delegate via 'from game.ui import hud_menu_scroll'. The trio inter-calls so all three moved as a unit.",
+          "stays_on_hud": "ALL state: hud._last_left_rect, hud._hero_menu_chat_rect, hud._hero_menu_hero_rect, hud._hero_panel (read via hud arg, UNTOUCHED). handle_click (hud.py:1058 -- big central router, deferred redesign target) NOT moved. building_panel + game_state are bare PARAMETERS (no hud./self.); pygame.Rect bare. Docstrings copied verbatim.",
+          "verification": {
+            "pytest": "1188 passed / 4 skipped / 0 failed (204.91s; exactly baseline -- no new test yet, Agent 11 adds WK103 seam test in W2)",
+            "wk67_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical; tests/test_wk67_ai_boundary.py 10 passed; digest constant at test line 181)",
+            "determinism_guard": "[determinism_guard] PASS: no violations found",
+            "qa_smoke_quick": "DONE: PASS",
+            "test_wk52_r10_menu_scroll": "10 passed (dedicated menu-scroll guard -- both building-panel + hero-menu wheel paths + input-handler MagicMock wiring stay green)",
+            "imports": "ok1 (hud_menu_scroll then hud), ok2 (hud then hud_menu_scroll) -- both fresh orders print, no cycle",
+            "zero_self": "grep self. in hud_menu_scroll.py -> ZERO matches (No matches found / 0 occurrences across 0 files)",
+            "no_top_hud_import": "hud_menu_scroll.py only 'from game.ui.hud import HUD' inside TYPE_CHECKING (line 17, under if TYPE_CHECKING: at line 16); no module-top import game.ui.hud / from game.ui.hud",
+            "loc": "hud.py 1219->1160 (-59); hud_menu_scroll.py 108 (NEW)"
+          },
+          "evidence": {
+            "capture_before": "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk103_before_base --size 1920x1080 --ticks 480 (4 PNGs); python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk103_before_panels --size 1920x1080 --ticks 480 (7 PNGs)",
+            "capture_after": "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk103_after_base --size 1920x1080 --ticks 480 (4 PNGs); python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk103_after_panels --size 1920x1080 --ticks 480 (7 PNGs)",
+            "screenshot_verdict": "DoD F caveat documented: wheel-scroll is INPUT behavior, not a static visual -- the steady captures prove scene+chrome unchanged; the targeted guard is tests/test_wk52_r10_menu_scroll.py (10 passed, drives both building-panel + hero-menu wheel paths + input-handler wiring) + Agent 11's W2 behavior test. CHROME VERDICT: ui_panels_hero + ui_panels_hidden PIXEL-IDENTICAL before/after (sha256 match). base_overview Z1: top bar (Gold 2100/Heroes 4/Enemies/Wave + placement banner), bottom command bar (Build/Hire/Bounty + hotkeys), FPS debug box, minimap frame swatches all same position/style; only deltas are world-entity jitter. ui_panels_building: Inn panel (title/Heroes Inside 0-6/Heals/Gold from drinks/Taxable Gold/red Demolish + green Enter Building + X close), top+bottom bars, speed controls, minimap all identical; only delta is the live perf-counter text in the debug overlay (PF/s 16->15 calls, 7.4->7.2ms) -- non-deterministic profiling, unrelated to edit. PASS: chrome unchanged."
+          }
+        }
+      }
+    },
     "wk102_round_b_hud_messages": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk102_round_b_hud_messages.plan.md",
