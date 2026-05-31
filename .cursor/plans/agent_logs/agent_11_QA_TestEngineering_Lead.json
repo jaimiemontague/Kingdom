@@ -9,6 +9,87 @@
   "Structure nests rounds inside sprints to keep history organized."
  ],
  "sprints": {
+  "wk107_round_b_ursina_terrain_ground_mesh": {
+   "sprint_meta": {
+    "sprint_id": "wk107_round_b_ursina_terrain_ground_mesh",
+    "created_utc": "2026-05-31T21:30:00Z",
+    "goal": "QA W2: verify WK107 Round B (FOG/B-1) behavior-preserving VERBATIM owner-arg move of the 3 ground-surface helpers (_build_terrain_ground_mesh, update_cave_entrance_shader, _apply_grass_texture; ~286 LOC) out of game/graphics/ursina_terrain_fog_collab.py into the new leaf module game/graphics/ursina_terrain_ground_mesh.py. All 3 became owner-arg module functions (every self.->owner.; reached via owner._r.* -- _terrain_ground_entity, _geomip_terrain_handle via setattr, _ks_ground_tex). UrsinaTerrainFogCollab keeps 3 one-line lazy-delegating wrappers (exact names+signatures) so build_3d_terrain's self._build_terrain_ground_mesh(...) call (fog_collab.py:682) and any external update_cave_entrance_shader caller are unchanged. The only intra-cluster call became a direct module-fn call (_apply_grass_texture(owner,...) x2). build_3d_terrain + _batch_static_terrain_for_chunks STAY in the class (-> WK108), so tests/test_terrain_perf.py needs NO edit -- its patch.object(UrsinaTerrainFogCollab, '_build_terrain_ground_mesh', ...) patches the new wrapper and the wrapper is what build_3d_terrain calls. Function-local imports (from ursina import Mesh; from PIL import Image; from config import UNDERGROUND_HOLE_RADIUS_TILES) carried VERBATIM as nested imports (optional-dependency/feature-gate fallbacks). Acyclic: new module imports UrsinaTerrainFogCollab ONLY under TYPE_CHECKING; fog_collab imports the new module LAZILY inside wrapper bodies. Live before/after Ursina screenshots DEFERRED to Jaimie (need GPU)."
+   },
+   "rounds": {
+    "wk107_w2": {
+     "sprint_id": "wk107_round_b_ursina_terrain_ground_mesh",
+     "round_id": "wk107_w2",
+     "status": "done",
+     "round_meta": {
+      "wave": "W2 (seam test + full DoD gate; deferred live ursina captures excluded)",
+      "role": "Agent 11 QA_TestEngineering_Lead",
+      "model": "claude-opus-4-8[1m]",
+      "behavior_preserving": true,
+      "production_code_edited": false,
+      "created_utc": "2026-05-31T21:30:00Z",
+      "depends_on": "wk107 W1 (Agent 09 ArtDirector extracted _build_terrain_ground_mesh + update_cave_entrance_shader + _apply_grass_texture into game/graphics/ursina_terrain_ground_mesh.py owner-arg pure-move, behind 3 delegating wrappers in ursina_terrain_fog_collab.py; both passed Agent 01's verbatim-diff gate + a dead-import cleanup)."
+     },
+     "prompt_summary": "WK107 W2: author tests/test_wk107_ursina_terrain_ground_mesh.py modeled on tests/test_wk106_ursina_terrain_fog_visibility.py (SDL_VIDEODRIVER/SDL_AUDIODRIVER=dummy at top; object.__new__ bare collab; monkeypatch-spy delegation; AST guards; subprocess both-orders). Cover the 7 mandated cases for the 3 fns _build_terrain_ground_mesh/update_cave_entrance_shader/_apply_grass_texture: (1) fn-exists module-level; (2) owner-first signature; (3) wrapper-delegation runtime spy incl 8-positional for build, [] /10/10 for cave shader, BOTH positional and use_texture_scale= keyword forms for grass texture; (4) AST no-self in new module; (5) AST no-cycle (no module-top import of new module in fog_collab; new module imports collab ONLY under TYPE_CHECKING); (6) function-local-import guard (Mesh/Image/UNDERGROUND_HOLE_RADIUS_TILES present in source but NOT top-level nodes); (7) fresh-subprocess both orders rc0. Run full DoD; do NOT edit test_terrain_perf.py (must stay green untouched); do NOT fix W1 code; DO NOT COMMIT; touch ONLY the new test file.",
+     "what_i_changed": "Authored tests/test_wk107_ursina_terrain_ground_mesh.py (16 tests = 3 fn-exists + 3 owner-first + 3 wrapper-delegation parametrized + 1 grass-texture keyword-forwarding (both positional default and use_texture_scale=False) + 1 AST no-self + 1 AST no-module-top-import-of-new-module + 1 AST imports-collab-only-under-TYPE_CHECKING + 1 function-local-import guard + 2 fresh-subprocess both-orders). Reads source with encoding='utf-8-sig' (fog_collab.py carries a UTF-8 BOM that breaks plain-utf-8 ast.parse -- BOM-tolerance is in the TEST only, not W1 code). NO production code touched; tests/test_terrain_perf.py NOT edited (confirmed unmodified in git status; the wrapper-on-class patch keeps it green).",
+     "commands_run": [
+      {
+       "cmd": "python -m pytest tests/test_wk107_ursina_terrain_ground_mesh.py -q",
+       "exit_code": 0,
+       "result": "16 passed"
+      },
+      {
+       "cmd": "python -m pytest -q",
+       "exit_code": 0,
+       "result": "1288 passed, 4 skipped, 0 failed in 217.18s"
+      },
+      {
+       "cmd": "python tools/determinism_guard.py",
+       "exit_code": 0,
+       "result": "[determinism_guard] PASS: no violations found"
+      },
+      {
+       "cmd": "python -m pytest tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable -q",
+       "exit_code": 0,
+       "result": "1 passed; digest literal at line 181 == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical, unchanged)"
+      },
+      {
+       "cmd": "python -m pytest tests/test_terrain_perf.py -q",
+       "exit_code": 0,
+       "result": "7 passed (GREEN, UNEDITED -- not in git status)"
+      },
+      {
+       "cmd": "python tools/qa_smoke.py --quick",
+       "exit_code": 0,
+       "result": "DONE: PASS"
+      }
+     ],
+     "evidence": {
+      "dod_1_full_suite": "1288 passed, 4 skipped, 0 failed (217.18s). test_terrain_perf.py GREEN with NO edit.",
+      "dod_2_determinism_guard": "[determinism_guard] PASS: no violations found",
+      "dod_3_wk67_digest": "tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable 1 passed; digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (literal at line 181, unchanged)",
+      "dod_4_qa_smoke_quick": "DONE: PASS",
+      "dod_5_seam_test": "tests/test_wk107_ursina_terrain_ground_mesh.py authored; 16 passed",
+      "dod_structure": "3 module-level fns in ursina_terrain_ground_mesh (all owner-first); 3 wrappers on UrsinaTerrainFogCollab at fog_collab.py:887/896/900 (exact names+sigs); build_3d_terrain self._build_terrain_ground_mesh(...) at fog_collab.py:682 UNCHANGED; zero ast.Name id 'self' in new module; function-local imports (Mesh/Image/UNDERGROUND_HOLE_RADIUS_TILES) preserved nested; fog_collab has NO module-top import of new module (lazy in wrappers); new module imports collab ONLY under TYPE_CHECKING; fresh-subprocess both orders rc0.",
+      "dod_deferred": "DEFERRED to Jaimie's display machine: live before/after Ursina captures (need GPU/window). ursina render code has NO headless render coverage; this test guards the refactor SEAM only.",
+      "test_terrain_perf_unedited": "CONFIRMED green (7 passed) and UNEDITED (absent from git status --short).",
+      "scope": "Touched ONLY the new file tests/test_wk107_ursina_terrain_ground_mesh.py + this log. No commit/add/push."
+     },
+     "blockers": [],
+     "follow_ups": [
+      "DEFERRED-NEEDS-DISPLAY: Jaimie runs live before/after Ursina captures at end-of-marathon to verify ground-mesh / grass-texture / cave-shader render fidelity (headless agents lack a GPU/window).",
+      "WK108 = FOG/B-2: build_3d_terrain (L631-888) + _batch_static_terrain_for_chunks (L388-539) -> new module; THIS one DOES need test_terrain_perf.py 8-patch retarget analysis (the patch.object(tfc, 'Entity'/scatter/model-list helpers) retarget to the new build module; the _batch_static class-method patch retargets to the new module fn once it moves; _build_terrain_ground_mesh class patch stays as-is (now a wrapper)). Scope carefully."
+     ],
+     "how_to_test": [
+      "python -m pytest tests/test_wk107_ursina_terrain_ground_mesh.py -q",
+      "python -m pytest tests/test_terrain_perf.py -q",
+      "python -m pytest -q",
+      "python tools/determinism_guard.py",
+      "python -m pytest tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable -q",
+      "python tools/qa_smoke.py --quick"
+     ]
+    }
+   }
+  },
   "wk104_round_b_ursina_terrain_growth_sync": {
    "sprint_meta": {
     "sprint_id": "wk104_round_b_ursina_terrain_growth_sync",
