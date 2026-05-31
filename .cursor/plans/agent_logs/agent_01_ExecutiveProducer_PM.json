@@ -5,6 +5,7 @@
   "name": "ExecutiveProducer_PM"
  },
  "notes": [
+  "2026-05-31 (Agent 01 WK109 CLOSED e3212e2 + WK110 KICKOFF): WK109 shipped+pushed (e3212e2, FOG/C finale ensure_fog_overlay + ensure_grid_debug_overlay -> ursina_fog_overlay.py; fog_collab 482->170; suite ->1314; digest byte-identical; PM verbatim ZERO diffs). MILESTONE: fog_collab god-file 1783->170 FULLY DECOMPOSED (5 leaf modules WK104/106/107/108/109 + thin facade). PIVOT to non-render headless roadmap. Grounding agent a7c2b23b024665466 found the audit LOC numbers are STALE (config/world/sim_engine/hero/input/mock_provider/context_builder work already done). WK110 KICKOFF = ai/vocab.py consolidation (ToolAction/DirectIntent str-Enums + place frozensets; derive+re-export legacy names byte-identical; digest-safe by construction; SCOPE OUT TaskRouter=Move12). Fully headless-verifiable. WK111=WK34 zombie purge, WK112=validator split queued. Dispatching Agent 06 (W1).",
   "2026-05-31 (Agent 01 WK108 CLOSED 0eaf55f + WK109 KICKOFF): WK108 shipped+pushed (0eaf55f, FOG/B-2 build_3d_terrain + _batch_static_terrain_for_chunks -> ursina_terrain_build.py; fog_collab 910->482; suite ->1300; digest byte-identical; PM verbatim both faithful; 8-point test_terrain_perf retarget + WK104 back-import invariant reconciled by updating the test to follow migrated consumers). MILESTONE: fog_collab 1783 (pre-WK104) -> 482. WK109 KICKOFF = FOG/C finale: ensure_fog_overlay + ensure_grid_debug_overlay (~315 LOC) -> ursina_fog_overlay.py. Cleanest move (only self._r, no own-slots, no intra-calls; pre-grounded agent a82bdea0d0fc5e898). Orphan sweep + FOG_TEX_BRIDGE_KEY relocation; test_terrain_perf L719-720 shared-object patches retarget tfc->ufo. After WK109 fog_collab = __init__ + wrappers (stateful facade) = god-file DONE. Then pivot to ursina_app.py / non-render headless roadmap. Dispatching Agent 09 (W1).",
   "2026-05-31 (Agent 01 WK107 CLOSED 9893836 + WK108 KICKOFF): WK107 shipped+pushed (9893836, FOG/B-1 ground-mesh/grass/cave-shader -> ursina_terrain_ground_mesh.py; fog_collab 1184->910 incl -3 dead-import cleanup; suite ->1288; digest byte-identical; PM verbatim-diff all 3 faithful; no test retarget needed). WK108 KICKOFF = FOG/B-2: build_3d_terrain + _batch_static_terrain_for_chunks (~408 LOC) -> ursina_terrain_build.py. Pre-grounded (agent a32f75b16ecbb88f1): one-way build->batch (L873 becomes direct module fn); build calls WK106/107 wrappers via owner.X; CRITICAL 8-point test_terrain_perf retarget, esp L235-238 class-method patch of _batch_static_terrain_for_chunks -> ttb module fn (build's direct call bypasses the class wrapper; miss=passes-but-wrong). Agent 09 also sweeps fog_collab orphan imports. After WK108 the god-file is essentially decomposed (only __init__ + ensure_fog_overlay + ensure_grid_debug + wrappers remain; WK109 takes those). Dispatching Agent 09 (W1).",
   "2026-05-31 (Agent 01 WK106 CLOSED 29590e8 + WK107 KICKOFF): WK106 shipped+pushed (29590e8, FOG/A visibility/cull/instanced-fog -> ursina_terrain_fog_visibility.py; fog_collab 1455->1184; suite ->1272; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical; PM verbatim-diff gate all 9 faithful). WK107 KICKOFF = FOG/B-1: 3 ground-surface helpers (_build_terrain_ground_mesh/update_cave_entrance_shader/_apply_grass_texture, L889-1177, ~286 LOC) -> ursina_terrain_ground_mesh.py. SAFEST FOG/B sub-slice: NO test retarget (build_3d_terrain stays calling self->wrapper; tfc.Entity/_environment_* patches still hit staying build). 3 methods touch only self._r.* + 1 intra _apply_grass_texture; function-local imports stay local. WK108 will be the riskier build_3d_terrain+_batch_static move (needs the 8-patch test_terrain_perf retarget). Dispatching Agent 09 (W1).",
@@ -5956,7 +5957,7 @@
      "import_smoke_both_orders": "order A + order B clean (no cycle); AST self-id in new module == 0",
      "live_screenshots": "DEFERRED to Jaimie end-of-marathon test (hot-path ursina render, no GPU in agent)",
      "MILESTONE": "ursina_terrain_fog_collab.py 1783 (pre-WK104) -> 170: the #1 audit god-file FULLY DECOMPOSED into 5 focused leaf modules (ursina_terrain_growth_sync WK104, ursina_terrain_fog_visibility WK106, ursina_terrain_ground_mesh WK107, ursina_terrain_build WK108, ursina_fog_overlay WK109) + a thin stateful facade (UrsinaTerrainFogCollab = __init__ + delegating wrappers, holding the __slots__ state the module-fns read/write via owner.*). 6 sprints WK104/106/107/108/109 (WK105 was ursina_app debug probe).",
-     "commit_sha": "recorded in next kickoff note"
+     "commit_sha": "e3212e2 (pushed 0eaf55f..e3212e2 main->main)"
     }
    },
    "rounds": {
@@ -5975,6 +5976,63 @@
      "pm_agent_prompts": {
       "09": "Onboard agent-09 rules; plan sections 1-3. Create ursina_fog_overlay.py (2 owner-arg free fns, only self._r->owner._r; FOG_TEX_BRIDGE_KEY moves here; panda3d/ursina/Mesh imports stay function-local); replace fog_collab L96-320 + L364-453 with 2 wrappers; grep-proven orphan sweep. DO NOT COMMIT. DO NOT edit tests.",
       "11": "Onboard agent-11 rules; plan sections 4-6. Retarget test_terrain_perf L719-720 tfc->ufo (add ufo alias); create test_wk109 seam test; full DoD. DO NOT COMMIT."
+     },
+     "pm_commits": [
+      "e3212e2 (pushed)"
+     ]
+    }
+   }
+  },
+  "wk110_round_b_ai_vocab": {
+   "sprint_meta": {
+    "status": "closed_success",
+    "created_utc": "2026-05-31",
+    "plan_doc": ".cursor/plans/wk110_round_b_ai_vocab.plan.md",
+    "goal": "Consolidate the scattered AI action/intent vocabulary (VALID_ACTIONS, TOOL_ACTIONS, SUPPORTED_DIRECT_INTENTS, DEFERRED_COMBAT_INTENTS, place groupings) into a new stdlib-only leaf module ai/vocab.py (ToolAction(str,Enum) + DirectIntent(str,Enum) + frozensets); existing modules derive + re-export the SAME names with BYTE-IDENTICAL values. FIRST non-render headless slice.",
+    "version_target": "internal-refactor (no version bump)",
+    "verification_class": "fully headless (NO screenshots) — pytest + determinism_guard + WK67 digest + qa_smoke",
+    "notes": "Grounded by agent a7c2b23b024665466. KEY FINDING: audit LOC numbers are STALE -- config registry unified, world.py fog extracted, sim_engine Moves 7-8 done, hero/input/mock_provider splits done, context_builder legacy path deleted; much of the audit is already complete. Best-bounded digest-SAFE remaining non-render item = vocab consolidation. INVARIANTS: (1) WK67 digest byte-identical BY CONSTRUCTION (str,Enum -> .value == current string; provable before/after); (2) re-export legacy names with identical type/members (VALID_ACTIONS/TOOL_ACTIONS are sets L5/L16; SUPPORTED/DEFERRED are frozensets L15/L29; _PLACE_TYPE_TO_MOVE_TARGET dict L38; _PLAYER_HOME_TYPES frozenset L45) so tests (test_wk50_phase2b, test_wk65) that import by-name need NO edits; (3) ai/vocab.py is a LEAF (stdlib only, no ai.*/game.* -> no cycle); (4) SCOPE OUT TaskRouter (Move 12, digest-fragile, later). Agents: 06 (W1 consolidation, owns ai/) + 11 (W2 characterization seam test pinning original literals + DoD).",
+    "definition_of_done": [
+     "python -m pytest -q ALL pass (0 fail)",
+     "determinism_guard clean",
+     "WK67 digest byte-identical b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (PRIMARY gate)",
+     "qa_smoke --quick green",
+     "tests/test_wk110_ai_vocab.py passes (str-enum behavior + byte-identical-value pin + re-export presence + leaf AST guard + enum/collection consistency)",
+     "ai/vocab.py stdlib-only leaf (AST guard)",
+     "Agent 01 re-verify: digest re-run + git show HEAD: value diff confirms byte-identical collections"
+    ],
+    "closeout_evidence": {
+     "new_module": "ai/vocab.py = 86 LOC (stdlib-only leaf: ToolAction(str,Enum) 7 members, DirectIntent(str,Enum) 8 members, PLAYER_HOME_TYPES/PLACE_TYPE_TO_MOVE_TARGET/DEFERRED_COMBAT_INTENTS frozensets+dict)",
+     "retargeted": "ai/prompt_templates.py (VALID_ACTIONS, TOOL_ACTIONS) + ai/direct_prompt_validator.py (SUPPORTED_DIRECT_INTENTS, DEFERRED_COMBAT_INTENTS, _PLAYER_HOME_TYPES, _PLACE_TYPE_TO_MOVE_TARGET) derive+re-export from vocab",
+     "byte_identical": "all 6 collections byte-identical to HEAD in BOTH membership and type (set/set/frozenset/frozenset/dict/frozenset); Agent 06 12/12 + Agent 11 characterization-pin both confirm",
+     "pm_reverify": "Agent 01 independently re-ran WK67 digest (byte-identical) + inspected git diff = definitions-only (frozenset(i.value for i in DirectIntent) / vocab aliases); every validate-fn body/comparison/control-flow untouched",
+     "full_suite": "1326 passed, 4 skipped, 0 failed",
+     "new_seam_test": "tests/test_wk110_ai_vocab.py = 12 passed (str-enum behavior + 6-collection byte-identical pin + re-export presence + enum/collection consistency + leaf AST guard)",
+     "determinism_guard": "PASS (no violations)",
+     "wk67_digest": "byte-identical b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (PRIMARY gate; re-run by Agent 01 + Agent 11)",
+     "qa_smoke_quick": "DONE: PASS",
+     "leaf_guard": "ai/vocab.py imports only __future__ + enum (AST-confirmed; no cycle)",
+     "scope_out": "TaskRouter (Move 12) NOT touched; optional prompt_packs.py:67 string + decision_moments.py inline tuples SKIPPED (contain ordered/extra members accept_bounty/seek_meal not byte-identically derivable) -> follow-up",
+     "verification_class": "FULLY HEADLESS (no deferred screenshots) -- clean break from the ursina render slices",
+     "commit_sha": "recorded in next kickoff note"
+    }
+   },
+   "rounds": {
+    "wk110_round_b_kickoff": {
+     "round_meta": {
+      "round": "wk110_round_b_kickoff",
+      "status": "closed_success",
+      "created_utc": "2026-05-31",
+      "agents": [
+       "06 (W1 vocab consolidation)",
+       "11 (W2 characterization seam test + DoD)"
+      ],
+      "model": "claude-opus-4-8"
+     },
+     "pm_status_summary": "WK109 shipped (e3212e2); the #1 god-file fog_collab fully decomposed (1783->170). PIVOT to non-render headless roadmap. WK110 = ai/vocab.py consolidation (digest-safe by construction). Sequence: Agent 06 consolidate+re-export -> Agent 01 re-verify (digest + value diff) -> Agent 11 characterization seam test + full DoD -> commit+push. Then WK111 WK34 zombie purge, WK112 validator split.",
+     "pm_agent_prompts": {
+      "06": "Onboard agent-06-aibehavior-onboarding.mdc; plan sections 2-4. Read exact current literals first; create ai/vocab.py (stdlib-only leaf: ToolAction/DirectIntent str-Enums + place frozensets, values verbatim); retarget prompt_templates.py + direct_prompt_validator.py to derive + re-export same names/values. Prove byte-identical + WK67 digest. DO NOT COMMIT. DO NOT edit tests. SCOPE OUT TaskRouter.",
+      "11": "Onboard agent-11-qa-onboarding.mdc; plan sections 5-6. Create test_wk110 characterization seam test (PIN original literals from git show HEAD: and assert current == pinned; str-enum behavior; leaf AST guard; re-export presence); full DoD. DO NOT COMMIT."
      },
      "pm_commits": [
       "pending push — SHA in next kickoff note"

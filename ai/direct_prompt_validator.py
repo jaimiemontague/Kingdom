@@ -10,47 +10,25 @@ from __future__ import annotations
 from typing import Any
 
 from ai.prompt_templates import OBEY_DEFY_VALUES, TOOL_ACTIONS
+from ai.vocab import (
+    DEFERRED_COMBAT_INTENTS as _VOCAB_DEFERRED_COMBAT_INTENTS,
+    DirectIntent,
+    PLACE_TYPE_TO_MOVE_TARGET,
+    PLAYER_HOME_TYPES,
+)
 from game.sim.direct_prompt_targets import parse_compass_direction
 
-SUPPORTED_DIRECT_INTENTS = frozenset(
-    {
-        "status_report",
-        "return_home",
-        "seek_healing",
-        "go_to_known_place",
-        "buy_potions",
-        "explore_direction",
-        "rest_until_healed",
-        "no_action_chat_only",
-    }
-)
+# WK110: derived from the canonical ``ai.vocab`` definitions. Re-exported under the SAME
+# names, collection types (frozenset / dict), and membership as the pre-WK110 literals so
+# every by-name importer and read-site is unchanged and the WK67 digest stays byte-identical.
+SUPPORTED_DIRECT_INTENTS = frozenset(i.value for i in DirectIntent)
 
 # Not supported in MVP; explicit labels the model might emit.
-DEFERRED_COMBAT_INTENTS = frozenset(
-    {
-        "attack_known_lair",
-        "attack_nearest_enemy",
-        "attack_lair",
-        "attack_enemy",
-    }
-)
+DEFERRED_COMBAT_INTENTS = frozenset(_VOCAB_DEFERRED_COMBAT_INTENTS)
 
-_PLACE_TYPE_TO_MOVE_TARGET = {
-    "castle": "castle",
-    "inn": "inn",
-    "marketplace": "marketplace",
-    "blacksmith": "blacksmith",
-}
+_PLACE_TYPE_TO_MOVE_TARGET = PLACE_TYPE_TO_MOVE_TARGET
 
-_PLAYER_HOME_TYPES = frozenset(
-    {
-        "warrior_guild",
-        "ranger_guild",
-        "rogue_guild",
-        "wizard_guild",
-        "temple",
-    }
-)
+_PLAYER_HOME_TYPES = PLAYER_HOME_TYPES
 
 
 def _norm_str(v: Any) -> str:

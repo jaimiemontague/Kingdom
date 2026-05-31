@@ -1755,6 +1755,51 @@
           "handoff_to_11_W2": "Behavior pin candidate: assert the _IDLE_STEPS driver returns on the first True and that an idle hero in a known state takes the same action as before (integration tick test). The WK67 300-tick digest already proves byte-identical idle decisions end-to-end."
         }
       }
+    },
+    "wk110_round_b_ai_vocab": {
+      "sprint_meta": {
+        "sprint_id": "wk110_round_b_ai_vocab",
+        "created_utc": "2026-05-31T00:00:00Z",
+        "title": "WK110 Round B W1 - consolidate scattered AI tool-action/direct-intent vocabulary into a stdlib-only leaf module ai/vocab.py; derive+re-export legacy collections byte-identically (Agent 06)",
+        "role": "Agent 06 AIBehaviorDirector_LLM",
+        "plan_ref": ".cursor/plans/wk110_round_b_ai_vocab.plan.md"
+      },
+      "rounds": {
+        "wk110_w1": {
+          "round_meta": {
+            "role": "Agent 06 AIBehaviorDirector_LLM",
+            "phase": "W1 - create ai/vocab.py (ToolAction/DirectIntent str-Enums + place-grouping frozensets/dict); retarget prompt_templates.py + direct_prompt_validator.py to derive+re-export same names/types/members; verify byte-identical + WK67 digest + contract/characterization tests",
+            "launched_by": "Claude Code Agent-tool subagent (parent Agent 01 PM)",
+            "reports_to": "Agent 01 (PM)",
+            "completed_utc": "2026-05-31T00:00:00Z"
+          },
+          "sprint_id": "wk110_round_b_ai_vocab",
+          "round_id": "wk110_w1",
+          "status": "done",
+          "scope": "VOCABULARY DATA CONSOLIDATION ONLY (byte-identical values, NO behavior change). Created LEAF module ai/vocab.py (imports ONLY __future__ + enum; no ai.*/game.*): class ToolAction(str,Enum) [LEAVE_BUILDING/MOVE_TO/FIGHT/RETREAT/BUY_ITEM/USE_POTION/EXPLORE], class DirectIntent(str,Enum) [8 members], module-level DEFERRED_COMBAT_INTENTS frozenset (4), PLACE_TYPE_TO_MOVE_TARGET dict (4), PLAYER_HOME_TYPES frozenset (5) - all values copied VERBATIM from the current literals. Retargeted ai/prompt_templates.py: added 'from ai.vocab import ToolAction'; VALID_ACTIONS = {a.value for a in ToolAction} and TOOL_ACTIONS = {a.value for a in ToolAction} (both kept as set, identical 7-member membership). Retargeted ai/direct_prompt_validator.py: import DirectIntent/PLACE_TYPE_TO_MOVE_TARGET/PLAYER_HOME_TYPES/DEFERRED_COMBAT_INTENTS from ai.vocab; SUPPORTED_DIRECT_INTENTS = frozenset(i.value for i in DirectIntent); DEFERRED_COMBAT_INTENTS = frozenset(vocab copy); _PLACE_TYPE_TO_MOVE_TARGET = PLACE_TYPE_TO_MOVE_TARGET (alias preserves private read-site name at L77/L79-80); _PLAYER_HOME_TYPES = PLAYER_HOME_TYPES (alias). Did NOT touch any logic/comparison/control-flow/validate functions. Kept 'from ai.prompt_templates import TOOL_ACTIONS' working. Lane: ai/vocab.py (new) + ai/prompt_templates.py + ai/direct_prompt_validator.py ONLY.",
+          "optional_items_skipped": [
+            "prompt_packs.py:67 hardcoded action-list string 'one of leave_building, move_to, fight, retreat, buy_item, use_potion, explore, or null' - SKIPPED: TOOL_ACTIONS is an unordered set, so a {a.value for a in ToolAction} join is not byte-identical-safe; the ordered comma string + ', or null' suffix would need a bespoke ordered join, increasing blast radius and risking chat-purity digest. Left for follow-up per plan-section-4 (small blast radius).",
+            "decision_moments.py inline allowed_actions tuples (L151/189/211/240/264) - SKIPPED: tuples are ordered and feed the WK67 digest; some include 'accept_bounty'/'seek_meal' which are NOT ToolAction members; replacing risks byte drift. Left for follow-up per plan-section-4."
+          ],
+          "collection_members": {
+            "VALID_ACTIONS": "set{fight, retreat, buy_item, use_potion, explore, leave_building, move_to}",
+            "TOOL_ACTIONS": "set{leave_building, move_to, fight, retreat, buy_item, use_potion, explore}",
+            "SUPPORTED_DIRECT_INTENTS": "frozenset{status_report, return_home, seek_healing, go_to_known_place, buy_potions, explore_direction, rest_until_healed, no_action_chat_only}",
+            "DEFERRED_COMBAT_INTENTS": "frozenset{attack_known_lair, attack_nearest_enemy, attack_lair, attack_enemy}",
+            "_PLACE_TYPE_TO_MOVE_TARGET": "dict{castle:castle, inn:inn, marketplace:marketplace, blacksmith:blacksmith}",
+            "_PLAYER_HOME_TYPES": "frozenset{warrior_guild, ranger_guild, rogue_guild, wizard_guild, temple}"
+          },
+          "verification": {
+            "import_vocab": "python -c 'import ai.vocab' -> vocab ok",
+            "import_reexports": "VALID_ACTIONS/TOOL_ACTIONS/SUPPORTED_DIRECT_INTENTS/DEFERRED_COMBAT_INTENTS -> reexports ok",
+            "byte_identical": "ALL 12 checks PASS (value+type for all 6 collections vs pinned HEAD originals) -> ALL BYTE-IDENTICAL: True",
+            "wk67_digest": "tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable -> 1 passed (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical)",
+            "wk50_wk65": "tests/test_wk50_phase2b_direct_prompt_contracts.py + tests/test_wk65_ai_characterization.py -> 30 passed",
+            "leaf_ast": "ai/vocab.py from-imports: ['__future__','enum']; plain imports: [] -> no ai.*/game.*"
+          },
+          "constraints_honored": "DID NOT COMMIT (no git add/commit/push/checkout). DID NOT edit any file under tests/. DID NOT touch ai/basic_ai.py / TaskRouter (out of scope, Move 12). Touched only ai/vocab.py (new) + ai/prompt_templates.py + ai/direct_prompt_validator.py."
+        }
+      }
     }
   }
 }

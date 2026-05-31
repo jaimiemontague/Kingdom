@@ -2,26 +2,15 @@
 Prompt templates for LLM decision making.
 """
 
-VALID_ACTIONS = {
-    "fight",
-    "retreat",
-    "buy_item",
-    "use_potion",
-    "explore",
-    "leave_building",
-    "move_to",
-}
+from ai.vocab import ToolAction
+
+# WK110: derived from the canonical ``ai.vocab.ToolAction`` enum. ``VALID_ACTIONS`` and
+# ``TOOL_ACTIONS`` are both sets of the same seven tool-action strings (byte-identical
+# membership to the pre-WK110 literals); the set comprehension reproduces that exactly.
+VALID_ACTIONS = {a.value for a in ToolAction}
 
 # WK18: Tool-use schema for Obey/Defy and physical actions (LLM agency).
-TOOL_ACTIONS = {
-    "leave_building",
-    "move_to",
-    "fight",
-    "retreat",
-    "buy_item",
-    "use_potion",
-    "explore",
-}
+TOOL_ACTIONS = {a.value for a in ToolAction}
 OBEY_DEFY_VALUES = ("Obey", "Defy")
 
 
