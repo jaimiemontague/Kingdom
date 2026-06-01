@@ -1556,6 +1556,58 @@
           "deferred": "Live before/after Ursina screenshots DEFERRED to Jaimie's end-of-marathon test pass per memory feedback_ursina_deferred_screenshots."
         }
       }
+    },
+    "wk113_round_b_ursina_app_camera": {
+      "sprint_meta": {
+        "notes": "WK113 Round B (Agent 09, W1): camera-control cluster slice out of game/graphics/ursina_app.py (1272 LOC) into a NEW sibling game/graphics/ursina_app_camera.py, using the WK87-92/WK104-105 owner-arg pure-move-behind-wrappers pattern (same shape as WK105 ursina_app_debug_probe.py). MOVED VERBATIM (self->owner) the 9 camera INSTANCE methods (were across L317-677): _setup_ursina_camera_for_castle(owner); _recenter_editor_camera_to_sim_xy(owner,sim_x,sim_y); _reset_camera_to_default(owner); _toggle_camera_lock(owner); _toggle_underground_camera(owner); _sync_ursina_camera_fov_from_zoom(owner); update_zone_fog_color(owner,camera_world_x,camera_world_z); begin_camera_underground_transition(owner,target_y); begin_camera_surface_transition(owner). ALSO MOVED the 2 zone-fog CLASS constants (were UrsinaApp class attrs L592-598, used ONLY by update_zone_fog_color) to MODULE-LEVEL constants _ZONE_FOG_COLORS / _DEFAULT_FOG_COLOR. Nested _matches_focus helper + all print(...) debug lines moved verbatim. UrsinaApp keeps 9 one-line lazy-delegating wrappers (EXACT names+signatures) so staying call sites (__init__ L194 _setup + L195 bound-wrapper capture into engine._ursina_recenter_fn; run() L1134/L1238/L1244/L1261; input handler L811/814/817) reference self.<name> UNCHANGED. _is_chat_active (input-gating, NOT camera) and camera_active_layer @property LEFT IN PLACE untouched. INTRA-CLUSTER calls in moved bodies made DIRECT module-local (plan sec 2): _sync_ursina_camera_fov_from_zoom(owner) in _reset_camera_to_default; begin_camera_underground_transition(owner,target_y) + begin_camera_surface_transition(owner) in _toggle_underground_camera. Moved-const reads (plan sec 3): self._ZONE_FOG_COLORS/_DEFAULT_FOG_COLOR -> bare module names. Function-local imports kept local verbatim: game.world_zones.get_zone; config.UNDERGROUND_DEPTH; config.UNDERGROUND_CAMERA_TRANSITION_SPEED (x2). Module-top imports EXACTLY per plan sec 4 (no extras). NO back-import (acyclic). ursina_app.py 1272 -> 961 LOC. Byte-faithful move, no behavior change. Live Ursina camera captures DEFERRED to Jaimie per memory feedback_ursina_deferred_screenshots.",
+        "created_utc": "2026-05-31T12:00:00-06:00"
+      },
+      "rounds": {
+        "wk113_w1": {
+          "sprint_id": "wk113_round_b_ursina_app_camera",
+          "round_id": "wk113_w1",
+          "status": "done",
+          "role": "WAVE W1 - extract camera-control cluster (9 instance methods + 2 zone-fog class constants) from ursina_app.py into NEW ursina_app_camera.py behind 9 lazy-delegating wrappers; headless gates (live ursina camera screenshots DEFERRED to Jaimie).",
+          "what_i_changed": {
+            "game/graphics/ursina_app_camera.py (NEW, 372 LOC)": [
+              "MOVED VERBATIM 9 INSTANCE methods -> module fns with owner FIRST (every self.->owner.): _setup_ursina_camera_for_castle; _recenter_editor_camera_to_sim_xy; _reset_camera_to_default; _toggle_camera_lock; _toggle_underground_camera; _sync_ursina_camera_fov_from_zoom; update_zone_fog_color; begin_camera_underground_transition; begin_camera_surface_transition. owner: \"UrsinaApp\" annotation on owner param (per plan sec 4 skeleton). Nested _matches_focus helper + all print(...) lines moved verbatim.",
+              "MOVED 2 zone-fog CLASS constants -> module-level: _ZONE_FOG_COLORS (4-zone dict) + _DEFAULT_FOG_COLOR ((0.53,0.72,0.88)). Used ONLY by update_zone_fog_color; reads rewritten self._ZONE_FOG_COLORS/_DEFAULT_FOG_COLOR -> bare module names (plan sec 3).",
+              "INTRA-CLUSTER calls (plan sec 2) made DIRECT module-local: _sync_ursina_camera_fov_from_zoom(owner) in _reset_camera_to_default; begin_camera_underground_transition(owner,target_y) + begin_camera_surface_transition(owner) in _toggle_underground_camera (NOT owner.*).",
+              "Module-top imports EXACTLY per plan sec 4: from __future__ import annotations; math; os; TYPE_CHECKING; config; from ursina import EditorCamera, Vec2, Vec3, camera; from game.graphics.ursina_renderer import SCALE, sim_px_to_world_xz; TYPE_CHECKING-guarded UrsinaApp import. NO extra import added. Function-local imports kept local verbatim: game.world_zones.get_zone; config.UNDERGROUND_DEPTH; config.UNDERGROUND_CAMERA_TRANSITION_SPEED (x2)."
+            ],
+            "game/graphics/ursina_app.py (1272 -> 961 LOC)": [
+              "REPLACED the 9 moved method bodies with 9 one-line lazy-delegating wrappers (SAME names+signatures): each does \"from game.graphics import ursina_app_camera; return ursina_app_camera.<fn>(self, ...)\". NO top-level import of the new module.",
+              "DELETED the _ZONE_FOG_COLORS/_DEFAULT_FOG_COLOR class-const block (moved). LEFT IN PLACE untouched: _is_chat_active (input-gating, NOT camera) + camera_active_layer @property (return self._camera_active_layer).",
+              "Staying call sites UNCHANGED: __init__ L194/L195; run() L1134/L1238/L1244/L1261; input handler L811/814/817 -> all call self.<name> and hit the wrappers."
+            ]
+          },
+          "state_stays_on_owner": "_atmo_fog, _zone_fog_current, _zone_fog_target, engine, _editor_camera, _default_cam_state, _camera_orbit_locked, _ursina_reference_fov, _map_center_xz, _camera_active_layer, _camera_transitioning, _camera_surface_y, _camera_transition_target_y, _camera_transition_speed all STAY on UrsinaApp (no __slots__); the 9 moved fns reach them via owner.*. No camera method calls a NON-moved method, so no owner.<wrapper> hops needed.",
+          "verify": {
+            "v1_import_ursina_app": "python -c \"import game.graphics.ursina_app\" -> OK import ursina_app (no error; only pre-existing pygame/setuptools pkg_resources warning).",
+            "v2_dir_new_module": "['EditorCamera', 'SCALE', 'TYPE_CHECKING', 'Vec2', 'Vec3', '_DEFAULT_FOG_COLOR', '_ZONE_FOG_COLORS', '_recenter_editor_camera_to_sim_xy', '_reset_camera_to_default', '_setup_ursina_camera_for_castle', '_sync_ursina_camera_fov_from_zoom', '_toggle_camera_lock', '_toggle_underground_camera', 'annotations', 'begin_camera_surface_transition', 'begin_camera_underground_transition', 'camera', 'config', 'math', 'os', 'sim_px_to_world_xz', 'update_zone_fog_color'] -> 9 fns + 2 consts present.",
+            "v3_ast_self_count_new_module": "self count = 0",
+            "v4_sibling_wk105_test": "python -m pytest tests/test_wk105_ursina_app_debug_probe.py -q -> 30 passed, 1 warning in 6.63s.",
+            "v5_ursina_app_lines_and_consts": "ursina_app.py LINES: 961 (was 1272; -311). _ZONE_FOG_COLORS present: False; _DEFAULT_FOG_COLOR present: False. 9 wrappers in place; no moved method bodies remain.",
+            "self_check_canonicalized_diff": "PM-style self/owner->@ canonicalized difflib of all 9 moved bodies vs HEAD ursina_app.py: ONLY allowed diffs -> (a) owner: \"UrsinaApp\" annotation on each def line; (b) the 3 plan-sec-2 intra-cluster call rewrites; (c) the 2 plan-sec-3 moved-const reads in update_zone_fog_color. ZERO other logic diffs."
+          },
+          "module_level_imports": "from __future__ import annotations; import math; import os; from typing import TYPE_CHECKING; import config; from ursina import EditorCamera, Vec2, Vec3, camera; from game.graphics.ursina_renderer import SCALE, sim_px_to_world_xz; TYPE_CHECKING: from game.graphics.ursina_app import UrsinaApp. No extra imports added.",
+          "line_counts": {
+            "ursina_app.py_before": 1272,
+            "ursina_app.py_after": 961,
+            "ursina_app_camera.py_new": 372
+          },
+          "screenshots_deferred": "Live before/after Ursina camera captures (castle framing, reset, camera-lock, underground/surface transition, zone-fog tint) DEFERRED to Jaimie end-of-marathon test (headless agent has no GPU/window) per memory feedback_ursina_deferred_screenshots. Byte-faithful move -> normal play unaffected.",
+          "how_to_test": [
+            "python -c \"import game.graphics.ursina_app\"",
+            "python -c \"import game.graphics.ursina_app_camera as m; print(sorted(n for n in dir(m) if not n.startswith('__')))\"",
+            "python -c \"import ast,io; t=ast.parse(io.open('game/graphics/ursina_app_camera.py',encoding='utf-8-sig').read()); print(sum(1 for n in ast.walk(t) if isinstance(n,ast.Name) and n.id=='self'))\"",
+            "python -m pytest tests/test_wk105_ursina_app_debug_probe.py -q"
+          ],
+          "blockers": "none",
+          "cross_lane_edits_note": "Only touched game/graphics/ (Agent 09 lane): created ursina_app_camera.py + edited ursina_app.py wrappers. No edits to other lanes or tests/. DID NOT commit/add/push (PM Agent 01 owns commits). Wave 2 (Agent 11) writes tests/test_wk113_ursina_app_camera.py.",
+          "follow_ups_for_PM": "Run the plan-sec-7 verbatim-diff gate (my self-check already shows only the allowed sec-2/sec-3 diffs + the owner annotation). Then Wave 2 / Agent 11 seam test + full DoD. ursina_app.py is 961 LOC (plan estimated ~915; delta is the 9 wrappers being non-zero LOC)."
+        }
+      }
     }
   }
 }

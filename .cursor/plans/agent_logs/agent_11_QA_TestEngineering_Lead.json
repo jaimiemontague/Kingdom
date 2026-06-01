@@ -5319,6 +5319,67 @@
           "milestone_note": "Wave 0 safety net GREEN on unmodified HEAD. The golden net is now the arbiter for Agent 06 Wave 1: the per-intent handler-table decomposition must reproduce all 38 dicts byte-for-byte, and Wave 1 must REMOVE the xfail (test then XPASS->PASS = 40 passed, 0 xfail). Handing off to PM to dispatch Wave 1."
         }
       }
+    },
+    "wk113_round_b_ursina_app_camera": {
+      "sprint_meta": {
+        "sprint_id": "wk113_round_b_ursina_app_camera",
+        "created_utc": "2026-05-31T00:00:00Z",
+        "goal": "WK113 Round B: extract the camera-control cluster (9 instance methods + 2 zone-fog consts, ~360 LOC) from game/graphics/ursina_app.py into the new sibling module game/graphics/ursina_app_camera.py via the WK87-92/WK104-105 owner-arg pure-move-behind-wrappers pattern. Wave 1 (Agent 09) did the byte-faithful move (ursina_app.py 1272->961 LOC; 0 self code-identifiers in the new module; PM verbatim-diff gate confirmed all 9 methods faithful). QA (Wave 2) wrote the seam test modeled VERBATIM on tests/test_wk105_ursina_app_debug_probe.py and ran the full DoD. URSINA RENDER SLICE -> deferred-screenshot model (live before/after captures deferred to the Sovereign end-test)."
+      },
+      "rounds": {
+        "wk113_w2": {
+          "sprint_id": "wk113_round_b_ursina_app_camera",
+          "round_id": "wk113_w2",
+          "status": "done",
+          "round_meta": {
+            "wave": "W2 (write the refactor SEAM test modeled verbatim on the WK105 debug-probe seam test; run full DoD; URSINA RENDER SLICE -> headless gates + deferred Sovereign captures)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "depends_on": "Agent 09 Wave 1 (camera methods moved to ursina_app_camera.py; frozen + PM verbatim-diff-verified before this round)"
+          },
+          "prompt_summary": "PM/plan-assigned (wk113_round_b_ursina_app_camera plan section 6, PM prompt 11_W2): create tests/test_wk113_ursina_app_camera.py modeled VERBATIM on tests/test_wk105_ursina_app_debug_probe.py (same 6-section structure, fixtures, AST/subprocess helpers), retargeted to game.graphics.ursina_app_camera and the 9 camera functions. ALL 9 are instance fns -> ALL owner-first; NO @staticmethod in this cluster, so the WK105 _save_window_screenshot_sync special-case section was OMITTED. Then run the full DoD and report a PASS/FAIL table. DO NOT modify ursina_app.py or ursina_app_camera.py. DO NOT COMMIT.",
+          "what_i_changed": "CREATED tests/test_wk113_ursina_app_camera.py (33 tests, all green). 6 sections: (1) existence + owner-first signature for all 9 fns [9+9 parametrized]; (2) wrapper delegation via spy+monkeypatch on object.__new__(UrsinaApp) bare instance, asserting args[0] is app + remaining args forwarded + result returned, per-wrapper extra-args map (_recenter_editor_camera_to_sim_xy->(1.0,2.0), update_zone_fog_color->(3.0,4.0), begin_camera_underground_transition->(-7.0,), all others ()) [9 parametrized] + 1 source/AST wrapper-call guard; (3) AST no-cycle guard (no module-top runtime import of ursina_app; TYPE_CHECKING UrsinaApp import allowed) [1]; (4) fresh-subprocess BOTH import orders ursina_app_camera<->ursina_app -> OK [2 parametrized]; (5) wrapper-source guard: ursina_app.py references ursina_app_camera.<fn> for each of the 9 (read utf-8-sig) [1]; (6) best-effort behavior-through-wrapper proof: bare app + begin_camera_underground_transition(-7.0) flips _camera_active_layer to -1 and _camera_transitioning to True (try/except + pytest.skip on shape mismatch) [1] -- this PASSED (not skipped). The 9 moved fns: _setup_ursina_camera_for_castle, _recenter_editor_camera_to_sim_xy, _reset_camera_to_default, _toggle_camera_lock, _toggle_underground_camera, _sync_ursina_camera_fov_from_zoom, update_zone_fog_color, begin_camera_underground_transition, begin_camera_surface_transition. NO production code edited.",
+          "test_counts": {
+            "new_seam_test_file": "tests/test_wk113_ursina_app_camera.py",
+            "new_seam_tests": 33,
+            "new_seam_tests_passed": 33,
+            "new_seam_tests_skipped": 0,
+            "breakdown": "sec1: 18 (9 existence + 9 owner-first); sec2: 10 (9 delegation + 1 source/AST guard); sec3: 1 (AST no-cycle); sec4: 2 (both import orders); sec5: 1 (wrapper-source); sec6: 1 (transition behavior, PASSED not skipped)"
+          },
+          "dod_results": {
+            "gate_1_full_pytest": {
+              "cmd": "python -m pytest -q",
+              "result": "PASS",
+              "detail": "1400 passed, 4 skipped, 0 failed in 223.73s"
+            },
+            "gate_2_determinism_guard": {
+              "cmd": "python tools/determinism_guard.py",
+              "result": "PASS",
+              "detail": "[determinism_guard] PASS: no violations found (excludes game/graphics/**)"
+            },
+            "gate_3_wk67_ai_digest": {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable -q",
+              "result": "PASS",
+              "detail": "1 passed (digest byte-identical b73961340c...d148ded; camera code not on AI path)"
+            },
+            "gate_4_qa_smoke_quick": {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "result": "PASS",
+              "detail": "[qa_smoke] DONE: PASS (all profiles exit_code=0)"
+            },
+            "gate_5_seam_plus_wk105": {
+              "cmd": "python -m pytest tests/test_wk113_ursina_app_camera.py tests/test_wk105_ursina_app_debug_probe.py -q",
+              "result": "PASS",
+              "detail": "63 passed (33 new WK113 + 30 WK105 sibling)"
+            }
+          },
+          "blocker_for_pm": "none -- all 5 DoD gates PASS. Ready for PM verbatim-diff gate (already done per kickoff context: all 9 methods byte-faithful) + final DoD + scoped commit.",
+          "constraints_honored": "Did NOT modify game/graphics/ursina_app.py or game/graphics/ursina_app_camera.py (Wave-1 frozen). ONLY added the test file. Did NOT git add/commit/push (PM owns the commit). Did NOT iterate beyond task.",
+          "milestone_note": "DEFERRED (URSINA RENDER SLICE): live before/after Ursina camera captures (castle framing, camera reset, camera-lock, underground/surface transition, zone-fog tint) to the Sovereign end-of-marathon test -- headless agents have no GPU/window (scoped exception per memory feedback_ursina_deferred_screenshots). Headless seam test + DoD gates are the in-sprint proof."
+        }
+      }
     }
   }
 }

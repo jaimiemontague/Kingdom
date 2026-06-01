@@ -5,6 +5,7 @@
   "name": "ExecutiveProducer_PM"
  },
  "notes": [
+  "2026-05-31 (Agent 01 WK112 CLOSED ca8da1d + WK113 KICKOFF): WK112 shipped+pushed (ca8da1d, 2f120b1..ca8da1d; validate_direct_prompt_output decomposed into _INTENT_HANDLERS per-intent table over _ResolveState/_ValidationInputs; full suite 1367 passed/4 skipped; WK67 digest byte-identical; PM differential cross-check IDENTICAL across 38 cases). WK113 = decompose the LAST major render god-file ursina_app.py (1272 LOC): extract its camera-control cluster (9 instance methods + 2 zone-fog consts, ~360 LOC) into NEW game/graphics/ursina_app_camera.py via the WK87-92/WK104-105 owner-arg pure-move pattern (precedent sibling: ursina_app_debug_probe.py). UrsinaApp keeps 9 delegating wrappers; byte-faithful move. RENDER SLICE -> deferred-screenshot model (live captures to Sovereign's end test). Verified by headless import smoke + both-import-orders + a WK105-style seam test + full pytest + determinism_guard + WK67 digest + qa_smoke + PM verbatim-diff gate. Waves: 09 W1 move -> 11 W2 seam test + DoD -> PM verbatim gate + commit. Plan: .cursor/plans/wk113_round_b_ursina_app_camera.plan.md.",
   "2026-05-31 (Agent 01 WK110 CLOSED 2f120b1 + WK112 KICKOFF): WK110 shipped+pushed (2f120b1, ai/vocab.py vocabulary consolidation; suite 1326 passed/4 skipped; digest byte-identical; definitions-only diff). CHECKPOINT held at 2f120b1; Sovereign asked about adding features, then said 'continue on the roadmap for now'. PM DECISION: keep executing BEHAVIOR-PRESERVING headless refactors; HOLD WK111 (WK34 zombie-type purge of 8 buildings) until the Sovereign rules keep/purge — several flagged types read as unfinished FEATURES (wizard_tower, library, royal_gardens, racial dwellings), so deleting them is a PRODUCT decision, not slop-cleanup. WK112 = decompose the 294-line god-function validate_direct_prompt_output (ai/direct_prompt_validator.py:118-412) — lift its 8-branch intent if/elif chain into a per-intent handler table (_INTENT_HANDLERS) over a _ResolveState dataclass; prelude + critical-HP redirect (extracted) + output tail stay in main. Behavior-preserving (chat path, NOT autonomous digest path -> WK67 digest trivially stable). Safety net = 38-case differential golden net captured by PM from HEAD (every branch). Wave order MANDATORY: 11 writes golden net GREEN on unmodified code (W0) -> 06 refactors (W1) -> 11 full DoD (W2). Plan: .cursor/plans/wk112_round_b_direct_prompt_validator.plan.md.",
   "2026-05-31 (Agent 01 WK109 CLOSED e3212e2 + WK110 KICKOFF): WK109 shipped+pushed (e3212e2, FOG/C finale ensure_fog_overlay + ensure_grid_debug_overlay -> ursina_fog_overlay.py; fog_collab 482->170; suite ->1314; digest byte-identical; PM verbatim ZERO diffs). MILESTONE: fog_collab god-file 1783->170 FULLY DECOMPOSED (5 leaf modules WK104/106/107/108/109 + thin facade). PIVOT to non-render headless roadmap. Grounding agent a7c2b23b024665466 found the audit LOC numbers are STALE (config/world/sim_engine/hero/input/mock_provider/context_builder work already done). WK110 KICKOFF = ai/vocab.py consolidation (ToolAction/DirectIntent str-Enums + place frozensets; derive+re-export legacy names byte-identical; digest-safe by construction; SCOPE OUT TaskRouter=Move12). Fully headless-verifiable. WK111=WK34 zombie purge, WK112=validator split queued. Dispatching Agent 06 (W1).",
   "2026-05-31 (Agent 01 WK108 CLOSED 0eaf55f + WK109 KICKOFF): WK108 shipped+pushed (0eaf55f, FOG/B-2 build_3d_terrain + _batch_static_terrain_for_chunks -> ursina_terrain_build.py; fog_collab 910->482; suite ->1300; digest byte-identical; PM verbatim both faithful; 8-point test_terrain_perf retarget + WK104 back-import invariant reconciled by updating the test to follow migrated consumers). MILESTONE: fog_collab 1783 (pre-WK104) -> 482. WK109 KICKOFF = FOG/C finale: ensure_fog_overlay + ensure_grid_debug_overlay (~315 LOC) -> ursina_fog_overlay.py. Cleanest move (only self._r, no own-slots, no intra-calls; pre-grounded agent a82bdea0d0fc5e898). Orphan sweep + FOG_TEX_BRIDGE_KEY relocation; test_terrain_perf L719-720 shared-object patches retarget tfc->ufo. After WK109 fog_collab = __init__ + wrappers (stateful facade) = god-file DONE. Then pivot to ursina_app.py / non-render headless roadmap. Dispatching Agent 09 (W1).",
@@ -6043,7 +6044,7 @@
   },
   "wk112_round_b_direct_prompt_validator": {
    "sprint_meta": {
-    "status": "in_progress",
+    "status": "closed_success",
     "created_utc": "2026-05-31",
     "plan_doc": ".cursor/plans/wk112_round_b_direct_prompt_validator.plan.md",
     "goal": "Decompose validate_direct_prompt_output (ai/direct_prompt_validator.py, 294-line god-function, L118-412) into a per-intent handler table: lift each of the 8 intent if/elif branches verbatim into a _handle_* fn keyed in _INTENT_HANDLERS, mutating a shared _ResolveState dataclass over a frozen _ValidationInputs read-context; extract the critical-HP redirect to _apply_critical_health_redirect; keep the prelude (normalize/deferred-combat/allow-list gating) and the output-assembly tail inline. Public signature byte-identical; output byte-identical for every input.",
@@ -6059,13 +6060,26 @@
      "public signature unchanged; both consumer modules import clean",
      "PM cross-check: re-run capture vs frozen _pm_wk112_golden_HEAD.json -> IDENTICAL"
     ],
-    "closeout_evidence": {}
+    "closeout_evidence": {
+     "commit_sha": "ca8da1d",
+     "refactor": "ai/direct_prompt_validator.py: validate_direct_prompt_output 8-branch intent if/elif lifted into _INTENT_HANDLERS (7 _handle_* fns; _handle_clear_tool covers status_report + no_action_chat_only) over mutable _ResolveState + frozen _ValidationInputs; critical-HP redirect -> _apply_critical_health_redirect (exact-original conjunct order); prelude + output tail + 7 helpers + constants unchanged. diffstat 296 ins / 196 del.",
+     "new_test": "tests/test_wk112_direct_prompt_validator.py = 41 tests (38 parametrized golden + signature + key-set + handler-table); golden captured from pre-refactor HEAD",
+     "behavioral_equivalence": "PM differential cross-check IDENTICAL across all 38 cases (refactored vs frozen HEAD capture)",
+     "dod": {
+      "full_pytest": "1367 passed / 4 skipped / 0 failed",
+      "determinism_guard": "PASS (no violations)",
+      "wk67_digest": "b73961340c...d148ded byte-identical; chat-purity pins (chat_path_consumes_pure_ai_view, engine_chat_caller_uses_build_ai_view) GREEN",
+      "qa_smoke_quick": "DONE: PASS",
+      "consumers_import_clean": "ai/llm_brain.py + ai/providers/mock/direct_prompt.py OK; public signature unchanged"
+     },
+     "waves": "11 W0 (golden net GREEN on unmodified code) -> 06 W1 (decomposition, zero golden-case failures) -> PM full DoD gate"
+    }
    },
    "rounds": {
     "wk112_round_b_kickoff": {
      "round_meta": {
       "round": "wk112_round_b_kickoff",
-      "status": "in_progress",
+      "status": "closed_success",
       "created_utc": "2026-05-31",
       "agents": [
        "11 (W0 golden characterization net, GREEN on unmodified code)",
@@ -6079,6 +6093,49 @@
       "11_W0": "Wave 0: write tests/test_wk112_direct_prompt_validator.py EXACTLY per plan §4 (copy the §4-GOLDEN JSON verbatim into _GOLDEN_JSON). Mark test_intent_handler_table_covers_all_supported_intents xfail(strict=True) for W0. Prove all OTHER tests GREEN on the UNMODIFIED validator. DO NOT COMMIT.",
       "06_W1": "Wave 1: edit ONLY ai/direct_prompt_validator.py per plan §3 — lift each of the 8 intent branches verbatim into _handle_* fns over _ResolveState/_ValidationInputs + _INTENT_HANDLERS; extract _apply_critical_health_redirect (EXACT original conjunct order); keep prelude+tail+helpers unchanged. Remove the W0 xfail. Self-verify: wk112 net 40 GREEN, the 53 direct-prompt/vocab tests GREEN, both consumers import clean. DO NOT COMMIT.",
       "11_W2": "Wave 2: full DoD — pytest -q (0 failed), determinism_guard, WK67 digest + chat-purity pins, qa_smoke --quick, wk112 net 40 GREEN no xfail. Report a PASS/FAIL table to PM. DO NOT COMMIT."
+     },
+     "pm_commits": [
+      "ca8da1d (pushed 2f120b1..ca8da1d origin main)"
+     ]
+    }
+   }
+  },
+  "wk113_round_b_ursina_app_camera": {
+   "sprint_meta": {
+    "status": "in_progress",
+    "created_utc": "2026-05-31",
+    "plan_doc": ".cursor/plans/wk113_round_b_ursina_app_camera.plan.md",
+    "goal": "Extract the camera-control cluster (9 instance methods: _setup_ursina_camera_for_castle, _recenter_editor_camera_to_sim_xy, _reset_camera_to_default, _toggle_camera_lock, _toggle_underground_camera, _sync_ursina_camera_fov_from_zoom, update_zone_fog_color, begin_camera_underground_transition, begin_camera_surface_transition; + the 2 zone-fog class consts _ZONE_FOG_COLORS/_DEFAULT_FOG_COLOR) from ursina_app.py into NEW game/graphics/ursina_app_camera.py as owner-arg module functions; UrsinaApp keeps 9 exact-signature delegating wrappers. camera_active_layer property and _is_chat_active stay. Byte-faithful move; ursina_app.py 1272 -> ~915 LOC.",
+    "version_target": "patch (behavior-preserving pure-move)",
+    "verification_class": "URSINA RENDER SLICE -> deferred-screenshot (no GPU headless; live captures DEFERRED to Sovereign end test). In-sprint gates: headless import smoke, fresh-subprocess both-import-orders, WK105-style seam test (existence/owner-first/wrapper-delegation/AST-no-cycle/wrapper-source/behavior-through-wrapper), full pytest, determinism_guard (excludes game/graphics/**), WK67 digest, qa_smoke, PM AST verbatim-diff gate.",
+    "notes": "Acyclic confirmed: ursina_renderer does NOT import ursina_app, so the new module's top-level `from ursina_renderer import SCALE, sim_px_to_world_xz` is safe; ursina_app imports ursina_app_camera ONLY lazily in wrappers. All camera-method callers live INSIDE ursina_app.py (input handler, run loop, __init__) so they stay self.<wrapper> untouched. _recenter is stored as engine._ursina_recenter_fn (bound wrapper) — preserved. ursina_app.py may carry a BOM -> read utf-8-sig in the PM gate.",
+    "definition_of_done": [
+     "ursina_app_camera.py: 9 owner-arg fns + 2 consts; ZERO self code-identifiers (AST)",
+     "ursina_app.py: 9 delegating wrappers exact sigs; consts+bodies removed; property+_is_chat_active kept; ~915 LOC",
+     "PM verbatim-diff gate: all 9 faithful (only the intra-cluster call + moved-const rewrites)",
+     "tests/test_wk113_ursina_app_camera.py green (all 6 sections)",
+     "full pytest 0 failed; determinism_guard clean; WK67 digest byte-identical; qa_smoke DONE: PASS",
+     "both fresh-import orders OK",
+     "DEFERRED live Ursina camera captures -> Sovereign end test"
+    ],
+    "closeout_evidence": {}
+   },
+   "rounds": {
+    "wk113_round_b_kickoff": {
+     "round_meta": {
+      "round": "wk113_round_b_kickoff",
+      "status": "in_progress",
+      "created_utc": "2026-05-31",
+      "agents": [
+       "09 (W1 owner-arg pure-move of the camera cluster -> ursina_app_camera.py)",
+       "11 (W2 WK105-style seam test + full DoD)"
+      ],
+      "model": "claude-opus-4-8"
+     },
+     "pm_status_summary": "PM ground the cluster fully: read all 9 camera methods + __init__ camera attrs + every caller + the cycle/test-coverage story. The move map, intra-cluster rewrites, moved consts, new-module import set, and the 9 wrappers are fully specified in the plan; the seam test is modeled verbatim on the WK105 debug-probe test. PM runs the AST verbatim-diff gate before commit.",
+     "pm_agent_prompts": {
+      "09_W1": "Wave 1: create game/graphics/ursina_app_camera.py and move the 9 camera methods + 2 zone-fog consts per plan §1-§5 (owner-arg pure-move; copy bodies VERBATIM self->owner; apply the 3 intra-cluster call rewrites §2 + 2 moved-const reads §3; function-local imports stay local). Replace the 9 method bodies in ursina_app.py with the lazy-delegating wrappers (exact names/sigs). Leave camera_active_layer property + _is_chat_active. Self-verify per §5. DO NOT COMMIT.",
+      "11_W2": "Wave 2: write tests/test_wk113_ursina_app_camera.py modeled VERBATIM on tests/test_wk105_ursina_app_debug_probe.py (6 sections, 9 fns, all owner-first, no staticmethod). Run full DoD per plan §6 (pytest 0 failed, determinism_guard, WK67 digest, qa_smoke, the new seam test + wk105 green). Report PASS/FAIL. DO NOT COMMIT."
      },
      "pm_commits": []
     }
