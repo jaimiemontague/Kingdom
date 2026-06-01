@@ -7,9 +7,9 @@ view. This is purely behavior-preserving: the derived dicts have identical keys 
 to the pre-WK70 hand-maintained copies (guarded by ``tests/test_wk70_building_registry.py``).
 
 Membership rules (encode exactly — readers depend on them):
-  - All 30 ``BuildingType`` enum keys are present, including the 8 WK34 "zombie" types
-    (``purge_candidate=True``), which are kept this sprint and deleted in a later guarded
-    purge sprint.
+  - Every ``BuildingType`` enum key is present (guarded by ``assert_building_type_coverage``).
+    The 8 WK34 "zombie" types (gnome_hovel/elven_bungalow/dwarven_settlement/ballista_tower/
+    wizard_tower/fairgrounds/library/royal_gardens) were deleted in WK114 Round B.
   - The 5 monster lairs (``is_lair=True``) appear in the SIZES/COLORS views but are
     EXCLUDED from the COSTS/MAX_OCCUPANTS views (they currently hit the
     ``Building.__init__`` fallbacks cost=100 / max_occupants=8). The ``cost``/
@@ -47,7 +47,6 @@ class BuildingDef:
     hero_class: str | None  # warrior/ranger/rogue/wizard for guilds, cleric for temple
     is_lair: bool = False
     is_poi: bool = False
-    purge_candidate: bool = False  # the 8 WK34-removed types (kept this sprint, deleted later)
 
 
 def _b(
@@ -63,7 +62,6 @@ def _b(
     hero_class: str | None = None,
     is_lair: bool = False,
     is_poi: bool = False,
-    purge_candidate: bool = False,
 ) -> BuildingDef:
     """Build a BuildingDef. ``cls`` is always None here (resolved lazily); see module docstring."""
     return BuildingDef(
@@ -79,7 +77,6 @@ def _b(
         hero_class=hero_class,
         is_lair=is_lair,
         is_poi=is_poi,
-        purge_candidate=purge_candidate,
     )
 
 
@@ -131,21 +128,11 @@ BUILDING_DEFS: dict[str, BuildingDef] = {
     "temple_krolm": _b("temple_krolm", (3, 3), (139, 0, 0), 400, 4),
     "temple_helia": _b("temple_helia", (3, 3), (255, 165, 0), 400, 4),
     "temple_lunord": _b("temple_lunord", (3, 3), (176, 196, 222), 400, 4),
-    # Phase 3: Non-Human Dwellings — WK34 zombies (purge candidates)
-    "gnome_hovel": _b("gnome_hovel", (2, 2), (128, 128, 0), 0, 0, purge_candidate=True),
-    "elven_bungalow": _b("elven_bungalow", (2, 2), (34, 139, 34), 0, 0, purge_candidate=True),
-    "dwarven_settlement": _b("dwarven_settlement", (2, 2), (101, 67, 33), 0, 0, purge_candidate=True),
     # Phase 4: Defensive Structures
     "guardhouse": _b(
         "guardhouse", (2, 2), (128, 128, 128), 300, 0,
         hotkey="U", placeable=True, placeable_order=9,
     ),
-    "ballista_tower": _b("ballista_tower", (1, 1), (64, 64, 64), 0, 0, purge_candidate=True),
-    "wizard_tower": _b("wizard_tower", (2, 2), (138, 43, 226), 0, 0, purge_candidate=True),
-    # Phase 5: Special Buildings — WK34 zombies (purge candidates)
-    "fairgrounds": _b("fairgrounds", (3, 3), (255, 20, 147), 0, 0, purge_candidate=True),
-    "library": _b("library", (2, 2), (25, 25, 112), 0, 0, purge_candidate=True),
-    "royal_gardens": _b("royal_gardens", (2, 2), (124, 252, 0), 0, 0, purge_candidate=True),
     # Phase 6: Palace
     "palace": _b("palace", (3, 3), (184, 134, 11), 0, 0),
     # Neutral auto-spawn buildings (not player-placeable)
@@ -177,7 +164,7 @@ BUILDING_DEFS: dict[str, BuildingDef] = {
 
 
 # Lazy class-name map for resolving BuildingDef.cls without an import cycle (see docstring).
-# Keys here mirror the current BuildingFactory.BUILDING_REGISTRY (27 player/neutral classes).
+# Keys here mirror the current BuildingFactory.BUILDING_REGISTRY (19 player/neutral classes).
 # castle/house/farm and the POIs are intentionally absent (cls=None for them). Lairs are
 # constructed via the lair-spawn path, not the building factory, so they are absent too.
 _CLASS_NAMES: dict[str, str] = {
@@ -198,15 +185,7 @@ _CLASS_NAMES: dict[str, str] = {
     "temple_krolm": "TempleKrolm",
     "temple_helia": "TempleHelia",
     "temple_lunord": "TempleLunord",
-    "gnome_hovel": "GnomeHovel",
-    "elven_bungalow": "ElvenBungalow",
-    "dwarven_settlement": "DwarvenSettlement",
     "guardhouse": "Guardhouse",
-    "ballista_tower": "BallistaTower",
-    "wizard_tower": "WizardTower",
-    "fairgrounds": "Fairgrounds",
-    "library": "Library",
-    "royal_gardens": "RoyalGardens",
     "palace": "Palace",
 }
 

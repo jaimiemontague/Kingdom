@@ -1,4 +1,4 @@
-{
+﻿{
  "schema_version": "2.0",
  "agent": {
   "id": "05",
@@ -1114,6 +1114,67 @@
      },
      "scope_compliance": "Touched ONLY game/entities/enemy.py. Did NOT touch lair.py, spawner.py, combat.py, config.py. No new file created (table lives in enemy.py). Did NOT rebalance any stat. DID NOT COMMIT.",
      "notes_for_pm": "Ready for Agent 11 W2 stat-parity test. Note for the parity test: wolf/skeleton/skeleton_archer must NOT have an `attackers` attribute (only goblin/spider/bandit/bandit_lord/demon_overlord do); bosses (bandit_lord/demon_overlord) have name+is_boss; non-bosses have neither name nor is_boss attribute. register_attacker now exists on the base (gated) -- this is intentional and digest-neutral."
+    }
+   }
+  },
+  "wk114_round_b_zombie_building_purge": {
+   "sprint_meta": {
+    "title": "WK114 Round B: purge the 8 WK34 zombie building types",
+    "plan_ref": ".cursor/plans/wk114_round_b_zombie_building_purge.plan.md",
+    "created_utc": "2026-05-31T00:00:00Z"
+   },
+   "rounds": {
+    "wk114_round_b_w1": {
+     "sprint_id": "wk114_round_b_zombie_building_purge",
+     "round_id": "wk114_round_b_w1",
+     "status": "done",
+     "round_meta": {
+      "role": "05_GameplaySystemsDesigner",
+      "wave": "W1 (the entire atomic code purge, plan sections A-G)",
+      "plan_ref": ".cursor/plans/wk114_round_b_zombie_building_purge.plan.md (section 2 A-G)",
+      "created_utc": "2026-05-31T00:00:00Z",
+      "launched_by": "tools/ai_studio_orchestrator"
+     },
+     "prompt_text": "Wave 1: execute the ENTIRE code purge per plan section 2 (A-G) in one atomic pass. Delete the 8 zombie building types (gnome_hovel, elven_bungalow, dwarven_settlement, ballista_tower, wizard_tower, fairgrounds, library, royal_gardens). Remove ONLY zombie members from shared lists; KEEP guardhouse/palace/guilds/temples/poi_wizard_tower. Self-verify per section 2. The full suite WILL be red (pinned tests) - expected; Agent 11 fixes it. DO NOT COMMIT.",
+     "what_i_changed": [
+      "A. game/content/buildings.py: removed the 8 BUILDING_DEFS entries + the 8 _CLASS_NAMES entries; removed the now-dead purge_candidate field from BuildingDef dataclass and the _b() factory param/passthrough; updated module docstring + _CLASS_NAMES comment (27->19). KEEP assert_building_type_coverage + poi_wizard_tower.",
+      "A. game/entities/buildings/types.py: removed the 8 BuildingType enum members (GNOME_HOVEL..ROYAL_GARDENS). KEEP GUARDHOUSE, PALACE.",
+      "A. game/entities/buildings/dwellings.py: file contained ONLY the 3 zombie classes -> DELETED via git rm (staged, not committed).",
+      "A. game/entities/buildings/defensive.py: deleted BallistaTower + WizardTower classes; removed now-unused is_research_unlocked import. KEEP Guardhouse + the file.",
+      "A. game/entities/buildings/special.py: deleted Fairgrounds, Library, RoyalGardens classes; removed now-unused imports (RESEARCH_DURATION_MS_PER_100_GOLD, sim_now_ms, is_research_unlocked, unlock_research). KEEP Palace + the file.",
+      "A. game/entities/buildings/__init__.py: removed BallistaTower/WizardTower from defensive import, removed whole dwellings import line, removed Fairgrounds/Library/RoyalGardens from special import; removed the 8 names from __all__.",
+      "A. game/entities/__init__.py: removed the 8 from the re-export block (dwellings line + zombie defensive/special names).",
+      "B. game/sim_engine.py: removed the 3 standalone elif branches (ballista_tower, wizard_tower, fairgrounds) in _update_buildings. KEPT the shared research-advance loop (~L885) and the shared _last_ranged_event collection loop (~L918).",
+      "B. game/systems/buffs.py: removed the royal_gardens aura block (sole aura producer); KEPT generic Buff/apply_or_refresh_buff/remove_expired_buffs infra and the prune-expired loop; updated module docstring.",
+      "B. game/entities/peasant.py: removed gnome_hovel detection; speed_mult is now unconditional 1.0.",
+      "C. config.py: BUILDING_CONSTRAINTS -> {}; removed ballista_tower prereq from BUILDING_PREREQUISITES; removed 3 dwellings from TAX_STASH_BUILDING_TYPES; removed 5 zombies from NON_TAX_STASH_BUILDING_TYPES. KEPT STARTING_BUILDINGS untouched.",
+      "D. ai/decision_moments.py: removed elven_bungalow/dwarven_settlement/gnome_hovel from _inside_recovery_building set. KEPT castle/inn/house/farm.",
+      "D. game/sim/hero_profile.py: removed the 8 zombies from PROFILE_DISCOVERY_BUILDING_TYPES. KEPT poi_wizard_tower, guilds, economic types, palace.",
+      "E. game/ui/building_renderers/__init__.py: removed 3 dwellings from _GUILD_TYPES, ballista/wizard_tower from _DEFENSIVE_TYPES, fairgrounds/library/royal_gardens from _SPECIAL_TYPES. PANEL_RENDERERS derives from those sets.",
+      "E. game/ui/building_renderers/special_panel.py: deleted _render_fairgrounds/_render_library/_render_royal_gardens + their dispatch; removed now-unused COLOR_GOLD import; updated class docstring. KEPT _render_palace.",
+      "E. game/ui/building_renderers/defensive_panel.py: deleted _render_ballista_tower/_render_wizard_tower + their dispatch; updated class docstring. KEPT _render_guardhouse + _render_hp_block.",
+      "E. game/ui/building_panel.py: removed the library research click handler + the library hover branch + the now-orphaned library_research_rects/library_research_hovered attribute defs and their reset (only consumer was the deleted _render_library).",
+      "E. game/ui/hud.py: removed the stale controls-overlay rows for the 8 (collapsed temple/guardhouse row; dropped the F/I/R row).",
+      "E. game/ui/pause_menu.py: removed the 8 keybind-help strings (G/E/V/Y/O/F/I/R).",
+      "E. game/input/keyboard.py: replaced the stale 'WK34 REMOVED - will return' comment with a WK114-purged note.",
+      "F. game/graphics/renderers/building_renderer.py: removed the 8 center-label _LABELS entries + the ballista_tower attack-range circle special-case.",
+      "F. game/graphics/ursina_renderer.py: removed the 8 label-map entries (ballista_tower/wizard_tower/fairground/library/gardens/gnome_hovel/elven_bungalow/dwarven_settlement). poi_wizard_tower not present in that map.",
+      "G. assets/prefabs/buildings/gnome_hovel_v1.json: LEFT in place (orphaned cosmetic, not imported by code; plan permits leave-or-delete)."
+     ],
+     "verification_raw": {
+      "1_import_smoke": "PASS - all 13 modules import.",
+      "2_coverage_assert": "PASS - 'coverage OK' (assert_building_type_coverage passes; enum subset of defs).",
+      "3_purge_candidate_grep": "ZERO hits - grep -rn purge_candidate game/ ai/ config.py exit=1 (no matches).",
+      "4_no_dangling_refs": "PASS - source-only grep of the 8 type strings + 8 class names: ZERO class-name hits; type-string hits are ONLY poi_wizard_tower (KEEP), WK114 purge-doc comments (buildings.py docstring, keyboard.py), shared 'Library' research-pattern comments (base.py/economic.py/config.py - serve Marketplace/Blacksmith), and 'sprite library' (interior_view_panel.py, unrelated SpriteLibrary).",
+      "5_kept_types_intact": "True True True True; zombies gone: True.",
+      "6_lengths": "len(BUILDING_DEFS) = 39 (was 47, -8); len(BUILDING_REGISTRY) = 19 (was 27, -8); zombie classes in registry: [].",
+      "determinism_guard": "PASS (independent run) - no violations found, exit 0.",
+      "pytest_quick": "RED (EXPECTED per plan) - 4 test-collection errors from pinned/collateral test files importing deleted modules/classes. Agent 11 fixes in Wave 2."
+     },
+     "flags_for_pm": [
+      "EXTRA collateral test files NOT in Agent 11's plan-listed set (plan section 3 lists test_wk70/test_buffs/test_wk61_r6_tax_gold_overlay_data/test_wk68/test_hero_profile_contract): (a) tests/test_wk65_buildings_systems_characterization.py imports BallistaTower from game.entities.buildings.defensive (L45) and exercises it (L144/L174); (b) tests/test_wk61_r6_tax_gold_overlay_data.py imports game.entities.buildings.dwellings (deleted) and is transitively imported by tests/test_wk61_r6_qa_renderer_tax_coverage.py + tests/test_wk61_r7_tax_overlay_none_guard.py. Agent 11 should cover these or PM should adjudicate.",
+      "Did NOT touch tests/ (Agent 11 domain), the PM hub, or game/engine.py. dwellings.py deletion staged via git rm only (NOT committed). No git add/commit/push performed."
+     ]
     }
    }
   }

@@ -7,11 +7,6 @@ from config import NON_TAX_STASH_BUILDING_TYPES, TAX_RATE, TAX_STASH_BUILDING_TY
 from game.entities.buildings.base import Building
 from game.entities.buildings.castle import Castle
 from game.entities.buildings.defensive import Guardhouse
-from game.entities.buildings.dwellings import (
-    DwarvenSettlement,
-    ElvenBungalow,
-    GnomeHovel,
-)
 from game.entities.buildings.economic import Blacksmith, Inn, Marketplace, TradingPost
 from game.entities.buildings.guilds import (
     RangerGuild,
@@ -19,7 +14,6 @@ from game.entities.buildings.guilds import (
     WarriorGuild,
     WizardGuild,
 )
-from game.entities.buildings.special import Fairgrounds, Library
 from game.entities.buildings.temples import TempleAgrela, TempleKrolm
 from game.entities.hero import Hero
 from game.entities.neutral_buildings import Farm, FoodStand, House
@@ -34,9 +28,6 @@ TAX_STASH_INSTANCES = [
     ("wizard_guild", WizardGuild(0, 0)),
     ("temple_agrela", TempleAgrela(0, 0)),
     ("temple_krolm", TempleKrolm(0, 0)),
-    ("gnome_hovel", GnomeHovel(0, 0)),
-    ("elven_bungalow", ElvenBungalow(0, 0)),
-    ("dwarven_settlement", DwarvenSettlement(0, 0)),
     ("house", House(0, 0)),
     ("farm", Farm(0, 0)),
     ("food_stand", FoodStand(0, 0)),
@@ -47,8 +38,6 @@ NON_TAX_STASH_INSTANCES = [
     ("guardhouse", Guardhouse(0, 0)),
     ("inn", Inn(0, 0)),
     ("trading_post", TradingPost(0, 0)),
-    ("fairgrounds", Fairgrounds(0, 0)),
-    ("library", Library(0, 0)),
 ]
 
 

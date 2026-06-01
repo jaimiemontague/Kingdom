@@ -7,9 +7,9 @@ proves the deletions are inert.
 
 What is pinned (and where the dedup lands later):
   1. Ranged-tower fire cadence  -> Round C `RangedAttackMixin`
-       * Guardhouse and BallistaTower set the SINGULAR `_last_ranged_event`
-         with the expected fields, deal damage to an in-range enemy, and then
-         respect their cooldown (no second shot until it elapses).
+       * Guardhouse sets the SINGULAR `_last_ranged_event` with the expected
+         fields, deals damage to an in-range enemy, and then respects its
+         cooldown (no second shot until it elapses).
        * We deliberately DO NOT assert on `_last_ranged_events` (plural) — that
          multi-arrow emission is entangled with the guardhouse and is
          explicitly deferred to Round C.
@@ -42,7 +42,7 @@ from config import (
     SKELETON_ATTACK,
 )
 from game.entities.buildings.base import RESEARCH_UNLOCKS
-from game.entities.buildings.defensive import BallistaTower, Guardhouse
+from game.entities.buildings.defensive import Guardhouse
 from game.entities.buildings.economic import Marketplace, TradingPost
 from game.entities.enemy import Goblin, Skeleton
 from game.systems.difficulty import DifficultyLevel, DifficultySystem
@@ -140,45 +140,17 @@ def test_guardhouse_ranged_clears_event_when_no_target_in_range() -> None:
     assert gh.target is None
 
 
-def test_ballista_ranged_fires_sets_singular_event_and_respects_cooldown() -> None:
-    """BallistaTower.update deals its attack_damage to an in-range enemy, sets
-    the singular _last_ranged_event, and respects attack_interval cooldown."""
-    ballista = BallistaTower(6, 7)
-    enemy = _enemy_at(ballista.center_x, ballista.center_y)
-    dmg = ballista.attack_damage
-    interval = ballista.attack_interval
-
-    # First shot (cooldown starts at 0.0).
-    ballista.update(dt=0.001, enemies=[enemy])
-    assert enemy.hp == 1000 - dmg
-
-    event = ballista._last_ranged_event
-    assert event is not None
-    assert event["type"] == "ranged_projectile"
-    assert event["to_x"] == float(enemy.x)
-    assert event["to_y"] == float(enemy.y)
-    assert ballista.target is enemy
-
-    # Short tick: still on cooldown, no second shot.
-    ballista.update(dt=interval / 4.0, enemies=[enemy])
-    assert enemy.hp == 1000 - dmg
-
-    # After the interval elapses, it fires again.
-    ballista.update(dt=interval, enemies=[enemy])
-    assert enemy.hp == 1000 - 2 * dmg
-
-
 def test_unconstructed_ranged_tower_does_not_fire() -> None:
     """An in-progress (unconstructed) tower performs no ranged attack — pins the
     `if not self.is_constructed: return` guard at the top of update()."""
-    ballista = BallistaTower(6, 7)
-    ballista.is_constructed = False
-    enemy = _enemy_at(ballista.center_x, ballista.center_y)
+    gh = Guardhouse(6, 7)
+    gh.is_constructed = False
+    enemy = _enemy_at(gh.center_x, gh.center_y)
 
-    ballista.update(dt=1.0, enemies=[enemy])
+    gh.update(dt=1.0, guards_list=[], enemies=[enemy])
 
     assert enemy.hp == 1000
-    assert ballista._last_ranged_event is None
+    assert gh._last_ranged_event is None
 
 
 # ---------------------------------------------------------------------------

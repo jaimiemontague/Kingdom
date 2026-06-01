@@ -189,15 +189,10 @@ BUILDING_SIZES = {k: d.size for k, d in BUILDING_DEFS.items()}          # incl. 
 BUILDING_COLORS = {k: d.color for k, d in BUILDING_DEFS.items()}       # incl. lairs + POIs
 
 # Building constraints (mutually exclusive buildings)
-BUILDING_CONSTRAINTS = {
-    "gnome_hovel": ["elven_bungalow", "dwarven_settlement"],
-    "elven_bungalow": ["gnome_hovel", "dwarven_settlement"],
-    "dwarven_settlement": ["gnome_hovel", "elven_bungalow"],
-}
+BUILDING_CONSTRAINTS = {}
 
 # Building prerequisites (required buildings)
 BUILDING_PREREQUISITES = {
-    "ballista_tower": ["dwarven_settlement"],
     "temple": [],
 }
 
@@ -341,9 +336,6 @@ TAX_STASH_BUILDING_TYPES = frozenset({
     "temple_krolm",
     "temple_helia",
     "temple_lunord",
-    "gnome_hovel",
-    "elven_bungalow",
-    "dwarven_settlement",
     "house",
     "farm",
     "food_stand",
@@ -355,11 +347,6 @@ NON_TAX_STASH_BUILDING_TYPES = frozenset({
     "inn",
     "trading_post",
     "guardhouse",
-    "ballista_tower",
-    "wizard_tower",
-    "fairgrounds",
-    "library",
-    "royal_gardens",
 })
 TAX_COLLECTOR_REST_AFTER_RETURN_SEC = 10.0  # Rest at castle 10s after returning a nice haul
 TAX_COLLECTOR_NICE_HAUL_GOLD = 20  # Gold deposited >= this triggers the short rest

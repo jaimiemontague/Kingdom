@@ -150,9 +150,9 @@ def handle_keydown(ih: "InputHandler", event):
 
     # WK70 W2: build hotkeys (1-8 + t + u) via the derived reverse-map (was an if/elif
     # chain). Keys are lowercased to match event.key; see BUILD_HOTKEY_TO_TYPE above.
-    # WK34 REMOVED — will return in future sprint:
-    # gnome_hovel (G), elven_bungalow (E), dwarven_settlement (V),
-    # ballista_tower (Y), wizard_tower (O), fairgrounds (F), library (I), royal_gardens (R)
+    # WK114 Round B: the 8 WK34 "zombie" building types (gnome_hovel/elven_bungalow/
+    # dwarven_settlement/ballista_tower/wizard_tower/fairgrounds/library/royal_gardens)
+    # were deleted; their old hotkeys (G/E/V/Y/O/F/I/R) are now free.
     elif event.key in BUILD_HOTKEY_TO_TYPE:
         ih.select_building_for_placement(BUILD_HOTKEY_TO_TYPE[event.key])
 

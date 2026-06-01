@@ -893,12 +893,6 @@ class SimEngine:
                 building.update(dt, self.economy)
             elif building.building_type == "marketplace" and hasattr(building, "update"):
                 building.update(dt, self.economy)
-            elif building.building_type == "ballista_tower" and hasattr(building, "update"):
-                building.update(dt, self.enemies)
-            elif building.building_type == "wizard_tower" and hasattr(building, "update"):
-                building.update(dt, self.enemies)
-            elif building.building_type == "fairgrounds" and hasattr(building, "update"):
-                building.update(dt, self.economy, self.heroes)
             elif building.building_type == "guardhouse" and hasattr(building, "update"):
                 # WK60: pass enemies list for arrow attacks (Feature 5)
                 should_spawn = building.update(dt, [g for g in self.guards if g.home_building == building], enemies=self.enemies)

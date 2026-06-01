@@ -60,8 +60,6 @@ class BuildingPanel:
         self.close_button_hovered = False
         self.research_button_rect: pygame.Rect | None = None
         self.research_button_hovered = False
-        self.library_research_rects: dict[str, pygame.Rect] = {}
-        self.library_research_hovered: str | None = None
         self.upgrade_button_rect: pygame.Rect | None = None
         self.upgrade_button_hovered = False
         self.demolish_button_rect: pygame.Rect | None = None
@@ -218,14 +216,6 @@ class BuildingPanel:
                 if self.selected_building.can_upgrade() and self.selected_building.upgrade(economy):
                     return True
 
-        if building_type == "library" and self.library_research_rects:
-            for research_name, rect in self.library_research_rects.items():
-                if self._rect_in_viewport(rect) and rect.collidepoint(mouse_pos):
-                    if hasattr(self.selected_building, "is_constructed") and not self.selected_building.is_constructed:
-                        return True
-                    self.selected_building.research(research_name, economy, game_state)
-                    return True
-
         if building_type == "blacksmith" and self.blacksmith_research_rects:
             for research_key, rect in self.blacksmith_research_rects.items():
                 if self._rect_in_viewport(rect) and rect.collidepoint(mouse_pos):
@@ -267,13 +257,6 @@ class BuildingPanel:
 
         building_type = self._building_type_key(self.selected_building) if (self.visible and self.selected_building) else ""
 
-        self.library_research_hovered = None
-        if self.visible and self.selected_building and building_type == "library":
-            for research_name, rect in self.library_research_rects.items():
-                if self._rect_in_viewport(rect) and rect.collidepoint(mouse_pos):
-                    self.library_research_hovered = research_name
-                    break
-
         self.blacksmith_research_hovered = None
         if self.visible and self.selected_building and building_type == "blacksmith":
             for research_key, rect in self.blacksmith_research_rects.items():
@@ -307,7 +290,6 @@ class BuildingPanel:
         self.panel_y = int(lr.y)
 
         building = self.selected_building
-        self.library_research_rects = {}
         self.blacksmith_research_rects = {}
         self.research_button_rect = None
         self.upgrade_button_rect = None

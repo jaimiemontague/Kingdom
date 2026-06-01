@@ -11,8 +11,8 @@ views equal them EXACTLY — both the key set and every value. If a future edit 
 ``BUILDING_DEFS`` (or the derivation logic) drifts any value or membership, this test fails.
 
 Covers Definition-of-Done item E (plan §4) and the membership invariants in plan §2:
-  * config.BUILDING_COSTS / SIZES / COLORS / MAX_OCCUPANTS == pre-WK70 snapshots
-  * BuildingFactory.BUILDING_REGISTRY == the pre-WK70 27 key->class mappings (by __name__)
+  * config.BUILDING_COSTS / SIZES / COLORS / MAX_OCCUPANTS == post-purge snapshots
+  * BuildingFactory.BUILDING_REGISTRY == the post-purge 19 key->class mappings (by __name__)
   * build_catalog_panel.BUILDING_HOTKEYS / PLACEABLE_BUILDINGS == the known values, and
     building_list_panel reads the SAME values
   * the import-time coverage assert holds: {bt.value for bt in BuildingType} <= BUILDING_DEFS
@@ -21,10 +21,11 @@ Covers Definition-of-Done item E (plan §4) and the membership invariants in pla
 """
 
 # ---------------------------------------------------------------------------
-# Pre-WK70 literal snapshots (DO NOT regenerate from the live derived dicts —
-# these are the verbatim pre-refactor values that the derivation must reproduce).
-# Source: `git show HEAD:config.py` @ WK69 commit 2ee336c.
-# Counts: COSTS=42, SIZES=47, COLORS=47, MAX_OCCUPANTS=42.
+# Post-purge literal snapshots (the verbatim values the derivation must reproduce).
+# Originally captured from `git show HEAD:config.py` @ WK69 commit 2ee336c; the 8
+# WK34 "zombie" building types (gnome_hovel, elven_bungalow, dwarven_settlement,
+# ballista_tower, wizard_tower, fairgrounds, library, royal_gardens) were removed
+# in WK114 Round B. Counts: COSTS=34, SIZES=39, COLORS=39, MAX_OCCUPANTS=34.
 # ---------------------------------------------------------------------------
 
 EXPECTED_COSTS = {
@@ -45,15 +46,7 @@ EXPECTED_COSTS = {
     'temple_krolm': 400,
     'temple_helia': 400,
     'temple_lunord': 400,
-    'gnome_hovel': 0,
-    'elven_bungalow': 0,
-    'dwarven_settlement': 0,
     'guardhouse': 300,
-    'ballista_tower': 0,
-    'wizard_tower': 0,
-    'fairgrounds': 0,
-    'library': 0,
-    'royal_gardens': 0,
     'palace': 0,
     'house': 0,
     'farm': 0,
@@ -90,15 +83,7 @@ EXPECTED_SIZES = {
     'temple_krolm': (3, 3),
     'temple_helia': (3, 3),
     'temple_lunord': (3, 3),
-    'gnome_hovel': (2, 2),
-    'elven_bungalow': (2, 2),
-    'dwarven_settlement': (2, 2),
     'guardhouse': (2, 2),
-    'ballista_tower': (1, 1),
-    'wizard_tower': (2, 2),
-    'fairgrounds': (3, 3),
-    'library': (2, 2),
-    'royal_gardens': (2, 2),
     'palace': (3, 3),
     'house': (1, 1),
     'farm': (3, 2),
@@ -140,15 +125,7 @@ EXPECTED_COLORS = {
     'temple_krolm': (139, 0, 0),
     'temple_helia': (255, 165, 0),
     'temple_lunord': (176, 196, 222),
-    'gnome_hovel': (128, 128, 0),
-    'elven_bungalow': (34, 139, 34),
-    'dwarven_settlement': (101, 67, 33),
     'guardhouse': (128, 128, 128),
-    'ballista_tower': (64, 64, 64),
-    'wizard_tower': (138, 43, 226),
-    'fairgrounds': (255, 20, 147),
-    'library': (25, 25, 112),
-    'royal_gardens': (124, 252, 0),
     'palace': (184, 134, 11),
     'house': (120, 100, 80),
     'farm': (200, 170, 90),
@@ -190,15 +167,7 @@ EXPECTED_MAX_OCCUPANTS = {
     'temple_krolm': 4,
     'temple_helia': 4,
     'temple_lunord': 4,
-    'gnome_hovel': 0,
-    'elven_bungalow': 0,
-    'dwarven_settlement': 0,
     'guardhouse': 0,
-    'ballista_tower': 0,
-    'wizard_tower': 0,
-    'fairgrounds': 0,
-    'library': 0,
-    'royal_gardens': 0,
     'palace': 0,
     'house': 0,
     'farm': 0,
@@ -217,8 +186,9 @@ EXPECTED_MAX_OCCUPANTS = {
     'poi_demon_portal': 4,
 }
 
-# Pre-WK70 factory registry (27 key -> class __name__).
-# Source: `git show HEAD:game/building_factory.py` @ WK69 commit 2ee336c.
+# Post-purge factory registry (19 key -> class __name__).
+# Originally from `git show HEAD:game/building_factory.py` @ WK69 commit 2ee336c;
+# the 8 WK34 zombie mappings were removed in WK114 Round B.
 EXPECTED_REGISTRY_CLASSNAMES = {
     'warrior_guild': 'WarriorGuild',
     'ranger_guild': 'RangerGuild',
@@ -237,15 +207,7 @@ EXPECTED_REGISTRY_CLASSNAMES = {
     'temple_krolm': 'TempleKrolm',
     'temple_helia': 'TempleHelia',
     'temple_lunord': 'TempleLunord',
-    'gnome_hovel': 'GnomeHovel',
-    'elven_bungalow': 'ElvenBungalow',
-    'dwarven_settlement': 'DwarvenSettlement',
     'guardhouse': 'Guardhouse',
-    'ballista_tower': 'BallistaTower',
-    'wizard_tower': 'WizardTower',
-    'fairgrounds': 'Fairgrounds',
-    'library': 'Library',
-    'royal_gardens': 'RoyalGardens',
     'palace': 'Palace',
 }
 
@@ -292,17 +254,17 @@ POIS = {
 
 def test_snapshot_self_consistency():
     """The embedded literals match the documented pre-WK70 counts and shape."""
-    assert len(EXPECTED_COSTS) == 42
-    assert len(EXPECTED_SIZES) == 47
-    assert len(EXPECTED_COLORS) == 47
-    assert len(EXPECTED_MAX_OCCUPANTS) == 42
-    assert len(EXPECTED_REGISTRY_CLASSNAMES) == 27
+    assert len(EXPECTED_COSTS) == 34
+    assert len(EXPECTED_SIZES) == 39
+    assert len(EXPECTED_COLORS) == 39
+    assert len(EXPECTED_MAX_OCCUPANTS) == 34
+    assert len(EXPECTED_REGISTRY_CLASSNAMES) == 19
     assert len(EXPECTED_HOTKEYS) == 10
     assert len(EXPECTED_PLACEABLE) == 10
-    # SIZES/COLORS share the same 47-key set; COSTS/OCCUPANTS share the same 42-key set.
+    # SIZES/COLORS share the same 39-key set; COSTS/OCCUPANTS share the same 34-key set.
     assert set(EXPECTED_SIZES) == set(EXPECTED_COLORS)
     assert set(EXPECTED_COSTS) == set(EXPECTED_MAX_OCCUPANTS)
-    # The 47-key set is exactly the 42-key set plus the 5 lairs.
+    # The 39-key set is exactly the 34-key set plus the 5 lairs.
     assert set(EXPECTED_SIZES) - set(EXPECTED_COSTS) == LAIRS
 
 
@@ -340,12 +302,12 @@ def test_config_max_occupants_byte_identical():
 # Order-independent (compare key->classname dicts).
 # ---------------------------------------------------------------------------
 
-def test_factory_registry_27_class_mappings():
+def test_factory_registry_19_class_mappings():
     from game.building_factory import BuildingFactory
     registry = BuildingFactory.BUILDING_REGISTRY
     derived = {key: cls.__name__ for key, cls in registry.items()}
     assert derived == EXPECTED_REGISTRY_CLASSNAMES
-    assert len(registry) == 27
+    assert len(registry) == 19
     # POIs and castle/house/farm must NOT be in the placement registry.
     for absent in ('castle', 'house', 'farm', *POIS, *LAIRS):
         assert absent not in registry

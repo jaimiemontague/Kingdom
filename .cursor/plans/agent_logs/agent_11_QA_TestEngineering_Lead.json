@@ -9,6 +9,65 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk114_round_b_zombie_building_purge": {
+      "sprint_meta": {
+        "sprint_id": "wk114_round_b_zombie_building_purge",
+        "created_utc": "2026-05-31T22:30:00Z",
+        "goal": "QA Wave 2: make the suite fully green after Agent 05 atomically purged the 8 WK34 zombie building types (gnome_hovel, elven_bungalow, dwarven_settlement, ballista_tower, wizard_tower, fairgrounds, library, royal_gardens), and add the post-purge seam test. Fix all purge-broken tests (4 collection-error imports + 5 assertion-level snapshot/aura/button files), recompute the WK70 registry snapshots from LIVE post-purge config/factory, write tests/test_wk114_zombie_building_purge.py pinning the invariant, and run the full DoD incl. the load-bearing WK67 AI-decision-digest byte-identity gate. ZERO production code touched (game/, ai/, config.py frozen)."
+      },
+      "rounds": {
+        "wk114_w2": {
+          "sprint_id": "wk114_round_b_zombie_building_purge",
+          "round_id": "wk114_w2",
+          "status": "done",
+          "round_meta": {
+            "wave": "W2 (fix pinned tests + new purge seam test + full DoD gate)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "created_utc": "2026-05-31T22:30:00Z",
+            "depends_on": "wk114 W1 (Agent 05 Gameplay atomic cross-file purge of the 8 zombie building types across ~22 code files: BUILDING_DEFS 47->39, _CLASS_NAMES 27->19, BuildingType enum, factory registry 27->19, dwellings.py DELETED, BallistaTower/WizardTower out of defensive.py keeping Guardhouse, Fairgrounds/Library/RoyalGardens out of special.py keeping Palace, sim_engine dispatch, buffs royal_gardens_aura, peasant gnome bonus, config shared lists, ai/decision_moments, hero_profile, UI panels, graphics label maps; import-clean, purge_candidate gone)."
+          },
+          "prompt_summary": "Wave 2: update the 4 pinned test files per plan section 3 (recompute test_wk70 snapshots from LIVE code + new length asserts; remove royal_gardens_aura test; remove dwelling/library instantiations in tax-overlay + button tests; rename the soft hero_profile library row). Write tests/test_wk114_zombie_building_purge.py pinning the post-purge invariant. Run full DoD (pytest 0 failed, determinism, WK67 digest byte-identical, qa_smoke). Report PASS/FAIL. DO NOT COMMIT.",
+          "what_i_changed": [
+            "tests/test_wk61_r6_tax_gold_overlay_data.py (COLLECTION ERROR FIX) -- removed the deleted game.entities.buildings.dwellings import (DwarvenSettlement/ElvenBungalow/GnomeHovel) and the special.py Fairgrounds/Library import; removed the 3 dwelling rows from TAX_STASH_INSTANCES and the fairgrounds+library rows from NON_TAX_STASH_INSTANCES; kept-type rows intact.",
+            "tests/test_wk61_r6_qa_renderer_tax_coverage.py (COLLECTION ERROR FIX, transitive) -- now collects cleanly via the fixed instance lists imported from file #1; no direct edit needed.",
+            "tests/test_wk61_r7_tax_overlay_none_guard.py (COLLECTION ERROR FIX, transitive) -- imports NON_TAX_STASH_INSTANCES from fixed file #1; collects cleanly, no direct edit needed.",
+            "tests/test_wk65_buildings_systems_characterization.py (COLLECTION ERROR FIX) -- removed the BallistaTower import; deleted the BallistaTower-only firing test; rewrote test_unconstructed_ranged_tower_does_not_fire to use the KEPT Guardhouse (same is_constructed guard) so unconstructed-tower coverage survives; all Guardhouse/Marketplace/TradingPost/Difficulty characterizations kept.",
+            "tests/test_wk70_building_registry.py (ASSERTION FIX) -- recomputed EXPECTED_COSTS/SIZES/COLORS/MAX_OCCUPANTS/REGISTRY_CLASSNAMES by removing the 8 zombie keys (verified byte-identical against LIVE config + BuildingFactory.BUILDING_REGISTRY); updated test_snapshot_self_consistency length asserts (COSTS 42->34, SIZES 47->39, COLORS 47->39, MAX_OCCUPANTS 42->34, REGISTRY 27->19), the registry len assert 27->19, renamed test_factory_registry_27->19_class_mappings, and refreshed header count comments.",
+            "tests/test_buffs.py (ASSERTION FIX / REWRITE) -- the whole file was royal_gardens_aura tests (3) against the purged aura producer; replaced with 5 generic buff-infra tests (Buff.is_expired boundary; apply_or_refresh_buff apply-once + refresh-not-stack; BuffSystem.update prunes expired + skips dead heroes) so buff infrastructure stays covered.",
+            "tests/test_wk68_building_buttons.py (ASSERTION FIX) -- removed the Library import and the library research-click portion of test_other_buttons_dispatch_correctly; kept Palace, Blacksmith, marketplace research, demolish, build-catalog, Close, palace upgrade.",
+            "tests/test_hero_profile_contract.py (SOFT FIX) -- renamed the generic place_type='library' KnownPlaceSnapshot fixture row to 'marketplace' (display_name Marketplace) for cleanliness; assertion is type-agnostic.",
+            "tests/test_wk114_zombie_building_purge.py (NEW SEAM TEST, 36 parametrized cases) -- pins the post-purge invariant: 8 type strings absent from BUILDING_DEFS; 8 enum members absent from BuildingType; 8 classes not on game.entities nor game.entities.buildings; factory registry excludes the 8 + records len==19; kept set {guardhouse,palace,warrior_guild,ranger_guild,marketplace,temple,house,farm} subset of BUILDING_DEFS; assert_building_type_coverage() passes; purge_candidate absent from buildings.py (utf-8-sig read)."
+          ],
+          "commands_run": [
+            "python -m pytest -q  (DoD.1)  -> 1425 passed, 4 skipped, 0 failed, 0 errors in 233s",
+            "python tools/determinism_guard.py  (DoD.2)  -> [determinism_guard] PASS: no violations found",
+            "python -m pytest tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable -q  (DoD.3)  -> 1 passed; digest pinned literal b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical (purge inert)",
+            "python tools/qa_smoke.py --quick  (DoD.4)  -> DONE: PASS",
+            "python -m pytest tests/test_wk114_zombie_building_purge.py tests/test_wk70_building_registry.py tests/test_buffs.py -q  (DoD.5)  -> 54 passed (36 seam + 13 wk70 + 5 buffs)"
+          ],
+          "evidence": {
+            "dod_table": {
+              "DoD.1 full pytest -q": "PASS (1425 passed, 4 skipped, 0 failed, 0 errors)",
+              "DoD.2 determinism_guard": "PASS (no violations)",
+              "DoD.3 WK67 AI digest byte-identical": "PASS (b73961340c...d148ded unchanged -- HARD gate proves purge did not perturb headless AI scenario)",
+              "DoD.4 qa_smoke --quick": "PASS (DONE: PASS)",
+              "DoD.5 targeted 3-file run": "PASS (54 passed)"
+            },
+            "new_seam_test_count": "36 parametrized cases in tests/test_wk114_zombie_building_purge.py",
+            "live_post_purge_counts": "BUILDING_DEFS 39, _CLASS_NAMES 19, BUILDING_COSTS 34, BUILDING_SIZES 39, BUILDING_COLORS 39, BUILDING_MAX_OCCUPANTS 34, BuildingFactory.BUILDING_REGISTRY 19",
+            "pre_fix_red_state": "4 collection errors (dwellings/BallistaTower imports) + 9 assertion failures (3 buffs aura, 1 wk68 library, 5 wk70 snapshot) -- all resolved"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "PM (Agent 01) owns the commit: scoped add of the 8 changed/new test files + plan + PM hub + agent 05/11 logs (and git rm for any deleted dwellings.py/prefab JSON from Wave 1). I did NOT commit."
+          ],
+          "how_to_test": "python -m pytest tests/test_wk114_zombie_building_purge.py -q (seam, 36) ; python -m pytest tests/test_wk70_building_registry.py tests/test_buffs.py -q ; full gate: python -m pytest -q && python tools/determinism_guard.py && python -m pytest tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable -q && python tools/qa_smoke.py --quick"
+        }
+      }
+    },
     "wk107_round_b_ursina_terrain_ground_mesh": {
       "sprint_meta": {
         "sprint_id": "wk107_round_b_ursina_terrain_ground_mesh",

@@ -306,17 +306,16 @@ def test_other_buttons_dispatch_correctly():
     Plus the "may assert True" research/upgrade branches (behavior-faithful):
       * marketplace research (potions not yet researched)  -> True
       * blacksmith research                                -> True
-      * library research                                   -> True
       * palace upgrade (affordable)                        -> True
     All use a TALL left_rect (no overflow) so each button is in-viewport; the point here
     is the dispatch contract, not the scroll math (covered above).
     """
     from game.entities.buildings.economic import Blacksmith
-    from game.entities.buildings.special import Library, Palace
+    from game.entities.buildings.special import Palace
     import game.entities.buildings.base as buildings_base
 
     engine = _make_engine()
-    # Snapshot the global research unlocks so the library branch can't leak into other tests.
+    # Snapshot the global research unlocks so the research branches can't leak into other tests.
     _research_backup = dict(buildings_base.RESEARCH_UNLOCKS)
     try:
         panel = engine.building_panel
@@ -368,18 +367,6 @@ def test_other_buttons_dispatch_correctly():
         _, bs_rect = bs_rects[0]
         bs = panel.handle_click(bs_rect.center, engine.economy, {})
         assert bs is True, f"blacksmith research click must return True, got {bs!r}"
-
-        # --- library research (string building_type so the special renderer dispatches) ---
-        library = Library(52, 52)
-        library.is_constructed = True
-        library.building_type = "library"
-        engine.buildings.append(library)
-        _select_and_render(engine, library, _TALL_LEFT_RECT)
-        lib_rects = [(k, r) for k, r in panel.library_research_rects.items() if r.width > 0]
-        assert lib_rects, "library research rects must render at least one option"
-        _, lib_rect = lib_rects[0]
-        lib = panel.handle_click(lib_rect.center, engine.economy, {})
-        assert lib is True, f"library research click must return True, got {lib!r}"
 
         # --- palace upgrade (affordable) ---
         palace = Palace(50, 50)

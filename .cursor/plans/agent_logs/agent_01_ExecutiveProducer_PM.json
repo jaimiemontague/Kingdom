@@ -5,6 +5,7 @@
   "name": "ExecutiveProducer_PM"
  },
  "notes": [
+  "2026-05-31 (Agent 01 WK113 CLOSED 779dd7f + WK114 KICKOFF): WK113 shipped+pushed (779dd7f, camera-control cluster -> ursina_app_camera.py; ursina_app.py 1272->961; PM verbatim gate all 9 faithful; suite 1400 passed). SOVEREIGN PLAYTEST: 'all camera features are working fine' -> WK113 deferred-screenshot item CLOSED (deferred-screenshot pure-move model validated end-to-end). SOVEREIGN RULING: 'you can delete those old buildings' -> WK111 zombie purge UNBLOCKED, now executed as WK114. WK114 = purge the 8 purge_candidate=True types (gnome_hovel, elven_bungalow, dwarven_settlement, ballista_tower, wizard_tower, fairgrounds, library, royal_gardens). Grounding sweep (Explore agent) produced a complete wiring map: DIGEST-SAFE (none spawn at default startup/spawner/worldgen, none placeable -> fresh headless engine never creates one -> WK67 digest must stay byte-identical). Cross-cutting deletion across ~22 code files + 4 hard-pinned test files (test_wk70_building_registry snapshot counts, test_buffs royal_gardens_aura, test_wk61_r6 tax-overlay, test_wk68 library button). Done ATOMICALLY by ONE agent (05) to avoid dangling imports, then 11 fixes tests + seam test + DoD. Plan: .cursor/plans/wk114_round_b_zombie_building_purge.plan.md.",
   "2026-05-31 (Agent 01 WK112 CLOSED ca8da1d + WK113 KICKOFF): WK112 shipped+pushed (ca8da1d, 2f120b1..ca8da1d; validate_direct_prompt_output decomposed into _INTENT_HANDLERS per-intent table over _ResolveState/_ValidationInputs; full suite 1367 passed/4 skipped; WK67 digest byte-identical; PM differential cross-check IDENTICAL across 38 cases). WK113 = decompose the LAST major render god-file ursina_app.py (1272 LOC): extract its camera-control cluster (9 instance methods + 2 zone-fog consts, ~360 LOC) into NEW game/graphics/ursina_app_camera.py via the WK87-92/WK104-105 owner-arg pure-move pattern (precedent sibling: ursina_app_debug_probe.py). UrsinaApp keeps 9 delegating wrappers; byte-faithful move. RENDER SLICE -> deferred-screenshot model (live captures to Sovereign's end test). Verified by headless import smoke + both-import-orders + a WK105-style seam test + full pytest + determinism_guard + WK67 digest + qa_smoke + PM verbatim-diff gate. Waves: 09 W1 move -> 11 W2 seam test + DoD -> PM verbatim gate + commit. Plan: .cursor/plans/wk113_round_b_ursina_app_camera.plan.md.",
   "2026-05-31 (Agent 01 WK110 CLOSED 2f120b1 + WK112 KICKOFF): WK110 shipped+pushed (2f120b1, ai/vocab.py vocabulary consolidation; suite 1326 passed/4 skipped; digest byte-identical; definitions-only diff). CHECKPOINT held at 2f120b1; Sovereign asked about adding features, then said 'continue on the roadmap for now'. PM DECISION: keep executing BEHAVIOR-PRESERVING headless refactors; HOLD WK111 (WK34 zombie-type purge of 8 buildings) until the Sovereign rules keep/purge — several flagged types read as unfinished FEATURES (wizard_tower, library, royal_gardens, racial dwellings), so deleting them is a PRODUCT decision, not slop-cleanup. WK112 = decompose the 294-line god-function validate_direct_prompt_output (ai/direct_prompt_validator.py:118-412) — lift its 8-branch intent if/elif chain into a per-intent handler table (_INTENT_HANDLERS) over a _ResolveState dataclass; prelude + critical-HP redirect (extracted) + output tail stay in main. Behavior-preserving (chat path, NOT autonomous digest path -> WK67 digest trivially stable). Safety net = 38-case differential golden net captured by PM from HEAD (every branch). Wave order MANDATORY: 11 writes golden net GREEN on unmodified code (W0) -> 06 refactors (W1) -> 11 full DoD (W2). Plan: .cursor/plans/wk112_round_b_direct_prompt_validator.plan.md.",
   "2026-05-31 (Agent 01 WK109 CLOSED e3212e2 + WK110 KICKOFF): WK109 shipped+pushed (e3212e2, FOG/C finale ensure_fog_overlay + ensure_grid_debug_overlay -> ursina_fog_overlay.py; fog_collab 482->170; suite ->1314; digest byte-identical; PM verbatim ZERO diffs). MILESTONE: fog_collab god-file 1783->170 FULLY DECOMPOSED (5 leaf modules WK104/106/107/108/109 + thin facade). PIVOT to non-render headless roadmap. Grounding agent a7c2b23b024665466 found the audit LOC numbers are STALE (config/world/sim_engine/hero/input/mock_provider/context_builder work already done). WK110 KICKOFF = ai/vocab.py consolidation (ToolAction/DirectIntent str-Enums + place frozensets; derive+re-export legacy names byte-identical; digest-safe by construction; SCOPE OUT TaskRouter=Move12). Fully headless-verifiable. WK111=WK34 zombie purge, WK112=validator split queued. Dispatching Agent 06 (W1).",
@@ -6102,7 +6103,7 @@
   },
   "wk113_round_b_ursina_app_camera": {
    "sprint_meta": {
-    "status": "in_progress",
+    "status": "closed_success",
     "created_utc": "2026-05-31",
     "plan_doc": ".cursor/plans/wk113_round_b_ursina_app_camera.plan.md",
     "goal": "Extract the camera-control cluster (9 instance methods: _setup_ursina_camera_for_castle, _recenter_editor_camera_to_sim_xy, _reset_camera_to_default, _toggle_camera_lock, _toggle_underground_camera, _sync_ursina_camera_fov_from_zoom, update_zone_fog_color, begin_camera_underground_transition, begin_camera_surface_transition; + the 2 zone-fog class consts _ZONE_FOG_COLORS/_DEFAULT_FOG_COLOR) from ursina_app.py into NEW game/graphics/ursina_app_camera.py as owner-arg module functions; UrsinaApp keeps 9 exact-signature delegating wrappers. camera_active_layer property and _is_chat_active stay. Byte-faithful move; ursina_app.py 1272 -> ~915 LOC.",
@@ -6118,13 +6119,28 @@
      "both fresh-import orders OK",
      "DEFERRED live Ursina camera captures -> Sovereign end test"
     ],
-    "closeout_evidence": {}
+    "closeout_evidence": {
+     "commit_sha": "779dd7f",
+     "new_module": "game/graphics/ursina_app_camera.py = 372 LOC (9 owner-arg camera fns + _ZONE_FOG_COLORS/_DEFAULT_FOG_COLOR consts; AST self-id count == 0)",
+     "facade": "game/graphics/ursina_app.py 1272 -> 961 LOC; 9 exact-signature delegating wrappers; camera_active_layer property + _is_chat_active retained; class consts removed",
+     "pm_verbatim_diff_gate": "all 9 methods byte-faithful: 6 IDENTICAL, _reset_camera_to_default + update_zone_fog_color each 1 allowed rewrite, _toggle_underground_camera the 2 allowed intra-cluster begin_camera_* rewrites (line-level confirmed)",
+     "new_test": "tests/test_wk113_ursina_app_camera.py = 33 tests (existence/owner-first, wrapper-delegation spy, AST no-cycle, fresh-subprocess both-orders, wrapper-source guard, behavior-through-wrapper PASSED not skipped)",
+     "dod": {
+      "full_pytest": "1400 passed / 4 skipped / 0 failed",
+      "determinism_guard": "PASS (no violations; excludes game/graphics/**)",
+      "wk67_digest": "b73961340c...d148ded byte-identical",
+      "qa_smoke_quick": "DONE: PASS",
+      "fresh_import_both_orders": "OK (ursina_renderer does not import ursina_app; new module imports renderer top-level safely; ursina_app imports new module lazily in wrappers)"
+     },
+     "deferred": "live before/after Ursina camera captures (castle framing, reset, lock, underground/surface transition, zone-fog tint) -> Sovereign end-of-marathon test (headless = no GPU)",
+     "waves": "09 W1 owner-arg pure-move -> PM AST verbatim-diff gate (all 9 faithful) -> 11 W2 seam test + full DoD"
+    }
    },
    "rounds": {
     "wk113_round_b_kickoff": {
      "round_meta": {
       "round": "wk113_round_b_kickoff",
-      "status": "in_progress",
+      "status": "closed_success",
       "created_utc": "2026-05-31",
       "agents": [
        "09 (W1 owner-arg pure-move of the camera cluster -> ursina_app_camera.py)",
@@ -6136,6 +6152,48 @@
      "pm_agent_prompts": {
       "09_W1": "Wave 1: create game/graphics/ursina_app_camera.py and move the 9 camera methods + 2 zone-fog consts per plan §1-§5 (owner-arg pure-move; copy bodies VERBATIM self->owner; apply the 3 intra-cluster call rewrites §2 + 2 moved-const reads §3; function-local imports stay local). Replace the 9 method bodies in ursina_app.py with the lazy-delegating wrappers (exact names/sigs). Leave camera_active_layer property + _is_chat_active. Self-verify per §5. DO NOT COMMIT.",
       "11_W2": "Wave 2: write tests/test_wk113_ursina_app_camera.py modeled VERBATIM on tests/test_wk105_ursina_app_debug_probe.py (6 sections, 9 fns, all owner-first, no staticmethod). Run full DoD per plan §6 (pytest 0 failed, determinism_guard, WK67 digest, qa_smoke, the new seam test + wk105 green). Report PASS/FAIL. DO NOT COMMIT."
+     },
+     "pm_commits": [
+      "779dd7f (pushed ca8da1d..779dd7f origin main)"
+     ]
+    }
+   }
+  },
+  "wk114_round_b_zombie_building_purge": {
+   "sprint_meta": {
+    "status": "in_progress",
+    "created_utc": "2026-05-31",
+    "plan_doc": ".cursor/plans/wk114_round_b_zombie_building_purge.plan.md",
+    "goal": "Purge the 8 WK34 zombie building types flagged purge_candidate=True in game/content/buildings.py (gnome_hovel, elven_bungalow, dwarven_settlement, ballista_tower, wizard_tower, fairgrounds, library, royal_gardens) across the registry, BuildingType enum, entity classes (dwellings/defensive/special), sim_engine dispatch, buffs (royal_gardens_aura), peasant gnome bonus, config shared lists, ai/decision_moments + hero_profile discovery sets, UI panels/build menu, and graphics label maps. Remove ONLY zombie members from shared lists; keep co-resident kept types (guardhouse/palace/guilds/temples). Sovereign-authorized 2026-05-31.",
+    "version_target": "minor (removes 8 dead building types)",
+    "verification_class": "HEADLESS, WK67-DIGEST-SAFE (none of the 8 spawn at default startup/spawner/worldgen, none placeable -> headless engine never creates one -> digest byte-identical is a HARD gate). No screenshots (never-rendered types; kept types untouched). Gates: import smoke + coverage assert, no-dangling-refs grep, full pytest (4 pinned test files updated), determinism_guard, WK67 digest, qa_smoke, new purge seam test.",
+    "notes": "poi_wizard_tower is a separate POI (is_poi=True) -> KEEP. Shared collections to edit members-only: building_renderers _GUILD/_DEFENSIVE/_SPECIAL_TYPES, config TAX_STASH/NON_TAX_STASH/BUILDING_CONSTRAINTS/BUILDING_PREREQUISITES, hero_profile PROFILE_DISCOVERY_BUILDING_TYPES, decision_moments recovery set. Shared loops to KEEP: sim_engine research-advance (Blacksmith/Marketplace) + _last_ranged_event (Guardhouse). Entity files: dwellings.py empties (delete file + import), defensive.py keeps Guardhouse, special.py keeps Palace. test_wk70 snapshot counts: COSTS 42->34, SIZES 47->39, COLORS 47->39, MAX_OCCUPANTS 42->34, REGISTRY_CLASSNAMES 27->19 (confirm via live len()).",
+    "definition_of_done": [
+     "8 types gone from BUILDING_DEFS/BuildingType/_CLASS_NAMES/factory registry/all shared lists; kept types intact",
+     "dwellings.py handled; defensive.py keeps Guardhouse; special.py keeps Palace; buffs aura block gone",
+     "purge_candidate appears nowhere; no dangling type/class ref in active code",
+     "tests/test_wk114_zombie_building_purge.py green; 4 pinned test files updated + green",
+     "full pytest 0 failed; determinism clean; WK67 digest BYTE-IDENTICAL; qa_smoke DONE: PASS",
+     "import smoke + coverage assert pass"
+    ],
+    "closeout_evidence": {}
+   },
+   "rounds": {
+    "wk114_round_b_kickoff": {
+     "round_meta": {
+      "round": "wk114_round_b_kickoff",
+      "status": "in_progress",
+      "created_utc": "2026-05-31",
+      "agents": [
+       "05 (W1 atomic code purge across ~22 files)",
+       "11 (W2 fix 4 pinned test files + purge seam test + full DoD)"
+      ],
+      "model": "claude-opus-4-8"
+     },
+     "pm_status_summary": "PM ran a thorough Explore grounding sweep that produced a complete per-file wiring map + confirmed digest-safety (no default spawns) + the exact shared lists/loops to edit-vs-keep. The plan §2 is a file-by-file REMOVE/KEEP checklist; §3 specifies the 4 pinned-test fixes + the new seam test. Atomic single-agent purge (05) avoids dangling imports; PM runs the no-dangling grep + digest gate before commit.",
+     "pm_agent_prompts": {
+      "05_W1": "Wave 1: execute the ENTIRE code purge per plan §2 (A-G) in one atomic pass — registry/enum/classes, sim_engine dispatch, buffs aura, peasant gnome bonus, config shared lists (members-only), ai/decision_moments + hero_profile, UI panels, graphics label maps. Remove ONLY zombie members from shared lists; KEEP guardhouse/palace/guilds/temples/poi_wizard_tower. Self-verify per §2 (import smoke, coverage assert, purge_candidate gone, no-dangling grep, kept types intact, new len(BUILDING_DEFS)/len(BUILDING_REGISTRY)). The full suite WILL be red (pinned tests) — that is expected; 11 fixes it. DO NOT COMMIT.",
+      "11_W2": "Wave 2: update the 4 pinned test files per plan §3 (recompute test_wk70 snapshots from LIVE code + new length asserts; remove royal_gardens_aura test; remove dwelling/library instantiations in tax-overlay + button tests; rename the soft hero_profile library row). Write tests/test_wk114_zombie_building_purge.py pinning the post-purge invariant. Run full DoD (pytest 0 failed, determinism, WK67 digest byte-identical, qa_smoke). Report PASS/FAIL. DO NOT COMMIT."
      },
      "pm_commits": []
     }

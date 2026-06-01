@@ -35,15 +35,7 @@ class BuildingRenderer:
         "temple_krolm": ("KROLM", 14),
         "temple_helia": ("HELIA", 14),
         "temple_lunord": ("LUNORD", 14),
-        "gnome_hovel": ("GNOMES", 14),
-        "elven_bungalow": ("ELVES", 14),
-        "dwarven_settlement": ("DWARVES", 14),
         "guardhouse": ("GUARDS", 14),
-        "ballista_tower": ("BALLISTA", 14),
-        "wizard_tower": ("WIZ TOWER", 14),
-        "fairgrounds": ("FAIR", 14),
-        "library": ("LIBRARY", 14),
-        "royal_gardens": ("GARDENS", 14),
     }
     _GUILD_WITH_TAX: set[str] = {"warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild"}
 
@@ -173,16 +165,3 @@ class BuildingRenderer:
                 gold = render_text_shadowed_cached(14, f"Tax: ${stored_tax}", (255, 215, 0))
                 gold_rect = gold.get_rect(center=(screen_x + width // 2, screen_y + height + 8))
                 surface.blit(gold, gold_rect)
-
-        # WK66 Move 3: BuildingDTO carries has_target (bool); live entities carry target.
-        if building_type == "ballista_tower" and (
-            getattr(building, "has_target", None) or getattr(building, "target", None)
-        ):
-            radius = int(getattr(building, "attack_range", 0))
-            pygame.draw.circle(
-                surface,
-                (255, 0, 0, 50),
-                (int(screen_x + width // 2), int(screen_y + height // 2)),
-                radius,
-                1,
-            )

@@ -113,9 +113,6 @@ _GUILD_TYPES = {
     "ranger_guild",
     "rogue_guild",
     "wizard_guild",
-    "gnome_hovel",
-    "elven_bungalow",
-    "dwarven_settlement",
 }
 _TEMPLE_TYPES = {
     "temple_agrela",
@@ -127,8 +124,8 @@ _TEMPLE_TYPES = {
     "temple_lunord",
 }
 _ECONOMIC_TYPES = {"marketplace", "blacksmith", "inn", "trading_post"}
-_DEFENSIVE_TYPES = {"guardhouse", "ballista_tower", "wizard_tower"}
-_SPECIAL_TYPES = {"fairgrounds", "library", "royal_gardens", "palace"}
+_DEFENSIVE_TYPES = {"guardhouse"}
+_SPECIAL_TYPES = {"palace"}
 
 PANEL_RENDERERS: dict[str, BuildingDomainRenderer] = {
     **{name: _guild_renderer for name in _GUILD_TYPES},

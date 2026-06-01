@@ -197,8 +197,8 @@ def test_select_known_places_for_llm_short_list_unchanged():
     places = (
         KnownPlaceSnapshot(
             place_id="a",
-            place_type="library",
-            display_name="Library",
+            place_type="marketplace",
+            display_name="Marketplace",
             tile=(0, 0),
             world_pos=(0.0, 0.0),
             first_seen_ms=1,

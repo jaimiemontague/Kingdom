@@ -110,7 +110,7 @@ def _inside_recovery_building(hero: Any) -> bool:
     if slug is None and inn is not None:
         slug = getattr(inn, "building_type", "")
     slug = str(slug or "").lower()
-    return slug in {"castle", "inn", "house", "farm", "elven_bungalow", "dwarven_settlement", "gnome_hovel"}
+    return slug in {"castle", "inn", "house", "farm"}
 
 
 def _near_marketplace(hero: Any, game_state: dict) -> bool:

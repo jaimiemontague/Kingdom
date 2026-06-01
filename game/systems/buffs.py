@@ -1,7 +1,9 @@
 """
 Buff / aura system.
 
-Agent 3: minimal reusable hero buff model + a first aura (Royal Gardens).
+Minimal reusable hero buff model. The original Royal Gardens aura producer was
+removed in WK114 Round B; the generic Buff infrastructure here is retained for
+future aura sources, and BuffSystem.update still prunes expired hero buffs.
 """
 
 from __future__ import annotations
@@ -33,37 +35,15 @@ class BuffSystem(GameSystem):
     def update(self, ctx: SystemContext, dt: float) -> None:
         _ = dt
         heroes = ctx.heroes
-        buildings = ctx.buildings
         now_ms = sim_now_ms()
 
-        # Prune expired buffs first to keep hero stats stable and avoid drift/stacking.
+        # Prune expired buffs to keep hero stats stable and avoid drift/stacking.
+        # (The Royal Gardens aura — the only aura producer — was removed in WK114 Round B;
+        # the generic Buff infrastructure below remains for future aura sources.)
         for hero in heroes:
             if not getattr(hero, "is_alive", True):
                 continue
             if hasattr(hero, "remove_expired_buffs"):
                 hero.remove_expired_buffs(now_ms)
-
-        # Apply auras.
-        for building in buildings:
-            if getattr(building, "building_type", None) != "royal_gardens":
-                continue
-
-            atk = int(getattr(building, "buff_attack_bonus", 0))
-            df = int(getattr(building, "buff_defense_bonus", 0))
-            duration_s = float(getattr(building, "buff_duration", self.AURA_REFRESH_SECONDS))
-            duration_s = min(duration_s, self.AURA_REFRESH_SECONDS)
-
-            if not hasattr(building, "get_heroes_in_range"):
-                continue
-
-            for hero in building.get_heroes_in_range(heroes):
-                if hasattr(hero, "apply_or_refresh_buff"):
-                    hero.apply_or_refresh_buff(
-                        name="royal_gardens_aura",
-                        atk_delta=atk,
-                        def_delta=df,
-                        duration_s=duration_s,
-                        now_ms=now_ms,
-                    )
 
 

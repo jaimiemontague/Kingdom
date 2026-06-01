@@ -167,12 +167,7 @@ class Peasant:
 
         castle = game_state.get("castle")
         buildings = game_state.get("buildings", [])
-        # Gnome hovel bonus: faster construction/repair for peasants.
-        gnome_bonus = any(
-            getattr(b, "building_type", "") == "gnome_hovel" and getattr(b, "is_constructed", True)
-            for b in buildings
-        )
-        speed_mult = 1.5 if gnome_bonus else 1.0
+        speed_mult = 1.0
 
         # Decide what to do each tick (simple, responsive)
         # Priority 1: repair castle if damaged
