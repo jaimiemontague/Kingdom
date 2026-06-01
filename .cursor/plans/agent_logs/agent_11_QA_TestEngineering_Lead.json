@@ -5582,6 +5582,67 @@
           "blocker_for_pm": "none -- all 5 DoD gates PASS. Ready for PM final DoD + scoped commit (ursina_app.py, ursina_app_input.py, tests/test_wk116_ursina_app_input.py, plan + PM hub + agent logs)."
         }
       }
+    },
+    "wk117_round_b_ursina_app_ui_overlay": {
+      "sprint_meta": {
+        "sprint_id": "wk117_round_b_ursina_app_ui_overlay",
+        "created_utc": "2026-06-01T00:00:00Z",
+        "goal": "WK117 Round B: extract the UI-overlay / HUD-texture cluster (3 @staticmethods + 2 instance methods, ~165 LOC) from game/graphics/ursina_app.py into the new sibling module game/graphics/ursina_app_ui_overlay.py via the WK105 MIXED static+instance owner-arg pure-move-behind-wrappers pattern. Wave 1 (Agent 09) did the byte-faithful move (ursina_app.py 833->669 LOC; self count = 0 in the new module; PM verbatim-diff gate confirmed all 5 members byte-faithful). QA (Wave 2) wrote the seam test modeled on tests/test_wk105_ursina_app_debug_probe.py (the MIXED static+instance template) and ran the full DoD. URSINA RENDER SLICE -> deferred-screenshot model (live HUD->GPU texture upload + dirty-row blit + window-resize-canvas captures deferred to the Sovereign end-test)."
+      },
+      "rounds": {
+        "wk117_w2": {
+          "round_id": "wk117_w2",
+          "sprint_id": "wk117_round_b_ursina_app_ui_overlay",
+          "status": "done",
+          "round_meta": {
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "wave": "W2 (write the refactor SEAM test modeled on the WK105 MIXED static+instance debug-probe seam test; run full DoD; URSINA RENDER SLICE -> headless gates + deferred Sovereign captures)",
+            "model": "claude-opus-4-8[1m]",
+            "depends_on": "Agent 09 Wave 1 (UI-overlay/HUD-texture cluster moved to ursina_app_ui_overlay.py; frozen + PM verbatim-diff-verified before this round)",
+            "behavior_preserving": true,
+            "production_code_edited": false
+          },
+          "prompt_summary": "PM/plan-assigned (wk117_round_b_ursina_app_ui_overlay plan section 5, PM prompt 11_W2): create tests/test_wk117_ursina_app_ui_overlay.py modeled on tests/test_wk105_ursina_app_debug_probe.py (the MIXED static+instance template), retargeted to game.graphics.ursina_app_ui_overlay and the 5 moved members. 2 are owner-first INSTANCE fns (_refresh_ui_overlay_texture, _sync_headless_ui_canvas_to_window); 3 are PLAIN module fns that were @staticmethods (NOT owner-first): _hud_quick_fingerprint(surf), _hud_prefers_nearest_pixel_filter(), _sync_hud_texture_filter_mode(tex). Then run the full DoD and report a PASS/FAIL table. DO NOT modify ursina_app.py or ursina_app_ui_overlay.py. DO NOT COMMIT.",
+          "what_i_changed": "CREATED tests/test_wk117_ursina_app_ui_overlay.py (22 tests, all green). 6 sections: (1) existence for all 5 fns [5 parametrized] + owner-first signature for the 2 instance fns [2 parametrized] + NOT-owner-first/leading-param check for the 3 static fns (surf / none / tex) [3 parametrized]; (2) instance-wrapper delegation via spy+monkeypatch on object.__new__(UrsinaApp) bare instance asserting args[0] is app + remaining args () forwarded + result returned [2 parametrized] + static-wrapper delegation asserting passthrough args forwarded with NO owner inserted [3 parametrized] + 1 source/AST wrapper-call guard; (3) AST no-cycle guard (no module-top runtime import of ursina_app; TYPE_CHECKING UrsinaApp allowed) [1]; (4) fresh-subprocess BOTH import orders ursina_app_ui_overlay<->ursina_app -> OK [2 parametrized]; (5) wrapper-source guard: ursina_app.py references ursina_app_ui_overlay.<fn> for each of the 5 (read utf-8-sig) [1]; (6) best-effort behavior proofs: _hud_prefers_nearest_pixel_filter() returns True [1] (PASSED) + _hud_quick_fingerprint(pygame.Surface((8,8))) returns int [1] (PASSED, init pygame display first, try/except + pytest.skip on shape mismatch). The 5 moved members: instance -> _refresh_ui_overlay_texture, _sync_headless_ui_canvas_to_window; static -> _hud_quick_fingerprint, _hud_prefers_nearest_pixel_filter, _sync_hud_texture_filter_mode. NO production code edited.",
+          "test_counts": {
+            "new_seam_test_file": "tests/test_wk117_ursina_app_ui_overlay.py",
+            "new_seam_tests": 22,
+            "new_seam_tests_passed": 22,
+            "new_seam_tests_skipped": 0,
+            "breakdown": "sec1: 10 (5 existence + 2 instance owner-first + 3 static not-owner-first); sec2: 6 (2 instance-wrapper delegation + 3 static-wrapper delegation + 1 source/AST wrapper-call guard); sec3: 1 (AST no-cycle); sec4: 2 (both import orders); sec5: 1 (wrapper-source); sec6: 2 (nearest-filter==True + fingerprint==int, both PASSED). Total 22."
+          },
+          "dod_results": {
+            "gate_1_full_pytest": {
+              "cmd": "python -m pytest -q",
+              "result": "PASS",
+              "detail": "1485 passed, 4 skipped, 0 failed in 276.54s"
+            },
+            "gate_2_determinism_guard": {
+              "cmd": "python tools/determinism_guard.py",
+              "result": "PASS",
+              "detail": "[determinism_guard] PASS: no violations found (excludes game/graphics/**)"
+            },
+            "gate_3_wk67_ai_digest": {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable -q",
+              "result": "PASS",
+              "detail": "1 passed (digest byte-identical to pinned b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded; UI-overlay/HUD-texture code not on the AI decision path)"
+            },
+            "gate_4_qa_smoke_quick": {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "result": "PASS",
+              "detail": "[qa_smoke] DONE: PASS (all profiles exit_code=0)"
+            },
+            "gate_5_seam_plus_wk116_wk113_wk105": {
+              "cmd": "python -m pytest tests/test_wk117_ursina_app_ui_overlay.py tests/test_wk116_ursina_app_input.py tests/test_wk113_ursina_app_camera.py tests/test_wk105_ursina_app_debug_probe.py -q",
+              "result": "PASS",
+              "detail": "118 passed (22 new WK117 + 33 WK116 sibling + 33 WK113 sibling + 30 WK105 sibling)"
+            }
+          },
+          "constraints_honored": "Did NOT modify game/graphics/ursina_app.py or game/graphics/ursina_app_ui_overlay.py (Wave-1 frozen + PM-verified). ONLY added the test file. Did NOT git add/commit/push (PM owns the commit). Did NOT iterate beyond task.",
+          "milestone_note": "DEFERRED (URSINA RENDER SLICE): live before/after Ursina captures of the HUD->GPU texture upload, dirty-region (changed-row) blit, nearest-vs-linear texture filtering, and the window-resize -> headless UI canvas resize path -> deferred to the Sovereign end-of-marathon test (headless agents have no GPU/window; scoped exception per memory feedback_ursina_deferred_screenshots). Headless seam test + DoD gates are the in-sprint proof.",
+          "blocker_for_pm": "none -- all 5 DoD gates PASS. Ready for PM final DoD + scoped commit (ursina_app.py, ursina_app_ui_overlay.py, tests/test_wk117_ursina_app_ui_overlay.py, plan + PM hub + agent logs)."
+        }
+      }
     }
   }
 }

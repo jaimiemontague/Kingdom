@@ -1609,6 +1609,53 @@
     }
    }
   },
+  "wk117_round_b_ursina_app_ui_overlay": {
+   "sprint_meta": {
+    "created_utc": "2026-06-01T00:00:00Z",
+    "notes": "WK117 Round B (Agent 09, W1): UI-overlay / HUD-texture cluster slice out of game/graphics/ursina_app.py (was 833 LOC) into NEW sibling game/graphics/ursina_app_ui_overlay.py, using the WK105 MIXED static+instance owner-arg pure-move-behind-wrappers pattern. Moved 5 members: 3 @staticmethods -> PLAIN module fns (NO owner arg, signatures unchanged): _hud_quick_fingerprint(surf); _hud_prefers_nearest_pixel_filter(); _sync_hud_texture_filter_mode(tex). 2 INSTANCE methods -> owner-first (self.->owner.): _refresh_ui_overlay_texture(owner) [128-line HUD->GPU compositor]; _sync_headless_ui_canvas_to_window(owner). UrsinaApp keeps 5 one-line lazy-delegating wrappers (3 @staticmethod, 2 instance; EXACT names+signatures); staying call sites in run() (L595 _sync_headless_ui_canvas_to_window, L722 _refresh_ui_overlay_texture, L725 _sync_hud_texture_filter_mode) reference self.<name> UNCHANGED. Byte-faithful move, no behavior change. ursina_app.py 833 -> 669 LOC."
+   },
+   "rounds": {
+    "wk117_w1": {
+     "sprint_id": "wk117_round_b_ursina_app_ui_overlay",
+     "round_id": "wk117_w1",
+     "status": "done",
+     "role": "WAVE W1 - extract UI-overlay/HUD-texture cluster (3 statics + 2 instance) from ursina_app.py into NEW ursina_app_ui_overlay.py behind 5 lazy-delegating wrappers; headless gates (live HUD->GPU upload + dirty-row blit + window-resize-canvas captures DEFERRED to Sovereign end test per feedback_ursina_deferred_screenshots).",
+     "what_i_changed": {
+      "game/graphics/ursina_app_ui_overlay.py (NEW, 199 LOC)": [
+       "MOVED VERBATIM 3 @staticmethods -> PLAIN module fns (NO owner arg, signatures unchanged): _hud_quick_fingerprint(surf); _hud_prefers_nearest_pixel_filter(); _sync_hud_texture_filter_mode(tex).",
+       "MOVED VERBATIM 2 INSTANCE methods -> module fns with owner FIRST (every self.->owner.): _refresh_ui_overlay_texture(owner); _sync_headless_ui_canvas_to_window(owner). owner: \"UrsinaApp\" annotation per plan sec3 skeleton.",
+       "Module-top import set EXACTLY per plan sec3 (grep-confirmed all used): import zlib; import pygame; from ursina import Texture, camera, window; from game.display_manager import DisplayManager; + TYPE_CHECKING UrsinaApp. NO extra imports added (no Entity/Vec3/os/Image/math/config — none referenced by the 5 bodies). Confirmed game.display_manager does NOT import ursina_app (acyclic).",
+       "Function-local imports KEPT function-local verbatim in _refresh_ui_overlay_texture: from panda3d.core import Texture as PandaTexture; from panda3d.core import PNMImage as _PNMImage.",
+       "INTRA-cluster call rewrites (plan sec2): in _sync_hud_texture_filter_mode UrsinaApp._hud_prefers_nearest_pixel_filter() -> _hud_prefers_nearest_pixel_filter(); in _refresh_ui_overlay_texture self._hud_quick_fingerprint(surf) -> _hud_quick_fingerprint(surf) (static, pass surf, NO owner) x2; self._sync_hud_texture_filter_mode(self._hud_composite_texture) -> _sync_hud_texture_filter_mode(owner._hud_composite_texture) (static, pass the tex) x2. All other self.<attr> -> owner.<attr> (owner.engine, owner.ui_overlay, owner._hud_composite_texture, owner._hud_composite_size, owner._hud_quick_sig, owner._hud_prev_raw, owner._last_ui_overlay_scale, owner.input_manager)."
+      ],
+      "game/graphics/ursina_app.py (833 -> 669 LOC)": [
+       "Replaced each of the 5 moved bodies with the lazy-delegating wrapper (from game.graphics import ursina_app_ui_overlay inside body; return ursina_app_ui_overlay.<fn>(...)).",
+       "3 wrappers stay @staticmethod (exact sigs): _hud_quick_fingerprint(surf), _hud_prefers_nearest_pixel_filter(), _sync_hud_texture_filter_mode(tex) -> passthrough args, no owner.",
+       "2 wrappers stay instance (owner-first via self): _refresh_ui_overlay_texture(self), _sync_headless_ui_canvas_to_window(self).",
+       "Left _read_int_env (L267-276) where it is - NOT part of this cluster. No staying call site touched (run() L595/722/725 still self.<name>)."
+      ]
+     },
+     "how_to_test": [
+      "python -c \"import game.graphics.ursina_app\"",
+      "python -c \"import game.graphics.ursina_app_ui_overlay\"",
+      "python -c \"import ast,io; t=ast.parse(io.open('game/graphics/ursina_app_ui_overlay.py',encoding='utf-8-sig').read()); print('self count =', sum(1 for n in ast.walk(t) if isinstance(n,ast.Name) and n.id=='self'))\"",
+      "python -c \"import game.graphics.ursina_app_ui_overlay as m; print(sorted(n for n in dir(m) if n.startswith(chr(95)) and not n.startswith(chr(95)*2)))\"",
+      "python -m pytest tests/test_wk105_ursina_app_debug_probe.py tests/test_wk113_ursina_app_camera.py tests/test_wk116_ursina_app_input.py -q"
+     ],
+     "evidence": {
+      "import_ursina_app": "OK ursina_app (no error; pygame deprecation warning pre-existing/unrelated)",
+      "import_ursina_app_ui_overlay": "OK ursina_app_ui_overlay (no error)",
+      "self_count": "self count = 0",
+      "module_fn_names": "['_hud_prefers_nearest_pixel_filter', '_hud_quick_fingerprint', '_refresh_ui_overlay_texture', '_sync_headless_ui_canvas_to_window', '_sync_hud_texture_filter_mode'] (all 5)",
+      "sibling_pytest": "96 passed, 1 warning in 20.71s (tests/test_wk105_ursina_app_debug_probe.py + tests/test_wk113_ursina_app_camera.py + tests/test_wk116_ursina_app_input.py)",
+      "ursina_app_loc": "669 (plan expected ~670; bodies confirmed gone, only the 5 wrappers remain - grep ursina_app_ui_overlay. -> L281/286/291/376/380)",
+      "deferred": "Live HUD->GPU texture upload + dirty-row blit + window-resize-canvas captures DEFERRED to Sovereign end test per memory feedback_ursina_deferred_screenshots; headless import/seam/self+name/AST gates are the in-sprint proof."
+     },
+     "constraints": "DID NOT COMMIT/add/push (PM Agent 01 owns commit). No drive-by edits. No extra imports beyond grep-confirmed need. Import set matched plan sec3 exactly (no additions reported).",
+     "follow_ups_for_PM": "Run the plan-sec-6 verbatim-diff gate (my self-check shows only the allowed sec-2 call rewrites + self->owner). Then Wave 2 / Agent 11 seam test (WK105 mixed template) + full DoD."
+    }
+   }
+  },
   "wk116_round_b_ursina_app_input": {
    "sprint_meta": {
     "created_utc": "2026-06-01T00:00:00Z",
