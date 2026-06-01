@@ -41,7 +41,6 @@ from game.systems.difficulty import DifficultySystem, DifficultyLevel
 from game.systems.wave_events import WaveEventSystem
 from game.building_factory import BuildingFactory
 from game.systems.protocol import SystemContext
-from game.sim.system_runner import SystemRunner
 from game.types import BountyType, HeroClass
 
 from config import (
@@ -130,17 +129,6 @@ class SimEngine:
         self.building_factory = BuildingFactory()
         self.bounty_system = BountySystem()
         self.poi_interaction_system = POIInteractionSystem()
-
-        # WK64 (audit item 22): ordered SystemRunner holds ONLY systems whose
-        # update(ctx, dt) is proven equivalent to their bespoke call AND is
-        # fire-and-forget (no surrounding post-processing). The Wave-1B audit
-        # proved exactly two qualify: buff_system and wave_event_system, kept in
-        # their current relative order. All other systems (combat event routing,
-        # spawn/lair capping, bounty claim+HUD, neutral-building castle source,
-        # nature tile bookkeeping, POI two-method tick) stay bespoke in update()
-        # and are documented exceptions. See game/sim/system_runner.py docstring
-        # and the wk64 plan Gate 2 notes.
-        self._ordered_systems = SystemRunner((self.buff_system, self.wave_event_system))
 
         # WK61-FEAT-004: Rubble records for destroyed buildings.
         self.rubble_records: list = []

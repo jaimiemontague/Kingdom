@@ -1177,6 +1177,49 @@
      ]
     }
    }
+  },
+  "wk119_round_b_systemrunner_deadwiring": {
+   "sprint_meta": {
+    "title": "WK119 Round B: resolve Move 9 by deleting the dead SystemRunner wiring",
+    "plan_ref": ".cursor/plans/wk119_round_b_systemrunner_deadwiring.plan.md",
+    "created_utc": "2026-06-01T00:00:00Z"
+   },
+   "rounds": {
+    "wk119_round_b_w1": {
+     "sprint_id": "wk119_round_b_systemrunner_deadwiring",
+     "round_id": "wk119_round_b_w1",
+     "status": "done",
+     "round_meta": {
+      "role": "05_GameplaySystemsDesigner",
+      "wave": "W1 (single round — delete dead SystemRunner wiring; behavior-preserving)",
+      "plan_ref": ".cursor/plans/wk119_round_b_systemrunner_deadwiring.plan.md (sections 1-3)",
+      "created_utc": "2026-06-01T00:00:00Z",
+      "launched_by": "tools/ai_studio_orchestrator"
+     },
+     "prompt_text": "Delete the dead SystemRunner wiring (3 edits, behavior-preserving): git rm game/sim/system_runner.py; remove the `from game.sim.system_runner import SystemRunner` import from game/sim_engine.py; remove the WK64 comment block + the `self._ordered_systems = SystemRunner(...)` construction line. Do NOT touch SimEngine.update()'s ordered call sequence — buff_system/wave_event_system are still constructed and called directly in update(). WK67-digest-SAFE (deleting never-called code cannot change runtime behavior). DO NOT COMMIT.",
+     "what_i_changed": [
+      "1. game/sim/system_runner.py: DELETED via `git rm` (staged, NOT committed). The whole dead module — SystemRunner dataclass + its never-called update_all(ctx, dt).",
+      "2. game/sim_engine.py (~L44): removed the import line `from game.sim.system_runner import SystemRunner`.",
+      "3. game/sim_engine.py (~L134-143): removed the 9-line WK64 comment block AND the construction line `self._ordered_systems = SystemRunner((self.buff_system, self.wave_event_system))`. Left the `self.poi_interaction_system = POIInteractionSystem()` line above and the `# WK61-FEAT-004: Rubble records` block below untouched.",
+      "UNTOUCHED (per CRITICAL constraint): SimEngine.update()'s ordered call sequence — self.buff_system and self.wave_event_system are still constructed in __init__ (~L127, L129) and still called directly in update() at their original non-adjacent positions. No reorder.",
+      "tests/test_wk64_system_runner.py: LEFT AS-IS — its only SystemRunner mention is a non-asserting docstring line (L9); per plan the docstring touch is optional and 'if unsure leave it'. Stays green unchanged."
+     ],
+     "verification_raw": {
+      "1_import_smoke": "PASS — `python -c \"import game.sim_engine; import game.engine\"` printed IMPORT OK, no error (removed import gone cleanly).",
+      "2_zero_residual_refs_grep": "ZERO hits — grep -rn 'SystemRunner|_ordered_systems|update_all' game/ --include=*.py → No matches found. No production-code references remain.",
+      "3_pytest_full": "1493 passed, 4 skipped, 1 warning in 275.87s — 0 failed. UNCHANGED count from WK118 baseline (1493/4), confirming nothing behavioral changed.",
+      "4_determinism_guard": "PASS — `[determinism_guard] PASS: no violations found`.",
+      "5_wk67_digest": "PASS — `python -m pytest tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable -q` → 1 passed. Digest byte-identical to pinned _AI_DECISION_DIGEST = b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (test asserts equality; PASS proves no behavior drift).",
+      "6_wk64_test": "GREEN — `python -m pytest tests/test_wk64_system_runner.py -q` → 4 passed. Characterization net still passes → the SimEngine.update behavior it pins is unchanged.",
+      "7_qa_smoke_quick": "DONE: PASS — `python tools/qa_smoke.py --quick` ended `[qa_smoke] DONE: PASS` (all scenarios exit_code=0; determinism_guard PASS; full pytest 1497 collected within smoke)."
+     },
+     "flags_for_pm": [
+      "All 7 verification gates GREEN. Move 9 resolved by deletion (no safe contiguous fire-and-forget run exists to host the runner; growing it would reorder buff/wave side effects and break the WK67 digest).",
+      "DO NOT COMMIT honored: only `git rm game/sim/system_runner.py` staged the deletion. No git add of sim_engine.py, no commit, no push. PM owns the scoped commit (git rm system_runner.py + git add game/sim_engine.py + plan + PM hub + this log).",
+      "No drive-by edits. tests/ untouched (the optional docstring touch was declined per 'if unsure leave it'). PM hub and game/engine.py untouched."
+     ]
+    }
+   }
   }
  }
 }

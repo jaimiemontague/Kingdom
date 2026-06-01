@@ -5,6 +5,7 @@
   "name": "ExecutiveProducer_PM"
  },
  "notes": [
+  "2026-06-01 (Agent 01 WK118 CLOSED 898cd60 + WK119 KICKOFF): WK118 frame-loop shipped+pushed (898cd60; update() closure -> ursina_app_frame.run_frame; ursina_app.py 669->423; verbatim gate faithful across 168 body lines; suite 1493 passed). MILESTONE: ursina_app.py render god-file decomposition COMPLETE (1272->423 across WK105/113/116/117/118). PIVOTED via Explore grounding to the remaining roadmap sim refactors (Move 9 SystemRunner, Move 12 TaskRouter). FINDING: SystemRunner (game/sim/system_runner.py, WK64) is DEAD wiring (update_all never called; _ordered_systems constructed at sim_engine.py:143 never read) AND its 2 held systems (buff ~L733, wave_event ~L792) are NON-ADJACENT -> growing it into one contiguous pipeline would reorder side effects and break the WK67 digest. Roadmap line 511 + audit remedy (a) both sanction DELETING the dead wiring when no contiguous fire-and-forget run exists (the case). WK119 = resolve Move 9 by deleting the dead SystemRunner wiring (digest-safe slop removal). Single round (Agent 05, owns sim) + PM gate. Plan: .cursor/plans/wk119_round_b_systemrunner_deadwiring.plan.md.",
   "2026-06-01 (Agent 01 WK117 CLOSED 0e0e8eb + WK118 KICKOFF): WK117 UI-overlay/HUD-texture cluster shipped+pushed (0e0e8eb; 5 members -> ursina_app_ui_overlay.py; ursina_app.py 833->669; suite 1485 passed). WK118 = extract the run() per-frame update() closure (~245 LOC, L418-663) into NEW game/graphics/ursina_app_frame.py as run_frame(owner, dt); run() collapses to a ~7-line Ursina bootstrap shim calling run_frame(self, time.dt). Completes the render god-file decomposition (ursina_app 1272 -> ~430 across WK105/113/116/117/118). LARGEST + HOTTEST move; the live loop is NOT exercised by the headless digest/determinism/qa_smoke, so the PM AST verbatim-diff gate is the PRIMARY faithfulness proof (must be byte-identical modulo 2 structural diffs: drop dt=time.dt, hoist pan_speed=55.0). Waves: 09 W1 move -> PM verbatim gate (load-bearing) -> 11 W2 seam test + DoD. Plan: .cursor/plans/wk118_round_b_ursina_app_frame.plan.md.",
   "2026-06-01 (Agent 01 WK116 CLOSED d2eab1c + WK117 KICKOFF): WK116 input/pointer cluster shipped+pushed (d2eab1c; 9 methods -> ursina_app_input.py; ursina_app.py 961->833; PM verbatim gate all 9 faithful; suite 1463 passed). WK117 = extract the UI-overlay/HUD-texture cluster (3 @staticmethods _hud_quick_fingerprint/_hud_prefers_nearest_pixel_filter/_sync_hud_texture_filter_mode + 2 instance _refresh_ui_overlay_texture/_sync_headless_ui_canvas_to_window, ~165 LOC) from ursina_app.py (833 LOC) into NEW game/graphics/ursina_app_ui_overlay.py via the WK105 MIXED static+instance owner-arg pure-move pattern. UrsinaApp keeps 5 wrappers (3 @staticmethod, 2 owner-first). The two panda3d.core imports stay function-local. RENDER SLICE -> deferred-screenshot (HUD->GPU upload + dirty-row blit are display artifacts). Verified by import smoke + both-import-orders + WK105-style seam test + full pytest + determinism_guard + WK67 digest + qa_smoke + PM verbatim gate. Waves: 09 W1 move -> PM gate -> 11 W2 seam test + DoD. Plan: .cursor/plans/wk117_round_b_ursina_app_ui_overlay.plan.md.",
   "2026-05-31 (Agent 01 WK115 CLOSED abba6fb + WK116 KICKOFF): WK115 left-menu UI polish shipped+pushed (abba6fb; 3 Sovereign bugs fixed: solo card content-sized + main_solo handle removed, scroll-clip-skip, pinned watch card grows for chat; suite 1430 passed; screenshot-verified by 08+11+PM across 9 captures; WK67 digest byte-identical). Resuming ursina_app decomposition per the /goal directive ('continue with ursina_app and the rest of the roadmap without stopping'). WK116 = extract the input/pointer cluster (9 instance methods incl. _is_chat_active, ~158 LOC) from ursina_app.py (961 LOC) into NEW game/graphics/ursina_app_input.py via the WK105/WK113 owner-arg pure-move pattern. UrsinaApp keeps 9 delegating wrappers. Nuance: _handle_ursina_input makes cross-cluster calls to the WK113 camera wrappers (owner._reset_camera_to_default etc.) which STAY as owner.<wrapper> hops; the _install_ursina_input_hook closure calls _handle_ursina_input(app, key) directly. RENDER/INPUT SLICE -> deferred-screenshot model. Verified by headless import smoke + both-import-orders + WK113-style seam test + full pytest + determinism_guard + WK67 digest + qa_smoke + PM verbatim-diff gate. Waves: 09 W1 move -> PM verbatim gate -> 11 W2 seam test + DoD. Plan: .cursor/plans/wk116_round_b_ursina_app_input.plan.md.",
@@ -6397,7 +6398,7 @@
   },
   "wk118_round_b_ursina_app_frame": {
    "sprint_meta": {
-    "status": "in_progress",
+    "status": "closed_success",
     "created_utc": "2026-06-01",
     "plan_doc": ".cursor/plans/wk118_round_b_ursina_app_frame.plan.md",
     "goal": "Extract the ~245-line per-frame update() closure from UrsinaApp.run() (game/graphics/ursina_app.py L418-663) into NEW game/graphics/ursina_app_frame.py as run_frame(owner, dt); run() becomes a ~7-line Ursina bootstrap whose update() shim calls run_frame(self, time.dt). Byte-faithful owner-arg pure-move; ursina_app.py 669 -> ~430 LOC. Completes the render god-file decomposition.",
@@ -6413,13 +6414,29 @@
      "both fresh-import orders OK",
      "DEFERRED live frame-loop (pan/zoom/transitions/clamp/follow/fog/auto-exit/HUD) -> Sovereign end test (NO headless runtime coverage -> flag prominently)"
     ],
-    "closeout_evidence": {}
+    "closeout_evidence": {
+     "commit_sha": "898cd60",
+     "new_module": "game/graphics/ursina_app_frame.py = 265 LOC (run_frame(owner, dt); AST self-id == 0; +import os flagged by 09, body uses os.environ.get)",
+     "facade": "game/graphics/ursina_app.py 669 -> 423 LOC; run() is the ~7-line bootstrap shim (update() -> run_frame(self, time.dt))",
+     "milestone": "ursina_app.py render god-file decomposition COMPLETE: 1272 -> 423 LOC across WK105 (debug probe) / WK113 (camera) / WK116 (input) / WK117 (ui-overlay) / WK118 (frame loop). Remaining ursina_app.py is a thin __init__ (scene construction) + bootstrap.",
+     "pm_verbatim_diff_gate": "LOAD-BEARING (loop has no headless runtime coverage). run_frame body vs original update() closure: 168 body lines, ONLY 2 diffs = HEAD-only 'dt = time.dt' (dropped, now param) + NEW-only 'pan_speed = 55.0' (hoisted). FAITHFUL.",
+     "new_test": "tests/test_wk118_ursina_app_frame.py = 8 tests (existence/signature, shim-delegation source guard incl. old-marker-gone, AST no-cycle, fresh-subprocess both-orders, best-effort drive that RAN (not skipped) and ticked sim once)",
+     "dod": {
+      "full_pytest": "1493 passed / 4 skipped / 0 failed",
+      "determinism_guard": "PASS (excludes game/graphics/**)",
+      "wk67_digest": "byte-identical b73961340c...d148ded",
+      "qa_smoke_quick": "DONE: PASS",
+      "fresh_import_both_orders": "OK"
+     },
+     "deferred": "FLAG: the live per-frame loop has NO headless runtime coverage. Live behavior (pan/zoom, camera transitions, terrain clamp, hero-follow, zone fog, auto-exit, HUD->GPU upload) -> Sovereign end-of-marathon live Ursina captures. Verbatim-diff gate is the in-sprint proof.",
+     "waves": "09 W1 frame-loop pure-move (+os import) -> PM LOAD-BEARING verbatim-diff gate (faithful, 2 structural diffs only) -> 11 W2 seam test (126 passed w/ wk117/116/113/105) + full DoD"
+    }
    },
    "rounds": {
     "wk118_round_b_kickoff": {
      "round_meta": {
       "round": "wk118_round_b_kickoff",
-      "status": "in_progress",
+      "status": "closed_success",
       "created_utc": "2026-06-01",
       "agents": [
        "09 (W1 frame-loop pure-move -> ursina_app_frame.py + run() shim)",
@@ -6431,6 +6448,44 @@
      "pm_agent_prompts": {
       "09_W1": "Wave 1: create game/graphics/ursina_app_frame.py with run_frame(owner, dt) = the update() closure body per plan §1-§2 (drop dt=time.dt; add pan_speed=55.0 as first line; self->owner; keep nested _chat_captures_keyboard; owner-method calls stay owner.<wrapper>; function-local imports stay local). Replace run() L415-669 with the ~7-line shim per §3. Self-verify per §3 (import smoke, self count=0, run_frame sig (owner,dt), sibling seam tests green, new line count ~430). DO NOT COMMIT.",
       "11_W2": "Wave 2: write tests/test_wk118_ursina_app_frame.py per plan §5 (existence/signature, shim-delegation source guard, AST no-cycle, fresh-subprocess both-orders, best-effort drive with stub owner + mocked ursina globals -> tick_simulation called once, skip-friendly). Run full DoD (pytest 0 failed, determinism, WK67 digest byte-identical, qa_smoke, seam + wk117/116/113/105 green). Report PASS/FAIL. DO NOT COMMIT."
+     },
+     "pm_commits": [
+      "898cd60 (pushed 0e0e8eb..898cd60 origin main)"
+     ]
+    }
+   }
+  },
+  "wk119_round_b_systemrunner_deadwiring": {
+   "sprint_meta": {
+    "status": "in_progress",
+    "created_utc": "2026-06-01",
+    "plan_doc": ".cursor/plans/wk119_round_b_systemrunner_deadwiring.plan.md",
+    "goal": "Resolve roadmap Move 9 / the audit dead-wiring finding by DELETING the dead SystemRunner wiring: remove game/sim/system_runner.py, the import at sim_engine.py:44, and the _ordered_systems = SystemRunner((buff,wave_event)) construction + WK64 comment block at sim_engine.py:134-143. The buff_system/wave_event_system are still constructed and called directly in update() at their original (non-adjacent) positions -- those call sites are UNTOUCHED. Growing the runner is not viable without a digest-breaking reorder (systems non-adjacent), so deletion is the digest-safe, audit-sanctioned resolution.",
+    "version_target": "patch (dead-code removal; behavior-preserving)",
+    "verification_class": "HEADLESS, WK67-DIGEST-SAFE (removing never-called code cannot change behavior -> digest byte-identical is the load-bearing proof). No screenshots. Gates: import smoke, no-residual-refs grep, full pytest (1493 expected unchanged), determinism_guard, WK67 digest, test_wk64_system_runner.py green, qa_smoke.",
+    "notes": "SystemRunner.update_all never called; _ordered_systems never read -> 100% dead. test_wk64_system_runner.py references SystemRunner only in its docstring (no assertion) -> stays green; optional light docstring touch only, no assertion change. Do NOT touch SimEngine.update()'s ordered call sequence -- buff/wave direct calls stay exactly where they are. If a future contiguous fire-and-forget run appears, the runner can be reintroduced.",
+    "definition_of_done": [
+     "system_runner.py deleted; import + _ordered_systems construction + comment block removed from sim_engine.py",
+     "ZERO SystemRunner/_ordered_systems/update_all refs in production code (grep-proven); buff/wave still constructed + called at original positions",
+     "full pytest 0 failed (1493 expected unchanged); test_wk64_system_runner.py green",
+     "determinism clean; WK67 digest byte-identical (load-bearing proof); qa_smoke DONE: PASS"
+    ],
+    "closeout_evidence": {}
+   },
+   "rounds": {
+    "wk119_round_b_kickoff": {
+     "round_meta": {
+      "round": "wk119_round_b_kickoff",
+      "status": "in_progress",
+      "created_utc": "2026-06-01",
+      "agents": [
+       "05 (single round: delete dead SystemRunner wiring + headless verify)"
+      ],
+      "model": "claude-opus-4-8"
+     },
+     "pm_status_summary": "PM ground the SystemRunner finding (Explore sweep): confirmed 100% dead + non-adjacent held systems make safe growth impossible, so deletion is the digest-safe resolution per roadmap line 511 + audit remedy (a). Single contained deletion (3 edit sites) + PM digest gate. Move 9 resolved; only Move 12 (TaskRouter, HIGH risk) remains on the roadmap.",
+     "pm_agent_prompts": {
+      "05_W1": "Single round: per plan §1, git rm game/sim/system_runner.py; remove the import (sim_engine.py:44) and the _ordered_systems = SystemRunner(...) construction + WK64 comment block (sim_engine.py:134-143). Do NOT touch update()'s ordered call sequence (buff/wave direct calls stay). Verify per §2 (import smoke, zero residual refs grep, pytest 0 failed @1493, determinism, WK67 digest byte-identical, test_wk64 green, qa_smoke). DO NOT COMMIT."
      },
      "pm_commits": []
     }
