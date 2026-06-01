@@ -448,6 +448,26 @@ class HUD:
             self, cx, cy, cw, ch, map_h, stats_h, chat_h, profiles, hero_id, painted_stats_bottom_override
         )
 
+    def _left_main_natural_h(self, game_state: dict | None = None) -> int:
+        """Last-rendered natural content height of the active left-column panel (0 if unknown).
+
+        Used to size the solo hero/building card to its content (WK115 BUG 1). The
+        building panel is owned by the engine (not the HUD), so it is reached via
+        ``game_state["engine"].building_panel``; the hero panel lives on the HUD.
+        Returns 0 until the panel has rendered once and reported its content height.
+        """
+        gs = game_state or {}
+        if gs.get("selected_building") is not None:
+            eng = gs.get("engine")
+            bp = getattr(eng, "building_panel", None) if eng is not None else None
+            return int(getattr(bp, "last_content_height", 0) or 0)
+        # Only the hero panel reports its content height; enemy/peasant summaries do
+        # not, so they fall back to the legacy fraction (still no floating bar — the
+        # solo resize handle is removed entirely).
+        if gs.get("selected_hero") is not None:
+            return int(getattr(self._hero_panel, "last_content_height", 0) or 0)
+        return 0
+
     def _left_column_segments_open(self, game_state: dict | None) -> tuple[bool, bool]:
         from game.ui import hud_left_layout
         return hud_left_layout.left_column_segments_open(self, game_state)
@@ -786,6 +806,32 @@ class HUD:
         top, bottom, left, right, minimap, cmd, speed_rect, recall, memorial = self._compute_layout(
             surface, game_state
         )
+
+        # WK115 BUG 1: for a solo (unpinned, non-chat) selected hero, learn the hero
+        # card's natural content height up front so the panel background + layout size
+        # to the content on THIS frame (no blank padded panel, no first-frame flash).
+        # The building panel already content-sizes its own blit; enemy/peasant fall
+        # back to the legacy fraction (still no floating bar — the solo handle is gone).
+        _sel_hero = game_state.get("selected_hero")
+        if (
+            _sel_hero is not None
+            and game_state.get("selected_building") is None
+            and self._pin_slot.hero_id is None
+            and not self._should_render_hero_menu_chat_popup(game_state)
+        ):
+            _main = self._left_main_rect
+            if _main is not None and _main.width > 0:
+                self._hero_panel.measure_content_height(
+                    _sel_hero,
+                    pygame.Rect(_main.x, _main.y, _main.width, _main.height),
+                    debug_ui=bool(game_state.get("debug_ui", False)),
+                    hero_profile=game_state.get("selected_hero_profile"),
+                )
+                # Re-run layout now that last_content_height is known so main_col +
+                # the _panel_left background shrink to the content this frame.
+                top, bottom, left, right, minimap, cmd, speed_rect, recall, memorial = self._compute_layout(
+                    surface, game_state
+                )
 
         self._panel_top.set_rect(top)
         self._panel_bottom.set_rect(bottom)

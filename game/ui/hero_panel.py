@@ -10,6 +10,7 @@ from config import COLOR_GOLD, COLOR_GREEN, COLOR_RED, COLOR_WHITE
 from game.entities.guard import Guard
 from game.entities.tax_collector import TaxCollector
 from game.sim.timebase import now_ms as sim_now_ms
+from game.ui.hud_layout import HERO_LEFT_MIN_H
 from game.ui.widgets import HPBar, TextLabel
 
 MAX_PANEL_CHARS = 48
@@ -59,6 +60,11 @@ class HeroPanel:
         self.menu_scroll_px = 0
         self._menu_scroll_hero_key: str | None = None
         self._menu_max_scroll = 0
+        # WK115 BUG 1: natural full content height of the last-rendered hero card
+        # (header + body + small bottom pad, clamped >= HERO_LEFT_MIN_H, NOT clamped
+        # to the viewport). Lets the left-column solo layout size the card to its
+        # content instead of a fixed fraction. 0 = not yet rendered.
+        self.last_content_height = 0
         # WK61-FEAT-005: Chat button state
         self._chat_button_rect: pygame.Rect | None = None
         self._chat_button_visible: bool = False
@@ -81,6 +87,39 @@ class HeroPanel:
         self.menu_scroll_px -= wheel_y * 24
         self.menu_scroll_px = max(0, min(self.menu_scroll_px, self._menu_max_scroll))
         return True
+
+    def measure_content_height(
+        self,
+        hero,
+        rect: pygame.Rect,
+        *,
+        debug_ui: bool = False,
+        hero_profile: Any | None = None,
+    ) -> int:
+        """Render to a throwaway surface (tall rect, no scroll/clip) just to learn the
+        natural content height, so the caller can size the on-screen card to its content
+        on the SAME frame (WK115 BUG 1). Returns ``last_content_height``.
+
+        The follow-up real ``render()`` at the final rect re-establishes the on-screen
+        click rects / scroll state, so the measure pass's side effects are harmless.
+        """
+        if rect.width <= 0:
+            return int(self.last_content_height or 0)
+        # Tall scratch rect so nothing clips/scrolls during measurement.
+        tall = pygame.Rect(int(rect.x), int(rect.y), int(rect.width), 4000)
+        scratch = pygame.Surface((int(rect.x) + int(rect.width), tall.bottom), pygame.SRCALPHA)
+        try:
+            self.render(
+                scratch,
+                hero,
+                tall,
+                right_close_rect=None,
+                debug_ui=debug_ui,
+                hero_profile=hero_profile,
+            )
+        except Exception:
+            pass
+        return int(self.last_content_height or 0)
 
     def _draw_section_divider(self, surface: pygame.Surface, x: int, y: int, width: int) -> None:
         if width <= 0:
@@ -282,6 +321,9 @@ class HeroPanel:
             (220, 220, 220),
             shadow_color=(25, 25, 35),
         )
+        y += self.theme.font_small.get_height()
+        # WK115 BUG 1: content-size the solo card (header top to last line + pad).
+        self.last_content_height = max(HERO_LEFT_MIN_H, int(y) - panel_y + 8)
 
     def _render_guard(
         self,
@@ -394,6 +436,9 @@ class HeroPanel:
             (220, 220, 220),
             shadow_color=(25, 25, 35),
         )
+        y += self.theme.font_small.get_height()
+        # WK115 BUG 1: content-size the solo card (header top to last line + pad).
+        self.last_content_height = max(HERO_LEFT_MIN_H, int(y) - panel_y + 8)
 
     def _render_standard_hero(
         self,
@@ -563,7 +608,12 @@ class HeroPanel:
         viewport = pygame.Rect(int(panel_x), int(viewport_top), int(panel_width), int(viewport_h))
         scroll_off = int(self.menu_scroll_px)
         prev_clip = surface.get_clip()
-        if viewport_h > 0 and viewport.width > 0:
+        # WK115 BUG 2: only clip the body when content actually overflows the card
+        # (``_menu_max_scroll > 0``). When the content fits — the common case after
+        # the WK115 BUG 1 content-sizing — drawing without a clip avoids partial-line
+        # clipping artifacts at the viewport top/bottom edges. ``prev_clip`` is
+        # always restored in ``_finish_body_scroll``.
+        if viewport_h > 0 and viewport.width > 0 and self._menu_max_scroll > 0:
             surface.set_clip(viewport)
 
         TextLabel.render(
@@ -895,6 +945,10 @@ class HeroPanel:
             vh = max(0, viewport_h)
             self._menu_max_scroll = max(0, content_h - vh) if vh > 0 else 0
             self.menu_scroll_px = max(0, min(self.menu_scroll_px, self._menu_max_scroll))
+            # WK115 BUG 1: natural full height the card needs to show everything =
+            # from the panel top (panel_y) down to the bottom of the last drawn
+            # element (y), plus a small bottom pad. NOT clamped to the viewport.
+            self.last_content_height = max(HERO_LEFT_MIN_H, int(y) - panel_y + 8)
             surface.set_clip(prev_clip)
 
         if not debug_ui:

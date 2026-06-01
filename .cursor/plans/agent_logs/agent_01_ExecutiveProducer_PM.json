@@ -5,6 +5,7 @@
   "name": "ExecutiveProducer_PM"
  },
  "notes": [
+  "2026-05-31 (Agent 01 WK114 CLOSED 2c3091a + WK115 KICKOFF): WK114 zombie-purge shipped+pushed (2c3091a, 8 building types removed across 22 files + dwellings.py deleted; suite 1425 passed; WK67 digest byte-identical -> purge behaviorally inert). NEW SOVEREIGN /goal: fix 3 left-menu HUD bugs, then continue ursina_app + roadmap autonomously ('i'll test it later'). WK115 = left-menu UI polish (PYGAME HUD -> SCREENSHOT-VERIFIED, NOT the ursina deferred exception). PM root-caused all 3 via grounding sweep + baseline captures: (1) solo resize 'slider' floats in blank panel because solo main_h=0.72*available >> card content -> fix: size solo card to content (cached last_content_height) + remove the main_solo handle; (2) hero-card 'weird effects' = blank-panel + scroll-clip edge artifacts -> mostly resolved by (1) + skip clip when no overflow; (3) pressing Chat doesn't grow the PINNED watch card (effective_watch_card_h honors split fraction, ignores _chat_visible) -> fix: grow watch_h to _desired_watch_card_expanded_h() when chat open. CONTRACT CHANGE: test_wk61_r11 (always-on solo handle) rewritten to new no-floating-bar contract. Owner Agent 08 (UX/UI) implements + screenshot-self-verifies; 11 does DoD + broad independent screenshot review. Plan: .cursor/plans/wk115_round_b_left_menu_ui_polish.plan.md.",
   "2026-05-31 (Agent 01 WK113 CLOSED 779dd7f + WK114 KICKOFF): WK113 shipped+pushed (779dd7f, camera-control cluster -> ursina_app_camera.py; ursina_app.py 1272->961; PM verbatim gate all 9 faithful; suite 1400 passed). SOVEREIGN PLAYTEST: 'all camera features are working fine' -> WK113 deferred-screenshot item CLOSED (deferred-screenshot pure-move model validated end-to-end). SOVEREIGN RULING: 'you can delete those old buildings' -> WK111 zombie purge UNBLOCKED, now executed as WK114. WK114 = purge the 8 purge_candidate=True types (gnome_hovel, elven_bungalow, dwarven_settlement, ballista_tower, wizard_tower, fairgrounds, library, royal_gardens). Grounding sweep (Explore agent) produced a complete wiring map: DIGEST-SAFE (none spawn at default startup/spawner/worldgen, none placeable -> fresh headless engine never creates one -> WK67 digest must stay byte-identical). Cross-cutting deletion across ~22 code files + 4 hard-pinned test files (test_wk70_building_registry snapshot counts, test_buffs royal_gardens_aura, test_wk61_r6 tax-overlay, test_wk68 library button). Done ATOMICALLY by ONE agent (05) to avoid dangling imports, then 11 fixes tests + seam test + DoD. Plan: .cursor/plans/wk114_round_b_zombie_building_purge.plan.md.",
   "2026-05-31 (Agent 01 WK112 CLOSED ca8da1d + WK113 KICKOFF): WK112 shipped+pushed (ca8da1d, 2f120b1..ca8da1d; validate_direct_prompt_output decomposed into _INTENT_HANDLERS per-intent table over _ResolveState/_ValidationInputs; full suite 1367 passed/4 skipped; WK67 digest byte-identical; PM differential cross-check IDENTICAL across 38 cases). WK113 = decompose the LAST major render god-file ursina_app.py (1272 LOC): extract its camera-control cluster (9 instance methods + 2 zone-fog consts, ~360 LOC) into NEW game/graphics/ursina_app_camera.py via the WK87-92/WK104-105 owner-arg pure-move pattern (precedent sibling: ursina_app_debug_probe.py). UrsinaApp keeps 9 delegating wrappers; byte-faithful move. RENDER SLICE -> deferred-screenshot model (live captures to Sovereign's end test). Verified by headless import smoke + both-import-orders + a WK105-style seam test + full pytest + determinism_guard + WK67 digest + qa_smoke + PM verbatim-diff gate. Waves: 09 W1 move -> 11 W2 seam test + DoD -> PM verbatim gate + commit. Plan: .cursor/plans/wk113_round_b_ursina_app_camera.plan.md.",
   "2026-05-31 (Agent 01 WK110 CLOSED 2f120b1 + WK112 KICKOFF): WK110 shipped+pushed (2f120b1, ai/vocab.py vocabulary consolidation; suite 1326 passed/4 skipped; digest byte-identical; definitions-only diff). CHECKPOINT held at 2f120b1; Sovereign asked about adding features, then said 'continue on the roadmap for now'. PM DECISION: keep executing BEHAVIOR-PRESERVING headless refactors; HOLD WK111 (WK34 zombie-type purge of 8 buildings) until the Sovereign rules keep/purge — several flagged types read as unfinished FEATURES (wizard_tower, library, royal_gardens, racial dwellings), so deleting them is a PRODUCT decision, not slop-cleanup. WK112 = decompose the 294-line god-function validate_direct_prompt_output (ai/direct_prompt_validator.py:118-412) — lift its 8-branch intent if/elif chain into a per-intent handler table (_INTENT_HANDLERS) over a _ResolveState dataclass; prelude + critical-HP redirect (extracted) + output tail stay in main. Behavior-preserving (chat path, NOT autonomous digest path -> WK67 digest trivially stable). Safety net = 38-case differential golden net captured by PM from HEAD (every branch). Wave order MANDATORY: 11 writes golden net GREEN on unmodified code (W0) -> 06 refactors (W1) -> 11 full DoD (W2). Plan: .cursor/plans/wk112_round_b_direct_prompt_validator.plan.md.",
@@ -6161,7 +6162,7 @@
   },
   "wk114_round_b_zombie_building_purge": {
    "sprint_meta": {
-    "status": "in_progress",
+    "status": "closed_success",
     "created_utc": "2026-05-31",
     "plan_doc": ".cursor/plans/wk114_round_b_zombie_building_purge.plan.md",
     "goal": "Purge the 8 WK34 zombie building types flagged purge_candidate=True in game/content/buildings.py (gnome_hovel, elven_bungalow, dwarven_settlement, ballista_tower, wizard_tower, fairgrounds, library, royal_gardens) across the registry, BuildingType enum, entity classes (dwellings/defensive/special), sim_engine dispatch, buffs (royal_gardens_aura), peasant gnome bonus, config shared lists, ai/decision_moments + hero_profile discovery sets, UI panels/build menu, and graphics label maps. Remove ONLY zombie members from shared lists; keep co-resident kept types (guardhouse/palace/guilds/temples). Sovereign-authorized 2026-05-31.",
@@ -6176,13 +6177,29 @@
      "full pytest 0 failed; determinism clean; WK67 digest BYTE-IDENTICAL; qa_smoke DONE: PASS",
      "import smoke + coverage assert pass"
     ],
-    "closeout_evidence": {}
+    "closeout_evidence": {
+     "commit_sha": "2c3091a",
+     "purged": "8 types (gnome_hovel, elven_bungalow, dwarven_settlement, ballista_tower, wizard_tower, fairgrounds, library, royal_gardens) + the purge_candidate field itself",
+     "code_files": "21 modified + dwellings.py DELETED. BUILDING_DEFS 47->39; factory registry 27->19; BuildingType enum -8; sim_engine 3 dispatch branches; buffs royal_gardens_aura block; peasant gnome bonus; config shared lists (members-only); decision_moments + hero_profile; UI panels; graphics label maps. Kept: guardhouse/palace/guilds/temples + poi_wizard_tower POI.",
+     "digest_safe": "WK67 digest b73961340c...d148ded BYTE-IDENTICAL (purged types never instantiate in headless scenario -> deletion behaviorally inert). HARD gate passed.",
+     "tests": "new tests/test_wk114_zombie_building_purge.py (36 cases). 6 test files updated: test_wk70_building_registry (snapshots recomputed from live 47->39/27->19), test_buffs (rewritten generic buff-infra), test_wk65_buildings_systems_characterization (ranged-tower test -> Guardhouse), test_wk61_r6_tax_gold_overlay_data (de-zombied; transitively fixed r6_qa + r7), test_wk68_building_buttons (library removed, Palace kept), test_hero_profile_contract (library->marketplace).",
+     "dod": {
+      "full_pytest": "1425 passed / 4 skipped / 0 failed / 0 errors",
+      "determinism_guard": "PASS",
+      "wk67_digest": "byte-identical b73961340c...d148ded",
+      "qa_smoke_quick": "DONE: PASS",
+      "pm_no_dangling_grep": "clean (zero class-name + zero quoted type-string refs in active code; only poi_wizard_tower/SpriteLibrary residue)"
+     },
+     "left_intentionally": "assets/prefabs/buildings/gnome_hovel_v1.json orphaned asset (not code-referenced; plan permits leaving it)",
+     "waves": "05 W1 atomic code purge (~22 files) -> PM no-dangling grep + digest gate -> 11 W2 fixed 4 collection errors + 9 assertion failures + seam test + full DoD",
+     "sovereign": "authorized 2026-05-31 ('you can delete those old buildings')"
+    }
    },
    "rounds": {
     "wk114_round_b_kickoff": {
      "round_meta": {
       "round": "wk114_round_b_kickoff",
-      "status": "in_progress",
+      "status": "closed_success",
       "created_utc": "2026-05-31",
       "agents": [
        "05 (W1 atomic code purge across ~22 files)",
@@ -6194,6 +6211,48 @@
      "pm_agent_prompts": {
       "05_W1": "Wave 1: execute the ENTIRE code purge per plan §2 (A-G) in one atomic pass — registry/enum/classes, sim_engine dispatch, buffs aura, peasant gnome bonus, config shared lists (members-only), ai/decision_moments + hero_profile, UI panels, graphics label maps. Remove ONLY zombie members from shared lists; KEEP guardhouse/palace/guilds/temples/poi_wizard_tower. Self-verify per §2 (import smoke, coverage assert, purge_candidate gone, no-dangling grep, kept types intact, new len(BUILDING_DEFS)/len(BUILDING_REGISTRY)). The full suite WILL be red (pinned tests) — that is expected; 11 fixes it. DO NOT COMMIT.",
       "11_W2": "Wave 2: update the 4 pinned test files per plan §3 (recompute test_wk70 snapshots from LIVE code + new length asserts; remove royal_gardens_aura test; remove dwelling/library instantiations in tax-overlay + button tests; rename the soft hero_profile library row). Write tests/test_wk114_zombie_building_purge.py pinning the post-purge invariant. Run full DoD (pytest 0 failed, determinism, WK67 digest byte-identical, qa_smoke). Report PASS/FAIL. DO NOT COMMIT."
+     },
+     "pm_commits": [
+      "2c3091a (pushed 779dd7f..2c3091a origin main)"
+     ]
+    }
+   }
+  },
+  "wk115_round_b_left_menu_ui_polish": {
+   "sprint_meta": {
+    "status": "in_progress",
+    "created_utc": "2026-05-31",
+    "plan_doc": ".cursor/plans/wk115_round_b_left_menu_ui_polish.plan.md",
+    "goal": "Fix 3 Sovereign-reported left-menu HUD bugs: (1) solo left-column resize 'slider' bar floating in blank panel space (size the solo hero/building card to its content + remove the main_solo handle); (2) 'weird effects' on the hero card (blank-panel + scroll-clip edge artifacts; skip clip when no overflow); (3) pressing Chat doesn't grow the pinned watch card to fit the chatbox (grow watch_h to _desired_watch_card_expanded_h() when _chat_visible). All in game/ui/*.",
+    "version_target": "patch (UI polish)",
+    "verification_class": "PYGAME HUD -> headless SCREENSHOT-VERIFIED (MANDATORY capture + per-image visual verdict, broad coverage, alignment/layering checked first). NOT the ursina deferred-screenshot exception. Plus full pytest, determinism_guard, WK67 digest (presentation-only -> must stay byte-identical), qa_smoke, updated contract tests + new seam test.",
+    "notes": "BUG 1 is a deliberate Sovereign-driven CONTRACT change: test_wk61_r11_sidebar_main_solo_handle (asserts the solo handle ALWAYS exists) is rewritten to the new no-floating-bar contract. One-frame-lag content height: layout runs before render, so solo main_h uses last frame's panel.last_content_height (converges in 1 frame; capture runs 120 ticks). Chat-popup branch (main_h=available) MUST stay first so chat-active always gets full height. WK52/96/98/99/100/101 + r10 layout tests must stay green (unchanged watch geometry).",
+    "definition_of_done": [
+     "BUG1: solo card sized to content, NO floating bar (ui_panels_hero/building/tax_collector AFTER)",
+     "BUG2: no clip/stray-line/overlap artifacts on hero card (AFTER shots)",
+     "BUG3: Chat grows the card; pinned ui_panels_pinned_chat + un-pinned wk61_hero_menu_chat_1920 readable",
+     "test_wk115_left_menu_polish.py green; test_wk61_r11 updated+green; WK52/96/98/99/100/101+r10 green",
+     "full pytest 0 failed; determinism clean; WK67 digest byte-identical; qa_smoke DONE: PASS",
+     "PM Read key BEFORE/AFTER PNGs + confirmed all 3 fixes visually"
+    ],
+    "closeout_evidence": {}
+   },
+   "rounds": {
+    "wk115_round_b_kickoff": {
+     "round_meta": {
+      "round": "wk115_round_b_kickoff",
+      "status": "in_progress",
+      "created_utc": "2026-05-31",
+      "agents": [
+       "08 (W1 implement 3 fixes + screenshot self-verify + contract tests)",
+       "11 (W2 full DoD + independent broad screenshot review)"
+      ],
+      "model": "claude-opus-4-8"
+     },
+     "pm_status_summary": "PM root-caused all 3 bugs to exact file:line, captured baseline screenshots (confirmed the floating bar, hero-card cramping, and chat band squeeze), and wrote precise fixes (solo content-sizing + handle removal; pinned watch-card chat growth; clip-skip). The plan specifies the layout edits with code, the contract-test rewrite, a new ui_panels_pinned_chat scenario, and the mandatory capture-verify loop.",
+     "pm_agent_prompts": {
+      "08_W1": "Wave 1: implement plan §1a/§1b (size solo card to content via panel.last_content_height + remove main_solo handle), §2 (skip hero_panel scroll clip when _menu_max_scroll<=0; no bar/line over content), §3 (grow pinned watch_h to _desired_watch_card_expanded_h() when _chat_visible). Add the ui_panels_pinned_chat scenario. Rewrite test_wk61_r11 to the new contract + add test_wk115_left_menu_polish.py. CAPTURE before/after for ALL §5 scenarios, Read every AFTER PNG, give per-image verdicts (alignment/layering FIRST). DO NOT COMMIT.",
+      "11_W2": "Wave 2: full DoD (pytest 0 failed, determinism, WK67 digest byte-identical, qa_smoke) + INDEPENDENT broad screenshot review — Read every §5 AFTER PNG, verdict alignment/layering first, confirm unaffected panels unchanged. Report PASS/FAIL per image. DO NOT COMMIT."
      },
      "pm_commits": []
     }

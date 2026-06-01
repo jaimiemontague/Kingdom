@@ -17,7 +17,6 @@ from game.ui.hud_layout import (
     LEFT_COL_W,
     LEFT_SPLIT_DEFAULT_FRAC_MAIN_SOLO,
     LEFT_SPLIT_HANDLE_H,
-    LEFT_SPLIT_HANDLE_HIT_H,
     RADAR_MINIMAP_H,
 )
 from game.ui.hud_watch_card import WATCH_CARD_HEADER_H
@@ -92,13 +91,32 @@ def layout_left_column_segments(
         if main_h < HERO_LEFT_MIN_H:
             main_h = HERO_LEFT_MIN_H
             watch_h = max(WATCH_CARD_HEADER_H, available - main_h)
+        # WK115 BUG 3: pressing Chat on the pinned watch hero must grow the watch
+        # segment to its chat-inclusive desired height (it already includes
+        # WATCH_CARD_CHAT_H via _desired_watch_card_expanded_h), recovering the
+        # space from the main panel down to its minimum.
+        if hud._chat_visible and hud._watch_card_expanded:
+            want_watch = int(hud._desired_watch_card_expanded_h())
+            max_watch = max(WATCH_CARD_HEADER_H, available - HERO_LEFT_MIN_H)
+            grown = min(want_watch, max_watch)
+            if grown > watch_h:
+                watch_h = grown
+                main_h = max(HERO_LEFT_MIN_H, available - watch_h)
     elif main_open:
         if hud._should_render_hero_menu_chat_popup(game_state or {}):
             main_h = available
         else:
-            solo_frac = fracs.get("main_solo", LEFT_SPLIT_DEFAULT_FRAC_MAIN_SOLO)
-            main_h = max(HERO_LEFT_MIN_H, int(round(float(solo_frac) * available)))
-            main_h = min(main_h, available)
+            # WK115 BUG 1: size the solo hero/building card to its content so no
+            # resize bar floats below the last line. Falls back to the legacy
+            # fraction only on the first frame after selection (before the panel
+            # has rendered + reported its content height).
+            natural = hud._left_main_natural_h(game_state or {})
+            if natural > 0:
+                main_h = max(HERO_LEFT_MIN_H, min(natural, available))
+            else:
+                solo_frac = fracs.get("main_solo", LEFT_SPLIT_DEFAULT_FRAC_MAIN_SOLO)
+                main_h = max(HERO_LEFT_MIN_H, int(round(float(solo_frac) * available)))
+                main_h = min(main_h, available)
     else:
         watch_h = available
 
@@ -114,14 +132,9 @@ def layout_left_column_segments(
             divider = pygame.Rect(0, y + main_h - LEFT_SPLIT_HANDLE_H, LEFT_COL_W, LEFT_SPLIT_HANDLE_H)
             hud._left_split_handle_rects["main_bottom"] = divider
             hud._left_split_handle_rects["watch_top"] = divider
-        else:
-            solo_handle = pygame.Rect(
-                0,
-                y + main_h - LEFT_SPLIT_HANDLE_HIT_H,
-                LEFT_COL_W,
-                LEFT_SPLIT_HANDLE_HIT_H,
-            )
-            hud._left_split_handle_rects["main_solo"] = solo_handle
+        # WK115 BUG 1: no handle in the solo case — the card is sized to its
+        # content (above), so there is no empty space below it to resize against.
+        # Overflow (rare) is handled by mouse-wheel scroll, not a resize bar.
         y += main_h
 
     if watch_open:

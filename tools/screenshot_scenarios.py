@@ -535,6 +535,34 @@ def scenario_ui_panels(engine, *, seed: int) -> list[Shot]:
             engine2.hud._watch_card_expanded = True
             engine2.hud._left_split_fracs = {"main": 0.32, "watch": 0.68}
 
+    def _apply_pinned_chat(engine2):
+        """WK115 BUG 3: pinned watch hero with Chat pressed — card must grow to fit chat."""
+        from game.sim.timebase import now_ms as sim_now_ms
+
+        _apply_select_hero(engine2)
+        hid = str(getattr(hero, "hero_id", "") or "")
+        hud = getattr(engine2, "hud", None)
+        if hud is not None:
+            hud._pin_slot.pin(hid, int(sim_now_ms()))
+            hud._pin_slot.pinned_name = str(getattr(hero, "name", "Hero"))
+            hud._pin_slot._just_pinned = False
+            hud._watch_card_expanded = True
+            hud._chat_visible = True
+            # Small watch fraction so the un-grown split would be too short for the
+            # chatbox; the BUG 3 fix must grow the watch segment to fit the chat band.
+            hud._left_split_fracs = {"main": 0.7, "watch": 0.3}
+            cp = getattr(hud, "_chat_panel", None)
+            if cp is not None:
+                cp.start_conversation(hero)
+                cp.conversation_history.clear()
+                cp.conversation_history.extend(
+                    [
+                        {"role": "player", "text": "Hold the gate while I rally the others."},
+                        {"role": "hero", "text": "Aye, my liege — nothing passes me."},
+                        {"role": "player", "text": "Good. Watch the treeline."},
+                    ]
+                )
+
     def _apply_debug_open(engine2):
         _apply_select_hero(engine2)
         if hasattr(engine2, "debug_panel"):
@@ -619,6 +647,15 @@ def scenario_ui_panels(engine, *, seed: int) -> list[Shot]:
             zoom=1.4,
             meta={"scenario": "ui_panels", "mode": "marketplace_tax"},
             apply=_apply_marketplace_taxable_gold,
+        ),
+        Shot(
+            filename="ui_panels_pinned_chat.png",
+            label="UI Panels: Pinned Watch Hero + Chat Open (WK115 BUG 3)",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.4,
+            meta={"scenario": "ui_panels", "mode": "pinned_chat"},
+            apply=_apply_pinned_chat,
         ),
     ]
 

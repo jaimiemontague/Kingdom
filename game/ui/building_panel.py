@@ -15,7 +15,7 @@ from config import (
     HERO_HIRE_COST,
 )
 from game.ui.building_renderers import get_panel_renderer, normalize_building_type_key
-from game.ui.hud import LEFT_COL_W, RADAR_MINIMAP_H
+from game.ui.hud import HERO_LEFT_MIN_H, LEFT_COL_W, RADAR_MINIMAP_H
 from game.ui.widgets import Button, NineSlice
 
 # WK68 G2: buildings that can hire a hero from their own panel.
@@ -48,6 +48,10 @@ class BuildingPanel:
         self._panel_height_max = 700  # scratch height for dynamic sizing
         self.menu_scroll_px = 0
         self._menu_max_scroll = 0
+        # WK115 BUG 1: natural full content height of the last-rendered building card
+        # (header + body + bottom pad, clamped >= HERO_LEFT_MIN_H, NOT clamped to the
+        # viewport). Lets the left-column solo layout size the card to its content.
+        self.last_content_height = 0
         self._scroll_anchor_id: int | None = None
         self.panel_x = 0
         self.panel_y = 48
@@ -333,6 +337,9 @@ class BuildingPanel:
 
         bottom_padding = 20
         content_h = min(scratch_h, y + bottom_padding)
+        # WK115 BUG 1: remember the natural full height the card needs so the
+        # left-column solo layout sizes the panel to its content (no floating bar).
+        self.last_content_height = max(HERO_LEFT_MIN_H, int(content_h))
 
         # Add close button
         close_size = 24
