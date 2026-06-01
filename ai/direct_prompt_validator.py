@@ -7,6 +7,8 @@ known-place targets, and MVP deferral of attack commands.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 from ai.prompt_templates import OBEY_DEFY_VALUES, TOOL_ACTIONS
@@ -115,6 +117,257 @@ def _find_place_by_hint(places: list[dict[str, Any]], target_id: str, descriptio
     return None
 
 
+# ---------------------------------------------------------------------------
+# WK112: per-intent handler table. The 8-branch intent chain of
+# validate_direct_prompt_output was lifted, branch-for-branch, into the
+# handlers below. Each handler is a faithful transcription of one former
+# ``elif`` block (LOCAL -> st.LOCAL; context reads -> inp.*); the dispatch
+# table preserves the original "exactly one branch runs, unknown -> no-op"
+# semantics. The prelude, the critical-HP redirect, and the output-assembly
+# tail remain in validate_direct_prompt_output. Behavior is byte-identical;
+# see tests/test_wk112_direct_prompt_validator.py (38-case golden).
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _ValidationInputs:
+    """Immutable read context shared by the per-intent handlers."""
+
+    places: list[dict[str, Any]]
+    hero_context: dict[str, Any]
+    situation: dict[str, Any]
+    critical: bool
+    has_potions: bool
+    can_shop: bool
+    player_message: str
+
+
+@dataclass
+class _ResolveState:
+    """Mutable working state threaded through the per-intent handlers.
+
+    Holds exactly the locals the original inline if/elif chain mutated, so each
+    handler is a verbatim lift of one branch. The caller seeds it from the
+    normalized inputs, applies the critical-HP redirect, dispatches to the
+    matching handler, then reads it back to assemble the output dict.
+    """
+
+    intent: str
+    tool: str | None
+    target_id: str
+    target_description: str
+    obey: str
+    refusal: str
+    safety: str
+    spoken: str
+    move_target: str = ""
+    target_row: dict[str, Any] | None = None
+
+
+def _apply_critical_health_redirect(st: _ResolveState, inp: _ValidationInputs) -> None:
+    """Critical-HP override (orig lines 184-211). Runs BEFORE intent dispatch and
+    may rewrite ``st.intent`` to ``seek_healing`` (which the dispatch then re-runs)."""
+    if inp.critical and st.intent in ("explore_direction", "go_to_known_place") and inp.has_potions:
+        st.intent = "seek_healing"
+        st.tool = "use_potion"
+        st.target_id = ""
+        st.target_description = ""
+        st.obey = "Obey"
+        st.safety = "critical_redirect"
+        if not st.spoken or len(st.spoken) < 10:
+            st.spoken = "Forgive me—I am too badly hurt to wander. I will drink what I have."
+    elif inp.critical and st.intent in ("explore_direction", "go_to_known_place"):
+        st.intent = "seek_healing"
+        home = _pick_home_place(inp.places, inp.hero_context)
+        if home:
+            st.tool = "retreat"
+            st.target_id = _norm_str(home.get("place_id"))
+            st.target_description = _norm_str(home.get("display_name")) or "castle"
+            st.obey = "Obey"
+            st.safety = "critical_redirect"
+            if not st.spoken or len(st.spoken) < 10:
+                st.spoken = "I must find safety first—I am barely on my feet."
+        else:
+            st.tool = None
+            st.refusal = st.refusal or "no_safe_haven_known"
+            st.safety = "impossible"
+            st.obey = "Defy"
+            st.target_id = ""
+            st.target_description = ""
+            st.spoken = st.spoken or "I am too badly hurt and know no hearth—send help if you can, Sovereign."
+
+
+def _handle_clear_tool(st: _ResolveState, inp: _ValidationInputs) -> None:
+    """status_report / no_action_chat_only (orig 216-219): just clear the tool."""
+    st.tool = None
+
+
+def _handle_return_home(st: _ResolveState, inp: _ValidationInputs) -> None:
+    home = _pick_home_place(inp.places, inp.hero_context)
+    if home:
+        st.target_row = home
+        st.move_target = _target_for_place_row(home)
+        if st.tool not in ("move_to", "retreat", None):
+            st.tool = "move_to"
+        if st.tool is None:
+            st.tool = "move_to"
+    else:
+        if inp.situation.get("near_safety") and inp.can_shop:
+            st.tool = "move_to"
+            st.move_target = "castle"
+        else:
+            st.tool = None
+            st.obey = "Defy" if st.obey == "Obey" else st.obey
+            st.refusal = st.refusal or "no_known_home"
+            st.safety = "impossible"
+            st.spoken = st.spoken or "I know of nowhere safe to run, Sovereign."
+
+
+def _handle_seek_healing(st: _ResolveState, inp: _ValidationInputs) -> None:
+    if inp.has_potions and inp.situation.get("low_health"):
+        st.tool = "use_potion"
+        st.move_target = ""
+    else:
+        home = _pick_home_place(inp.places, inp.hero_context)
+        if home:
+            st.target_row = home
+            st.move_target = _target_for_place_row(home)
+            st.tool = "retreat" if st.tool not in ("retreat", "move_to", None) else st.tool
+            if st.tool is None:
+                st.tool = "retreat"
+        else:
+            st.tool = None
+            st.refusal = st.refusal or "no_safe_haven_known"
+            st.safety = "impossible"
+            st.obey = "Defy"
+            st.spoken = st.spoken or "I know of no hall or inn to limp toward, Sovereign."
+
+
+def _handle_go_to_known_place(st: _ResolveState, inp: _ValidationInputs) -> None:
+    st.target_row = _find_place_by_hint(inp.places, st.target_id, st.target_description)
+    if st.target_row:
+        st.move_target = _target_for_place_row(st.target_row)
+        if st.tool not in ("move_to", "retreat", None):
+            st.tool = "move_to"
+        if st.tool is None:
+            st.tool = "move_to"
+        st.target_id = _norm_str(st.target_row.get("place_id"))
+        st.target_description = _norm_str(st.target_row.get("display_name")) or st.target_description
+    else:
+        st.tool = None
+        st.intent = "no_action_chat_only"
+        st.refusal = st.refusal or "unknown_place"
+        st.safety = "unknown_target"
+        st.spoken = st.spoken or "I do not know that place yet, my liege."
+
+
+def _handle_buy_potions(st: _ResolveState, inp: _ValidationInputs) -> None:
+    hero_d = inp.hero_context.get("hero") or {}
+    gold = int(hero_d.get("gold", 0) or 0)
+    if inp.can_shop:
+        items = list(inp.hero_context.get("shop_items") or [])
+        potion_item = next(
+            (i for i in items if "potion" in _norm_str(i.get("name")).lower()),
+            None,
+        )
+        # WK50 R17: direct prompt blob may omit proximity shop_items; use remembered/nearest
+        # marketplace catalog from ContextBuilder so MockProvider validation matches reality.
+        if potion_item is None:
+            catalog = list(inp.hero_context.get("market_catalog_items") or [])
+            potion_item = next(
+                (i for i in catalog if "potion" in _norm_str(i.get("name")).lower()),
+                None,
+            )
+        if potion_item and potion_item.get("can_afford"):
+            st.tool = "buy_item"
+            st.move_target = _norm_str(potion_item.get("name")) or "Health Potion"
+        elif potion_item and not potion_item.get("can_afford"):
+            st.tool = None
+            st.intent = "no_action_chat_only"
+            st.refusal = st.refusal or ("no_gold" if gold <= 0 else "insufficient_gold")
+            st.safety = "impossible"
+            st.obey = "Defy"
+            st.spoken = st.spoken or (
+                "I haven't the coin for that draught, Sovereign."
+                if gold > 0
+                else "I haven't the coin for potions, Sovereign."
+            )
+        else:
+            st.tool = None
+            st.intent = "no_action_chat_only"
+            st.refusal = st.refusal or "no_potions_here"
+            st.safety = "impossible"
+            st.obey = "Defy"
+            st.spoken = st.spoken or "No healing vials here—I'll need another stall or apothecary."
+    else:
+        m = _pick_marketplace(inp.places)
+        if m:
+            st.target_row = m
+            st.tool = "move_to"
+            st.move_target = _target_for_place_row(m)
+        else:
+            st.tool = None
+            st.refusal = st.refusal or "no_market_known"
+            st.safety = "impossible"
+            st.intent = "no_action_chat_only"
+            st.obey = "Defy"
+            st.spoken = st.spoken or "I know of no market where I can spend coin."
+
+
+def _handle_explore_direction(st: _ResolveState, inp: _ValidationInputs) -> None:
+    dirn = parse_compass_direction(
+        _norm_str(inp.player_message),
+        st.target_description,
+        st.target_id,
+    )
+    if not dirn:
+        st.tool = None
+        st.intent = "no_action_chat_only"
+        st.refusal = st.refusal or "unknown_heading"
+        st.safety = "unknown_target"
+        st.obey = "Defy"
+        st.spoken = st.spoken or (
+            "Name a compass way—east, west, north, or south—and I'll scout it, Sovereign."
+        )
+        st.move_target = ""
+    else:
+        if st.tool not in ("explore", None):
+            st.tool = "explore"
+        if st.tool is None:
+            st.tool = "explore"
+        st.move_target = ""
+        st.target_description = dirn
+
+
+def _handle_rest_until_healed(st: _ResolveState, inp: _ValidationInputs) -> None:
+    if _norm_str(inp.hero_context.get("current_location", "")).lower() not in ("outdoors", ""):
+        st.tool = "leave_building" if st.tool not in ("leave_building", None) else "leave_building"
+        st.move_target = ""
+    else:
+        home = _pick_home_place(inp.places, inp.hero_context)
+        if home:
+            st.tool = "move_to"
+            st.move_target = _target_for_place_row(home)
+        else:
+            st.tool = None
+            st.refusal = st.refusal or "no_known_rest_place"
+            st.safety = "impossible"
+            st.obey = "Defy"
+            st.spoken = st.spoken or "I know of no roof to rest under—point me to an inn or hold."
+
+
+_INTENT_HANDLERS: dict[str, Callable[[_ResolveState, _ValidationInputs], None]] = {
+    "status_report": _handle_clear_tool,
+    "no_action_chat_only": _handle_clear_tool,
+    "return_home": _handle_return_home,
+    "seek_healing": _handle_seek_healing,
+    "go_to_known_place": _handle_go_to_known_place,
+    "buy_potions": _handle_buy_potions,
+    "explore_direction": _handle_explore_direction,
+    "rest_until_healed": _handle_rest_until_healed,
+}
+
+
 def validate_direct_prompt_output(
     raw: Any,
     hero_context: dict[str, Any],
@@ -181,209 +434,56 @@ def validate_direct_prompt_output(
     if tool is not None and tool not in TOOL_ACTIONS:
         tool = None
 
-    if critical and intent in ("explore_direction", "go_to_known_place") and has_potions:
-        intent = "seek_healing"
-        tool = "use_potion"
-        target_id = ""
-        target_description = ""
-        obey = "Obey"
-        safety = "critical_redirect"
-        if not spoken or len(spoken) < 10:
-            spoken = "Forgive me—I am too badly hurt to wander. I will drink what I have."
-    elif critical and intent in ("explore_direction", "go_to_known_place"):
-        intent = "seek_healing"
-        home = _pick_home_place(places, hero_context)
-        if home:
-            tool = "retreat"
-            target_id = _norm_str(home.get("place_id"))
-            target_description = _norm_str(home.get("display_name")) or "castle"
-            obey = "Obey"
-            safety = "critical_redirect"
-            if not spoken or len(spoken) < 10:
-                spoken = "I must find safety first—I am barely on my feet."
-        else:
-            tool = None
-            refusal = refusal or "no_safe_haven_known"
-            safety = "impossible"
-            obey = "Defy"
-            target_id = ""
-            target_description = ""
-            spoken = spoken or "I am too badly hurt and know no hearth—send help if you can, Sovereign."
+    st = _ResolveState(
+        intent=intent,
+        tool=tool,
+        target_id=target_id,
+        target_description=target_description,
+        obey=obey,
+        refusal=refusal,
+        safety=safety,
+        spoken=spoken,
+    )
+    inp = _ValidationInputs(
+        places=places,
+        hero_context=hero_context,
+        situation=situation,
+        critical=critical,
+        has_potions=has_potions,
+        can_shop=can_shop,
+        player_message=player_message,
+    )
 
-    target_row: dict[str, Any] | None = None
-    move_target = ""
+    _apply_critical_health_redirect(st, inp)
 
-    if intent == "status_report":
-        tool = None
-    elif intent == "no_action_chat_only":
-        tool = None
-    elif intent == "return_home":
-        home = _pick_home_place(places, hero_context)
-        if home:
-            target_row = home
-            move_target = _target_for_place_row(home)
-            if tool not in ("move_to", "retreat", None):
-                tool = "move_to"
-            if tool is None:
-                tool = "move_to"
-        else:
-            if situation.get("near_safety") and can_shop:
-                tool = "move_to"
-                move_target = "castle"
-            else:
-                tool = None
-                obey = "Defy" if obey == "Obey" else obey
-                refusal = refusal or "no_known_home"
-                safety = "impossible"
-                spoken = spoken or "I know of nowhere safe to run, Sovereign."
-    elif intent == "seek_healing":
-        if has_potions and situation.get("low_health"):
-            tool = "use_potion"
-            move_target = ""
-        else:
-            home = _pick_home_place(places, hero_context)
-            if home:
-                target_row = home
-                move_target = _target_for_place_row(home)
-                tool = "retreat" if tool not in ("retreat", "move_to", None) else tool
-                if tool is None:
-                    tool = "retreat"
-            else:
-                tool = None
-                refusal = refusal or "no_safe_haven_known"
-                safety = "impossible"
-                obey = "Defy"
-                spoken = spoken or "I know of no hall or inn to limp toward, Sovereign."
-    elif intent == "go_to_known_place":
-        target_row = _find_place_by_hint(places, target_id, target_description)
-        if target_row:
-            move_target = _target_for_place_row(target_row)
-            if tool not in ("move_to", "retreat", None):
-                tool = "move_to"
-            if tool is None:
-                tool = "move_to"
-            target_id = _norm_str(target_row.get("place_id"))
-            target_description = _norm_str(target_row.get("display_name")) or target_description
-        else:
-            tool = None
-            intent = "no_action_chat_only"
-            refusal = refusal or "unknown_place"
-            safety = "unknown_target"
-            spoken = spoken or "I do not know that place yet, my liege."
-    elif intent == "buy_potions":
-        hero_d = hero_context.get("hero") or {}
-        gold = int(hero_d.get("gold", 0) or 0)
-        if can_shop:
-            items = list(hero_context.get("shop_items") or [])
-            potion_item = next(
-                (i for i in items if "potion" in _norm_str(i.get("name")).lower()),
-                None,
-            )
-            # WK50 R17: direct prompt blob may omit proximity shop_items; use remembered/nearest
-            # marketplace catalog from ContextBuilder so MockProvider validation matches reality.
-            if potion_item is None:
-                catalog = list(hero_context.get("market_catalog_items") or [])
-                potion_item = next(
-                    (i for i in catalog if "potion" in _norm_str(i.get("name")).lower()),
-                    None,
-                )
-            if potion_item and potion_item.get("can_afford"):
-                tool = "buy_item"
-                move_target = _norm_str(potion_item.get("name")) or "Health Potion"
-            elif potion_item and not potion_item.get("can_afford"):
-                tool = None
-                intent = "no_action_chat_only"
-                refusal = refusal or ("no_gold" if gold <= 0 else "insufficient_gold")
-                safety = "impossible"
-                obey = "Defy"
-                spoken = spoken or (
-                    "I haven't the coin for that draught, Sovereign."
-                    if gold > 0
-                    else "I haven't the coin for potions, Sovereign."
-                )
-            else:
-                tool = None
-                intent = "no_action_chat_only"
-                refusal = refusal or "no_potions_here"
-                safety = "impossible"
-                obey = "Defy"
-                spoken = spoken or "No healing vials here—I'll need another stall or apothecary."
-        else:
-            m = _pick_marketplace(places)
-            if m:
-                target_row = m
-                tool = "move_to"
-                move_target = _target_for_place_row(m)
-            else:
-                tool = None
-                refusal = refusal or "no_market_known"
-                safety = "impossible"
-                intent = "no_action_chat_only"
-                obey = "Defy"
-                spoken = spoken or "I know of no market where I can spend coin."
-    elif intent == "explore_direction":
-        dirn = parse_compass_direction(
-            _norm_str(player_message),
-            target_description,
-            target_id,
-        )
-        if not dirn:
-            tool = None
-            intent = "no_action_chat_only"
-            refusal = refusal or "unknown_heading"
-            safety = "unknown_target"
-            obey = "Defy"
-            spoken = spoken or (
-                "Name a compass way—east, west, north, or south—and I'll scout it, Sovereign."
-            )
-            move_target = ""
-        else:
-            if tool not in ("explore", None):
-                tool = "explore"
-            if tool is None:
-                tool = "explore"
-            move_target = ""
-            target_description = dirn
-    elif intent == "rest_until_healed":
-        if _norm_str(hero_context.get("current_location", "")).lower() not in ("outdoors", ""):
-            tool = "leave_building" if tool not in ("leave_building", None) else "leave_building"
-            move_target = ""
-        else:
-            home = _pick_home_place(places, hero_context)
-            if home:
-                tool = "move_to"
-                move_target = _target_for_place_row(home)
-            else:
-                tool = None
-                refusal = refusal or "no_known_rest_place"
-                safety = "impossible"
-                obey = "Defy"
-                spoken = spoken or "I know of no roof to rest under—point me to an inn or hold."
+    handler = _INTENT_HANDLERS.get(st.intent)
+    if handler is not None:
+        handler(st, inp)
 
-    target_id_out = _norm_str(target_row.get("place_id")) if target_row else ""
-    if intent == "go_to_known_place":
-        target_id_out = target_id
+    target_id_out = _norm_str(st.target_row.get("place_id")) if st.target_row else ""
+    if st.intent == "go_to_known_place":
+        target_id_out = st.target_id
 
     out: dict[str, Any] = {
-        "spoken_response": spoken,
-        "interpreted_intent": intent,
-        "tool_action": tool,
-        "action": tool,
-        "target": move_target,
+        "spoken_response": st.spoken,
+        "interpreted_intent": st.intent,
+        "tool_action": st.tool,
+        "action": st.tool,
+        "target": st.move_target,
         "target_kind": (
             "direction"
-            if tool == "explore" and intent == "explore_direction"
-            else (_norm_str(raw.get("target_kind")) or ("known_place" if target_row else ""))
+            if st.tool == "explore" and st.intent == "explore_direction"
+            else (_norm_str(raw.get("target_kind")) or ("known_place" if st.target_row else ""))
         ),
         "target_id": target_id_out,
-        "target_description": target_description,
-        "obey_defy": obey,
-        "refusal_reason": refusal,
-        "safety_assessment": safety,
+        "target_description": st.target_description,
+        "obey_defy": st.obey,
+        "refusal_reason": st.refusal,
+        "safety_assessment": st.safety,
         "confidence": conf,
     }
 
-    if tool is None:
+    if st.tool is None:
         out["action"] = None
         out["target"] = ""
         out["target_kind"] = out.get("target_kind") or ""
@@ -393,8 +493,8 @@ def validate_direct_prompt_output(
         if str(out.get("safety_assessment") or "") in ("", "unknown"):
             out["safety_assessment"] = "safe"
 
-    if tool == "buy_item":
-        out["target"] = move_target or "Health Potion"
+    if st.tool == "buy_item":
+        out["target"] = st.move_target or "Health Potion"
 
     if out.get("tool_action") is None:
         tin = str(out.get("interpreted_intent") or "")

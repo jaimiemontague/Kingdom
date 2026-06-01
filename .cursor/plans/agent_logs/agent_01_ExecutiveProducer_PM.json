@@ -5,6 +5,7 @@
   "name": "ExecutiveProducer_PM"
  },
  "notes": [
+  "2026-05-31 (Agent 01 WK110 CLOSED 2f120b1 + WK112 KICKOFF): WK110 shipped+pushed (2f120b1, ai/vocab.py vocabulary consolidation; suite 1326 passed/4 skipped; digest byte-identical; definitions-only diff). CHECKPOINT held at 2f120b1; Sovereign asked about adding features, then said 'continue on the roadmap for now'. PM DECISION: keep executing BEHAVIOR-PRESERVING headless refactors; HOLD WK111 (WK34 zombie-type purge of 8 buildings) until the Sovereign rules keep/purge — several flagged types read as unfinished FEATURES (wizard_tower, library, royal_gardens, racial dwellings), so deleting them is a PRODUCT decision, not slop-cleanup. WK112 = decompose the 294-line god-function validate_direct_prompt_output (ai/direct_prompt_validator.py:118-412) — lift its 8-branch intent if/elif chain into a per-intent handler table (_INTENT_HANDLERS) over a _ResolveState dataclass; prelude + critical-HP redirect (extracted) + output tail stay in main. Behavior-preserving (chat path, NOT autonomous digest path -> WK67 digest trivially stable). Safety net = 38-case differential golden net captured by PM from HEAD (every branch). Wave order MANDATORY: 11 writes golden net GREEN on unmodified code (W0) -> 06 refactors (W1) -> 11 full DoD (W2). Plan: .cursor/plans/wk112_round_b_direct_prompt_validator.plan.md.",
   "2026-05-31 (Agent 01 WK109 CLOSED e3212e2 + WK110 KICKOFF): WK109 shipped+pushed (e3212e2, FOG/C finale ensure_fog_overlay + ensure_grid_debug_overlay -> ursina_fog_overlay.py; fog_collab 482->170; suite ->1314; digest byte-identical; PM verbatim ZERO diffs). MILESTONE: fog_collab god-file 1783->170 FULLY DECOMPOSED (5 leaf modules WK104/106/107/108/109 + thin facade). PIVOT to non-render headless roadmap. Grounding agent a7c2b23b024665466 found the audit LOC numbers are STALE (config/world/sim_engine/hero/input/mock_provider/context_builder work already done). WK110 KICKOFF = ai/vocab.py consolidation (ToolAction/DirectIntent str-Enums + place frozensets; derive+re-export legacy names byte-identical; digest-safe by construction; SCOPE OUT TaskRouter=Move12). Fully headless-verifiable. WK111=WK34 zombie purge, WK112=validator split queued. Dispatching Agent 06 (W1).",
   "2026-05-31 (Agent 01 WK108 CLOSED 0eaf55f + WK109 KICKOFF): WK108 shipped+pushed (0eaf55f, FOG/B-2 build_3d_terrain + _batch_static_terrain_for_chunks -> ursina_terrain_build.py; fog_collab 910->482; suite ->1300; digest byte-identical; PM verbatim both faithful; 8-point test_terrain_perf retarget + WK104 back-import invariant reconciled by updating the test to follow migrated consumers). MILESTONE: fog_collab 1783 (pre-WK104) -> 482. WK109 KICKOFF = FOG/C finale: ensure_fog_overlay + ensure_grid_debug_overlay (~315 LOC) -> ursina_fog_overlay.py. Cleanest move (only self._r, no own-slots, no intra-calls; pre-grounded agent a82bdea0d0fc5e898). Orphan sweep + FOG_TEX_BRIDGE_KEY relocation; test_terrain_perf L719-720 shared-object patches retarget tfc->ufo. After WK109 fog_collab = __init__ + wrappers (stateful facade) = god-file DONE. Then pivot to ursina_app.py / non-render headless roadmap. Dispatching Agent 09 (W1).",
   "2026-05-31 (Agent 01 WK107 CLOSED 9893836 + WK108 KICKOFF): WK107 shipped+pushed (9893836, FOG/B-1 ground-mesh/grass/cave-shader -> ursina_terrain_ground_mesh.py; fog_collab 1184->910 incl -3 dead-import cleanup; suite ->1288; digest byte-identical; PM verbatim-diff all 3 faithful; no test retarget needed). WK108 KICKOFF = FOG/B-2: build_3d_terrain + _batch_static_terrain_for_chunks (~408 LOC) -> ursina_terrain_build.py. Pre-grounded (agent a32f75b16ecbb88f1): one-way build->batch (L873 becomes direct module fn); build calls WK106/107 wrappers via owner.X; CRITICAL 8-point test_terrain_perf retarget, esp L235-238 class-method patch of _batch_static_terrain_for_chunks -> ttb module fn (build's direct call bypasses the class wrapper; miss=passes-but-wrong). Agent 09 also sweeps fog_collab orphan imports. After WK108 the god-file is essentially decomposed (only __init__ + ensure_fog_overlay + ensure_grid_debug + wrappers remain; WK109 takes those). Dispatching Agent 09 (W1).",
@@ -6014,7 +6015,7 @@
      "leaf_guard": "ai/vocab.py imports only __future__ + enum (AST-confirmed; no cycle)",
      "scope_out": "TaskRouter (Move 12) NOT touched; optional prompt_packs.py:67 string + decision_moments.py inline tuples SKIPPED (contain ordered/extra members accept_bounty/seek_meal not byte-identically derivable) -> follow-up",
      "verification_class": "FULLY HEADLESS (no deferred screenshots) -- clean break from the ursina render slices",
-     "commit_sha": "recorded in next kickoff note"
+     "commit_sha": "2f120b1"
     }
    },
    "rounds": {
@@ -6037,6 +6038,49 @@
      "pm_commits": [
       "pending push — SHA in next kickoff note"
      ]
+    }
+   }
+  },
+  "wk112_round_b_direct_prompt_validator": {
+   "sprint_meta": {
+    "status": "in_progress",
+    "created_utc": "2026-05-31",
+    "plan_doc": ".cursor/plans/wk112_round_b_direct_prompt_validator.plan.md",
+    "goal": "Decompose validate_direct_prompt_output (ai/direct_prompt_validator.py, 294-line god-function, L118-412) into a per-intent handler table: lift each of the 8 intent if/elif branches verbatim into a _handle_* fn keyed in _INTENT_HANDLERS, mutating a shared _ResolveState dataclass over a frozen _ValidationInputs read-context; extract the critical-HP redirect to _apply_critical_health_redirect; keep the prelude (normalize/deferred-combat/allow-list gating) and the output-assembly tail inline. Public signature byte-identical; output byte-identical for every input.",
+    "version_target": "patch (behavior-preserving refactor; no feature change)",
+    "verification_class": "HEADLESS pure-logic (NO UI/render -> NO screenshots). Differential 38-case golden net (PM-captured from HEAD) is the keystone; full pytest + determinism_guard + WK67 digest (incl. chat-purity pins) + qa_smoke + PM golden cross-check (re-run capture vs frozen _pm_wk112_golden_HEAD.json).",
+    "notes": "Chat validator, OFF the autonomous decision path -> WK67 keystone digest b73961340c...d148ded expected trivially byte-identical. Consumers (ai/llm_brain.py x5, ai/providers/mock/direct_prompt.py x1) depend only on the public signature. Subtle interplay preserved: critical-HP redirect runs BEFORE dispatch and may rewrite intent to seek_healing (handler re-runs on top of redirect writes) — pinned by golden cases critical_explore_has_potion / critical_explore_no_potion_home.",
+    "definition_of_done": [
+     "tests/test_wk112_direct_prompt_validator.py: 40 tests, all GREEN, no xfail remaining",
+     "full pytest -q: 0 failed",
+     "tools/determinism_guard.py: clean PASS",
+     "WK67 digest byte-identical (b73961340c...d148ded) + chat-purity pins GREEN",
+     "tools/qa_smoke.py --quick: DONE: PASS",
+     "public signature unchanged; both consumer modules import clean",
+     "PM cross-check: re-run capture vs frozen _pm_wk112_golden_HEAD.json -> IDENTICAL"
+    ],
+    "closeout_evidence": {}
+   },
+   "rounds": {
+    "wk112_round_b_kickoff": {
+     "round_meta": {
+      "round": "wk112_round_b_kickoff",
+      "status": "in_progress",
+      "created_utc": "2026-05-31",
+      "agents": [
+       "11 (W0 golden characterization net, GREEN on unmodified code)",
+       "06 (W1 per-intent handler-table decomposition)",
+       "11 (W2 full DoD verification)"
+      ],
+      "model": "claude-opus-4-8"
+     },
+     "pm_status_summary": "PM captured a byte-exact 38-case behavioral golden from HEAD (every branch, incl. the critical-redirect/seek-healing re-run interplay), embedded it verbatim in the plan §4-GOLDEN, and specified the complete target module (the _ResolveState / _ValidationInputs dataclasses, the 7 _handle_* fns + _INTENT_HANDLERS, and the rewritten main fn) so the agents transcribe with near-zero ambiguity. Wave order is enforced by PM (11 W0 GREEN-on-HEAD before 06 W1).",
+     "pm_agent_prompts": {
+      "11_W0": "Wave 0: write tests/test_wk112_direct_prompt_validator.py EXACTLY per plan §4 (copy the §4-GOLDEN JSON verbatim into _GOLDEN_JSON). Mark test_intent_handler_table_covers_all_supported_intents xfail(strict=True) for W0. Prove all OTHER tests GREEN on the UNMODIFIED validator. DO NOT COMMIT.",
+      "06_W1": "Wave 1: edit ONLY ai/direct_prompt_validator.py per plan §3 — lift each of the 8 intent branches verbatim into _handle_* fns over _ResolveState/_ValidationInputs + _INTENT_HANDLERS; extract _apply_critical_health_redirect (EXACT original conjunct order); keep prelude+tail+helpers unchanged. Remove the W0 xfail. Self-verify: wk112 net 40 GREEN, the 53 direct-prompt/vocab tests GREEN, both consumers import clean. DO NOT COMMIT.",
+      "11_W2": "Wave 2: full DoD — pytest -q (0 failed), determinism_guard, WK67 digest + chat-purity pins, qa_smoke --quick, wk112 net 40 GREEN no xfail. Report a PASS/FAIL table to PM. DO NOT COMMIT."
+     },
+     "pm_commits": []
     }
    }
   }

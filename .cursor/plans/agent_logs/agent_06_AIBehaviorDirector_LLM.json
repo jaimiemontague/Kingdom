@@ -1800,6 +1800,51 @@
           "constraints_honored": "DID NOT COMMIT (no git add/commit/push/checkout). DID NOT edit any file under tests/. DID NOT touch ai/basic_ai.py / TaskRouter (out of scope, Move 12). Touched only ai/vocab.py (new) + ai/prompt_templates.py + ai/direct_prompt_validator.py."
         }
       }
+    },
+    "wk112_round_b_direct_prompt_validator": {
+      "sprint_meta": {
+        "created_utc": "2026-05-31T00:00:00Z",
+        "plan_ref": ".cursor/plans/wk112_round_b_direct_prompt_validator.plan.md",
+        "role": "Agent 06 AIBehaviorDirector_LLM",
+        "sprint_id": "wk112_round_b_direct_prompt_validator",
+        "title": "WK112 Round B W1 - decompose the 294-line god-function validate_direct_prompt_output into a per-intent handler table (behavior-preserving, byte-identical) (Agent 06)"
+      },
+      "rounds": {
+        "wk112_w1": {
+          "round_id": "wk112_w1",
+          "sprint_id": "wk112_round_b_direct_prompt_validator",
+          "status": "done",
+          "round_meta": {
+            "role": "Agent 06 AIBehaviorDirector_LLM",
+            "reports_to": "Agent 01 (PM)",
+            "launched_by": "Claude Code Agent-tool subagent (parent Agent 01 PM)",
+            "completed_utc": "2026-05-31T00:00:00Z",
+            "phase": "W1 - lift the 8-branch intent chain of validate_direct_prompt_output into a per-intent handler table over _ResolveState/_ValidationInputs dataclasses; extract _apply_critical_health_redirect; rewrite main fn to prelude+build st/inp+redirect+dispatch+tail; remove W0 xfail. Behavior byte-identical; differential golden net is the arbiter."
+          },
+          "scope": "BEHAVIOR-PRESERVING REFACTOR, ai/direct_prompt_validator.py ONLY. Added imports: from collections.abc import Callable; from dataclasses import dataclass (NOT field - no default-factory). Added frozen _ValidationInputs (places/hero_context/situation/critical/has_potions/can_shop/player_message) + mutable _ResolveState (intent/tool/target_id/target_description/obey/refusal/safety/spoken + move_target=\"\" + target_row=None defaults). Extracted _apply_critical_health_redirect (orig 184-211) using the EXACT ORIGINAL conjunct order: if inp.critical and st.intent in (\"explore_direction\",\"go_to_known_place\") and inp.has_potions: ... elif inp.critical and st.intent in (...). Lifted the 8 if/elif branches VERBATIM (LOCAL -> st.LOCAL, context reads -> inp.*) into _handle_clear_tool (status_report + no_action_chat_only), _handle_return_home, _handle_seek_healing, _handle_go_to_known_place, _handle_buy_potions, _handle_explore_direction, _handle_rest_until_healed; dispatch via _INTENT_HANDLERS dict (8 keys). Rewrote validate_direct_prompt_output body: prelude UNCHANGED -> build st+inp -> _apply_critical_health_redirect(st, inp) -> handler = _INTENT_HANDLERS.get(st.intent); if handler is not None: handler(st, inp) -> output-assembly tail reads st.*/conf/raw. Kept all 7 helpers + constants block + existing imports unchanged. NO string literals / control flow / ordering changed. Also removed the @pytest.mark.xfail decorator from tests/test_wk112_direct_prompt_validator.py::test_intent_handler_table_covers_all_supported_intents (the ONLY test-file edit; it now XPASSes -> passes).",
+          "new_top_level_names": [
+            "_ValidationInputs",
+            "_ResolveState",
+            "_apply_critical_health_redirect",
+            "_handle_clear_tool",
+            "_handle_return_home",
+            "_handle_seek_healing",
+            "_handle_go_to_known_place",
+            "_handle_buy_potions",
+            "_handle_explore_direction",
+            "_handle_rest_until_healed",
+            "_INTENT_HANDLERS"
+          ],
+          "self_check": "AST top-level-name dump confirms ONLY the planned new names were added (4 constants + 7 original helpers UNCHANGED, then _ValidationInputs/_ResolveState/_apply_critical_health_redirect/7x _handle_*/_INTENT_HANDLERS/validate_direct_prompt_output). Main fn intent section has NO leftover bare-local chain: prelude still mutates bare intent/tool BEFORE st is built (unchanged prelude logic); tail reads only st.*/conf/raw/out.",
+          "constraints_honored": "DID NOT COMMIT (no git add/commit/push/checkout). Edited ONLY ai/direct_prompt_validator.py + the single xfail removal in tests/test_wk112_direct_prompt_validator.py per PM instruction. No drive-by cleanups. Used EXACT original critical-redirect conjunct order (not the readability-reorder). No string-literal/control-flow/ordering changes.",
+          "verification": {
+            "wk112_net": "python -m pytest tests/test_wk112_direct_prompt_validator.py -q -> 41 passed, 1 warning in 0.17s (0 failed, 0 xfail, 0 xpass)",
+            "direct_prompt_vocab_suites": "python -m pytest tests/test_wk50_phase2b_direct_prompt_contracts.py tests/test_direct_prompt_integration.py tests/test_wk65_ai_characterization.py tests/test_wk110_ai_vocab.py -q -> 53 passed, 1 warning in 6.59s",
+            "import_dpv": "python -c \"import ai.direct_prompt_validator\" -> dpv OK (no error)",
+            "import_consumers": "python -c \"import ai.llm_brain; import ai.providers.mock.direct_prompt\" -> consumers OK (no error)"
+          }
+        }
+      }
     }
   }
 }
