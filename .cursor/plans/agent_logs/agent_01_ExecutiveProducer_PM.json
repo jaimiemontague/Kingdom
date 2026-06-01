@@ -5,6 +5,7 @@
   "name": "ExecutiveProducer_PM"
  },
  "notes": [
+  "2026-06-01 (Agent 01 WK120 CLOSED 0bc1d70 + WK121 KICKOFF): WK120 Move 12 faithful relocation shipped+pushed (0bc1d70; update_hero -> ai/task_router.py; basic_ai 415->281; verbatim IDENTICAL; full WK67 suite green; suite 1500 passed). SOVEREIGN BUG (found testing WK115): clicking the hero/watch card top bar maximizes it across the entire left sidebar, hiding the building/hero menu; preferred = shouldn't do this, fallback = reliable toggle back. WK121 = fix it (PYGAME HUD -> SCREENSHOT-VERIFIED). PM grounding: the watch-card header X-glyph (info_card.draw_shell L95-102, header_close_x=True) is the control_hit -> hud._watch_card_chevron_rect; clicking it toggles _watch_card_expanded (hud.py:1147); action handler is a clean no-op (mouse.py:119). Click-driven layout effect NOT reproduced by static scenarios -> Agent 08 MUST reproduce the click (before/after captures) to pin the mechanism, then fix so the header click never evicts/hides the main menu + the card never takes the full sidebar while a main menu is open + reliably toggles back. Waves: 08 W1 reproduce+diagnose+fix+screenshot-verify -> PM visual review -> 11 W2 DoD + broad review. Plan: .cursor/plans/wk121_round_b_watch_card_maximize_bug.plan.md.",
   "2026-06-01 (Agent 01 WK119 CLOSED 8afec65 + WK120 KICKOFF): WK119 resolved Move 9 by deleting the dead SystemRunner wiring (8afec65; digest byte-identical; suite 1493 unchanged). WK120 = Move 12 (TaskRouter) FAITHFUL FORM: relocate BasicAI.update_hero's dispatch (L205-335, ~131 LOC) verbatim into NEW ai/task_router.py::update_hero(ai, hero, dt, view) behind a 1-line delegating wrapper (owner-arg pure-move, self->ai). HIGH-CONFIDENCE: update_hero IS the path the WK67 digest exercises, so a faithful relocation that keeps the digest byte-identical is provably behavior-preserving with strong headless coverage. SCOPE DECISION: the roadmap's competitive propose()->TaskProposal re-architecture is a BEHAVIOR-CHANGING design that would shift the 50+-sprint WK67 digest invariant -> that is a gameplay decision, NOT de-slop -> DEFERRED, needs Sovereign go-ahead. WK120 does the safe structural half (creates the module + slims basic_ai 415->~290). Waves: 06 W1 move -> PM verbatim gate (expect IDENTICAL) + full WK67 suite -> 11 W2 seam test + DoD. After WK120 the roadmap is substantially complete except the deferred propose() item. Plan: .cursor/plans/wk120_round_b_task_router_extract.plan.md.",
   "2026-06-01 (Agent 01 WK118 CLOSED 898cd60 + WK119 KICKOFF): WK118 frame-loop shipped+pushed (898cd60; update() closure -> ursina_app_frame.run_frame; ursina_app.py 669->423; verbatim gate faithful across 168 body lines; suite 1493 passed). MILESTONE: ursina_app.py render god-file decomposition COMPLETE (1272->423 across WK105/113/116/117/118). PIVOTED via Explore grounding to the remaining roadmap sim refactors (Move 9 SystemRunner, Move 12 TaskRouter). FINDING: SystemRunner (game/sim/system_runner.py, WK64) is DEAD wiring (update_all never called; _ordered_systems constructed at sim_engine.py:143 never read) AND its 2 held systems (buff ~L733, wave_event ~L792) are NON-ADJACENT -> growing it into one contiguous pipeline would reorder side effects and break the WK67 digest. Roadmap line 511 + audit remedy (a) both sanction DELETING the dead wiring when no contiguous fire-and-forget run exists (the case). WK119 = resolve Move 9 by deleting the dead SystemRunner wiring (digest-safe slop removal). Single round (Agent 05, owns sim) + PM gate. Plan: .cursor/plans/wk119_round_b_systemrunner_deadwiring.plan.md.",
   "2026-06-01 (Agent 01 WK117 CLOSED 0e0e8eb + WK118 KICKOFF): WK117 UI-overlay/HUD-texture cluster shipped+pushed (0e0e8eb; 5 members -> ursina_app_ui_overlay.py; ursina_app.py 833->669; suite 1485 passed). WK118 = extract the run() per-frame update() closure (~245 LOC, L418-663) into NEW game/graphics/ursina_app_frame.py as run_frame(owner, dt); run() collapses to a ~7-line Ursina bootstrap shim calling run_frame(self, time.dt). Completes the render god-file decomposition (ursina_app 1272 -> ~430 across WK105/113/116/117/118). LARGEST + HOTTEST move; the live loop is NOT exercised by the headless digest/determinism/qa_smoke, so the PM AST verbatim-diff gate is the PRIMARY faithfulness proof (must be byte-identical modulo 2 structural diffs: drop dt=time.dt, hoist pan_speed=55.0). Waves: 09 W1 move -> PM verbatim gate (load-bearing) -> 11 W2 seam test + DoD. Plan: .cursor/plans/wk118_round_b_ursina_app_frame.plan.md.",
@@ -6511,7 +6512,7 @@
   },
   "wk120_round_b_task_router_extract": {
    "sprint_meta": {
-    "status": "in_progress",
+    "status": "closed_success",
     "created_utc": "2026-06-01",
     "plan_doc": ".cursor/plans/wk120_round_b_task_router_extract.plan.md",
     "goal": "Move 12 faithful form: extract BasicAI.update_hero's body (ai/basic_ai.py L205-335) verbatim into NEW ai/task_router.py::update_hero(ai, hero, dt, view) (owner-arg, self->ai); BasicAI keeps a 1-line delegating wrapper; update() loop unchanged. Creates the task_router module and slims basic_ai (~415 -> ~290 LOC). Byte-faithful; WK67 digest byte-identical. The competitive propose()->TaskProposal re-architecture is DEFERRED (behavior-changing, needs Sovereign go-ahead).",
@@ -6526,13 +6527,28 @@
      "full pytest 0 failed; determinism clean; FULL WK67 suite green + digest byte-identical (decisive); qa_smoke PASS",
      "both fresh-import orders OK"
     ],
-    "closeout_evidence": {}
+    "closeout_evidence": {
+     "commit_sha": "0bc1d70",
+     "new_module": "ai/task_router.py (update_hero(ai, hero, dt, view); AST self-id == 0; 6 grep-exact imports)",
+     "facade": "ai/basic_ai.py 415 -> 281 LOC; update_hero is the 1-line delegating wrapper; update() loop unchanged; 4 proven-unused imports removed",
+     "pm_verbatim_diff_gate": "IDENTICAL — task_router.update_hero body == HEAD BasicAI.update_hero body after self->ai canonicalization (0 diffs across 78 ast body statements)",
+     "new_test": "tests/test_wk120_task_router.py = 7 tests (existence/signature, wrapper-delegation spy, AST no-cycle, fresh-subprocess both-orders, source guard)",
+     "dod": {
+      "full_pytest": "1500 passed / 4 skipped / 0 failed",
+      "determinism_guard": "PASS",
+      "wk67_full_suite": "10 passed; digest byte-identical b73961340c...d148ded (DECISIVE for an AI-path move)",
+      "qa_smoke_quick": "DONE: PASS",
+      "ai_seam_suite": "52 passed (wk120 7 + wk82/83/84/85 45)"
+     },
+     "scope_decision": "Move 12 SAFE STRUCTURAL HALF done (module exists, basic_ai slimmed, digest-byte-identical). The competitive propose()->TaskProposal re-architecture is DEFERRED -- behavior-changing (would move the 50+-sprint WK67 digest invariant) -> needs explicit Sovereign go-ahead; surfaced as the one remaining roadmap item that is a gameplay change, not de-slop.",
+     "waves": "06 W1 faithful relocation (+4 unused-import removal) -> PM verbatim-diff gate (IDENTICAL) + WK67 -> 11 W2 seam test + full DoD (full WK67 suite decisive)"
+    }
    },
    "rounds": {
     "wk120_round_b_kickoff": {
      "round_meta": {
       "round": "wk120_round_b_kickoff",
-      "status": "in_progress",
+      "status": "closed_success",
       "created_utc": "2026-06-01",
       "agents": [
        "06 (W1 faithful relocation of update_hero -> ai/task_router.py + wrapper)",
@@ -6544,6 +6560,47 @@
      "pm_agent_prompts": {
       "06_W1": "Wave 1: create ai/task_router.py with update_hero(ai, hero, dt, view) = the verbatim body of BasicAI.update_hero (self->ai ONLY; keep docstring/comments). Module-top imports = EXACTLY the 6 sources update_hero references (plan §2); do NOT import route_to_building/BuildingType/get_rng/sim_now_ms/the ai.behaviors block; task_router must NOT import basic_ai at top. Replace BasicAI.update_hero (L205-335) with the 1-line lazy-delegating wrapper; leave update() loop unchanged. Self-verify per §2 (import smoke, self count=0, signature (ai,hero,dt,view), WK67 digest + wk82/wk85 green, new line count ~290). DO NOT COMMIT.",
       "11_W2": "Wave 2: write tests/test_wk120_task_router.py (existence/signature, wrapper-delegation spy, AST no-cycle, fresh-subprocess both-orders, source guard). Run full DoD per plan §4: pytest 0 failed, determinism, FULL WK67 suite green + digest byte-identical (decisive for an AI-path move), qa_smoke, seam + wk82/83/84/85 green. Report PASS/FAIL. DO NOT COMMIT."
+     },
+     "pm_commits": [
+      "0bc1d70 (pushed 8afec65..0bc1d70 origin main)"
+     ]
+    }
+   }
+  },
+  "wk121_round_b_watch_card_maximize_bug": {
+   "sprint_meta": {
+    "status": "in_progress",
+    "created_utc": "2026-06-01",
+    "plan_doc": ".cursor/plans/wk121_round_b_watch_card_maximize_bug.plan.md",
+    "goal": "Fix the Sovereign-reported bug: clicking the hero/watch card's top bar maximizes it across the entire left sidebar, hiding the building/hero menu. Make clicking the watch-card header non-destructive: it must NOT evict/hide the main menu, the card must never take the full sidebar while a main menu is present, and a second click must reliably restore the prior size. PYGAME HUD -> screenshot-verified.",
+    "version_target": "patch (UI bug fix)",
+    "verification_class": "PYGAME HUD SCREENSHOT-VERIFIED (reproduce the click headlessly -> before/after captures -> visual verdict, alignment/layering first). NOT the ursina deferred exception. Plus full pytest, determinism_guard, WK67 digest (presentation-only -> byte-identical), qa_smoke, a new regression test, and the watch/left-layout suite (WK52/96/98/99/100/101 + WK115) green.",
+    "notes": "Mechanism candidates (Agent 08 to confirm via repro): expanded watch segment squeezes/hides main; or toggle not reliably reverting; or WK115 chat-grow / solo-watch path. The X glyph LOOKS like close but TOGGLES expand (UX confusion). Known sites: info_card.draw_shell L95-102, hud.py:1144-1148 toggle, hud_left_layout.layout_left_column_segments split, desired_watch_card_expanded_h. Keep WK115 fixes intact. Follow-up to WK115, not a roadmap item.",
+    "definition_of_done": [
+     "Reproduction confirmed the mechanism (before/after captures + field deltas in Agent 08 log)",
+     "Header click no longer hides/evicts the building/hero menu; card never full-sidebar while a main menu is open; 2nd click restores size",
+     "tests/test_wk121_watch_card_no_evict.py green; watch/left-layout suite (WK52/96/98/99/100/101 + WK115) green",
+     "full pytest 0 failed; determinism clean; WK67 digest byte-identical; qa_smoke DONE: PASS",
+     "PM Read before/after/toggled-back PNGs + confirmed the fix visually"
+    ],
+    "closeout_evidence": {}
+   },
+   "rounds": {
+    "wk121_round_b_kickoff": {
+     "round_meta": {
+      "round": "wk121_round_b_kickoff",
+      "status": "in_progress",
+      "created_utc": "2026-06-01",
+      "agents": [
+       "08 (W1 reproduce + diagnose + fix + screenshot self-verify + regression test)",
+       "11 (W2 full DoD + independent broad screenshot review)"
+      ],
+      "model": "claude-opus-4-8"
+     },
+     "pm_status_summary": "PM ground the watch-card header control (the X toggles _watch_card_expanded; handler is a no-op; split layout in hud_left_layout). Because the bug is click-driven and static scenarios set the state programmatically, the plan requires Agent 08 to REPRODUCE the click (before/after captures + field deltas) to pin the mechanism before fixing, then fix so the header click never evicts the main menu, with screenshot verification.",
+     "pm_agent_prompts": {
+      "08_W1": "Wave 1: per plan §2 — (a) REPRODUCE headlessly: build a main-menu-open (selected building/hero) + pinned collapsed watch-card state at 1920x1080 (model on screenshot_scenarios _apply_sidebar_pin_split/_apply_select_hero), render+capture before, call hud.handle_click(_watch_card_chevron_rect.center, gs), render+capture after, report the _left_main_rect/_left_watch_rect/_watch_card_expanded/selected deltas + what visibly changed. (b) FIX per the diagnosis so clicking the header NEVER hides/evicts the main building/hero menu and the card never takes the full sidebar while a main menu is present + 2nd click reliably restores size; keep WK115 fixes intact. (c) VERIFY: re-run repro after fix (after_fixed + toggled_back captures), capture ui_panels + wk52_pin_alerts, Read all PNGs + per-image verdict; add tests/test_wk121_watch_card_no_evict.py. DO NOT COMMIT.",
+      "11_W2": "Wave 2: full DoD (pytest 0 failed, determinism, WK67 digest byte-identical, qa_smoke) + the watch/left-layout suite (WK52/96/98/99/100/101 + WK115 + WK121) green + INDEPENDENT broad screenshot review (re-capture, Read each, verdict alignment/layering first; confirm main menu coexists with the watch card). Report PASS/FAIL per image. DO NOT COMMIT."
      },
      "pm_commits": []
     }

@@ -17,6 +17,7 @@ from game.ui.hud_layout import (
     LEFT_COL_W,
     LEFT_SPLIT_DEFAULT_FRAC_MAIN_SOLO,
     LEFT_SPLIT_HANDLE_H,
+    MAIN_MENU_MIN_PRESENT_H,
     RADAR_MINIMAP_H,
 )
 from game.ui.hud_watch_card import WATCH_CARD_HEADER_H
@@ -83,25 +84,40 @@ def layout_left_column_segments(
     main_h = watch_h = 0
 
     if main_open and watch_open:
-        main_h = max(HERO_LEFT_MIN_H, int(round(fracs["main"] * available)))
-        watch_h = available - main_h
-        if watch_h < WATCH_CARD_HEADER_H:
-            watch_h = WATCH_CARD_HEADER_H
-            main_h = max(HERO_LEFT_MIN_H, available - watch_h)
+        # WK121: clicking the watch-card header must NEVER maximize the card over /
+        # evict the building/hero (main) menu. The watch segment is bounded to the
+        # card's OWN content: just the header when collapsed, or its desired
+        # expanded height (incl. chat when open) when expanded — it can no longer
+        # claim a large pre-reserved fraction that the body then "fills" on toggle.
+        # The main menu always keeps at least its natural content height (down to a
+        # sane minimum only when the column is genuinely too short), so the two
+        # panels visibly coexist instead of one taking over the sidebar.
+        if hud._watch_card_expanded:
+            watch_want = int(hud._desired_watch_card_expanded_h())
+        else:
+            watch_want = WATCH_CARD_HEADER_H
+        watch_want = max(WATCH_CARD_HEADER_H, watch_want)
+
+        main_natural = int(hud._left_main_natural_h(game_state or {}))
+        if main_natural <= 0:
+            # First frame after selection (panel not yet rendered): fall back to the
+            # saved fraction so the menu still has room until content height reports.
+            main_natural = max(HERO_LEFT_MIN_H, int(round(fracs["main"] * available)))
+        # The main menu's floor: prefer its full content, but never demand more than
+        # a sane menu-present minimum when forced to share a short column.
+        main_floor = min(main_natural, max(HERO_LEFT_MIN_H, MAIN_MENU_MIN_PRESENT_H))
+
+        # The watch card takes only its bounded want; the main menu takes its
+        # natural content. If both don't fit, shrink the watch first (down to its
+        # header), then the main toward its floor — the main menu is never the
+        # first to lose space. Any leftover column stays EMPTY (no giant card):
+        # neither panel is inflated to absorb slack, so a collapsed watch card is
+        # an 18px header peek, not a full-column box.
+        watch_h = min(watch_want, max(WATCH_CARD_HEADER_H, available - main_floor))
+        main_h = min(main_natural, available - watch_h)
         if main_h < HERO_LEFT_MIN_H:
             main_h = HERO_LEFT_MIN_H
             watch_h = max(WATCH_CARD_HEADER_H, available - main_h)
-        # WK115 BUG 3: pressing Chat on the pinned watch hero must grow the watch
-        # segment to its chat-inclusive desired height (it already includes
-        # WATCH_CARD_CHAT_H via _desired_watch_card_expanded_h), recovering the
-        # space from the main panel down to its minimum.
-        if hud._chat_visible and hud._watch_card_expanded:
-            want_watch = int(hud._desired_watch_card_expanded_h())
-            max_watch = max(WATCH_CARD_HEADER_H, available - HERO_LEFT_MIN_H)
-            grown = min(want_watch, max_watch)
-            if grown > watch_h:
-                watch_h = grown
-                main_h = max(HERO_LEFT_MIN_H, available - watch_h)
     elif main_open:
         if hud._should_render_hero_menu_chat_popup(game_state or {}):
             main_h = available

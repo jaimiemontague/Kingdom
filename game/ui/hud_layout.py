@@ -23,6 +23,11 @@ RECALL_BTN_W = 180
 MEMORIAL_BTN_W = 90
 # Left-column main-panel minimum height (relocated from hud.py in WK98; hud.py re-imports+re-exports it).
 HERO_LEFT_MIN_H = 80
+# WK121: when BOTH a main (building/hero) menu AND the watch card are open, the main
+# menu must keep at least this much height so the watch card can never maximize over /
+# evict it. Well above HERO_LEFT_MIN_H (which is only the absolute clamp for a
+# genuinely too-short column); chosen to keep the header + first stat rows readable.
+MAIN_MENU_MIN_PRESENT_H = 160
 # Left-column split-handle sizes + default split fractions (relocated from hud.py in WK99; hud re-imports+re-exports).
 LEFT_SPLIT_HANDLE_H = 4
 LEFT_SPLIT_HANDLE_HIT_H = 8

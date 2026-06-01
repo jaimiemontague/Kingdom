@@ -2391,6 +2391,54 @@
      "do_not_commit": "PM (Agent 01) owns the commit. Did not git add/commit/push."
     }
    }
+  },
+  "wk121_round_b_watch_card_maximize_bug": {
+   "sprint_meta": {
+    "plan_ref": ".cursor/plans/wk121_round_b_watch_card_maximize_bug.plan.md",
+    "created_utc": "2026-06-01T00:00:00Z",
+    "notes": "WK121 Round B Wave 1 (Agent 08): fix Sovereign-reported bug - clicking the hero/watch card top bar maximizes it over the whole left sidebar, evicting the building/hero menu. PYGAME HUD, screenshot-verified. DO NOT COMMIT - PM owns commit."
+   },
+   "rounds": {
+    "wk121_round_b_kickoff__08_W1": {
+     "sprint_id": "wk121_round_b_watch_card_maximize_bug",
+     "round_id": "wk121_round_b_kickoff (08_W1)",
+     "status": "done",
+     "task": "Reproduce->diagnose->fix->verify the watch-card header click that maximizes over the building/hero menu. Touch only game/ui/*; add tests/test_wk121_watch_card_no_evict.py. DO NOT COMMIT.",
+     "diagnosis": {
+      "mechanism": "Headless repro (hero SELECTED + hero PINNED, 1920x1080): clicking the 14x14 header X routes to HUD.handle_click L1144-1148 -> toggles _watch_card_expanded; mouse.py action is a no-op (no deselect). The toggle itself is clean - NOTHING gets deselected. The REAL mechanism is in hud_left_layout.layout_left_column_segments main_open and watch_open branch: the watch segment was sized by the SAVED FRACTION (_left_split_fracs['watch']) regardless of expand/collapse. Default 0.45, and the ui_panels sidebar_split scenario the Sovereign was testing uses 0.68. So even COLLAPSED, the watch card reserved 45-68 percent of the column (rendered as an empty dark box). Expanding merely FILLED that pre-reserved segment -> reads as the card maximizing over the (already-squeezed) main menu.",
+      "field_deltas_default_fracs": "collapsed->expanded with default 0.55/0.45: main rect (0,48,224,469) ~unchanged; watch (0,517,224,383)->(0,517,224,383). Rects do NOT change on toggle; the 383px watch box is empty when collapsed (only an 18px header drawn).",
+      "field_deltas_scenario_fracs": "with scenario 0.32/0.68 (what Sovereign saw, watch expanded): main=(0,48,224,273) - squeezed to a tiny strip; watch=(0,321,224,579) - dominates 2/3 of the column. THIS is the reported 'maximizes over the whole sidebar / gets rid of other menus'.",
+      "nothing_deselected": "selected_hero stayed True, selected_building stayed False across all clicks. handle_click returned 'watch_card_chevron_toggle' each time. Chevron rect re-derived each frame; second click reliably collapses back."
+     },
+     "what_i_changed": [
+      "game/ui/hud_layout.py: added MAIN_MENU_MIN_PRESENT_H = 160 (sane menu-present floor for the main building/hero menu when both panels are open; well above HERO_LEFT_MIN_H=80 which is now only the absolute too-short-column clamp).",
+      "game/ui/hud_left_layout.py: rewrote the main_open and watch_open split (~L86-120) to be CONTENT-bounded instead of fraction-driven. watch_want = WATCH_CARD_HEADER_H when collapsed else _desired_watch_card_expanded_h() (already includes WATCH_CARD_CHAT_H when _chat_visible, so WK115 BUG3 chat-grow is preserved). main_natural = _left_main_natural_h(gs) (hero panel content; building panel falls back to fraction; 0 -> first-frame fraction fallback). watch_h = min(watch_want, available-main_floor); main_h = min(main_natural, available-watch_h); HERO_LEFT_MIN_H clamp kept for genuinely short columns. Net: collapsed watch = 18px header peek (no giant box); expanded watch = its own content only (never full column); main menu always keeps its content (>= MAIN_MENU_MIN_PRESENT_H); leftover column is empty, not inflated.",
+      "tests/test_wk121_watch_card_no_evict.py (NEW): 4 tests - (1) main NOT evicted/squeezed when watch expanded (main.height>=MAIN_MENU_MIN_PRESENT_H, watch<available-HERO_LEFT_MIN_H, no overlap); (2) collapsed watch == WATCH_CARD_HEADER_H header peek; (3) drives the REAL chevron handle_click headlessly - toggle non-destructive (main survives), 2nd click round-trips _watch_card_expanded + restores header peek; (4) WK115 chat-grow still works.",
+      "tests/test_wk61_r10_sidebar_layout.py: updated test_left_split_fracs_allocate_main_and_watch - the watch segment is now content-bounded so main+watch may sum to <= available (leftover empty column), watch<=_desired_watch_card_expanded_h(), and main is above watch with no overlap (was asserting == available, the OLD fill-the-column behavior)."
+     ],
+     "verification": {
+      "repro_after_fix": "default fracs: collapsed main=469/watch=18(header peek); expanded main=437/watch=236; toggled-back main=437/watch=18. Main menu fully present + content-sized in ALL states; watch never exceeds 236 (its content). 2nd click reliably collapses.",
+      "screenshot_verdicts": [
+       "docs/screenshots/wk121_repro/before.png (collapsed) - PASS: full Gareth hero menu (all rows+Chat btn); below it an 18px watch header peek + empty column. No giant empty box, no eviction.",
+       "docs/screenshots/wk121_repro/after.png (expanded) - PASS: full hero menu at top AND expanded watch card (mini-map+stats) below. Both coexist, flush-left x=0, no overlap.",
+       "docs/screenshots/wk121_repro/toggled_back.png (2nd click) - PASS: back to full hero menu + header peek. Round-trips cleanly.",
+       "docs/screenshots/wk121_after/ui_panels_sidebar_split.png - PASS: scenario 0.32/0.68 frac no longer dominates; full hero menu + bounded expanded watch card coexist (previously watch took 2/3).",
+       "docs/screenshots/wk121_after/ui_panels_pinned_chat.png - PASS: WK115 BUG3 intact - full hero menu + expanded watch + 3-line chat band all visible.",
+       "docs/screenshots/wk121_after/ui_panels_hero.png - PASS: WK115 BUG1 intact - solo hero card content-sized (no floating resize bar).",
+       "docs/screenshots/wk121_after/wk52_watch_card_expanded.png + wk52_watch_card_minimized.png - PASS: hero menu present + watch card (expanded / header-peek) coexist."
+      ],
+      "alignment_layering": "Checked FIRST: left edges flush at x=0; main menu always above watch card; main.bottom <= watch.top (no overlap); watch never full-column while a main menu is present.",
+      "pytest": "target suite (wk121/wk115/wk52/wk99/wk100/wk101) -> 124 passed. Full suite: 1504 passed, 4 skipped, 0 failed. WK67 ai-decision-digest stable test: 1 passed (presentation-only change).",
+      "evidence_commands": [
+       "python tools/capture_screenshots.py --scenario ui_panels --out docs/screenshots/wk121_after --seed 3 --size 1920x1080",
+       "python tools/capture_screenshots.py --scenario wk52_pin_alerts --out docs/screenshots/wk121_after --seed 3 --size 1920x1080"
+      ]
+     },
+     "constraints_observed": [
+      "Touched only game/ui/* + new test + WK61-R10 test update. No commit/add/push. Throwaway repro script deleted. docs/screenshots PNGs are gitignored verification artifacts."
+     ]
+    }
+   }
   }
  }
 }

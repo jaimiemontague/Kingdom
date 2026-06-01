@@ -5757,6 +5757,101 @@
           "blocker_for_pm": "none -- all 5 DoD gates PASS. Ready for PM final DoD + scoped commit (ursina_app.py, ursina_app_ui_overlay.py, tests/test_wk117_ursina_app_ui_overlay.py, plan + PM hub + agent logs)."
         }
       }
+    },
+    "wk121_round_b_watch_card_maximize_bug": {
+      "sprint_meta": {
+        "sprint_id": "wk121_round_b_watch_card_maximize_bug",
+        "plan_ref": ".cursor/plans/wk121_round_b_watch_card_maximize_bug.plan.md",
+        "created_utc": "2026-06-01T00:00:00Z",
+        "goal": "WK121 Round B Wave 2 (Agent 11 QA): full DoD + independent broad screenshot review of Agent 08's fix for the Sovereign-reported bug (clicking the hero/watch card top bar maximized it over the whole left sidebar, hiding the building/hero menu). Root cause (Wave 1): hud_left_layout.layout_left_column_segments sized the watch segment by the SAVED split FRACTION (default 0.45, scenario 0.68) regardless of collapse/expand, so even collapsed it reserved 45-68pct of the column. Fix: both-open split is now CONTENT-bounded (collapsed watch=18px header peek; expanded=_desired_watch_card_expanded_h(); main always keeps >= new MAIN_MENU_MIN_PRESENT_H=160 floor). PYGAME HUD, screenshot-verified. DO NOT COMMIT - PM owns commit."
+      },
+      "rounds": {
+        "wk121_round_b_kickoff__11_W2": {
+          "sprint_id": "wk121_round_b_watch_card_maximize_bug",
+          "round_id": "wk121_round_b_kickoff (11_W2)",
+          "status": "done",
+          "round_meta": {
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "wave": "W2 (full DoD gate stack + INDEPENDENT broad screenshot review; alignment/layering first; confirm main menu coexists with the watch card and nothing is evicted)",
+            "model": "claude-opus-4-8[1m]",
+            "depends_on": "Agent 08 Wave 1 (content-bounded both-open split in hud_left_layout.py; MAIN_MENU_MIN_PRESENT_H=160 in hud_layout.py; tests/test_wk121_watch_card_no_evict.py NEW; tests/test_wk61_r10_sidebar_layout.py updated)",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "wave1_test_files_edited": false
+          },
+          "prompt_summary": "PM prompt 11_W2: full DoD (pytest 0 failed; determinism; WK67 digest byte-identical; qa_smoke) + watch/left-layout suite (WK52/96/98/99/100/101 + WK115 + WK121 + WK61_r10) green + INDEPENDENT broad screenshot review (re-capture ui_panels + wk52_pin_alerts at seed 3 1920x1080, Read each, verdict alignment/layering first; confirm main menu coexists with the watch card, watch does not dominate/evict). Report PASS/FAIL per image. DO NOT modify production or Wave-1 test files. DO NOT COMMIT.",
+          "dod_gate_table": [
+            {
+              "gate": "python -m pytest -q (full suite)",
+              "result": "PASS",
+              "detail": "1504 passed, 4 skipped, 0 failed in 250.15s. Matches Agent 08's count (1504 passed / 4 skipped)."
+            },
+            {
+              "gate": "python tools/determinism_guard.py",
+              "result": "PASS",
+              "detail": "[determinism_guard] PASS: no violations found."
+            },
+            {
+              "gate": "WK67 keystone digest byte-identical",
+              "result": "PASS",
+              "detail": "tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable -> 1 passed. _AI_DECISION_DIGEST = b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded == expected b73961340c...d148ded. Confirms presentation-only change; AI behavior unchanged."
+            },
+            {
+              "gate": "python tools/qa_smoke.py --quick",
+              "result": "PASS",
+              "detail": "[qa_smoke] DONE: PASS. All headless profiles (base/intent_bounty/hero_stuck/no-enemies/mock-LLM/speed-scaling/interior_view/quest_panel/conversation/direct_prompt) exit_code=0."
+            },
+            {
+              "gate": "watch/left-layout regression suite",
+              "result": "PASS",
+              "detail": "test_wk121_watch_card_no_evict + test_wk115_left_menu_polish + test_wk52_watch_card + test_wk96_hud_watch_card + test_wk98_hud_watch_geom + test_wk99_hud_left_layout + test_wk100_hud_layout_orchestration + test_wk101_hud_hero_menu_layout + test_wk61_r10_sidebar_layout -> 197 passed, 0 failed."
+            }
+          ],
+          "screenshot_review": {
+            "capture_cmds": [
+              "python tools/capture_screenshots.py --scenario ui_panels --out docs/screenshots/wk121_qa --seed 3 --size 1920x1080  (8 PNGs)",
+              "python tools/capture_screenshots.py --scenario wk52_pin_alerts --out docs/screenshots/wk121_qa --seed 3 --size 1920x1080  (7 PNGs)"
+            ],
+            "method": "Read each PNG; for fine HUD detail cropped the left ~20pct column and 3x NEAREST-upscaled (_zoom_*_left.png) since the left sidebar is small at 1920x1080. Alignment/layering checked FIRST.",
+            "per_image_verdicts": [
+              {
+                "image": "docs/screenshots/wk121_qa/ui_panels_sidebar_split.png",
+                "verdict": "PASS",
+                "notes": "WORST CASE (0.68 watch frac). FULL hero menu (Gareth Warrior: header+stats+decision+blue Chat btn, nothing truncated) at TOP; BOUNDED watch card (header+mini-map+HP/Mana/XP/Lvl/Chat) below it. They coexist, flush-left x=0, stacked, no overlap; column below the watch card is empty background. The watch card does NOT take 2/3 of the column / does NOT evict the main menu. The reported maximize-over behavior is RESOLVED."
+              },
+              {
+                "image": "docs/screenshots/wk121_qa/ui_panels_pinned_chat.png",
+                "verdict": "PASS",
+                "notes": "WK115 BUG3 chat-grow intact AND coexisting. FULL hero menu at top (Chat btn present); below it the expanded watch card with mini-map + HP/Mana/XP/Lvl bars, AND the 3-line chat band visible (Hold the gate while I rally the others / Aye my liege - nothing passes me / Good. Watch the treeline). Watch card grew for the chat band but still does NOT evict the main menu. Flush-left, stacked, no overlap."
+              },
+              {
+                "image": "docs/screenshots/wk121_qa/ui_panels_hero.png",
+                "verdict": "PASS",
+                "notes": "WK115 BUG1 solo content-sizing intact. Single hero card (no pinned watch card) sized exactly to content: header+stats+decision block ending cleanly at the blue Chat btn + clean bottom border. NO floating resize bar, NO giant empty box below. Rest of column is background."
+              },
+              {
+                "image": "docs/screenshots/wk121_qa/wk52_watch_card_expanded.png",
+                "verdict": "PASS",
+                "notes": "FULL hero menu at top (Chat btn) + expanded watch card below (header+mini-map showing Gareth+INN landmark+HP/Mana/XP/Lvl/Chat). Watch card content-bounded, ends cleanly; column below is background. No full-sidebar takeover. Coexist, flush-left, no overlap."
+              },
+              {
+                "image": "docs/screenshots/wk121_qa/wk52_watch_card_minimized.png",
+                "verdict": "PASS",
+                "notes": "FULL hero menu remains present + complete above the watch card (with Chat btn). Watch card content-bounded (mini-map + bars). No full-sidebar takeover in this state either. Flush-left, stacked, no overlap."
+              },
+              {
+                "image": "docs/screenshots/wk121_qa/ui_panels_building.png",
+                "verdict": "PASS (unaffected control)",
+                "notes": "Inn building menu sized exactly to content: header (Inn+X) + stats (Heroes Inside/Heals/Gold/Taxable) + Demolish(red) + Enter Building(green) buttons + clean bottom border. No watch card (no pin), no giant empty box. Content-sized, flush-left x=0. Unrelated control path unregressed."
+              }
+            ],
+            "alignment_layering_summary": "Checked FIRST across all images: left edges flush at x=0; main building/hero menu ALWAYS rendered above the watch card; no panel overlap/overlap-bleed in any state; watch card never spans the full sidebar while a main menu is present. The previously-reserved giant empty watch box (the maximize-over mechanism) is gone."
+          },
+          "regression_found": false,
+          "verdict": "PASS - all 5 DoD gates green; 6/6 reviewed images PASS (incl. the 0.68 worst-case sidebar_split and the unaffected building control). The Sovereign-reported maximize-over-the-sidebar bug is fixed: the watch card is content-bounded and the main menu always coexists. WK67 digest byte-identical => presentation-only. No regression in the watch/left-layout suite, WK115 chat-grow, or WK115 solo content-sizing. Ready for PM commit. Screenshot PNGs (docs/screenshots/wk121_qa/*) stay gitignored.",
+          "constraints_honored": "Did NOT modify production code or Wave-1 test files (verified via git status: only the 5 Wave-1 paths + 2 PM/agent logs modified, plus the NEW test + plan untracked - all from Wave 1, none from me). Did NOT commit/add/push. Only ran gates + captured/reviewed screenshots + updated this log."
+        }
+      }
     }
   }
 }

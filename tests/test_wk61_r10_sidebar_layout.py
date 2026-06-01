@@ -37,9 +37,15 @@ def test_left_split_fracs_allocate_main_and_watch():
 
     assert hud._left_main_rect is not None
     assert hud._left_watch_rect is not None
-    assert hud._left_main_rect.height + hud._left_watch_rect.height == available
+    # WK121: the watch segment is now bounded to the card's OWN content (it no longer
+    # fills its saved fraction of the column), so main + watch may sum to LESS than the
+    # full available height — the leftover is empty column, not a giant card. Both
+    # panels still fit within the column without overlap.
+    assert hud._left_main_rect.height + hud._left_watch_rect.height <= available
+    assert hud._left_watch_rect.height <= int(hud._desired_watch_card_expanded_h())
     assert hud._left_main_rect.height >= HERO_LEFT_MIN_H
     assert hud._left_watch_rect.height >= WATCH_CARD_HEADER_H
+    assert hud._left_main_rect.bottom <= hud._left_watch_rect.top + 1
     assert "main_bottom" in hud._left_split_handle_rects
     assert hud._left_split_handle_rects["main_bottom"].height == LEFT_SPLIT_HANDLE_H
 
