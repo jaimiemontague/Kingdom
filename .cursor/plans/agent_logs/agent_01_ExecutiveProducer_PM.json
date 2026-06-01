@@ -5,6 +5,7 @@
   "name": "ExecutiveProducer_PM"
  },
  "notes": [
+  "2026-06-01 (Agent 01 WK117 CLOSED 0e0e8eb + WK118 KICKOFF): WK117 UI-overlay/HUD-texture cluster shipped+pushed (0e0e8eb; 5 members -> ursina_app_ui_overlay.py; ursina_app.py 833->669; suite 1485 passed). WK118 = extract the run() per-frame update() closure (~245 LOC, L418-663) into NEW game/graphics/ursina_app_frame.py as run_frame(owner, dt); run() collapses to a ~7-line Ursina bootstrap shim calling run_frame(self, time.dt). Completes the render god-file decomposition (ursina_app 1272 -> ~430 across WK105/113/116/117/118). LARGEST + HOTTEST move; the live loop is NOT exercised by the headless digest/determinism/qa_smoke, so the PM AST verbatim-diff gate is the PRIMARY faithfulness proof (must be byte-identical modulo 2 structural diffs: drop dt=time.dt, hoist pan_speed=55.0). Waves: 09 W1 move -> PM verbatim gate (load-bearing) -> 11 W2 seam test + DoD. Plan: .cursor/plans/wk118_round_b_ursina_app_frame.plan.md.",
   "2026-06-01 (Agent 01 WK116 CLOSED d2eab1c + WK117 KICKOFF): WK116 input/pointer cluster shipped+pushed (d2eab1c; 9 methods -> ursina_app_input.py; ursina_app.py 961->833; PM verbatim gate all 9 faithful; suite 1463 passed). WK117 = extract the UI-overlay/HUD-texture cluster (3 @staticmethods _hud_quick_fingerprint/_hud_prefers_nearest_pixel_filter/_sync_hud_texture_filter_mode + 2 instance _refresh_ui_overlay_texture/_sync_headless_ui_canvas_to_window, ~165 LOC) from ursina_app.py (833 LOC) into NEW game/graphics/ursina_app_ui_overlay.py via the WK105 MIXED static+instance owner-arg pure-move pattern. UrsinaApp keeps 5 wrappers (3 @staticmethod, 2 owner-first). The two panda3d.core imports stay function-local. RENDER SLICE -> deferred-screenshot (HUD->GPU upload + dirty-row blit are display artifacts). Verified by import smoke + both-import-orders + WK105-style seam test + full pytest + determinism_guard + WK67 digest + qa_smoke + PM verbatim gate. Waves: 09 W1 move -> PM gate -> 11 W2 seam test + DoD. Plan: .cursor/plans/wk117_round_b_ursina_app_ui_overlay.plan.md.",
   "2026-05-31 (Agent 01 WK115 CLOSED abba6fb + WK116 KICKOFF): WK115 left-menu UI polish shipped+pushed (abba6fb; 3 Sovereign bugs fixed: solo card content-sized + main_solo handle removed, scroll-clip-skip, pinned watch card grows for chat; suite 1430 passed; screenshot-verified by 08+11+PM across 9 captures; WK67 digest byte-identical). Resuming ursina_app decomposition per the /goal directive ('continue with ursina_app and the rest of the roadmap without stopping'). WK116 = extract the input/pointer cluster (9 instance methods incl. _is_chat_active, ~158 LOC) from ursina_app.py (961 LOC) into NEW game/graphics/ursina_app_input.py via the WK105/WK113 owner-arg pure-move pattern. UrsinaApp keeps 9 delegating wrappers. Nuance: _handle_ursina_input makes cross-cluster calls to the WK113 camera wrappers (owner._reset_camera_to_default etc.) which STAY as owner.<wrapper> hops; the _install_ursina_input_hook closure calls _handle_ursina_input(app, key) directly. RENDER/INPUT SLICE -> deferred-screenshot model. Verified by headless import smoke + both-import-orders + WK113-style seam test + full pytest + determinism_guard + WK67 digest + qa_smoke + PM verbatim-diff gate. Waves: 09 W1 move -> PM verbatim gate -> 11 W2 seam test + DoD. Plan: .cursor/plans/wk116_round_b_ursina_app_input.plan.md.",
   "2026-05-31 (Agent 01 WK114 CLOSED 2c3091a + WK115 KICKOFF): WK114 zombie-purge shipped+pushed (2c3091a, 8 building types removed across 22 files + dwellings.py deleted; suite 1425 passed; WK67 digest byte-identical -> purge behaviorally inert). NEW SOVEREIGN /goal: fix 3 left-menu HUD bugs, then continue ursina_app + roadmap autonomously ('i'll test it later'). WK115 = left-menu UI polish (PYGAME HUD -> SCREENSHOT-VERIFIED, NOT the ursina deferred exception). PM root-caused all 3 via grounding sweep + baseline captures: (1) solo resize 'slider' floats in blank panel because solo main_h=0.72*available >> card content -> fix: size solo card to content (cached last_content_height) + remove the main_solo handle; (2) hero-card 'weird effects' = blank-panel + scroll-clip edge artifacts -> mostly resolved by (1) + skip clip when no overflow; (3) pressing Chat doesn't grow the PINNED watch card (effective_watch_card_h honors split fraction, ignores _chat_visible) -> fix: grow watch_h to _desired_watch_card_expanded_h() when chat open. CONTRACT CHANGE: test_wk61_r11 (always-on solo handle) rewritten to new no-floating-bar contract. Owner Agent 08 (UX/UI) implements + screenshot-self-verifies; 11 does DoD + broad independent screenshot review. Plan: .cursor/plans/wk115_round_b_left_menu_ui_polish.plan.md.",
@@ -6338,7 +6339,7 @@
   },
   "wk117_round_b_ursina_app_ui_overlay": {
    "sprint_meta": {
-    "status": "in_progress",
+    "status": "closed_success",
     "created_utc": "2026-06-01",
     "plan_doc": ".cursor/plans/wk117_round_b_ursina_app_ui_overlay.plan.md",
     "goal": "Extract the UI-overlay/HUD-texture cluster (3 @staticmethods: _hud_quick_fingerprint, _hud_prefers_nearest_pixel_filter, _sync_hud_texture_filter_mode -> plain module fns; 2 instance: _refresh_ui_overlay_texture, _sync_headless_ui_canvas_to_window -> owner-first) from ursina_app.py into NEW game/graphics/ursina_app_ui_overlay.py; UrsinaApp keeps 5 exact-signature delegating wrappers (3 @staticmethod, 2 instance). Byte-faithful; ursina_app.py 833 -> ~670 LOC.",
@@ -6354,13 +6355,28 @@
      "both fresh-import orders OK",
      "DEFERRED live HUD->GPU upload / dirty-row blit / canvas-resize captures -> Sovereign end test"
     ],
-    "closeout_evidence": {}
+    "closeout_evidence": {
+     "commit_sha": "0e0e8eb",
+     "new_module": "game/graphics/ursina_app_ui_overlay.py = 199 LOC (3 static + 2 owner-arg fns; AST self-id == 0)",
+     "facade": "game/graphics/ursina_app.py 833 -> 669 LOC; 5 delegating wrappers (3 @staticmethod, 2 instance); bodies removed",
+     "pm_verbatim_diff_gate": "all 5 faithful: 3 statics IDENTICAL; _sync_headless_ui_canvas_to_window IDENTICAL; _refresh_ui_overlay_texture only 4 intra-cluster call rewrites (8 lines)",
+     "new_test": "tests/test_wk117_ursina_app_ui_overlay.py = 22 tests (WK105 mixed template: owner-vs-static signature, both-kind wrapper-delegation, AST no-cycle, fresh-subprocess both-orders, wrapper-source guard, behavior)",
+     "dod": {
+      "full_pytest": "1485 passed / 4 skipped / 0 failed",
+      "determinism_guard": "PASS (excludes game/graphics/**)",
+      "wk67_digest": "byte-identical b73961340c...d148ded",
+      "qa_smoke_quick": "DONE: PASS",
+      "fresh_import_both_orders": "OK"
+     },
+     "deferred": "live HUD->GPU texture upload + dirty-row blit + nearest/linear filtering + window-resize->canvas-resize captures -> Sovereign end test (headless = no GPU)",
+     "waves": "09 W1 mixed static+instance pure-move -> PM AST verbatim-diff gate (all 5 faithful) -> 11 W2 seam test (118 passed w/ wk116+wk113+wk105) + full DoD"
+    }
    },
    "rounds": {
     "wk117_round_b_kickoff": {
      "round_meta": {
       "round": "wk117_round_b_kickoff",
-      "status": "in_progress",
+      "status": "closed_success",
       "created_utc": "2026-06-01",
       "agents": [
        "09 (W1 mixed static+instance pure-move -> ursina_app_ui_overlay.py)",
@@ -6372,6 +6388,49 @@
      "pm_agent_prompts": {
       "09_W1": "Wave 1: create game/graphics/ursina_app_ui_overlay.py and move the 5 members per plan §1-§4 (3 @staticmethods -> plain module fns NO owner; 2 instance -> owner-first; copy bodies VERBATIM self->owner; intra-cluster calls -> direct module fns with static-passthrough args; keep the 2 panda3d.core imports function-local). Replace the 5 bodies with delegating wrappers (3 @staticmethod, 2 instance; exact names/sigs). Self-verify per §4 (import smoke, self count=0, 5 fn names, sibling seam tests green, new line count). DO NOT COMMIT.",
       "11_W2": "Wave 2: write tests/test_wk117_ursina_app_ui_overlay.py modeled on tests/test_wk105_ursina_app_debug_probe.py (MIXED static+instance template): instance fns owner-first, static fns NOT owner-first (surf/none/tex first param), wrapper delegation for all 5, AST no-cycle, fresh-subprocess both-orders, wrapper-source guard, behavior proof. Run full DoD per plan §5 (pytest 0 failed, determinism, WK67 digest, qa_smoke, seam + wk116/wk113/wk105 green). Report PASS/FAIL. DO NOT COMMIT."
+     },
+     "pm_commits": [
+      "0e0e8eb (pushed d2eab1c..0e0e8eb origin main)"
+     ]
+    }
+   }
+  },
+  "wk118_round_b_ursina_app_frame": {
+   "sprint_meta": {
+    "status": "in_progress",
+    "created_utc": "2026-06-01",
+    "plan_doc": ".cursor/plans/wk118_round_b_ursina_app_frame.plan.md",
+    "goal": "Extract the ~245-line per-frame update() closure from UrsinaApp.run() (game/graphics/ursina_app.py L418-663) into NEW game/graphics/ursina_app_frame.py as run_frame(owner, dt); run() becomes a ~7-line Ursina bootstrap whose update() shim calls run_frame(self, time.dt). Byte-faithful owner-arg pure-move; ursina_app.py 669 -> ~430 LOC. Completes the render god-file decomposition.",
+    "version_target": "patch (behavior-preserving pure-move)",
+    "verification_class": "URSINA RENDER SLICE -> deferred-screenshot. CRITICAL: the live per-frame update() loop is NOT exercised by the WK67 digest / determinism_guard / qa_smoke (those drive the pygame/sim path, not the Ursina frame loop), so the PM AST verbatim-diff gate is the PRIMARY faithfulness proof this sprint. Plus import smoke, fresh-subprocess both-orders, structural seam test + best-effort drive, full pytest, determinism, digest, qa_smoke.",
+    "notes": "Largest/hottest move of the series. Changes from original update() body: (1) drop dt=time.dt (dt is now the param), (2) hoist pan_speed=55.0 into run_frame (was the captured run() local), (3) self->owner. Nested _chat_captures_keyboard stays nested. All owner-method calls stay owner.<wrapper> hops (they delegate to WK113/116/117 siblings). Function-local imports stay local (TILE_SIZE, ursina.application, sys, terrain_height, UNDERGROUND_DEPTH). run() shim keeps time.dt read (time already imported in ursina_app). Acyclic: ursina_input_debug/input_manager don't import ursina_app.",
+    "definition_of_done": [
+     "ursina_app_frame.py: run_frame(owner, dt); ZERO self code-identifiers (AST)",
+     "ursina_app.py: run() is the ~7-line shim; update() body gone; ~430 LOC",
+     "PM verbatim-diff gate: run_frame == original update() modulo ONLY the 2 documented structural diffs",
+     "tests/test_wk118_ursina_app_frame.py green",
+     "full pytest 0 failed; determinism clean; WK67 digest byte-identical; qa_smoke DONE: PASS",
+     "both fresh-import orders OK",
+     "DEFERRED live frame-loop (pan/zoom/transitions/clamp/follow/fog/auto-exit/HUD) -> Sovereign end test (NO headless runtime coverage -> flag prominently)"
+    ],
+    "closeout_evidence": {}
+   },
+   "rounds": {
+    "wk118_round_b_kickoff": {
+     "round_meta": {
+      "round": "wk118_round_b_kickoff",
+      "status": "in_progress",
+      "created_utc": "2026-06-01",
+      "agents": [
+       "09 (W1 frame-loop pure-move -> ursina_app_frame.py + run() shim)",
+       "11 (W2 seam test + best-effort drive + full DoD)"
+      ],
+      "model": "claude-opus-4-8"
+     },
+     "pm_status_summary": "PM ground the full ~245-line update() closure (captures: pan_speed, eng, nested _chat_captures_keyboard; module globals camera/held_keys/mouse/Vec3/pytime/config; function-local imports; all owner-wrapper calls). Specified the exact extraction (2 structural diffs + self->owner), the run() shim, the import set, and the load-bearing verbatim-diff gate (the loop has no headless runtime coverage).",
+     "pm_agent_prompts": {
+      "09_W1": "Wave 1: create game/graphics/ursina_app_frame.py with run_frame(owner, dt) = the update() closure body per plan §1-§2 (drop dt=time.dt; add pan_speed=55.0 as first line; self->owner; keep nested _chat_captures_keyboard; owner-method calls stay owner.<wrapper>; function-local imports stay local). Replace run() L415-669 with the ~7-line shim per §3. Self-verify per §3 (import smoke, self count=0, run_frame sig (owner,dt), sibling seam tests green, new line count ~430). DO NOT COMMIT.",
+      "11_W2": "Wave 2: write tests/test_wk118_ursina_app_frame.py per plan §5 (existence/signature, shim-delegation source guard, AST no-cycle, fresh-subprocess both-orders, best-effort drive with stub owner + mocked ursina globals -> tick_simulation called once, skip-friendly). Run full DoD (pytest 0 failed, determinism, WK67 digest byte-identical, qa_smoke, seam + wk117/116/113/105 green). Report PASS/FAIL. DO NOT COMMIT."
      },
      "pm_commits": []
     }

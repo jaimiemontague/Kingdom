@@ -9,6 +9,59 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk118_round_b_ursina_app_frame": {
+      "sprint_meta": {
+        "sprint_id": "wk118_round_b_ursina_app_frame",
+        "created_utc": "2026-06-01T00:00:00Z",
+        "goal": "QA Wave 2: write the seam test for WK118 Round B (Agent 09 W1 extracted the ~245-line per-frame update() closure out of UrsinaApp.run() into game/graphics/ursina_app_frame.py::run_frame(owner, dt); ursina_app.py 669->423 LOC, run() now a ~7-line bootstrap whose nested update() shim calls ursina_app_frame.run_frame(self, time.dt); self count=0). The per-frame loop has NO headless runtime coverage (WK67 digest / determinism_guard / qa_smoke drive the pygame/sim path, not the live Ursina frame loop), so the PM AST verbatim-diff gate is the PRIMARY faithfulness proof; this seam test pins the structural shape + import-acyclicity + a best-effort one-frame smoke. Run the full DoD. ZERO production code touched (ursina_app.py + ursina_app_frame.py W1-frozen + PM-verified)."
+      },
+      "rounds": {
+        "wk118_w2": {
+          "sprint_id": "wk118_round_b_ursina_app_frame",
+          "round_id": "wk118_w2",
+          "status": "done",
+          "round_meta": {
+            "wave": "W2 (new seam test + full DoD gate)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "created_utc": "2026-06-01T00:00:00Z",
+            "depends_on": "wk118 W1 (Agent 09 Engineering owner-arg pure-move of the per-frame update() closure body, HEAD ursina_app.py L418-663, into ursina_app_frame.py::run_frame(owner, dt): dropped first line dt=time.dt -> dt is now the param; hoisted pan_speed=55.0 as first line; self.->owner. throughout; nested _chat_captures_keyboard closure kept verbatim; owner.<wrapper> hops to WK113/116/117 sibling modules preserved; function-local imports kept local; added module-top import os since the body uses os.environ.get; run() collapsed to the ~7-line bootstrap shim) + PM verbatim-diff gate (run_frame body byte-identical to original update() modulo ONLY the 2 documented structural diffs)."
+          },
+          "prompt_summary": "Wave 2: write tests/test_wk118_ursina_app_frame.py per plan section 5 (existence/signature (owner,dt); shim-delegation source guard incl. old-loop-markers GONE; ursina_app source guard; AST no-cycle; fresh-subprocess both-orders; best-effort drive with stub owner + monkeypatched ursina globals -> tick_simulation called once, skip-friendly). Run full DoD (pytest 0 failed, determinism, WK67 digest byte-identical, qa_smoke, seam + wk117/116/113/105 green). Report PASS/FAIL. DO NOT COMMIT.",
+          "what_i_changed": [
+            "tests/test_wk118_ursina_app_frame.py (NEW SEAM TEST, 8 tests) -- modeled on the WK105/113 ursina-seam test pattern. (1) test_run_frame_exists_and_is_callable + test_run_frame_signature_is_owner_dt: run_frame present, callable, signature exactly ['owner','dt']. (2) test_run_shim_delegates_and_old_loop_markers_gone: inspect.getsource(UrsinaApp.run) contains 'ursina_app_frame.run_frame(self, time.dt)' AND 'def update(' AND asserts the OLD loop markers ('_chat_captures_keyboard','pan_speed = 55.0','tick_simulation') are GONE from run() source (they moved into run_frame). (3) test_ursina_app_source_references_run_frame: ursina_app.py (utf-8-sig) references 'ursina_app_frame.run_frame'. (4) test_frame_mod_has_no_module_top_import_of_ursina_app: AST iter_child_nodes guard -- no UNCONDITIONAL module-top runtime import of ...ursina_app (TYPE_CHECKING-guarded UrsinaApp import is a direct child of the if-block, not the module body, so correctly NOT flagged). (5) test_fresh_subprocess_imports_both_orders [2 params]: fresh interpreter imports ursina_app_frame<->ursina_app in BOTH orders -> 'OK' (env SDL_VIDEODRIVER=dummy). (6) test_run_frame_drives_one_frame_and_ticks_simulation: stub owner (types.SimpleNamespace with engine.tick_simulation=_CallCounter, get_game_state/build_snapshot/build_presentation_frame/render_pygame/process_command/zoom_by, paused=False, pause_menu.visible=False, running=True, hud=None, _command_mode=False, _last_frame_dt_ms, _ursina_window_fps_ema=None, _find_hero_by_id->None; input_manager queue_event/get_mouse_pos/set_virtual_screen_size; renderer; _pending_lmb=False, _worker_scale_shot_reattach=0, auto-exit + camera-state flags, _editor_camera=None, _hud_composite_texture=None; all owner-method hops as no-op lambdas incl. _sync_headless_ui_canvas_to_window/_queue_pointer_motion_event/_record_fps_probe_stage_ms/_record_fps_probe_sample/_refresh_ui_overlay_texture/_sync_hud_texture_filter_mode/_sync_ursina_camera_fov_from_zoom/update_zone_fog_color/begin_camera_*_transition) + monkeypatched module globals camera (SimpleNamespace x/y/z/aspect_ratio/world_position=Vec3-like), held_keys (dict subclass __missing__->0), mouse; drives run_frame(owner,0.016) and asserts tick_simulation.count==1. Whole body wrapped in try/except + pytest.skip on ANY exception (best-effort smoke). Docstring documents the live loop is deferred-screenshot-verified."
+          ],
+          "commands_run": [
+            "python -m pytest tests/test_wk118_ursina_app_frame.py -q  (new file alone)  -> 8 passed (drive test RAN, not skipped -> tick_simulation called once)",
+            "python -m pytest -q  (DoD.1)  -> 1493 passed, 4 skipped, 0 failed, 0 errors in 270s",
+            "python tools/determinism_guard.py  (DoD.2)  -> [determinism_guard] PASS: no violations found (exit 0)",
+            "python -m pytest tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable -q  (DoD.3)  -> 1 passed; pinned literal b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical (render move inert to headless AI path)",
+            "python tools/qa_smoke.py --quick  (DoD.4)  -> DONE: PASS (exit 0)",
+            "python -m pytest tests/test_wk118_ursina_app_frame.py tests/test_wk117_ursina_app_ui_overlay.py tests/test_wk116_ursina_app_input.py tests/test_wk113_ursina_app_camera.py tests/test_wk105_ursina_app_debug_probe.py -q  (DoD.5)  -> 126 passed"
+          ],
+          "evidence": {
+            "dod_table": {
+              "DoD.1 full pytest -q": "PASS (1493 passed, 4 skipped, 0 failed, 0 errors)",
+              "DoD.2 determinism_guard": "PASS (no violations, exit 0)",
+              "DoD.3 WK67 AI digest byte-identical": "PASS (b73961340c...d148ded unchanged -- confirms the render-side per-frame extraction did not perturb the headless AI scenario; loop has no headless runtime coverage so this is a structural sanity check, not loop coverage)",
+              "DoD.4 qa_smoke --quick": "PASS (DONE: PASS)",
+              "DoD.5 5-file ursina seam run": "PASS (126 passed: wk118 8 + wk117 + wk116 + wk113 + wk105)"
+            },
+            "new_seam_test_count": "8 tests in tests/test_wk118_ursina_app_frame.py -- ALL 8 PASS (none skipped). 5 distinct + 1 parametrized x2 (both-orders subprocess) + the best-effort drive ACTUALLY RAN (stub shape satisfied the live body through to completion) rather than skipping, so tick_simulation==1 was asserted live.",
+            "skip_note": "The best-effort drive test (test_run_frame_drives_one_frame_and_ticks_simulation) is skip-FRIENDLY by design (try/except+pytest.skip) but did NOT skip in this run -- it passed, exercising one real run_frame() call against the stub owner. The 4 suite-wide skips are pre-existing (unrelated to this sprint).",
+            "primary_proof_note": "Per plan section 7 + the verification class, the PM AST verbatim-diff gate (run_frame body == original update() body modulo only dt-param-drop + pan_speed-hoist) is the PRIMARY faithfulness proof this sprint; this seam test pins structural shape + delegation source + import-acyclicity + a best-effort one-frame smoke. The LIVE frame loop (pan/zoom, camera layer transitions, terrain clamp, hero-follow, zone fog, auto-exit, HUD texture upload) is DEFERRED to the Sovereign's before/after live Ursina captures (real GPU/window required)."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "PM (Agent 01) owns the commit: scoped add of ursina_app.py, ursina_app_frame.py, tests/test_wk118_ursina_app_frame.py, plan + PM hub + agent 09/11 logs. I did NOT commit/add/push.",
+            "DEFERRED to Sovereign end test: live frame-loop verification (pan/zoom feel, camera underground/surface transition lerp, terrain clamp, hero-follow auto-transition, zone fog color, auto-exit/auto-screenshot, HUD composite texture upload) -- none of these have headless runtime coverage; flag prominently in closeout."
+          ],
+          "how_to_test": "python -m pytest tests/test_wk118_ursina_app_frame.py -q (seam, 8) ; full gate: python -m pytest -q && python tools/determinism_guard.py && python -m pytest tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable -q && python tools/qa_smoke.py --quick && python -m pytest tests/test_wk118_ursina_app_frame.py tests/test_wk117_ursina_app_ui_overlay.py tests/test_wk116_ursina_app_input.py tests/test_wk113_ursina_app_camera.py tests/test_wk105_ursina_app_debug_probe.py -q"
+        }
+      }
+    },
     "wk114_round_b_zombie_building_purge": {
       "sprint_meta": {
         "sprint_id": "wk114_round_b_zombie_building_purge",
