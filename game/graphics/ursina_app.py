@@ -5,6 +5,7 @@ on the X/Z floor plane; Pygame UI is composited on camera.ui (separate UI camera
 """
 from __future__ import annotations
 
+import gc
 import math
 import os
 import time as pytime
@@ -121,6 +122,12 @@ class UrsinaApp:
         # WK57/58: Zone-specific fog color — current lerp target and state
         self._zone_fog_current = (_sky_r, _sky_g, _sky_b)
         self._zone_fog_target = (_sky_r, _sky_g, _sky_b)
+        # WK121: per-frame zone-fog caches (avoid buildings scan + get_zone each frame).
+        # _zone_fog_castle_xy assumes a static castle center (grid_x/grid_y are set
+        # once in Building.__init__ and never reassigned); _zone_fog_last_tile gates
+        # the get_zone() recompute to integer camera-tile changes.
+        self._zone_fog_castle_xy: tuple[int, int] | None = None
+        self._zone_fog_last_tile: tuple[int, int] | None = None
 
         # WK57 Wave 3: Camera layer awareness (0 = surface, -1 = underground)
         self._camera_active_layer: int = 0
@@ -208,6 +215,12 @@ class UrsinaApp:
         # Left click deferred to start of update() so MOUSEMOTION is processed first (placement preview).
         self._pending_lmb = False
         self._last_engine_screen_pos: tuple[int, int] = (0, 0)
+        # Stationary-pointer/camera cache for _engine_screen_pos_for_pointer (per-frame perf).
+        # Key captures raw pointer + camera/zoom + 3D camera transform + paused/menu flags;
+        # when unchanged the floor raycast / HUD layout / game-state build are skipped.
+        self._pointer_cache_key = None
+        self._pointer_cache_result = None
+        self._pointer_cache_world_sim = None
         # Reuse one Texture for pygame HUD compositing (avoid new GPU alloc every frame; WK22 SPRINT-BUG-006).
         self._hud_composite_texture: Texture | None = None
         self._hud_composite_size: tuple[int, int] | None = None
@@ -263,6 +276,15 @@ class UrsinaApp:
         self._fps_probe_elapsed = 0.0
         self._fps_probe_samples: list[float] = []
         self._fps_probe_stage_samples: dict[str, list[float]] = {}
+
+        # WK122 perf: the per-frame loop allocates ~130 DTOs + profile snapshots; the
+        # default gen0 threshold (700) triggers very frequent collections → periodic
+        # frame-time stutter. Raise thresholds so collections are far rarer. A one-time
+        # gc.freeze() (in run_frame, after the static scene is built) excludes the permanent
+        # terrain/tree heap from gen2 scans. Behavior-preserving (garbage is still collected).
+        gc.set_threshold(50000, 500, 1000)
+        self._gc_frozen = False
+        self._gc_frame_count = 0
 
     @staticmethod
     def _read_int_env(name: str, default: int, *, min_value: int, max_value: int) -> int:

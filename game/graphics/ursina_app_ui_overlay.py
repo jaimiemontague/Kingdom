@@ -70,6 +70,11 @@ def _refresh_ui_overlay_texture(owner: "UrsinaApp") -> None:
     surf = owner.engine.screen
     sz = surf.get_size()
 
+    import os as _os
+    if _os.environ.get("KINGDOM_FPS_SLOWLOG", "") not in ("", "0") and not getattr(owner, "_hud_size_logged", False):
+        owner._hud_size_logged = True
+        print(f"[hud-size] surface={sz} camera_aspect={getattr(__import__('ursina').camera, 'aspect_ratio', '?')}", flush=True)
+
     try:
         quick = _hud_quick_fingerprint(surf)
     except Exception:
@@ -91,9 +96,12 @@ def _refresh_ui_overlay_texture(owner: "UrsinaApp") -> None:
 
     raw_data = pygame.image.tobytes(surf, "RGBA")
 
-    try:
-        owner._hud_quick_sig = _hud_quick_fingerprint(surf)
-    except Exception:
+    # WK121: ``surf`` is unchanged since ``quick`` was computed at L74 (only read
+    # by pygame.image.tobytes above), so reuse it instead of re-scanning — saves
+    # one ~0.7ms crc32 pass on every changed frame. Identical stored value.
+    if quick is not None:
+        owner._hud_quick_sig = quick
+    else:
         owner._hud_quick_sig = zlib.crc32(raw_data) & 0xFFFFFFFF
 
     # Skip Python-side byte flip; GPU handles Y-inversion via texture_scale=(1,-1).
@@ -153,29 +161,36 @@ def _refresh_ui_overlay_texture(owner: "UrsinaApp") -> None:
 
                 if dirty_max >= dirty_min:
                     sub_h = dirty_max - dirty_min + 1
-                    sub_offset = dirty_min * row_stride
-                    sub_bytes = raw_data[sub_offset:sub_offset + sub_h * row_stride]
-
-                    try:
-                        from panda3d.core import PNMImage as _PNMImage
-
-                        # Create temp texture holding only the dirty rows
-                        temp_tex = PandaTexture()
-                        temp_tex.setup2dTexture(sz[0], sub_h, PandaTexture.TUnsignedByte, PandaTexture.FRgba)
-                        temp_tex.setRamImageAs(sub_bytes, "RGBA")
-
-                        # Convert to PNMImage for load_sub_image
-                        sub_pnm = _PNMImage()
-                        temp_tex.store(sub_pnm)
-
-                        # Panda3D texture y=0 is at BOTTOM. Our RAM is un-flipped (pygame top-down),
-                        # so RAM row 0 maps to panda_y = height-1. The sub-image's top edge
-                        # (dirty_min) maps to panda_y = height - dirty_min - sub_h.
-                        panda_y = sz[1] - dirty_min - sub_h
-                        owner._hud_composite_texture._texture.load_sub_image(sub_pnm, 0, panda_y)
-                    except Exception:
-                        # Fallback: full upload if load_sub_image fails
+                    if sub_h > int(sz[1] * 0.4):
+                        # WK122: a near-full-height dirty band (top status row + bottom
+                        # radar both change every frame) makes the PNMImage load_sub_image
+                        # round-trip (~44ms) far slower than a single direct full upload.
+                        # Use the proven full-texture path instead. Same final pixels.
                         panda_tex.setRamImageAs(raw_data, "RGBA")
+                    else:
+                        sub_offset = dirty_min * row_stride
+                        sub_bytes = raw_data[sub_offset:sub_offset + sub_h * row_stride]
+
+                        try:
+                            from panda3d.core import PNMImage as _PNMImage
+
+                            # Create temp texture holding only the dirty rows
+                            temp_tex = PandaTexture()
+                            temp_tex.setup2dTexture(sz[0], sub_h, PandaTexture.TUnsignedByte, PandaTexture.FRgba)
+                            temp_tex.setRamImageAs(sub_bytes, "RGBA")
+
+                            # Convert to PNMImage for load_sub_image
+                            sub_pnm = _PNMImage()
+                            temp_tex.store(sub_pnm)
+
+                            # Panda3D texture y=0 is at BOTTOM. Our RAM is un-flipped (pygame top-down),
+                            # so RAM row 0 maps to panda_y = height-1. The sub-image's top edge
+                            # (dirty_min) maps to panda_y = height - dirty_min - sub_h.
+                            panda_y = sz[1] - dirty_min - sub_h
+                            owner._hud_composite_texture._texture.load_sub_image(sub_pnm, 0, panda_y)
+                        except Exception:
+                            # Fallback: full upload if load_sub_image fails
+                            panda_tex.setRamImageAs(raw_data, "RGBA")
                 # else: no dirty rows (fingerprint false positive) — skip upload
             else:
                 # No previous data or size changed — full upload

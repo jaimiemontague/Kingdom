@@ -220,16 +220,26 @@ class UrsinaEntityRenderCollab:
             ent._ks_last_scale = scale_xyz
         _sx, sy, _sz = scale_xyz
         oy = _building_3d_origin_y(model_path, sy)
-        ent.position = (wx, terrain_y + oy, wz)
+        # WK121: mirror sync_prefab_building_entity's ``_ks_last_position`` /
+        # ``_ks_last_color`` dirty-gates (see that sibling for the rationale —
+        # unconditional Panda3D position/color writes trigger scene-graph dirty
+        # propagation + bounding-volume invalidation in the cull pass).
+        pos_xyz = (wx, terrain_y + oy, wz)
+        if getattr(ent, "_ks_last_position", None) != pos_xyz:
+            ent.position = pos_xyz
+            ent._ks_last_position = pos_xyz
         _shadows = bool(getattr(config, "URSINA_DIRECTIONAL_SHADOWS", False))
         want_shader = lit_with_shadows_shader if _shadows else unlit_shader
         UrsinaEntityRenderCollab.set_shader_if_changed(ent, want_shader)
         if state == "damaged":
-            ent.color = color.rgb(0.78, 0.42, 0.42)
+            target_color = color.rgb(0.78, 0.42, 0.42)
         elif state == "construction":
-            ent.color = color.rgb(0.72, 0.72, 0.65)
+            target_color = color.rgb(0.72, 0.72, 0.65)
         else:
-            ent.color = tint_col
+            target_color = tint_col
+        if getattr(ent, "_ks_last_color", None) != target_color:
+            ent.color = target_color
+            ent._ks_last_color = target_color
 
     @staticmethod
     def sync_prefab_building_entity(

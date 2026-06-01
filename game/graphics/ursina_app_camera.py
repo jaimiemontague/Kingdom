@@ -313,25 +313,38 @@ def update_zone_fog_color(owner: "UrsinaApp", camera_world_x: float, camera_worl
     tile_x = int(camera_world_x * SCALE / float(config.TILE_SIZE))
     tile_z = int(-camera_world_z * SCALE / float(config.TILE_SIZE))
 
-    # Castle center in tile coords for zone lookup
-    castle_cx = int(config.MAP_WIDTH) // 2
-    castle_cy = int(config.MAP_HEIGHT) // 2
-    try:
-        castle = next(
-            (b for b in owner.engine.buildings
-             if getattr(b, "building_type", "") == "castle" and getattr(b, "hp", 1) > 0),
-            None,
-        )
-        if castle is not None:
-            castle_cx = int(getattr(castle, "grid_x", castle_cx)) + int(getattr(castle, "size", (1, 1))[0]) // 2
-            castle_cy = int(getattr(castle, "grid_y", castle_cy)) + int(getattr(castle, "size", (1, 1))[1]) // 2
-    except Exception:
-        pass
+    # WK121: cache the castle tile center once. The cache assumes a static castle
+    # center — grid_x/grid_y/size are set in Building.__init__ and never reassigned
+    # (a destroyed castle would simply revert to the MAP_WIDTH/2 fallback here on a
+    # subsequent process, but is not removed mid-cache; matches prior behavior since
+    # the function already required hp > 0). Computed via the same next()/getattr
+    # logic and default fallback the function has always used.
+    if owner._zone_fog_castle_xy is None:
+        castle_cx = int(config.MAP_WIDTH) // 2
+        castle_cy = int(config.MAP_HEIGHT) // 2
+        try:
+            castle = next(
+                (b for b in owner.engine.buildings
+                 if getattr(b, "building_type", "") == "castle" and getattr(b, "hp", 1) > 0),
+                None,
+            )
+            if castle is not None:
+                castle_cx = int(getattr(castle, "grid_x", castle_cx)) + int(getattr(castle, "size", (1, 1))[0]) // 2
+                castle_cy = int(getattr(castle, "grid_y", castle_cy)) + int(getattr(castle, "size", (1, 1))[1]) // 2
+        except Exception:
+            pass
+        owner._zone_fog_castle_xy = (castle_cx, castle_cy)
 
-    zone = get_zone(tile_x, tile_z, castle_cx, castle_cy)
-    zone_id = getattr(zone, "zone_id", None) if zone is not None else None
-    target = _ZONE_FOG_COLORS.get(zone_id, _DEFAULT_FOG_COLOR) if zone_id else _DEFAULT_FOG_COLOR
-    owner._zone_fog_target = target
+    castle_cx, castle_cy = owner._zone_fog_castle_xy
+
+    # WK121: only recompute the zone target when the camera crosses into a different
+    # integer tile (castle center is cached above). Reuse the stored target otherwise.
+    if (tile_x, tile_z) != owner._zone_fog_last_tile:
+        zone = get_zone(tile_x, tile_z, castle_cx, castle_cy)
+        zone_id = getattr(zone, "zone_id", None) if zone is not None else None
+        target = _ZONE_FOG_COLORS.get(zone_id, _DEFAULT_FOG_COLOR) if zone_id else _DEFAULT_FOG_COLOR
+        owner._zone_fog_target = target
+        owner._zone_fog_last_tile = (tile_x, tile_z)
 
     # Lerp current color toward target for smooth transition
     cr, cg, cb = owner._zone_fog_current

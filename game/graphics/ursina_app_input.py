@@ -56,6 +56,32 @@ def _engine_screen_pos_for_pointer(owner: "UrsinaApp") -> tuple[tuple[int, int],
     """
     px, py = owner.input_manager.get_mouse_pos()
     eng = owner.engine
+
+    # Stationary-pointer/camera early-out: when nothing the result depends on has
+    # changed, the (pos, kind, hit, wx_sim, wy_sim) tuple and the
+    # eng._ursina_pointer_world_sim side effect are provably identical to last frame,
+    # so skip get_game_state / virtual_pointer_in_hud_chrome / floor raycast entirely.
+    try:
+        from ursina import camera as _cam
+        _cam_wp = tuple(round(v, 4) for v in _cam.world_position)
+        _cam_wr = tuple(round(v, 4) for v in _cam.world_rotation)
+    except Exception:
+        _cam_wp = None
+        _cam_wr = None
+    key = (
+        (px, py),
+        float(eng.zoom if eng.zoom else 1.0),
+        float(getattr(eng, "camera_x", 0.0)),
+        float(getattr(eng, "camera_y", 0.0)),
+        _cam_wp,
+        _cam_wr,
+        bool(getattr(eng, "paused", False)),
+        bool(getattr(getattr(eng, "pause_menu", None), "visible", False)),
+    )
+    if key == owner._pointer_cache_key and owner._pointer_cache_result is not None:
+        eng._ursina_pointer_world_sim = owner._pointer_cache_world_sim
+        return owner._pointer_cache_result
+
     eng._ursina_pointer_world_sim = None
     z = float(eng.zoom if eng.zoom else 1.0)
     hit: tuple[float, float] | None = None
@@ -71,7 +97,11 @@ def _engine_screen_pos_for_pointer(owner: "UrsinaApp") -> tuple[tuple[int, int],
             and getattr(eng.pause_menu, "visible", False)
         )
     ):
-        return (px, py), "ui", None, 0.0, 0.0
+        result = (px, py), "ui", None, 0.0, 0.0
+        owner._pointer_cache_key = key
+        owner._pointer_cache_result = result
+        owner._pointer_cache_world_sim = eng._ursina_pointer_world_sim
+        return result
 
     gs = eng.get_game_state()
     if _pixel_hits_opaque_ui(owner, px, py) or eng.hud.virtual_pointer_in_hud_chrome(
@@ -94,7 +124,11 @@ def _engine_screen_pos_for_pointer(owner: "UrsinaApp") -> tuple[tuple[int, int],
             pos = (int(round(sx)), int(round(sy)))
             kind = "world"
 
-    return pos, kind, hit, wx_sim, wy_sim
+    result = (pos, kind, hit, wx_sim, wy_sim)
+    owner._pointer_cache_key = key
+    owner._pointer_cache_result = result
+    owner._pointer_cache_world_sim = eng._ursina_pointer_world_sim
+    return result
 
 
 def _sidebar_split_drag_active(owner: "UrsinaApp") -> bool:

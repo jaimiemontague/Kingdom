@@ -20,6 +20,29 @@ if TYPE_CHECKING:  # one-way edge: ursina_app imports THIS module (lazily in the
 def run_frame(owner: "UrsinaApp", dt) -> None:
     pan_speed = 55.0
 
+    # WK122 perf: one-time gc.freeze() after the static scene is built. The terrain mesh
+    # + ~2083 tree objects + initial buildings build lazily on the first renderer.update,
+    # so wait ~90 frames (a few seconds) before freezing — comfortably after the one-time
+    # build but while few transient objects exist. freeze() moves the long-lived static
+    # heap into the permanent generation, excluding it from every subsequent gen2 scan.
+    # Behavior-preserving: new per-frame DTOs are created AFTER the freeze and still collect.
+    if not owner._gc_frozen:
+        owner._gc_frame_count += 1
+        if owner._gc_frame_count >= 90:
+            import gc
+            gc.collect()
+            gc.freeze()  # move the static terrain/tree/startup heap to the permanent gen — excluded from future gen2 scans
+            owner._gc_frozen = True
+
+    # WK122 (diagnostic, env-gated, dead-by-default): per-frame timing logger.
+    # NO-OP unless KINGDOM_FPS_SLOWLOG is set — changes NO behavior.
+    _slowlog = os.environ.get("KINGDOM_FPS_SLOWLOG", "") not in ("", "0")
+    _slow_t0 = pytime.perf_counter() if _slowlog else 0.0
+    _d_tick = 0.0
+    _d_renderer = 0.0
+    _d_hudrender = 0.0
+    _d_hudupload = 0.0
+
     eng = owner.engine
 
     def _chat_captures_keyboard() -> bool:
@@ -69,6 +92,8 @@ def run_frame(owner: "UrsinaApp", dt) -> None:
     _stage_t0 = pytime.perf_counter()
     owner.engine.tick_simulation(dt)
     owner._record_fps_probe_stage_ms("tick_simulation", _stage_t0)
+    if _slowlog:
+        _d_tick = (pytime.perf_counter() - _stage_t0) * 1000.0
     owner.engine._last_frame_dt_ms = float(dt or 0.0) * 1000.0
 
     if getattr(owner, "_worker_scale_shot_reattach", 0) > 0:
@@ -143,6 +168,8 @@ def run_frame(owner: "UrsinaApp", dt) -> None:
     frame = owner.engine.build_presentation_frame()
     owner.renderer.update(snapshot, frame)
     owner._record_fps_probe_stage_ms("ursina_renderer", _stage_t0)
+    if _slowlog:
+        _d_renderer = (pytime.perf_counter() - _stage_t0) * 1000.0
 
     # WK58 Agent 10 (cross-domain, scoped): auto-reveal hook for perf_render_benchmark
     # and tools/run_ursina_capture_once.py --reveal-map. Fires once when env flag is set.
@@ -156,9 +183,13 @@ def run_frame(owner: "UrsinaApp", dt) -> None:
     _stage_t0 = pytime.perf_counter()
     owner.engine.render_pygame()
     owner._record_fps_probe_stage_ms("pygame_hud_render", _stage_t0)
+    if _slowlog:
+        _d_hudrender = (pytime.perf_counter() - _stage_t0) * 1000.0
     _stage_t0 = pytime.perf_counter()
     owner._refresh_ui_overlay_texture()
     owner._record_fps_probe_stage_ms("hud_texture_upload", _stage_t0)
+    if _slowlog:
+        _d_hudupload = (pytime.perf_counter() - _stage_t0) * 1000.0
     # Fullscreen ↔ windowed toggles with a static HUD skip texture upload; still resync filter.
     owner._sync_hud_texture_filter_mode(owner._hud_composite_texture)
 
@@ -263,3 +294,32 @@ def run_frame(owner: "UrsinaApp", dt) -> None:
         )
     except Exception:
         pass
+
+    # WK122 (diagnostic, env-gated, dead-by-default): per-frame timing summary.
+    if _slowlog:
+        _total_ms = (pytime.perf_counter() - _slow_t0) * 1000.0
+        _dt_ms = float(dt or 0.0) * 1000.0
+        _cpu_sum = _d_tick + _d_renderer + _d_hudrender + _d_hudupload
+        _untracked = _total_ms - _cpu_sum
+        eng = owner.engine
+        try:
+            _ne = len([e for e in getattr(eng, "enemies", []) if getattr(e, "is_alive", True)])
+        except Exception:
+            _ne = -1
+        _nb = len(getattr(eng, "buildings", []) or [])
+        _nh = len(getattr(eng, "heroes", []) or [])
+        # rolling accumulators for a periodic summary
+        owner._slowlog_frames = getattr(owner, "_slowlog_frames", 0) + 1
+        owner._slowlog_accum = getattr(owner, "_slowlog_accum", None) or {"dt":0.0,"tick":0.0,"rend":0.0,"hudr":0.0,"hudu":0.0,"untr":0.0}
+        a = owner._slowlog_accum
+        a["dt"] += _dt_ms; a["tick"] += _d_tick; a["rend"] += _d_renderer
+        a["hudr"] += _d_hudrender; a["hudu"] += _d_hudupload; a["untr"] += _untracked
+        # Per-slow-frame line (frames slower than ~40ms = sub-25fps)
+        if _dt_ms > 40.0:
+            print(f"[slowframe] dt={_dt_ms:.1f}ms run_frame_cpu={_total_ms:.1f} tick={_d_tick:.1f} rend={_d_renderer:.1f} hudR={_d_hudrender:.1f} hudU={_d_hudupload:.1f} untracked={_untracked:.1f} | enemies={_ne} buildings={_nb} heroes={_nh}", flush=True)
+            print(f"[slowframe2] gpu_or_ursina={_dt_ms - _total_ms:.1f}ms (dt - run_frame_cpu)", flush=True)
+        # Periodic rolling summary every 120 frames
+        if owner._slowlog_frames % 120 == 0:
+            n = 120.0
+            print(f"[frameavg] over {int(n)}f: dt={a['dt']/n:.1f}ms (=~{1000.0*n/max(a['dt'],1e-6):.1f}fps) | tick={a['tick']/n:.1f} rend={a['rend']/n:.1f} hudR={a['hudr']/n:.1f} hudU={a['hudu']/n:.1f} untracked={a['untr']/n:.1f} | E={_ne} B={_nb}", flush=True)
+            for k in a: a[k] = 0.0
