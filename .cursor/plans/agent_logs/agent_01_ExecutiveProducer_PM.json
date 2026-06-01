@@ -5,6 +5,7 @@
   "name": "ExecutiveProducer_PM"
  },
  "notes": [
+  "2026-06-01 (Agent 01 WK119 CLOSED 8afec65 + WK120 KICKOFF): WK119 resolved Move 9 by deleting the dead SystemRunner wiring (8afec65; digest byte-identical; suite 1493 unchanged). WK120 = Move 12 (TaskRouter) FAITHFUL FORM: relocate BasicAI.update_hero's dispatch (L205-335, ~131 LOC) verbatim into NEW ai/task_router.py::update_hero(ai, hero, dt, view) behind a 1-line delegating wrapper (owner-arg pure-move, self->ai). HIGH-CONFIDENCE: update_hero IS the path the WK67 digest exercises, so a faithful relocation that keeps the digest byte-identical is provably behavior-preserving with strong headless coverage. SCOPE DECISION: the roadmap's competitive propose()->TaskProposal re-architecture is a BEHAVIOR-CHANGING design that would shift the 50+-sprint WK67 digest invariant -> that is a gameplay decision, NOT de-slop -> DEFERRED, needs Sovereign go-ahead. WK120 does the safe structural half (creates the module + slims basic_ai 415->~290). Waves: 06 W1 move -> PM verbatim gate (expect IDENTICAL) + full WK67 suite -> 11 W2 seam test + DoD. After WK120 the roadmap is substantially complete except the deferred propose() item. Plan: .cursor/plans/wk120_round_b_task_router_extract.plan.md.",
   "2026-06-01 (Agent 01 WK118 CLOSED 898cd60 + WK119 KICKOFF): WK118 frame-loop shipped+pushed (898cd60; update() closure -> ursina_app_frame.run_frame; ursina_app.py 669->423; verbatim gate faithful across 168 body lines; suite 1493 passed). MILESTONE: ursina_app.py render god-file decomposition COMPLETE (1272->423 across WK105/113/116/117/118). PIVOTED via Explore grounding to the remaining roadmap sim refactors (Move 9 SystemRunner, Move 12 TaskRouter). FINDING: SystemRunner (game/sim/system_runner.py, WK64) is DEAD wiring (update_all never called; _ordered_systems constructed at sim_engine.py:143 never read) AND its 2 held systems (buff ~L733, wave_event ~L792) are NON-ADJACENT -> growing it into one contiguous pipeline would reorder side effects and break the WK67 digest. Roadmap line 511 + audit remedy (a) both sanction DELETING the dead wiring when no contiguous fire-and-forget run exists (the case). WK119 = resolve Move 9 by deleting the dead SystemRunner wiring (digest-safe slop removal). Single round (Agent 05, owns sim) + PM gate. Plan: .cursor/plans/wk119_round_b_systemrunner_deadwiring.plan.md.",
   "2026-06-01 (Agent 01 WK117 CLOSED 0e0e8eb + WK118 KICKOFF): WK117 UI-overlay/HUD-texture cluster shipped+pushed (0e0e8eb; 5 members -> ursina_app_ui_overlay.py; ursina_app.py 833->669; suite 1485 passed). WK118 = extract the run() per-frame update() closure (~245 LOC, L418-663) into NEW game/graphics/ursina_app_frame.py as run_frame(owner, dt); run() collapses to a ~7-line Ursina bootstrap shim calling run_frame(self, time.dt). Completes the render god-file decomposition (ursina_app 1272 -> ~430 across WK105/113/116/117/118). LARGEST + HOTTEST move; the live loop is NOT exercised by the headless digest/determinism/qa_smoke, so the PM AST verbatim-diff gate is the PRIMARY faithfulness proof (must be byte-identical modulo 2 structural diffs: drop dt=time.dt, hoist pan_speed=55.0). Waves: 09 W1 move -> PM verbatim gate (load-bearing) -> 11 W2 seam test + DoD. Plan: .cursor/plans/wk118_round_b_ursina_app_frame.plan.md.",
   "2026-06-01 (Agent 01 WK116 CLOSED d2eab1c + WK117 KICKOFF): WK116 input/pointer cluster shipped+pushed (d2eab1c; 9 methods -> ursina_app_input.py; ursina_app.py 961->833; PM verbatim gate all 9 faithful; suite 1463 passed). WK117 = extract the UI-overlay/HUD-texture cluster (3 @staticmethods _hud_quick_fingerprint/_hud_prefers_nearest_pixel_filter/_sync_hud_texture_filter_mode + 2 instance _refresh_ui_overlay_texture/_sync_headless_ui_canvas_to_window, ~165 LOC) from ursina_app.py (833 LOC) into NEW game/graphics/ursina_app_ui_overlay.py via the WK105 MIXED static+instance owner-arg pure-move pattern. UrsinaApp keeps 5 wrappers (3 @staticmethod, 2 owner-first). The two panda3d.core imports stay function-local. RENDER SLICE -> deferred-screenshot (HUD->GPU upload + dirty-row blit are display artifacts). Verified by import smoke + both-import-orders + WK105-style seam test + full pytest + determinism_guard + WK67 digest + qa_smoke + PM verbatim gate. Waves: 09 W1 move -> PM gate -> 11 W2 seam test + DoD. Plan: .cursor/plans/wk117_round_b_ursina_app_ui_overlay.plan.md.",
@@ -6457,7 +6458,7 @@
   },
   "wk119_round_b_systemrunner_deadwiring": {
    "sprint_meta": {
-    "status": "in_progress",
+    "status": "closed_success",
     "created_utc": "2026-06-01",
     "plan_doc": ".cursor/plans/wk119_round_b_systemrunner_deadwiring.plan.md",
     "goal": "Resolve roadmap Move 9 / the audit dead-wiring finding by DELETING the dead SystemRunner wiring: remove game/sim/system_runner.py, the import at sim_engine.py:44, and the _ordered_systems = SystemRunner((buff,wave_event)) construction + WK64 comment block at sim_engine.py:134-143. The buff_system/wave_event_system are still constructed and called directly in update() at their original (non-adjacent) positions -- those call sites are UNTOUCHED. Growing the runner is not viable without a digest-breaking reorder (systems non-adjacent), so deletion is the digest-safe, audit-sanctioned resolution.",
@@ -6470,13 +6471,28 @@
      "full pytest 0 failed (1493 expected unchanged); test_wk64_system_runner.py green",
      "determinism clean; WK67 digest byte-identical (load-bearing proof); qa_smoke DONE: PASS"
     ],
-    "closeout_evidence": {}
+    "closeout_evidence": {
+     "commit_sha": "8afec65",
+     "deleted": "game/sim/system_runner.py (dead SystemRunner class) + its import (sim_engine.py:44) + the _ordered_systems construction + WK64 comment block (sim_engine.py:134-143)",
+     "untouched": "SimEngine.update() ordered call sequence unchanged; buff_system + wave_event_system still constructed and called directly at their original non-adjacent positions",
+     "rationale": "Move 9 'grow SystemRunner' not safely viable: the 2 held systems are non-adjacent, so a contiguous update_all would reorder side effects and break the WK67 digest. Roadmap line 511 + audit remedy (a) sanction deletion when no contiguous fire-and-forget run exists. Resolved by deletion.",
+     "pm_grep": "ZERO SystemRunner/_ordered_systems/update_all refs remain in production code",
+     "dod": {
+      "full_pytest": "1493 passed / 4 skipped / 0 failed (count UNCHANGED from WK118 -> no behavioral change)",
+      "determinism_guard": "PASS",
+      "wk67_digest": "byte-identical b73961340c...d148ded (load-bearing proof)",
+      "test_wk64_system_runner": "green (SimEngine.update characterization net unchanged)",
+      "qa_smoke_quick": "DONE: PASS"
+     },
+     "waves": "single round (Agent 05 delete + headless verify) -> PM grep + digest gate",
+     "roadmap_status": "Move 9 RESOLVED. GPT-5.5 recs + audit substantially complete. Only Move 12 (TaskRouter, HIGH risk/determinism-fragile) remains as a roadmap item; small optional items: ursina_app.__init__ scene split (render-deferred), world.py _currently_visible list->set."
+    }
    },
    "rounds": {
     "wk119_round_b_kickoff": {
      "round_meta": {
       "round": "wk119_round_b_kickoff",
-      "status": "in_progress",
+      "status": "closed_success",
       "created_utc": "2026-06-01",
       "agents": [
        "05 (single round: delete dead SystemRunner wiring + headless verify)"
@@ -6486,6 +6502,48 @@
      "pm_status_summary": "PM ground the SystemRunner finding (Explore sweep): confirmed 100% dead + non-adjacent held systems make safe growth impossible, so deletion is the digest-safe resolution per roadmap line 511 + audit remedy (a). Single contained deletion (3 edit sites) + PM digest gate. Move 9 resolved; only Move 12 (TaskRouter, HIGH risk) remains on the roadmap.",
      "pm_agent_prompts": {
       "05_W1": "Single round: per plan §1, git rm game/sim/system_runner.py; remove the import (sim_engine.py:44) and the _ordered_systems = SystemRunner(...) construction + WK64 comment block (sim_engine.py:134-143). Do NOT touch update()'s ordered call sequence (buff/wave direct calls stay). Verify per §2 (import smoke, zero residual refs grep, pytest 0 failed @1493, determinism, WK67 digest byte-identical, test_wk64 green, qa_smoke). DO NOT COMMIT."
+     },
+     "pm_commits": [
+      "8afec65 (pushed 898cd60..8afec65 origin main)"
+     ]
+    }
+   }
+  },
+  "wk120_round_b_task_router_extract": {
+   "sprint_meta": {
+    "status": "in_progress",
+    "created_utc": "2026-06-01",
+    "plan_doc": ".cursor/plans/wk120_round_b_task_router_extract.plan.md",
+    "goal": "Move 12 faithful form: extract BasicAI.update_hero's body (ai/basic_ai.py L205-335) verbatim into NEW ai/task_router.py::update_hero(ai, hero, dt, view) (owner-arg, self->ai); BasicAI keeps a 1-line delegating wrapper; update() loop unchanged. Creates the task_router module and slims basic_ai (~415 -> ~290 LOC). Byte-faithful; WK67 digest byte-identical. The competitive propose()->TaskProposal re-architecture is DEFERRED (behavior-changing, needs Sovereign go-ahead).",
+    "version_target": "patch (behavior-preserving pure-move)",
+    "verification_class": "HEADLESS, WK67-DIGEST-GUARDED (HIGH confidence -- update_hero is exactly what the digest exercises). Gates: import smoke, AST self count=0, full WK67 suite green + digest byte-identical (decisive), PM verbatim-diff gate (expect IDENTICAL after self->ai), seam test, AI-extraction suite (wk82-85), full pytest, determinism_guard, qa_smoke. No screenshots.",
+    "notes": "task_router imports EXACTLY the 6 sources update_hero references (view_compat as_ai_view/view_to_legacy_context, context_builder ContextBuilder, prompt_templates get_fallback_decision, config TILE_SIZE, hero HeroState, direct_prompt_commit clear/expire). Everything else is ai.<method/attr> on BasicAI (defense_behavior/hunger_behavior/llm_bridge_behavior/handle_*/_is_committed_destination/etc.). Acyclic: task_router must NOT import basic_ai at top; basic_ai imports task_router lazily in the wrapper. update() loop (L192-203) unchanged.",
+    "definition_of_done": [
+     "ai/task_router.py: update_hero(ai, hero, dt, view); ZERO self code-identifiers (AST)",
+     "ai/basic_ai.py: update_hero is the 1-line wrapper; body relocated; ~290 LOC; update() loop unchanged",
+     "PM verbatim-diff gate: task_router body == HEAD update_hero body IDENTICAL after self->ai canon",
+     "tests/test_wk120_task_router.py green; WK82-85 AI-seam suite green",
+     "full pytest 0 failed; determinism clean; FULL WK67 suite green + digest byte-identical (decisive); qa_smoke PASS",
+     "both fresh-import orders OK"
+    ],
+    "closeout_evidence": {}
+   },
+   "rounds": {
+    "wk120_round_b_kickoff": {
+     "round_meta": {
+      "round": "wk120_round_b_kickoff",
+      "status": "in_progress",
+      "created_utc": "2026-06-01",
+      "agents": [
+       "06 (W1 faithful relocation of update_hero -> ai/task_router.py + wrapper)",
+       "11 (W2 seam test + full DoD incl. full WK67 suite)"
+      ],
+      "model": "claude-opus-4-8"
+     },
+     "pm_status_summary": "PM ground update_hero (L205-335) + its exact import deps (6 sources) + confirmed every other reference is ai.<method/attr>. Scoped Move 12 to the SAFE structural relocation (digest-byte-identical) and explicitly DEFERRED the behavior-changing propose() re-arch to the Sovereign. PM runs the verbatim gate (expect IDENTICAL) + full WK67 suite.",
+     "pm_agent_prompts": {
+      "06_W1": "Wave 1: create ai/task_router.py with update_hero(ai, hero, dt, view) = the verbatim body of BasicAI.update_hero (self->ai ONLY; keep docstring/comments). Module-top imports = EXACTLY the 6 sources update_hero references (plan §2); do NOT import route_to_building/BuildingType/get_rng/sim_now_ms/the ai.behaviors block; task_router must NOT import basic_ai at top. Replace BasicAI.update_hero (L205-335) with the 1-line lazy-delegating wrapper; leave update() loop unchanged. Self-verify per §2 (import smoke, self count=0, signature (ai,hero,dt,view), WK67 digest + wk82/wk85 green, new line count ~290). DO NOT COMMIT.",
+      "11_W2": "Wave 2: write tests/test_wk120_task_router.py (existence/signature, wrapper-delegation spy, AST no-cycle, fresh-subprocess both-orders, source guard). Run full DoD per plan §4: pytest 0 failed, determinism, FULL WK67 suite green + digest byte-identical (decisive for an AI-path move), qa_smoke, seam + wk82/83/84/85 green. Report PASS/FAIL. DO NOT COMMIT."
      },
      "pm_commits": []
     }

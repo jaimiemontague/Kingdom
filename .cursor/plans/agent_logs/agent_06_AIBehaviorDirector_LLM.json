@@ -1845,6 +1845,44 @@
           }
         }
       }
+    },
+    "wk120_round_b_task_router_extract": {
+      "sprint_meta": {
+        "created_utc": "2026-06-01T00:00:00Z",
+        "plan_ref": ".cursor/plans/wk120_round_b_task_router_extract.plan.md",
+        "role": "Agent 06 AIBehaviorDirector_LLM",
+        "sprint_id": "wk120_round_b_task_router_extract",
+        "title": "WK120 Round B Wave 1 - faithful relocation of BasicAI.update_hero dispatch into ai/task_router.py behind a 1-line delegating wrapper (roadmap Move 12 SAFE half; digest byte-identical) (Agent 06)"
+      },
+      "rounds": {
+        "wk120_w1": {
+          "round_id": "wk120_w1",
+          "sprint_id": "wk120_round_b_task_router_extract",
+          "status": "done",
+          "round_meta": {
+            "role": "Agent 06 AIBehaviorDirector_LLM",
+            "reports_to": "Agent 01 (PM)",
+            "launched_by": "Claude Code Agent-tool subagent (parent Agent 01 PM)",
+            "completed_utc": "2026-06-01T00:00:00Z",
+            "phase": "W1 - relocate the per-hero AI dispatch (BasicAI.update_hero body, HEAD L205-335) VERBATIM into a new module fn ai/task_router.py::update_hero(ai,hero,dt,view) (owner-arg pure-move; self->ai only). Replace BasicAI.update_hero with a 4-line lazy-delegating wrapper. The behavior-changing competitive propose()->TaskProposal re-arch is DEFERRED (NOT attempted). Faithful move; WK67 decision digest byte-identical is the behavior-preserving proof."
+          },
+          "scope": "BEHAVIOR-PRESERVING OWNER-ARG PURE-MOVE. Created ai/task_router.py (module docstring notes propose() re-arch deferred; EXACTLY 6 module-top import lines = the external names update_hero references: from ai.behaviors.view_compat import as_ai_view, view_to_legacy_context; from ai.context_builder import ContextBuilder; from ai.prompt_templates import get_fallback_decision; from config import TILE_SIZE; from game.entities.hero import HeroState; from game.sim.direct_prompt_commit import clear_direct_prompt_commit, expire_direct_prompt_commit_if_timed_out). NO route_to_building/BuildingType/get_rng/sim_now_ms/ai.behaviors-block import (update_hero does not reference them; grep-confirmed). task_router does NOT import ai.basic_ai at top (acyclic); ai param left untyped; basic_ai imports task_router LAZILY inside the wrapper. Moved the 130-line body verbatim (only change self.->ai.). In ai/basic_ai.py: replaced update_hero (L205-335) with the 4-line wrapper (from ai import task_router; return task_router.update_hero(self,hero,dt,view)); left BasicAI.update() all-heroes loop UNCHANGED (still calls self.update_hero). Removed 4 now-genuinely-unused import statements from basic_ai.py (as_ai_view/view_to_legacy_context, ContextBuilder, get_fallback_decision, clear_direct_prompt_commit/expire_direct_prompt_commit_if_timed_out) - PROVEN unused via word-boundary grep (each had exactly 1 occurrence = its own import line, 0 remaining code refs after the move). KEPT TILE_SIZE(4 refs), HeroState(7), route_to_building(3), BuildingType(2), get_rng(2), sim_now_ms(2) - all still referenced elsewhere in basic_ai.",
+          "new_top_level_names": [
+            "ai/task_router.py::update_hero (new module)"
+          ],
+          "self_check": "AST self-count on ai/task_router.py = 0 (no self code-identifiers; clean self->ai rename). update_hero signature = [ai, hero, dt, view] (first param ai). I also pre-ran the PM verbatim-diff gate myself: AST-extracted HEAD BasicAI.update_hero body vs ai/task_router.py::update_hero body, whole-word self/ai canonicalized to @, line-diffed -> IDENTICAL (130 body lines, zero diffs). basic_ai.py update_hero is now the 4-line wrapper; BasicAI.update() loop unchanged. basic_ai.py line count = 281 (plan expected ~290).",
+          "constraints_honored": "DID NOT COMMIT (no git add/commit/push/checkout). Edited ONLY ai/basic_ai.py + created ai/task_router.py. No propose()/TaskProposal re-architecture (explicitly deferred). No drive-by edits, no reformatting, no logic/ordering/literal changes - body copied exactly. Import removals from basic_ai.py PROVEN unused before removal (conservative: kept every still-referenced import).",
+          "verification": {
+            "import_smoke": "python -c \"import ai.basic_ai; import ai.task_router\" -> IMPORT OK (no error)",
+            "self_count": "python -c (ast self count on ai/task_router.py) -> self count = 0",
+            "signature": "python -c (inspect.signature(task_router.update_hero)) -> ['ai', 'hero', 'dt', 'view']",
+            "wk67_digest_plus_seams": "python -m pytest tests/test_wk67_ai_boundary.py::test_ai_decision_digest_is_stable tests/test_wk82_basic_ai_handlers.py tests/test_wk85_handle_idle_split.py -q -> 32 passed, 1 warning in 3.52s (WK67 decision digest byte-identical = behavior-preserving proof)",
+            "verbatim_diff_self_run": "AST HEAD-update_hero-body vs task_router-update_hero-body, whole-word self/ai->@ canonicalized, unified_diff -> IDENTICAL (130 body lines)",
+            "basic_ai_line_count": "python -c (count lines ai/basic_ai.py) -> 281 (expected ~290); update_hero is now the 4-line lazy-delegating wrapper; update() loop unchanged",
+            "qa_smoke_quick": "python tools/qa_smoke.py --quick -> DONE: PASS (exit_code=0)"
+          }
+        }
+      }
     }
   }
 }

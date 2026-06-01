@@ -9,6 +9,67 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk120_round_b_task_router_extract": {
+      "sprint_meta": {
+        "sprint_id": "wk120_round_b_task_router_extract",
+        "created_utc": "2026-06-01T00:00:00Z",
+        "goal": "QA Wave 2 (WK120 Round B, roadmap Move 12 SAFE structural half): Agent 06 W1 relocated BasicAI.update_hero's body VERBATIM (HEAD ai/basic_ai.py L205-335) into ai/task_router.py::update_hero(ai, hero, dt, view) (owner-arg pure-move; only self->ai), behind a 1-line delegating wrapper on BasicAI; basic_ai.py 415->281 LOC; new-module self count=0; 4 proven-unused imports dropped; BasicAI.update (all-heroes loop) unchanged. PM ran the AST verbatim-diff gate -> task_router body IDENTICAL to HEAD update_hero body after self->ai canonicalization (0 diffs). UNLIKE the ursina render slices, update_hero IS exactly the path the WK67 AI-decision digest exercises (300 headless ticks, 3 seeded heroes), so the FULL tests/test_wk67_ai_boundary.py suite staying green with the digest byte-identical (b73961340c...d148ded) is the DECISIVE in-sprint behavior proof -- no deferred captures needed. The competitive propose()->TaskProposal re-architecture (behavior-changing, would shift the digest) is DEFERRED to a Sovereign go-ahead. QA wrote the seam test + ran the full DoD. ZERO production code touched (ai/basic_ai.py + ai/task_router.py W1-frozen + PM-verified)."
+      },
+      "rounds": {
+        "wk120_w2": {
+          "sprint_id": "wk120_round_b_task_router_extract",
+          "round_id": "wk120_w2",
+          "status": "done",
+          "round_meta": {
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "wave": "W2 (write the AI-decision-path seam test for the update_hero -> task_router pure-move; run the full DoD whose load-bearing gate is the FULL WK67 suite + byte-identical digest)",
+            "model": "claude-opus-4-8[1m]",
+            "depends_on": "Agent 06 Wave 1 (BasicAI.update_hero body relocated to ai/task_router.py behind a delegating wrapper; W1-frozen + PM AST verbatim-diff-verified, 0 diffs, before this round)",
+            "behavior_preserving": true,
+            "production_code_edited": false
+          },
+          "prompt_summary": "PM/plan-assigned (wk120_round_b_task_router_extract plan section 4, PM prompt 11_W2): create tests/test_wk120_task_router.py (existence/signature, wrapper-delegation spy, AST no-cycle, fresh-subprocess both import orders, source guard) following the WK116/WK84 owner-arg seam-test patterns, retargeted to ai.task_router.update_hero(ai, hero, dt, view) and the BasicAI.update_hero delegating wrapper. Then run the full DoD and report a PASS/FAIL table. DO NOT modify ai/basic_ai.py or ai/task_router.py. DO NOT COMMIT.",
+          "what_i_changed": "CREATED tests/test_wk120_task_router.py (7 tests, all green). Sections: (1) existence + EXACT owner-first signature ['ai','hero','dt','view'] for ai.task_router.update_hero [2]; (2) wrapper delegation -- b=object.__new__(BasicAI) bare caller (no __init__), monkeypatch tr.update_hero with a recording spy returning a sentinel, call BasicAI.update_hero(b, hero_marker, 0.05, view_marker) UNBOUND, assert spy got exactly (b, hero_marker, 0.05, view_marker) positionally with NO kwargs and the wrapper returned the sentinel [1]; (3) AST no-cycle guard -- ai/task_router.py has NO module-top runtime import of ai.basic_ai (import ai.basic_ai / from ai.basic_ai import ... / from ai import basic_ai, all checked as direct module-body children; TYPE_CHECKING-guarded would be allowed, none present) [1]; (4) fresh-subprocess BOTH import orders ai.task_router<->ai.basic_ai with SDL_VIDEODRIVER=dummy -> WK120_IMPORT_OK [2 parametrized]; (5) source guard -- ai/basic_ai.py source references task_router.update_hero (read utf-8-sig) [1]. Set SDL_VIDEODRIVER=dummy at module import. NO production code edited.",
+          "test_counts": {
+            "new_seam_test_file": "tests/test_wk120_task_router.py",
+            "new_seam_tests": 7,
+            "new_seam_tests_passed": 7,
+            "new_seam_tests_skipped": 0,
+            "breakdown": "sec1: 2 (existence + signature); sec2: 1 (wrapper delegation spy); sec3: 1 (AST no-cycle); sec4: 2 (both import orders); sec5: 1 (source guard)"
+          },
+          "dod_results": {
+            "gate_1_full_pytest": {
+              "cmd": "python -m pytest -q",
+              "result": "PASS",
+              "detail": "1500 passed, 4 skipped, 0 failed in 285.40s (was 1493+; +7 new WK120 seam tests)"
+            },
+            "gate_2_determinism_guard": {
+              "cmd": "python tools/determinism_guard.py",
+              "result": "PASS",
+              "detail": "[determinism_guard] PASS: no violations found"
+            },
+            "gate_3_wk67_full_suite": {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "result": "PASS",
+              "detail": "10 passed in 18.35s -- the FULL WK67 suite (keystone AI-decision digest + reproducibility + the other pins). DECISIVE behavior proof for an AI-decision-path move: digest byte-identical b73961340c...d148ded (300 headless ticks, 3 seeded heroes). update_hero IS the path this digest exercises."
+            },
+            "gate_4_qa_smoke_quick": {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "result": "PASS",
+              "detail": "[qa_smoke] DONE: PASS (all profiles exit_code=0: determinism, base/bounty, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling 0.1/0.25/0.5/1.0x, interior_view, quest_panel, conversation, direct_prompt_integration)"
+            },
+            "gate_5_ai_extraction_seam_suite": {
+              "cmd": "python -m pytest tests/test_wk120_task_router.py tests/test_wk82_basic_ai_handlers.py tests/test_wk83_movement_dispatcher.py tests/test_wk84_zones_extract.py tests/test_wk85_handle_idle_split.py -q",
+              "result": "PASS",
+              "detail": "52 passed (7 new WK120 + 45 across WK82/83/84/85 AI-extraction seam tests)"
+            }
+          },
+          "constraints_honored": "Did NOT modify ai/basic_ai.py or ai/task_router.py (Wave-1 frozen + PM-verified). ONLY added tests/test_wk120_task_router.py. Did NOT git add/commit/push (PM owns the commit). Did NOT iterate beyond task.",
+          "milestone_note": "AI-decision-path move (NOT an ursina render slice): fully proven HEADLESS in-sprint -- no deferred Sovereign captures. The byte-identical WK67 digest across the full 10-test WK67 suite is provably behavior-preserving for this exact dispatch path. DEFERRED (separate item, needs Sovereign go-ahead): the competitive propose()->TaskProposal re-architecture (would shift the digest = a gameplay change, not de-slop) per plan section 0/6.",
+          "blocker_for_pm": "none -- all 5 DoD gates PASS. Ready for PM final DoD + scoped commit (ai/basic_ai.py, ai/task_router.py, tests/test_wk120_task_router.py, plan + PM hub + agent logs)."
+        }
+      }
+    },
     "wk118_round_b_ursina_app_frame": {
       "sprint_meta": {
         "sprint_id": "wk118_round_b_ursina_app_frame",
