@@ -323,10 +323,8 @@ class UrsinaApp:
         return ursina_app_camera._recenter_editor_camera_to_sim_xy(self, sim_x, sim_y)
 
     def _is_chat_active(self) -> bool:
-        if getattr(self.engine, '_command_mode', False):
-            return True
-        cp = getattr(getattr(self.engine, "hud", None), "_chat_panel", None)
-        return cp is not None and getattr(cp, "is_active", lambda: False)()
+        from game.graphics import ursina_app_input
+        return ursina_app_input._is_chat_active(self)
 
     def _reset_camera_to_default(self) -> None:
         from game.graphics import ursina_app_camera
@@ -366,162 +364,36 @@ class UrsinaApp:
         return ursina_app_camera.begin_camera_surface_transition(self)
 
     def _install_ursina_input_hook(self) -> None:
-        app = self
-
-        def ursina_input(key: str) -> None:
-            app._handle_ursina_input(key)
-
-        import __main__
-
-        __main__.input = ursina_input
+        from game.graphics import ursina_app_input
+        return ursina_app_input._install_ursina_input_hook(self)
 
     def _pixel_hits_opaque_ui(self, px: int, py: int) -> bool:
-        """True if virtual screen pixel has opaque HUD (alpha high enough to steal the click)."""
-        surf = self.engine.screen
-        try:
-            c = surf.get_at((px, py))
-        except Exception:
-            return True
-        if len(c) < 4:
-            return bool(c[0] or c[1] or c[2])
-        return c[3] >= 24
+        from game.graphics import ursina_app_input
+        return ursina_app_input._pixel_hits_opaque_ui(self, px, py)
 
     def _engine_screen_pos_for_pointer(self) -> tuple[tuple[int, int], str, tuple[float, float] | None, float, float]:
-        """
-        Map Ursina pointer → virtual pygame pixel + engine screen coords for handlers.
-
-        Returns:
-            (engine_sx, engine_sy), kind, world_xz_or_none, wx_sim, wy_sim
-        """
-        px, py = self.input_manager.get_mouse_pos()
-        eng = self.engine
-        eng._ursina_pointer_world_sim = None
-        z = float(eng.zoom if eng.zoom else 1.0)
-        hit: tuple[float, float] | None = None
-        wx_sim = wy_sim = 0.0
-
-        # Paused / ESC menu: the center of the screen is pygame HUD (often semi-transparent
-        # backdrop). get_at() can be <24 alpha or stale → world-mapping breaks hover/clicks.
-        # Input is consumed by the menu while open; when paused, world clicks are blocked too.
-        if getattr(eng, "_ursina_viewer", False) and (
-            getattr(eng, "paused", False)
-            or (
-                getattr(eng, "pause_menu", None) is not None
-                and getattr(eng.pause_menu, "visible", False)
-            )
-        ):
-            return (px, py), "ui", None, 0.0, 0.0
-
-        gs = eng.get_game_state()
-        if self._pixel_hits_opaque_ui(px, py) or eng.hud.virtual_pointer_in_hud_chrome(
-            (px, py), eng.screen, gs
-        ):
-            pos = (px, py)
-            kind = "ui"
-        else:
-            hit = pick_world_xz_on_floor_y0()
-            if hit is None:
-                pos = (px, py)
-                kind = "ui_fallback"
-            else:
-                wx, wz = hit
-                wx_sim = wx * SCALE
-                wy_sim = -wz * SCALE
-                eng._ursina_pointer_world_sim = (wx_sim, wy_sim)
-                sx = (wx_sim - eng.camera_x) * z
-                sy = (wy_sim - eng.camera_y) * z
-                pos = (int(round(sx)), int(round(sy)))
-                kind = "world"
-
-        return pos, kind, hit, wx_sim, wy_sim
+        from game.graphics import ursina_app_input
+        return ursina_app_input._engine_screen_pos_for_pointer(self)
 
     def _sidebar_split_drag_active(self) -> bool:
-        hud = getattr(self.engine, "hud", None)
-        return hud is not None and getattr(hud, "_left_split_drag_kind", None) is not None
+        from game.graphics import ursina_app_input
+        return ursina_app_input._sidebar_split_drag_active(self)
 
     def _virtual_screen_pos(self) -> tuple[int, int]:
-        pos = self.input_manager.get_mouse_pos()
-        return int(pos[0]), int(pos[1])
+        from game.graphics import ursina_app_input
+        return ursina_app_input._virtual_screen_pos(self)
 
     def _pointer_event_pos(self) -> tuple[int, int]:
-        """Virtual HUD pixels for sidebar split drags; otherwise engine routing coords."""
-        if self._sidebar_split_drag_active():
-            return self._virtual_screen_pos()
-        pos, _kind, _hit, _wx, _wy = self._engine_screen_pos_for_pointer()
-        return pos
+        from game.graphics import ursina_app_input
+        return ursina_app_input._pointer_event_pos(self)
 
     def _queue_pointer_motion_event(self) -> None:
-        """Building placement needs update_preview() via MOUSEMOTION before MOUSEDOWN sets preview_valid."""
-        pos = self._pointer_event_pos()
-        self._last_engine_screen_pos = pos
-        # Ursina: expose left-button hold state so UI sliders only drag while LMB is down.
-        try:
-            lmb = 1 if bool(mouse.left) else 0
-        except Exception:
-            lmb = 0
-        buttons = (lmb, 1 if bool(getattr(mouse, "right", False)) else 0, 0)
-        self.input_manager.queue_event(
-            InputEvent(type="MOUSEMOTION", pos=pos, key=None, buttons=buttons)
-        )
+        from game.graphics import ursina_app_input
+        return ursina_app_input._queue_pointer_motion_event(self)
 
     def _handle_ursina_input(self, key: str) -> None:
-        # WK21: F12 — full Ursina window (3D + UI overlay) → docs/screenshots/
-        if str(key).lower() == "f12":
-            from ursina import application
-
-            path = save_ursina_window_screenshot(application.base)
-            if path and hasattr(self.engine, "hud") and self.engine.hud:
-                import os as _os
-
-                self.engine.hud.add_message(
-                    f"Screenshot: {_os.path.basename(str(path))}",
-                    (100, 200, 255),
-                )
-            return
-        if key == "left mouse down":
-            # WK61-R11 BUG-005: capture sidebar split handle before deferred world MOUSEDOWN.
-            vpos = self._virtual_screen_pos()
-            hud = getattr(self.engine, "hud", None)
-            if hud is not None and hasattr(hud, "handle_sidebar_split_pointer_down"):
-                try:
-                    hud.handle_sidebar_split_pointer_down(vpos, self.engine.get_game_state())
-                except Exception:
-                    pass
-            # Process click on next update() after motion, so BuildingMenu.preview_valid is current.
-            self._pending_lmb = True
-            return
-        if key == "left mouse up":
-            pos = self._virtual_screen_pos() if self._sidebar_split_drag_active() else self._last_engine_screen_pos
-            self.input_manager.queue_event(InputEvent(type="MOUSEUP", button=1, pos=pos, key=None))
-            return
-        _ks = str(key).strip().lower()
-        if not self._is_chat_active():
-            if _ks == 'home':
-                self._reset_camera_to_default()
-                return
-            if _ks == 'l':
-                self._toggle_camera_lock()
-                return
-            if _ks == 'u':
-                self._toggle_underground_camera()
-                return
-        # WK52 R12: Route wheel to left menus before queuing — MOUSEMOTION may map pointer to
-        # world-relative coords while building/hero menus use virtual framebuffer pixels only.
-        if _ks in ("scroll up", "scroll down"):
-            _wy = 1 if _ks == "scroll up" else -1
-            _eng = self.engine
-            _hud = getattr(_eng, "hud", None)
-            if _hud is not None:
-                try:
-                    _mx = self.input_manager.get_mouse_pos()
-                except Exception:
-                    _mx = (0, 0)
-                if _hud.handle_menu_scroll(tuple(_mx), int(_wy), _eng.get_game_state(), getattr(_eng, "building_panel", None)):
-                    return
-        # WK22 SPRINT-BUG-004: forward keyboard / wheel to engine (was dropped by early return).
-        evt = ursina_key_to_input_event(key)
-        if evt is not None:
-            self.input_manager.queue_event(evt)
+        from game.graphics import ursina_app_input
+        return ursina_app_input._handle_ursina_input(self, key)
 
     def _refresh_ui_overlay_texture(self) -> None:
         """Upload pygame HUD to GPU — zero-copy Y-inversion via GPU texture coords (R5 round 3.5).

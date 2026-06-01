@@ -5,6 +5,7 @@
   "name": "ExecutiveProducer_PM"
  },
  "notes": [
+  "2026-05-31 (Agent 01 WK115 CLOSED abba6fb + WK116 KICKOFF): WK115 left-menu UI polish shipped+pushed (abba6fb; 3 Sovereign bugs fixed: solo card content-sized + main_solo handle removed, scroll-clip-skip, pinned watch card grows for chat; suite 1430 passed; screenshot-verified by 08+11+PM across 9 captures; WK67 digest byte-identical). Resuming ursina_app decomposition per the /goal directive ('continue with ursina_app and the rest of the roadmap without stopping'). WK116 = extract the input/pointer cluster (9 instance methods incl. _is_chat_active, ~158 LOC) from ursina_app.py (961 LOC) into NEW game/graphics/ursina_app_input.py via the WK105/WK113 owner-arg pure-move pattern. UrsinaApp keeps 9 delegating wrappers. Nuance: _handle_ursina_input makes cross-cluster calls to the WK113 camera wrappers (owner._reset_camera_to_default etc.) which STAY as owner.<wrapper> hops; the _install_ursina_input_hook closure calls _handle_ursina_input(app, key) directly. RENDER/INPUT SLICE -> deferred-screenshot model. Verified by headless import smoke + both-import-orders + WK113-style seam test + full pytest + determinism_guard + WK67 digest + qa_smoke + PM verbatim-diff gate. Waves: 09 W1 move -> PM verbatim gate -> 11 W2 seam test + DoD. Plan: .cursor/plans/wk116_round_b_ursina_app_input.plan.md.",
   "2026-05-31 (Agent 01 WK114 CLOSED 2c3091a + WK115 KICKOFF): WK114 zombie-purge shipped+pushed (2c3091a, 8 building types removed across 22 files + dwellings.py deleted; suite 1425 passed; WK67 digest byte-identical -> purge behaviorally inert). NEW SOVEREIGN /goal: fix 3 left-menu HUD bugs, then continue ursina_app + roadmap autonomously ('i'll test it later'). WK115 = left-menu UI polish (PYGAME HUD -> SCREENSHOT-VERIFIED, NOT the ursina deferred exception). PM root-caused all 3 via grounding sweep + baseline captures: (1) solo resize 'slider' floats in blank panel because solo main_h=0.72*available >> card content -> fix: size solo card to content (cached last_content_height) + remove the main_solo handle; (2) hero-card 'weird effects' = blank-panel + scroll-clip edge artifacts -> mostly resolved by (1) + skip clip when no overflow; (3) pressing Chat doesn't grow the PINNED watch card (effective_watch_card_h honors split fraction, ignores _chat_visible) -> fix: grow watch_h to _desired_watch_card_expanded_h() when chat open. CONTRACT CHANGE: test_wk61_r11 (always-on solo handle) rewritten to new no-floating-bar contract. Owner Agent 08 (UX/UI) implements + screenshot-self-verifies; 11 does DoD + broad independent screenshot review. Plan: .cursor/plans/wk115_round_b_left_menu_ui_polish.plan.md.",
   "2026-05-31 (Agent 01 WK113 CLOSED 779dd7f + WK114 KICKOFF): WK113 shipped+pushed (779dd7f, camera-control cluster -> ursina_app_camera.py; ursina_app.py 1272->961; PM verbatim gate all 9 faithful; suite 1400 passed). SOVEREIGN PLAYTEST: 'all camera features are working fine' -> WK113 deferred-screenshot item CLOSED (deferred-screenshot pure-move model validated end-to-end). SOVEREIGN RULING: 'you can delete those old buildings' -> WK111 zombie purge UNBLOCKED, now executed as WK114. WK114 = purge the 8 purge_candidate=True types (gnome_hovel, elven_bungalow, dwarven_settlement, ballista_tower, wizard_tower, fairgrounds, library, royal_gardens). Grounding sweep (Explore agent) produced a complete wiring map: DIGEST-SAFE (none spawn at default startup/spawner/worldgen, none placeable -> fresh headless engine never creates one -> WK67 digest must stay byte-identical). Cross-cutting deletion across ~22 code files + 4 hard-pinned test files (test_wk70_building_registry snapshot counts, test_buffs royal_gardens_aura, test_wk61_r6 tax-overlay, test_wk68 library button). Done ATOMICALLY by ONE agent (05) to avoid dangling imports, then 11 fixes tests + seam test + DoD. Plan: .cursor/plans/wk114_round_b_zombie_building_purge.plan.md.",
   "2026-05-31 (Agent 01 WK112 CLOSED ca8da1d + WK113 KICKOFF): WK112 shipped+pushed (ca8da1d, 2f120b1..ca8da1d; validate_direct_prompt_output decomposed into _INTENT_HANDLERS per-intent table over _ResolveState/_ValidationInputs; full suite 1367 passed/4 skipped; WK67 digest byte-identical; PM differential cross-check IDENTICAL across 38 cases). WK113 = decompose the LAST major render god-file ursina_app.py (1272 LOC): extract its camera-control cluster (9 instance methods + 2 zone-fog consts, ~360 LOC) into NEW game/graphics/ursina_app_camera.py via the WK87-92/WK104-105 owner-arg pure-move pattern (precedent sibling: ursina_app_debug_probe.py). UrsinaApp keeps 9 delegating wrappers; byte-faithful move. RENDER SLICE -> deferred-screenshot model (live captures to Sovereign's end test). Verified by headless import smoke + both-import-orders + a WK105-style seam test + full pytest + determinism_guard + WK67 digest + qa_smoke + PM verbatim-diff gate. Waves: 09 W1 move -> 11 W2 seam test + DoD -> PM verbatim gate + commit. Plan: .cursor/plans/wk113_round_b_ursina_app_camera.plan.md.",
@@ -6220,7 +6221,7 @@
   },
   "wk115_round_b_left_menu_ui_polish": {
    "sprint_meta": {
-    "status": "in_progress",
+    "status": "closed_success",
     "created_utc": "2026-05-31",
     "plan_doc": ".cursor/plans/wk115_round_b_left_menu_ui_polish.plan.md",
     "goal": "Fix 3 Sovereign-reported left-menu HUD bugs: (1) solo left-column resize 'slider' bar floating in blank panel space (size the solo hero/building card to its content + remove the main_solo handle); (2) 'weird effects' on the hero card (blank-panel + scroll-clip edge artifacts; skip clip when no overflow); (3) pressing Chat doesn't grow the pinned watch card to fit the chatbox (grow watch_h to _desired_watch_card_expanded_h() when _chat_visible). All in game/ui/*.",
@@ -6235,13 +6236,29 @@
      "full pytest 0 failed; determinism clean; WK67 digest byte-identical; qa_smoke DONE: PASS",
      "PM Read key BEFORE/AFTER PNGs + confirmed all 3 fixes visually"
     ],
-    "closeout_evidence": {}
+    "closeout_evidence": {
+     "commit_sha": "abba6fb",
+     "bug1": "solo hero/building card sized to content (HeroPanel/BuildingPanel.last_content_height; HUD.render measures hero card up front + re-layouts same frame); main_solo resize handle REMOVED. ui_panels_hero/building AFTER: no floating bar.",
+     "bug2": "scroll clip only set when _menu_max_scroll>0 (no edge-clip artifacts); blank-panel weirdness resolved by bug1.",
+     "bug3": "watch+main layout grows watch segment to _desired_watch_card_expanded_h() when _chat_visible (pinned chat now fits); un-pinned popup unchanged. ui_panels_pinned_chat AFTER: chat band + 3 messages visible.",
+     "tests": "test_wk61_r11 rewritten to new no-floating-bar contract; new test_wk115_left_menu_polish.py pins all 3; new ui_panels_pinned_chat scenario.",
+     "screenshot_review": "Agent 08 + Agent 11 + PM independently reviewed 9 captures (ui_panels_hero/building/tax_collector/sidebar_split/pinned_chat, wk61_hero_menu_chat_1024/1920, wk52_watch_card_expanded + unaffected pause-menu/building-menu controls) -- all PASS, alignment/layering first. wk61 debug FPS-overlay overlap = scenario instrumentation, not a bug.",
+     "dod": {
+      "full_pytest": "1430 passed / 4 skipped / 0 failed",
+      "determinism_guard": "PASS (excludes game/ui by design; UI path covered by full suite + qa_smoke + digest)",
+      "wk67_digest": "byte-identical b73961340c...d148ded (presentation-only)",
+      "qa_smoke_quick": "DONE: PASS (no measure_content_height/relayout exception)"
+     },
+     "verification_class": "PYGAME HUD screenshot-verified (NOT the ursina deferred exception)",
+     "waves": "08 W1 implement 3 fixes + screenshot self-verify + contract tests -> PM independent visual review -> 11 W2 full DoD + independent broad screenshot review",
+     "sovereign": "reported the 3 bugs via /goal 2026-05-31; 'i'll test it later'"
+    }
    },
    "rounds": {
     "wk115_round_b_kickoff": {
      "round_meta": {
       "round": "wk115_round_b_kickoff",
-      "status": "in_progress",
+      "status": "closed_success",
       "created_utc": "2026-05-31",
       "agents": [
        "08 (W1 implement 3 fixes + screenshot self-verify + contract tests)",
@@ -6253,6 +6270,49 @@
      "pm_agent_prompts": {
       "08_W1": "Wave 1: implement plan §1a/§1b (size solo card to content via panel.last_content_height + remove main_solo handle), §2 (skip hero_panel scroll clip when _menu_max_scroll<=0; no bar/line over content), §3 (grow pinned watch_h to _desired_watch_card_expanded_h() when _chat_visible). Add the ui_panels_pinned_chat scenario. Rewrite test_wk61_r11 to the new contract + add test_wk115_left_menu_polish.py. CAPTURE before/after for ALL §5 scenarios, Read every AFTER PNG, give per-image verdicts (alignment/layering FIRST). DO NOT COMMIT.",
       "11_W2": "Wave 2: full DoD (pytest 0 failed, determinism, WK67 digest byte-identical, qa_smoke) + INDEPENDENT broad screenshot review — Read every §5 AFTER PNG, verdict alignment/layering first, confirm unaffected panels unchanged. Report PASS/FAIL per image. DO NOT COMMIT."
+     },
+     "pm_commits": [
+      "abba6fb (pushed 2c3091a..abba6fb origin main)"
+     ]
+    }
+   }
+  },
+  "wk116_round_b_ursina_app_input": {
+   "sprint_meta": {
+    "status": "in_progress",
+    "created_utc": "2026-05-31",
+    "plan_doc": ".cursor/plans/wk116_round_b_ursina_app_input.plan.md",
+    "goal": "Extract the input/pointer cluster (9 instance methods: _is_chat_active, _install_ursina_input_hook, _pixel_hits_opaque_ui, _engine_screen_pos_for_pointer, _sidebar_split_drag_active, _virtual_screen_pos, _pointer_event_pos, _queue_pointer_motion_event, _handle_ursina_input) from ursina_app.py into NEW game/graphics/ursina_app_input.py as owner-arg module functions; UrsinaApp keeps 9 exact-signature delegating wrappers. Cross-cluster camera-wrapper calls stay owner.<wrapper>. Byte-faithful move; ursina_app.py 961 -> ~810 LOC.",
+    "version_target": "patch (behavior-preserving pure-move)",
+    "verification_class": "URSINA RENDER/INPUT SLICE -> deferred-screenshot (no GPU headless; live pointer/input + F12 + camera-hotkey captures DEFERRED to Sovereign end test). In-sprint gates: headless import smoke, fresh-subprocess both-import-orders, WK113-style seam test, full pytest, determinism_guard, WK67 digest, qa_smoke, PM AST verbatim-diff gate.",
+    "notes": "_is_chat_active (sandwiched among WK113 camera methods at L325) moves here (gates input). Intra-cluster calls -> direct module fns; cross-cluster camera calls (_reset_camera_to_default/_toggle_camera_lock/_toggle_underground_camera) STAY owner.<wrapper>. _install_ursina_input_hook closure calls _handle_ursina_input(app, key). Function-local imports stay local (__main__, ursina.application, os). All external callers in __init__/run() stay self.<wrapper>. Acyclic: ursina_pick/renderer/screenshot/input_manager/ursina_input_manager don't import ursina_app.",
+    "definition_of_done": [
+     "ursina_app_input.py: 9 owner-arg fns; ZERO self code-identifiers (AST)",
+     "ursina_app.py: 9 delegating wrappers exact sigs; bodies removed; ~810 LOC",
+     "PM verbatim-diff gate: all 9 faithful (only the intra-cluster call rewrites)",
+     "tests/test_wk116_ursina_app_input.py green (6 sections)",
+     "full pytest 0 failed; determinism clean; WK67 digest byte-identical; qa_smoke DONE: PASS",
+     "both fresh-import orders OK",
+     "DEFERRED live pointer/input/F12/camera-hotkey captures -> Sovereign end test"
+    ],
+    "closeout_evidence": {}
+   },
+   "rounds": {
+    "wk116_round_b_kickoff": {
+     "round_meta": {
+      "round": "wk116_round_b_kickoff",
+      "status": "in_progress",
+      "created_utc": "2026-05-31",
+      "agents": [
+       "09 (W1 owner-arg pure-move of the input/pointer cluster -> ursina_app_input.py)",
+       "11 (W2 WK113-style seam test + full DoD)"
+      ],
+      "model": "claude-opus-4-8"
+     },
+     "pm_status_summary": "PM ground the cluster fully (read all 9 methods + every caller + the intra/cross-cluster call graph). Move map, call rewrites (intra->direct, cross-cluster camera->owner.<wrapper>), import set, and the 9 wrappers are fully specified; the seam test is the WK113 template retargeted. PM runs the AST verbatim-diff gate before commit.",
+     "pm_agent_prompts": {
+      "09_W1": "Wave 1: create game/graphics/ursina_app_input.py and move the 9 input/pointer methods per plan §1-§4 (owner-arg pure-move; copy bodies VERBATIM self->owner; intra-cluster calls -> direct module fns; KEEP cross-cluster camera calls as owner._reset_camera_to_default/etc.; the _install_ursina_input_hook closure calls _handle_ursina_input(app,key); function-local imports stay local). Replace the 9 bodies with lazy-delegating wrappers (exact names/sigs). Self-verify per §4 (import smoke, self count=0, sibling seam tests green, new line count). DO NOT COMMIT.",
+      "11_W2": "Wave 2: write tests/test_wk116_ursina_app_input.py modeled VERBATIM on tests/test_wk113_ursina_app_camera.py (6 sections, 9 fns, all owner-first, no staticmethod). Run full DoD per plan §5 (pytest 0 failed, determinism_guard, WK67 digest, qa_smoke, the new seam test + wk113 + wk105 green). Report PASS/FAIL. DO NOT COMMIT."
      },
      "pm_commits": []
     }
