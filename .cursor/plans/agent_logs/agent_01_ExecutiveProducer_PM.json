@@ -6569,7 +6569,7 @@
   },
   "wk121_round_b_watch_card_maximize_bug": {
    "sprint_meta": {
-    "status": "in_progress",
+    "status": "closed_success",
     "created_utc": "2026-06-01",
     "plan_doc": ".cursor/plans/wk121_round_b_watch_card_maximize_bug.plan.md",
     "goal": "Fix the Sovereign-reported bug: clicking the hero/watch card's top bar maximizes it across the entire left sidebar, hiding the building/hero menu. Make clicking the watch-card header non-destructive: it must NOT evict/hide the main menu, the card must never take the full sidebar while a main menu is present, and a second click must reliably restore the prior size. PYGAME HUD -> screenshot-verified.",
@@ -6583,13 +6583,29 @@
      "full pytest 0 failed; determinism clean; WK67 digest byte-identical; qa_smoke DONE: PASS",
      "PM Read before/after/toggled-back PNGs + confirmed the fix visually"
     ],
-    "closeout_evidence": {}
+    "closeout_evidence": {
+     "commit_sha": "recorded in next kickoff note",
+     "root_cause": "hud_left_layout.layout_left_column_segments both-open branch sized the watch segment from saved _left_split_fracs['watch'] (default 0.45, scenario 0.68) regardless of collapse/expand -> watch reserved 45-68% of the column even collapsed (empty box); expanding filled it = 'maximize over sidebar, evict other menu'. The header X-click itself was clean (toggle only; no deselect).",
+     "fix": "game/ui/* only: both-open split now CONTENT-BOUNDED -- collapsed watch=WATCH_CARD_HEADER_H (18px peek), expanded watch=_desired_watch_card_expanded_h() (keeps WK115 chat band when _chat_visible), main always >= new MAIN_MENU_MIN_PRESENT_H=160 (hud_layout.py). Leftover column empty; panels coexist; watch never full-sidebar while main open; 2nd click round-trips. WK115 solo-sizing + chat-grow intact.",
+     "tests": "new tests/test_wk121_watch_card_no_evict.py (drives real chevron click; asserts main never hidden + toggle round-trips); updated tests/test_wk61_r10_sidebar_layout.py (old == available fill-column assertion -> content-bounded contract, deliberate change)",
+     "screenshot_review": "Agent 08 + Agent 11 + PM independently reviewed: worst-case 0.68 sidebar_split now full main menu + bounded watch card coexist; WK115 chat-grow (pinned_chat) + solo sizing (hero) intact; building menu unregressed. before/after/toggled_back repro captures confirm non-destructive toggle.",
+     "dod": {
+      "full_pytest": "1504 passed / 4 skipped / 0 failed",
+      "determinism_guard": "PASS",
+      "wk67_digest": "byte-identical b73961340c...d148ded (presentation-only)",
+      "qa_smoke_quick": "DONE: PASS",
+      "watch_left_layout_suite": "197 passed (wk121/115/52/96/98/99/100/101/61_r10)"
+     },
+     "verification_class": "PYGAME HUD screenshot-verified (reproduce-click before/after)",
+     "waves": "08 W1 reproduce+diagnose+fix+screenshot-verify+regression test -> PM independent visual review -> 11 W2 full DoD + independent broad screenshot review",
+     "origin": "Sovereign live bug report while testing WK115 (follow-up, not a roadmap item)"
+    }
    },
    "rounds": {
     "wk121_round_b_kickoff": {
      "round_meta": {
       "round": "wk121_round_b_kickoff",
-      "status": "in_progress",
+      "status": "closed_success",
       "created_utc": "2026-06-01",
       "agents": [
        "08 (W1 reproduce + diagnose + fix + screenshot self-verify + regression test)",
@@ -6602,7 +6618,9 @@
       "08_W1": "Wave 1: per plan §2 — (a) REPRODUCE headlessly: build a main-menu-open (selected building/hero) + pinned collapsed watch-card state at 1920x1080 (model on screenshot_scenarios _apply_sidebar_pin_split/_apply_select_hero), render+capture before, call hud.handle_click(_watch_card_chevron_rect.center, gs), render+capture after, report the _left_main_rect/_left_watch_rect/_watch_card_expanded/selected deltas + what visibly changed. (b) FIX per the diagnosis so clicking the header NEVER hides/evicts the main building/hero menu and the card never takes the full sidebar while a main menu is present + 2nd click reliably restores size; keep WK115 fixes intact. (c) VERIFY: re-run repro after fix (after_fixed + toggled_back captures), capture ui_panels + wk52_pin_alerts, Read all PNGs + per-image verdict; add tests/test_wk121_watch_card_no_evict.py. DO NOT COMMIT.",
       "11_W2": "Wave 2: full DoD (pytest 0 failed, determinism, WK67 digest byte-identical, qa_smoke) + the watch/left-layout suite (WK52/96/98/99/100/101 + WK115 + WK121) green + INDEPENDENT broad screenshot review (re-capture, Read each, verdict alignment/layering first; confirm main menu coexists with the watch card). Report PASS/FAIL per image. DO NOT COMMIT."
      },
-     "pm_commits": []
+     "pm_commits": [
+      "ba933d3 (pushed 0bc1d70..ba933d3 origin main)"
+     ]
     }
    }
   }
