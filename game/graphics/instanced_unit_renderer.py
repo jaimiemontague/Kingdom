@@ -229,14 +229,14 @@ class InstancedUnitRenderer:
 
         sh = instanced_unit_shader._shader
         self._geom_node_outside.set_shader(sh)
-        self._geom_node_outside.set_shader_input("p3d_Texture0", panda_atlas)
+        self._geom_node_outside.set_shader_input("unitAtlas", panda_atlas)
         self._geom_node_outside.set_shader_input("instanceData", self._instance_buffer)
         self._geom_node_outside.set_transparency(TransparencyAttrib.M_alpha)
         self._geom_node_outside.set_depth_write(False)
         self._geom_node_outside.set_bin("transparent", 1)
 
         self._geom_node_inside.set_shader(sh)
-        self._geom_node_inside.set_shader_input("p3d_Texture0", panda_atlas)
+        self._geom_node_inside.set_shader_input("unitAtlas", panda_atlas)
         self._geom_node_inside.set_shader_input("instanceData", self._instance_buffer_inside)
         self._geom_node_inside.set_transparency(TransparencyAttrib.M_alpha)
         self._geom_node_inside.set_depth_write(False)

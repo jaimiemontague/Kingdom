@@ -141,6 +141,16 @@ def tick_simulation(engine: "GameEngine", dt: float) -> tuple[float, float]:
     sim_time_to_advance = dt * get_time_multiplier()
     engine._sim_accumulator += sim_time_to_advance
 
+    # Spiral-of-death guard: never bank more than one frame's worth of drainable sim
+    # (MAX_TICKS * FIXED_DT). A single abnormal frame (one-time world build, alt-tab,
+    # GC, prefab load) would otherwise inject a multi-second backlog that fast-forwards
+    # over many catch-up frames (tick_simulation spikes -> FPS cascade). Normal frames
+    # are far below this cap, so steady-state play is unchanged; only post-hitch recovery
+    # is affected (the sim resumes from now instead of fast-forwarding the backlog).
+    _max_backlog = engine._FIXED_SIM_DT * engine._MAX_TICKS_PER_FRAME
+    if engine._sim_accumulator > _max_backlog:
+        engine._sim_accumulator = _max_backlog
+
     # Run fixed-rate sim ticks until accumulator is drained (or safety cap hit).
     ticks_this_frame = 0
     t_update_start = time.perf_counter()

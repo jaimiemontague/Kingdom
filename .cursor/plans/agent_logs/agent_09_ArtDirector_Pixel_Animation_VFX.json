@@ -2072,6 +2072,54 @@
      "notes": "Behavior-preserving render-only. The union of uploaded row-runs is exactly the set of changed rows, so on-screen texture == full upload, just cheaper. Did NOT commit/add/push per prompt."
     }
    }
+  },
+  "white_squares_unit_atlas_sampler_fix": {
+   "sprint_meta": {
+    "created_utc": "2026-06-02T00:00:00Z",
+    "notes": "White-squares unit fix (GPU instancing default path). Units rendered as solid WHITE squares: the instanced fragment shader sampled its atlas via the RESERVED Panda3D auto-input p3d_Texture0, which Panda auto-binds to texture stage 0 (empty on the raw instanced GeomNode -> default WHITE), overriding the manual set_shader_input. Renamed the atlas sampler to a CUSTOM name unitAtlas in both the GLSL and the two renderer binds so the manual bind takes effect. Positions were already correct (they come from the custom-named instanceData samplerBuffer), confirming the mechanism was binding-not-data."
+   },
+   "rounds": {
+    "white_squares_fix_w1": {
+     "sprint_id": "white_squares_unit_atlas_sampler_fix",
+     "round_id": "white_squares_fix_w1",
+     "status": "done",
+     "role": "Agent 09 ArtDirector. Fix confirmed visual bug: instanced units render as solid white squares (no sprite texture). Render-only; no sim/gameplay change.",
+     "what_i_changed": {
+      "game/graphics/instanced_unit_shader.py": [
+       "L49: uniform sampler2D p3d_Texture0; -> uniform sampler2D unitAtlas;",
+       "L54: vec4 texColor = texture(p3d_Texture0, uvs); -> texture(unitAtlas, uvs);",
+       "Vertex shader, discard (a<0.08), UV math, and compile(shader_includes=False) call all unchanged."
+      ],
+      "game/graphics/instanced_unit_renderer.py": [
+       "L232 (_ensure_initialized, outside geom): set_shader_input(\"p3d_Texture0\", panda_atlas) -> set_shader_input(\"unitAtlas\", panda_atlas).",
+       "L239 (_ensure_initialized, inside geom): same rename to \"unitAtlas\".",
+       "Shadow shader / shadow geom NOT touched (it does not sample the atlas)."
+      ]
+     },
+     "root_cause": "p3d_Texture0 is a reserved Panda3D auto-input bound to node texture stage 0 (empty -> default white, opaque alpha=1 passes the a<0.08 discard), which overrode the manual set_shader_input. instanceData (custom name) bound fine, so positions were correct -> proved binding-not-data.",
+     "how_to_test": [
+      "SDL_VIDEODRIVER=dummy python -c \"import game.graphics.instanced_unit_shader; print('SHADER_OK')\"",
+      "python -c \"import game.graphics.instanced_unit_renderer; print('IMPORT_OK')\"",
+      "python -m pytest -q",
+      "python tools/qa_smoke.py --quick",
+      "python -m pytest tests/test_wk67_ai_boundary.py -q"
+     ],
+     "grep_check": "grep p3d_Texture0 in both instanced unit files = no matches after rename. Unrelated p3d_Texture0 in terrain_fog_shader.py / ursina_sprite_unlit_shader.py / terrain_geomipterrain.py left untouched.",
+     "evidence": {
+      "shader_import": "SHADER_OK",
+      "renderer_import": "IMPORT_OK",
+      "pytest_full": "1503 passed, 5 skipped, 1 warning (matches baseline; no new failures)",
+      "wk67_ai_boundary": "10 passed (render-only)",
+      "qa_smoke": {
+       "command": "python tools/qa_smoke.py --quick",
+       "exit_code": 0,
+       "status": "PASS",
+       "tail": "[qa_smoke] DONE: PASS; determinism_guard PASS"
+      }
+     },
+     "notes": "Render-only; no sim/gameplay change. Live verification that units now show sprite textures (not white) deferred to orchestrator/Sovereign per feedback_ursina_deferred_screenshots (headless agent cannot screenshot game/graphics/ursina_* GPU path). DID NOT commit/add/push per prompt."
+    }
+   }
   }
  }
 }

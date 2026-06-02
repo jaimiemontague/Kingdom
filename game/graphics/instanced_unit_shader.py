@@ -46,12 +46,12 @@ void main() {
 }
 """,
     fragment="""#version 330
-uniform sampler2D p3d_Texture0;
+uniform sampler2D unitAtlas;
 in vec2 uvs;
 out vec4 fragColor;
 
 void main() {
-    vec4 texColor = texture(p3d_Texture0, uvs);
+    vec4 texColor = texture(unitAtlas, uvs);
     if (texColor.a < 0.08) {
         discard;
     }
