@@ -271,6 +271,14 @@ class InstancedUnitRenderer:
         node = GeomNode(geom_name)
         node.add_geom(geom)
 
+        # GPU instancing: instance positions live in the buffer texture, invisible to
+        # Panda's CPU-side frustum culler, which would otherwise cull this whole node
+        # (bounds = the base quad at the origin) whenever the camera looks away from
+        # the origin -> all units vanish. Force an infinite bound so it's never culled.
+        from panda3d.core import OmniBoundingVolume
+        node.set_bounds(OmniBoundingVolume())
+        node.set_final(True)
+
         from ursina import scene
 
         np = NodePath(node)
