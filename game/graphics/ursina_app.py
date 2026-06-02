@@ -286,6 +286,20 @@ class UrsinaApp:
         self._gc_frozen = False
         self._gc_frame_count = 0
 
+        # WK122 perf: prewarm the Panda3D model cache for every building-prefab piece mesh.
+        # Neutral buildings spawn during gameplay (~every 6s) and cross construction bands
+        # (plot -> build_20 -> build_50 -> final), each swapping a prefab JSON whose first
+        # Entity(model=...) would cold-parse its .glb on the render thread (a single-frame
+        # FPS dip). Loading each unique piece model once here (Ursina app + model-path are
+        # ready above) moves those cold parses off the gameplay hot path. Behavior-preserving
+        # (identical models, just cached earlier). Wrapped so a prewarm failure never blocks startup.
+        try:
+            from game.graphics.ursina_prefabs import prewarm_building_prefab_models
+            _warmed = prewarm_building_prefab_models()
+            print(f"[prewarm] building prefab models warmed: {_warmed}")
+        except Exception as _e:
+            print(f"[prewarm] building prefab model prewarm skipped: {_e}")
+
     @staticmethod
     def _read_int_env(name: str, default: int, *, min_value: int, max_value: int) -> int:
         raw = os.environ.get(name, "").strip()

@@ -78,6 +78,53 @@
      },
      "live_verification": "DEFERRED to orchestrator/Sovereign end test: instanced render with an off-origin camera has no headless screenshot coverage (per feedback_ursina_deferred_screenshots). Shipped behind import/pytest/qa_smoke/WK67 gates.",
      "do_not_commit": true
+    },
+    "wk124_w1_prefab_model_prewarm": {
+     "sprint_id": "wk123_round_b_instancing_default",
+     "round_id": "wk124_w1_prefab_model_prewarm",
+     "status": "done",
+     "role": "Agent 09 ArtDirector. ONE behavior-preserving startup optimization: prewarm the Panda3D model cache for all building-prefab piece meshes so the FIRST in-game spawn/construction-stage of each building type does not cold-parse its .glb on the render thread (single-frame FPS dip). Pre-loads assets that load lazily today; NO visual/sim/gameplay change.",
+     "what_i_changed": {
+      "game/graphics/ursina_prefabs.py": [
+       "Added _collect_prefab_building_model_strings() -> list[str]: globs every *.json in _PREFAB_BUILDINGS_DIR (final + plot_* + *_build_20/50_* + lair/poi), parses each (json.loads(read_text); try/except skip unreadable), collects UNIQUE assets/models/<rel> piece-model strings normalized exactly like _load_prefab_instance L283 (replace backslash->/ , lstrip(\"/\")), skipping pieces whose models_root/rel is not a file (L287-288 parity). Returns sorted list. GPU-free, testable.",
+       "Added prewarm_building_prefab_models() -> int: imports ursina.load_model (function-local), loads each unique model once via load_model(model_str, use_deepcopy=False) (same mechanism Entity(model=...) uses -> matching cache key), each wrapped in try/except, counts successes, returns count.",
+       "_load_prefab_instance UNCHANGED."
+      ],
+      "game/graphics/ursina_app.py": [
+       "UrsinaApp.__init__ end (after gc.set_threshold/_gc_frozen/_gc_frame_count, after Ursina app + UrsinaRenderer + getModelPath dirs are set up, before main loop): try: from game.graphics.ursina_prefabs import prewarm_building_prefab_models; _warmed = prewarm_building_prefab_models(); print(f\"[prewarm] building prefab models warmed: {_warmed}\") except Exception as _e: print(prewarm skipped). Wrapped so a prewarm failure never blocks startup."
+      ]
+     },
+     "why": "Neutral buildings spawn ~every 6s and cross construction bands (plot -> build_20 -> build_50 -> final), each swapping a prefab JSON whose first Entity(model=str) cold-parses up to ~26 piece .glb meshes on the render thread = a single-frame stall (min-FPS dip on spawns). Loading each unique piece model once at startup moves the cold parse to load time, off the gameplay hot path.",
+     "enumeration": {
+      "unique_models": 133,
+      "examples": [
+       "assets/models/Models/GLB format/altar-stone-graveyard.glb",
+       "assets/models/Models/GLB format/banner-green-fantasy-town.glb",
+       "assets/models/Models/GLB format/banner-red-fantasy-town.glb"
+      ],
+      "prefab_jsons_scanned": 65
+     },
+     "how_to_test": [
+      "python -c \"import game.graphics.ursina_prefabs as p; print('IMPORT_OK', hasattr(p,'prewarm_building_prefab_models'))\"",
+      "SDL_VIDEODRIVER=dummy python -c \"import game.graphics.ursina_app; print('APP_IMPORT_OK')\"",
+      "python -c \"import game.graphics.ursina_prefabs as p; m=p._collect_prefab_building_model_strings(); print(len(m))\"",
+      "python -m pytest -q",
+      "python tools/qa_smoke.py --quick",
+      "python -m pytest tests/test_wk67_ai_boundary.py -q"
+     ],
+     "evidence": {
+      "import_ok": "IMPORT_OK True",
+      "app_import_ok": "APP_IMPORT_OK",
+      "collection_helper": "UNIQUE_MODELS 133 (examples: altar-stone-graveyard.glb, banner-green-fantasy-town.glb, banner-red-fantasy-town.glb)",
+      "pytest_full": "1503 passed, 5 skipped, 1 warning in 248.89s (baseline match, no new failures)",
+      "qa_smoke": {
+       "cmd": "python tools/qa_smoke.py --quick",
+       "exit_code": 0,
+       "status": "DONE: PASS"
+      },
+      "wk67_ai_boundary": "10 passed"
+     },
+     "constraints_met": "Behavior-preserving: only pre-loads assets that would otherwise load lazily; identical models, just cached earlier. No trees/terrain prewarm (out of scope). _load_prefab_instance not changed. Slight added startup time accepted (moves cold parses off gameplay hot path). DID NOT COMMIT/add/push."
     }
    }
   },

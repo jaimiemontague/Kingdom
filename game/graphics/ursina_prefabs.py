@@ -334,3 +334,61 @@ def _load_prefab_instance(prefab_path: Path, world_pos: Vec3) -> Entity:
             pass
 
     return root
+
+
+def _collect_prefab_building_model_strings() -> list[str]:
+    """Enumerate every unique ``assets/models/<rel>`` piece-model string across ALL building prefabs.
+
+    Globs every ``*.json`` in ``_PREFAB_BUILDINGS_DIR`` (final + plot_* + *_build_20/50_* +
+    lair/poi variants), parses each prefab, and collects the de-duplicated set of model
+    strings exactly as ``_load_prefab_instance`` builds them (normalize backslashes,
+    ``lstrip("/")``, skip pieces whose ``models_root / rel`` is not an on-disk file).
+
+    This is the GPU-free, testable core of :func:`prewarm_building_prefab_models`.
+    Returns a sorted list for deterministic ordering.
+    """
+    models_root = PROJECT_ROOT / "assets" / "models"
+    seen: set[str] = set()
+    for path in sorted(_PREFAB_BUILDINGS_DIR.glob("*.json")):
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            # Unreadable / malformed prefab JSON — skip, keep scanning the rest.
+            continue
+        for piece in raw.get("pieces") or []:
+            rel = str(piece.get("model", "")).replace("\\", "/").lstrip("/")
+            if not rel:
+                continue
+            if not (models_root / rel).is_file():
+                continue
+            seen.add(f"assets/models/{rel}")
+    return sorted(seen)
+
+
+def prewarm_building_prefab_models() -> int:
+    """Pre-load every building-prefab piece model into Panda3D's loader cache at startup.
+
+    Behavior-preserving startup optimization: the FIRST ``Entity(model=str)`` for a given
+    model cold-parses its .glb/.obj on the render thread (a single-frame stall). Neutral
+    buildings spawn during gameplay (~every 6s) and cross construction bands
+    (plot -> build_20 -> build_50 -> final), each swapping prefabs with up to ~26 pieces,
+    so the first spawn of each type would otherwise hitch. Loading each unique piece model
+    once here moves that parse off the gameplay hot path.
+
+    Uses the SAME ``ursina.load_model`` mechanism that ``Entity(model=...)`` uses, so the
+    populated cache key matches the in-game lookup. Each load is wrapped in try/except so a
+    failure (e.g. headless / no GL context) never blocks startup.
+
+    Returns the count of models successfully warmed (for logging).
+    """
+    from ursina import load_model
+
+    warmed = 0
+    for model_str in _collect_prefab_building_model_strings():
+        try:
+            load_model(model_str, use_deepcopy=False)
+            warmed += 1
+        except Exception:
+            # Skip any model that fails to load (missing GL context, bad mesh, etc.).
+            continue
+    return warmed
