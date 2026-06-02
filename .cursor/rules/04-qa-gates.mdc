@@ -50,6 +50,10 @@ Whenever you ask **Jaimie** to verify something manually — in Cursor chat, age
 
 Use fenced code blocks or a single line per command. Include env vars when required, e.g. `set KINGDOM_URSINA_DEBUG_INPUT=1` (Windows) or `export KINGDOM_URSINA_DEBUG_INPUT=1` (Unix), then the `python ...` line on the next line if the shell needs two steps.
 
+## Gate 5: FPS guardrails (mandatory if you touched per-frame / render code)
+
+If your change touches any per-frame path — `game/graphics/ursina_*`, the HUD render/upload, the sim tick loop, or anything that runs every frame — you MUST first read [`11-fps-performance-guardrails.mdc`](11-fps-performance-guardrails.mdc) and confirm you have not reintroduced a known cost (full-window HUD upload, uncached per-frame `get_game_state()`, unbounded per-frame allocation, removed sim dt-clamp, a `p3d_*`-named custom GLSL sampler). Headless agents cannot screenshot/FPS-verify `ursina_*`; ship with the headless gates above + a verbatim diff and defer the live FPS check to Jaimie at **Fast speed + zoomed out + the 80-monster swarm** (a normal-speed probe under-represents the lag).
+
 ## What to do if a gate fails
 
 1. Fix the issue if it's in your domain

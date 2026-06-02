@@ -1,0 +1,90 @@
+---
+description: FPS / frame-time guardrails for the Ursina 3D renderer — REQUIRED reading. The "jittery again / FPS low of 6 / drops under 30" problem has recurred for ~50-100 sprints. Read before touching any per-frame code (game/graphics/ursina_*, game/engine*, the HUD render path, or the sim tick) or before perf work.
+globs:
+alwaysApply: true
+---
+
+# FPS Performance Guardrails (Ursina 3D renderer)
+
+**Why this exists:** the "game is jittery again, FPS low of 6, drops below 30 regularly" report has come back over and over for ~50-100 sprints. The WK122-124 FPS-floor recovery (branch `perf/fps-floor-recovery`) root-caused it and applied a stack of behavior-preserving fixes. This file is the durable record so the same costs don't get reintroduced and so the next perf pass starts from knowledge, not from scratch.
+
+## TL;DR — the cardinal rules
+
+1. **Test at the PLAYER'S real conditions, not normal speed.** Jaimie plays at **Fast speed (2×)**, **zoomed fully out**, and lets monsters accumulate to the cap. A normal-speed, short, unattended probe badly under-represents the lag. Always reproduce at fast speed + a high entity count (see "How to measure").
+2. **It is NOT a regression from recent refactors.** A pre-vs-post bisect (wk103 vs HEAD) showed HEAD is *faster*. The jitter is **preexisting, load-driven per-frame cost** + a few amplifiers. Don't go hunting "what did yesterday's commit break" — measure the live per-stage cost.
+3. **Per-frame cost must not scale unbounded with entity count, and one slow frame must not snowball.** Most of the fixes below enforce exactly that. Don't undo them.
+4. **Never cut tree/grass/forest density or grass stride for perf** (see [[no-tree-density-cuts]]). Perf comes from the data/render path, never content reduction.
+5. **`game/graphics/ursina_*` cannot be screenshot/FPS-verified by a headless agent** (no GPU). Live FPS + visual checks run on Jaimie's machine (or the main session on his machine). Subagents ship with headless gates (pytest, determinism_guard, WK67 digest, qa_smoke, import smoke) + a verbatim-diff; live verification is deferred. See [[feedback_ursina_deferred_screenshots]].
+
+## How to measure FPS (do this for any perf claim)
+
+The game has a built-in live FPS probe + per-stage profiler. Run the real game (not a headless sim):
+
+```
+# 2-min, 20-hero live playtest with per-stage timing, NORMAL speed:
+$env:KINGDOM_URSINA_HERO_FPS_PROBE_COUNT=20   # spawns N warriors (max 20)
+$env:KINGDOM_URSINA_FPS_PROBE=1               # prints [fps-probe] avg/min/p10/p50/p90 on exit
+$env:KINGDOM_URSINA_FPS_PROBE_WARMUP_SEC=15   # excludes the one-time world build from sampling
+$env:KINGDOM_URSINA_AUTO_EXIT_SEC=135         # auto-quit after N seconds
+$env:KINGDOM_FPS_SLOWLOG=1                    # per-frame breakdown (see below)
+python main.py --no-llm
+```
+
+- **`KINGDOM_FPS_SLOWLOG=1`** (instrumentation in `game/graphics/ursina_app_frame.py`, dead-by-default) prints `[frameavg]` every 120 frames and `[slowframe]` for frames > 40ms, each with the 4 timed stages: **`tick`** (sim), **`rend`** (build_snapshot + renderer.update), **`hudR`** (pygame HUD compose), **`hudU`** (HUD→GPU upload). The untracked remainder (`dt − sum`) is GPU scene render + the camera/pointer/fog block. Use it to attribute cost to a stage before fixing anything.
+- **To reproduce FAST speed** (the player's real condition; the default is `SPEED_NORMAL = 0.5`, Fast is `SPEED_FAST = 1.0` = 2×): in a tiny launcher, `import game.sim.timebase as tb; tb.set_time_multiplier(1.0); tb.set_time_multiplier = lambda m: None` (lock it past the engine's `DEFAULT_SPEED_TIER` reset), then run main.py. At fast speed `tick` ~doubles and the catch-up cascade is worse.
+- **`MAX_ALIVE_ENEMIES = 80`** (config.py; wave overflow → ~120) is the monster cap; neutral buildings pile to 50-60. The swarm is the worst case — test there.
+- **Visual verification (units, etc.):** capture instanced-vs-legacy at the SAME deterministic scene (`KINGDOM_URSINA_HERO_FPS_PROBE_COUNT=20` + `KINGDOM_URSINA_DISABLE_NEUTRAL_SPAWN=1` + short `AUTO_EXIT`), then numpy pixel-diff the two PNGs to locate units (where they differ) and read their colors. Far more reliable than eyeballing a downscaled screenshot.
+
+## What actually costs frame time (measured, at the swarm)
+
+No single stage dominates — costs spread across all of them, which is why one-shot fixes never "fixed it":
+
+| Cost | Where | Fix applied |
+|---|---|---|
+| Sim **catch-up cascade** — one slow frame (boot build, GC, alt-tab) banks a multi-second backlog that fast-forwards over ~25 frames (`tick` spikes 13-27ms) | `game/engine_facades/lifecycle.py` accumulator | **dt-clamp** (see below) |
+| **HUD→GPU upload** (`hudU`) spiking to 40-55ms — the radar redraws a dot per unit + the top status row both change every frame, forcing a near-full-window 5.3MB texture upload | `game/graphics/ursina_app_ui_overlay.py` `_refresh_ui_overlay_texture` | **multi-band dirty upload** |
+| Periodic **GC pauses** (~50ms) from per-frame allocation (snapshot DTOs + per-hero profile sorts) | global | **gc.freeze + raised thresholds** |
+| Per-frame **`get_game_state()` + HUD-layout recompute + floor raycast** even when mouse/camera are static | `game/graphics/ursina_app_input.py` | **stationary-pointer cache** |
+| **Building prefab cold-parse** on first spawn/construction-stage (a multi-piece `.glb` parse on the render thread) | `game/graphics/ursina_prefabs.py` | **startup model prewarm** |
+| Unconditional building **position/color writes** every frame (Panda bounding-volume invalidation) | `game/graphics/ursina_entity_render_collab.py` | **dirty-gate** |
+| Per-frame **zone-fog castle scan + get_zone** | `game/graphics/ursina_app_camera.py` | **cache castle xy + last tile** |
+| **GPU scene draw** at the swarm (50+ buildings, 80+ units, 2083 trees) | GPU | trees already instanced; units would need instancing (see below) |
+
+## The fixes in place — DO NOT undo these
+
+All are behavior-preserving (no sim/gameplay/visual change). Committed on `perf/fps-floor-recovery`:
+
+- **Sim dt-clamp** (`game/engine_facades/lifecycle.py`): after adding to `engine._sim_accumulator`, it is capped at `engine._FIXED_SIM_DT * engine._MAX_TICKS_PER_FRAME` (= 200ms). Prevents the spiral-of-death after any hitch. Normal frames never hit the cap, so steady-state timing is byte-identical; only post-hitch recovery changes (sim resumes from now instead of fast-forwarding). **This is a stability fix, NOT a balance/pacing change — keep it.**
+- **Multi-band HUD upload** (`ursina_app_ui_overlay.py` `_refresh_ui_overlay_texture`): uploads only the contiguous changed row-runs (numpy dirty mask) instead of one spanning band / full-window `setRamImageAs`. The union of bands == changed rows (pixel-identical).
+- **GC freeze + thresholds** (`ursina_app.py __init__` raises `gc.set_threshold`; `ursina_app_frame.py` calls `gc.collect()` + `gc.freeze()` once ~frame 90 to move the static terrain/tree heap out of gen2). Removes periodic gen2 pauses.
+- **Stationary-pointer cache** (`ursina_app_input.py` `_engine_screen_pos_for_pointer`): skips `get_game_state()` + HUD-layout recompute + floor raycast when mouse AND camera (world pos/rot/zoom) are unchanged.
+- **Building prefab prewarm** (`ursina_prefabs.py` `prewarm_building_prefab_models()`, called from `ursina_app.py __init__`): warms Panda's model cache for all building prefab piece models at load.
+- **Building position/color dirty-gate** (`ursina_entity_render_collab.py` `sync_3d_building_entity`) + **zone-fog cache** (`ursina_app_camera.py` `update_zone_fog_color`).
+- **Env-gated slowlog** (`KINGDOM_FPS_SLOWLOG`) instrumentation — keep it; it's the diagnostic tool.
+
+## Hard DON'Ts (these reintroduce the jitter)
+
+- **DON'T add a per-frame full-window pygame→GPU texture upload.** The HUD is composited at the window resolution; a full upload is ~40ms on integrated graphics. If you add an animated HUD element, make sure it stays inside the existing multi-band dirty path (and ideally occupies few contiguous rows).
+- **DON'T call `get_game_state()` (or anything that builds per-hero profile snapshots) multiple times per frame uncached.** It sorts known_places/recent_memory per hero. It is already invoked from the tick loop, the render pass, and the pointer path — cache, don't multiply.
+- **DON'T add unbounded per-frame allocation** (new DTOs/lists/dicts for every entity every frame) — it drives GC pauses. Reuse/cache.
+- **DON'T remove the dt-clamp** or raise the per-frame sim backlog. One bad frame must not fast-forward the sim.
+- **DON'T add per-frame work that scales with entity count without measuring at the 80-monster swarm at fast speed.** Things that look free at 20 normal-speed entities are not free at 80 fast-speed monsters.
+- **DON'T name a custom GLSL shader sampler `p3d_*`** — those are reserved Panda auto-inputs (bound from the node's texture stage, NOT from `set_shader_input`). Use a custom name + `set_shader_input("yourName", tex)`.
+
+## The instanced unit renderer (`KINGDOM_URSINA_INSTANCING`) — OPT-IN, currently BROKEN
+
+- Default is **OFF** (`game/graphics/ursina_renderer.py` ~L591, `== "1"` opt-in). The default **legacy per-Entity billboard** path renders units correctly.
+- Instancing is the **only path to p10 ≥ 30 at the swarm** (legacy ~35fps / p10 21 vs instanced ~51fps / p10 29 at the same load) — but it renders units **invisible/transparent** and draws a wrong dark shadow blob. Five blind capture-diff fix attempts (frustum-cull via OmniBoundingVolume; sampler rename; stage bind; UV V-flip; atlas source) got it from fully-invisible to only partially-rendering.
+- **Documented direction for the next interactive-GPU-debug session** (do NOT blind-iterate — use RenderDoc/apitrace): the sampler binding is most likely **NOT** the root cause. Both bindings were already tried and units stayed transparent either way — the current committed `p3d_Texture0` + `set_texture(panda_atlas, 1)` (reserved auto-input) and the earlier custom `unitAtlas` + `set_shader_input`. So investigate the **alpha/transparency path**, do not swap the sampler name a third time:
+  1. **GPU-capture first.** Confirm the atlas texels AND a correct alpha channel actually arrive at the fragment shader. The frag discards `texColor.a < 0.08` (`instanced_unit_shader.py:57`), so a dropped, premultiplied, or wrong-channel alpha reads as fully invisible. Highest-value check — do it before changing any binding.
+  2. **Diff the node render-state against the working legacy billboard.** The instanced unit geoms set `TransparencyAttrib.M_alpha` + `set_depth_write(False)` + `set_bin("transparent", …)` (`instanced_unit_renderer.py:237-247`); verify the atlas `Texture` format/alpha and blend state match what the legacy per-Entity path feeds (i.e. the sprite isn't being blended/multiplied out).
+  3. **Kill the dark blob (independent of unit visibility).** It's the separate instanced SHADOW geom (`shadow_instanced_shader` outputs black, alpha up to 0.65; `instanced_unit_renderer.py:217-228`); `self._shadow_geom_node.set_instance_count(0)` disables it (confirmed).
+  - Two things are already correct — **keep them**: the UV **V-flip** (`1 - uvRegion.y - uvRegion.w`, matches the legacy `texture_offset`; `instanced_unit_shader.py:45`) and the `OmniBoundingVolume()` + `set_final(True)` cull fix (instanced geom CPU bounds don't cover the GPU-buffer instance positions, so without it Panda frustum-culls the whole batch off-origin). Verify any change with the instanced-vs-legacy pixel-diff before re-enabling the default.
+
+## The acceptable bar
+
+The `min < 20` dips are a rare (~1 frame per 2-min run) **stochastic GPU/shader-gen hiccup present on both render paths** — likely not removable behavior-preservingly on integrated graphics. "min never under 20 over a 2-min run" is an extremely demanding bar for this engine. Jaimie's accepted target (2026-06-02 playtest) is **"25+ fps consistently and feels smooth."** Don't chase a perfect min at the cost of the playable, smooth state — get back to features.
+
+## If you must push the swarm floor higher
+
+The remaining big levers all need a decision (none is a free behavior-preserving win): **(a)** finish the instanced renderer (interactive GPU debug; +15fps), **(b)** batch the buildings (like the trees) to cut swarm GPU draw, or **(c)** the balance/pacing knobs Jaimie has set aside (lower `MAX_ALIVE_ENEMIES` / neutral-building cap). Ask before doing (b) or (c) — they change game feel/scope. See [[fps-floor-recovery-conditions]] in project memory for the full diagnosis.

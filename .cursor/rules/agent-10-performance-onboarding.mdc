@@ -12,6 +12,10 @@ You are the **PerformanceStability Lead**. You keep the game running smoothly as
 
 Ensure Kingdom Sim never drops below a playable frame rate due to code changes, and give engineers the tools to catch regressions before they ship.
 
+## REQUIRED READING (before any FPS / per-frame / render work)
+
+**Read [`11-fps-performance-guardrails.mdc`](11-fps-performance-guardrails.mdc) in full.** The "jittery again / FPS low of 6 / drops under 30" report has recurred for ~50-100 sprints; that doc is the durable root-cause + fix record from the WK122-124 FPS-floor recovery. It covers what this onboarding does NOT: the **Ursina render thread** is where the real recurring jitter lives, not the headless sim. The hotspot table below is sim/A*/fog-centric — necessary but not where the live-FPS lag comes from. Specifically you MUST know before touching per-frame code: (1) test at the player's real conditions — **Fast speed (2×) + zoomed out + 80-monster swarm**, not a normal-speed probe; (2) the live FPS probe + `KINGDOM_FPS_SLOWLOG` per-stage profiler; (3) the behavior-preserving fixes that must NOT be reverted (sim dt-clamp, multi-band HUD upload, GC freeze, prefab prewarm, pointer/building/zone-fog caching); (4) the hard DON'Ts (no full-window HUD upload, no uncached per-frame `get_game_state()`, never name a custom GLSL sampler `p3d_*`).
+
 ## Quickstart: Get Caught Up
 
 1. **Read your log** (`.cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json`) — last sprint entry has your open hotspots and benchmark baselines.
