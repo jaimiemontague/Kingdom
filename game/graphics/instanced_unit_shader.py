@@ -42,16 +42,18 @@ void main() {
         + camUp * p3d_Vertex.y * scale;
 
     gl_Position = p3d_ModelViewProjectionMatrix * vec4(worldPos, 1.0);
-    uvs = uvRegion.xy + p3d_MultiTexCoord0 * uvRegion.zw;
+    float _v0 = 1.0 - uvRegion.y - uvRegion.w;   // V-flip: pygame top-down -> GL bottom-up (matches legacy texture_offset)
+    uvs = vec2(uvRegion.x + p3d_MultiTexCoord0.x * uvRegion.z,
+               _v0 + p3d_MultiTexCoord0.y * uvRegion.w);
 }
 """,
     fragment="""#version 330
-uniform sampler2D unitAtlas;
+uniform sampler2D p3d_Texture0;
 in vec2 uvs;
 out vec4 fragColor;
 
 void main() {
-    vec4 texColor = texture(unitAtlas, uvs);
+    vec4 texColor = texture(p3d_Texture0, uvs);
     if (texColor.a < 0.08) {
         discard;
     }

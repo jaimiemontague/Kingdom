@@ -24,7 +24,6 @@ from game.graphics.instanced_unit_shader import instanced_unit_shader
 from game.graphics.shadow_instanced_shader import shadow_instanced_shader
 from game.graphics.unit_atlas import FRAME_SIZE, UnitAtlasBuilder
 from game.graphics.ursina_coords import sim_px_to_world_xz
-from game.graphics.ursina_texture_bridge import pygame_surface_to_ursina_texture
 from game.graphics.ursina_units_anim import (
     anim_clock_seconds,
     _frame_index_for_clip,
@@ -184,10 +183,11 @@ class InstancedUnitRenderer:
             return
         self._initialized = True
 
-        atlas_surf = self._atlas_builder.atlas_surface
-        self._atlas_tex = pygame_surface_to_ursina_texture(
-            atlas_surf, cache_key="unit_instancing_atlas_v1"
-        )
+        # Use the SAME atlas Texture object as the proven legacy billboard path
+        # (UnitAtlasBuilder.get_ursina_texture -> TerrainTextureBridge), not a
+        # separate surface->texture converter, so V handling and the sampled
+        # atlas band match the legacy `_sync_unit_atlas_billboard`.
+        self._atlas_tex = UnitAtlasBuilder.get().get_ursina_texture()
         panda_atlas: Texture = self._atlas_tex._texture
         panda_atlas.set_magfilter(Texture.FT_nearest)
         panda_atlas.set_minfilter(Texture.FT_nearest)
@@ -229,14 +229,17 @@ class InstancedUnitRenderer:
 
         sh = instanced_unit_shader._shader
         self._geom_node_outside.set_shader(sh)
-        self._geom_node_outside.set_shader_input("unitAtlas", panda_atlas)
+        # Bind the atlas onto texture stage 0 so the shader's reserved
+        # ``p3d_Texture0`` auto-input samples it (mirrors the working legacy
+        # ``Entity.texture`` path); priority 1 overrides any default stage tex.
+        self._geom_node_outside.set_texture(panda_atlas, 1)
         self._geom_node_outside.set_shader_input("instanceData", self._instance_buffer)
         self._geom_node_outside.set_transparency(TransparencyAttrib.M_alpha)
         self._geom_node_outside.set_depth_write(False)
         self._geom_node_outside.set_bin("transparent", 1)
 
         self._geom_node_inside.set_shader(sh)
-        self._geom_node_inside.set_shader_input("unitAtlas", panda_atlas)
+        self._geom_node_inside.set_texture(panda_atlas, 1)
         self._geom_node_inside.set_shader_input("instanceData", self._instance_buffer_inside)
         self._geom_node_inside.set_transparency(TransparencyAttrib.M_alpha)
         self._geom_node_inside.set_depth_write(False)

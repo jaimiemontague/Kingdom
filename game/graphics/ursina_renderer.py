@@ -584,9 +584,11 @@ class UrsinaRenderer:
         if _stage_profile: _rec("09_ensure_grid_debug_overlay", _t0); _t0 = time.perf_counter()
 
         # WK47 Wave 2b: hardware-instanced units (snapshot → buffer texture).
-        # DEFAULT unit-draw path: big FPS win at high unit counts. Set
-        # KINGDOM_URSINA_INSTANCING=0 to force the legacy per-Entity billboard path.
-        if os.environ.get("KINGDOM_URSINA_INSTANCING", "1") != "0":
+        # Instancing is OPT-IN (default OFF) — set KINGDOM_URSINA_INSTANCING=1 to
+        # enable; it has a known unresolved texture-binding bug (units invisible)
+        # pending interactive GPU debugging. The default legacy per-Entity billboard
+        # path renders units correctly.
+        if os.environ.get("KINGDOM_URSINA_INSTANCING", "0") == "1":
             if not hasattr(self, "_instanced_unit_renderer"):
                 from game.graphics.instanced_unit_renderer import InstancedUnitRenderer
 
