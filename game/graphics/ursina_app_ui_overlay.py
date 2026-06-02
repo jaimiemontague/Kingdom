@@ -138,60 +138,87 @@ def _refresh_ui_overlay_texture(owner: "UrsinaApp") -> None:
             _sync_hud_texture_filter_mode(owner._hud_composite_texture)
             owner._hud_prev_raw = raw_data
         else:
-            # R5 phase 3: dirty-region upload — only upload changed rows to GPU.
+            # WK123: multi-band dirty-region upload. The HUD changes in MULTIPLE
+            # separated regions every frame — the top status row (gold/wave) AND the
+            # bottom-left radar (a dot per unit). The old single-band logic spanned
+            # dirty_min..dirty_max, which for top+bottom deltas is nearly full height
+            # and tripped the WK122 large-band cap into a full ~5.3MB upload. Here we
+            # find the actual contiguous dirty row-runs with numpy and upload only those
+            # bands (top run + bottom run, skipping the static middle). The union of the
+            # uploaded runs is exactly the set of changed rows, so the on-screen texture
+            # is pixel-identical to a full upload — just cheaper. Render-only.
             if owner._hud_prev_raw is not None and len(owner._hud_prev_raw) == len(raw_data):
-                row_stride = sz[0] * 4
-                dirty_min = sz[1]
-                dirty_max = -1
+                W, H = sz
+                row_stride = W * 4
 
-                # Scan from top to find first dirty row
-                for y in range(sz[1]):
-                    offset = y * row_stride
-                    if raw_data[offset:offset + row_stride] != owner._hud_prev_raw[offset:offset + row_stride]:
-                        dirty_min = y
-                        break
+                def _upload_band(r0: int, r1: int) -> None:
+                    """Upload rows [r0, r1] (inclusive) via load_sub_image. Same
+                    mechanism the old single-band path used, factored out per run."""
+                    from panda3d.core import PNMImage as _PNMImage
 
-                if dirty_min < sz[1]:
-                    # Scan from bottom to find last dirty row
-                    for y in range(sz[1] - 1, dirty_min - 1, -1):
-                        offset = y * row_stride
-                        if raw_data[offset:offset + row_stride] != owner._hud_prev_raw[offset:offset + row_stride]:
-                            dirty_max = y
-                            break
+                    sub_h = r1 - r0 + 1
+                    sub_offset = r0 * row_stride
+                    sub_bytes = raw_data[sub_offset:sub_offset + sub_h * row_stride]
 
-                if dirty_max >= dirty_min:
-                    sub_h = dirty_max - dirty_min + 1
-                    if sub_h > int(sz[1] * 0.4):
-                        # WK122: a near-full-height dirty band (top status row + bottom
-                        # radar both change every frame) makes the PNMImage load_sub_image
-                        # round-trip (~44ms) far slower than a single direct full upload.
-                        # Use the proven full-texture path instead. Same final pixels.
-                        panda_tex.setRamImageAs(raw_data, "RGBA")
+                    # Temp texture holding only this band's rows
+                    temp_tex = PandaTexture()
+                    temp_tex.setup2dTexture(W, sub_h, PandaTexture.TUnsignedByte, PandaTexture.FRgba)
+                    temp_tex.setRamImageAs(sub_bytes, "RGBA")
+
+                    # Convert to PNMImage for load_sub_image
+                    sub_pnm = _PNMImage()
+                    temp_tex.store(sub_pnm)
+
+                    # Panda3D texture y=0 is at BOTTOM. Our RAM is un-flipped (pygame
+                    # top-down), so RAM row 0 maps to panda_y = H-1. The band's top edge
+                    # (r0) maps to panda_y = H - r0 - sub_h.
+                    panda_y = H - r0 - sub_h
+                    owner._hud_composite_texture._texture.load_sub_image(sub_pnm, 0, panda_y)
+
+                try:
+                    import numpy as _np
+
+                    cur = _np.frombuffer(raw_data, dtype=_np.uint8).reshape(H, row_stride)
+                    prev = _np.frombuffer(owner._hud_prev_raw, dtype=_np.uint8).reshape(H, row_stride)
+                    dirty = _np.any(cur != prev, axis=1)  # bool[H], ~0.3-0.6ms
+
+                    if not dirty.any():
+                        # No change (fingerprint false positive) — skip upload entirely.
+                        pass
                     else:
-                        sub_offset = dirty_min * row_stride
-                        sub_bytes = raw_data[sub_offset:sub_offset + sub_h * row_stride]
+                        # Contiguous dirty row-runs: pad with a clean row each side, diff
+                        # the int mask, +1 transition = run start, -1 = one past run end.
+                        d = dirty.astype(_np.int8)
+                        edges = _np.diff(_np.concatenate(([0], d, [0])))
+                        starts = _np.where(edges == 1)[0]
+                        ends = _np.where(edges == -1)[0] - 1  # inclusive last dirty row
 
-                        try:
-                            from panda3d.core import PNMImage as _PNMImage
+                        # Merge runs separated by a small clean gap (< 8 rows) so we don't
+                        # fragment into many tiny uploads.
+                        GAP = 8
+                        merged: list[list[int]] = []
+                        for s, e in zip(starts.tolist(), ends.tolist()):
+                            if merged and s - merged[-1][1] - 1 < GAP:
+                                merged[-1][1] = e
+                            else:
+                                merged.append([s, e])
 
-                            # Create temp texture holding only the dirty rows
-                            temp_tex = PandaTexture()
-                            temp_tex.setup2dTexture(sz[0], sub_h, PandaTexture.TUnsignedByte, PandaTexture.FRgba)
-                            temp_tex.setRamImageAs(sub_bytes, "RGBA")
-
-                            # Convert to PNMImage for load_sub_image
-                            sub_pnm = _PNMImage()
-                            temp_tex.store(sub_pnm)
-
-                            # Panda3D texture y=0 is at BOTTOM. Our RAM is un-flipped (pygame top-down),
-                            # so RAM row 0 maps to panda_y = height-1. The sub-image's top edge
-                            # (dirty_min) maps to panda_y = height - dirty_min - sub_h.
-                            panda_y = sz[1] - dirty_min - sub_h
-                            owner._hud_composite_texture._texture.load_sub_image(sub_pnm, 0, panda_y)
-                        except Exception:
-                            # Fallback: full upload if load_sub_image fails
+                        total_dirty = int(d.sum())
+                        if total_dirty > 0.5 * H or len(merged) > 6:
+                            # Too much changed (or too fragmented): a single direct full
+                            # upload is cheaper than many sub-uploads. Same final pixels.
                             panda_tex.setRamImageAs(raw_data, "RGBA")
-                # else: no dirty rows (fingerprint false positive) — skip upload
+                        else:
+                            try:
+                                for r0, r1 in merged:
+                                    _upload_band(r0, r1)
+                            except Exception:
+                                # On ANY band failure, fall back to a full upload so we
+                                # never leave a partial frame on screen.
+                                panda_tex.setRamImageAs(raw_data, "RGBA")
+                except Exception:
+                    # numpy/setup failure — safe full upload.
+                    panda_tex.setRamImageAs(raw_data, "RGBA")
             else:
                 # No previous data or size changed — full upload
                 panda_tex.setRamImageAs(raw_data, "RGBA")

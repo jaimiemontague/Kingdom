@@ -584,8 +584,9 @@ class UrsinaRenderer:
         if _stage_profile: _rec("09_ensure_grid_debug_overlay", _t0); _t0 = time.perf_counter()
 
         # WK47 Wave 2b: hardware-instanced units (snapshot → buffer texture).
-        # Opt-in: set KINGDOM_URSINA_INSTANCING=1 (known visual issues — see project memory).
-        if os.environ.get("KINGDOM_URSINA_INSTANCING", "0") == "1":
+        # DEFAULT unit-draw path: big FPS win at high unit counts. Set
+        # KINGDOM_URSINA_INSTANCING=0 to force the legacy per-Entity billboard path.
+        if os.environ.get("KINGDOM_URSINA_INSTANCING", "1") != "0":
             if not hasattr(self, "_instanced_unit_renderer"):
                 from game.graphics.instanced_unit_renderer import InstancedUnitRenderer
 
@@ -598,6 +599,11 @@ class UrsinaRenderer:
             unit_ids = self._instanced_unit_renderer.update(snapshot, self._frame_tick_id)
             active_ids.update(unit_ids)
             # Projectiles draw inside ``InstancedUnitRenderer`` (wk48); skip legacy Entities.
+            # Bounty markers + rubble piles are Entity-based and independent of the
+            # unit-draw path, so sync them here too (same calls/order as the legacy
+            # path below) — otherwise they'd vanish under instancing.
+            self._sync_snapshot_bounties(snapshot, active_ids)
+            self._sync_snapshot_rubble(snapshot)
             self._update_debug_status_text(snapshot)
             self._destroy_removed_entities(active_ids)
             return
