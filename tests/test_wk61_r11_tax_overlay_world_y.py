@@ -29,8 +29,8 @@ def test_building_gold_overlay_world_y_prefab_includes_terrain_and_clearance() -
     ent = SimpleNamespace(_ks_building_mode="prefab", _ks_prefab_top_y=2.4, children=[])
     terrain_y = 3.5
     world_y = _building_gold_overlay_world_y(ent, terrain_y=terrain_y, hy=2.0)
-    # local roof = 2.4 + 0.50 = 2.9; + terrain 3.5 + 1.2 clearance
-    assert world_y == pytest.approx(3.5 + 2.9 + 1.2)
+    # local roof = 2.4 + 0.50 = 2.9; + terrain 3.5 + 0.3 clearance
+    assert world_y == pytest.approx(3.5 + 2.9 + 0.3)
 
 
 def test_building_gold_overlay_world_y_billboard_includes_terrain() -> None:
@@ -39,7 +39,7 @@ def test_building_gold_overlay_world_y_billboard_includes_terrain() -> None:
     hy = 2.0
     world_y = _building_gold_overlay_world_y(ent, terrain_y=terrain_y, hy=hy)
     local_roof = max(hy * 0.75, 0.9)
-    assert world_y == pytest.approx(terrain_y + local_roof + 1.2)
+    assert world_y == pytest.approx(terrain_y + local_roof + 0.3)
 
 
 def test_sync_building_worldspace_ui_gold_label_scene_parent_and_world_position() -> None:

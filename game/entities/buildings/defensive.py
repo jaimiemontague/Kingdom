@@ -34,6 +34,12 @@ class Guardhouse(Building):
         self._arrow_timer = 0.0
         self.is_ranged_attacker = True
         self._last_ranged_event = None
+        # WK122-BUG-B1: a volley emits GUARDHOUSE_ARROWS_PER_SHOT arrows. The
+        # plural list carries one projectile event per arrow (distinct origins);
+        # the singular field above stays = the first arrow for back-compat. The
+        # engine (sim_engine._update_buildings) collects the plural list when
+        # present so every arrow spawns a ProjectileVFX.
+        self._last_ranged_events = []
         self.target = None
 
     def update(self, dt: float, guards_list: list, enemies: list = None):
@@ -77,10 +83,15 @@ class Guardhouse(Building):
                         to_x = float(getattr(best_target, "center_x", 0.0))
                         to_y = float(getattr(best_target, "center_y", 0.0))
                     # WK61: emit one projectile event per arrow with distinct origin offsets
-                    # Arrows originate from different spots on the guardhouse (+/-12px X, +/-4px Y)
+                    # Arrows originate from different spots on the guardhouse.
+                    # WK122-BUG-B1: widened the lateral ORIGIN spread to +/-20px X
+                    # (was +/-12) so the two arrows read as distinct in flight even
+                    # as they converge on the shared target. TARGET is unchanged
+                    # (both still aim exactly at the enemy). Kept subtle: a small,
+                    # readable gap, not a wide fan.
                     self._last_ranged_events = []
                     for i in range(GUARDHOUSE_ARROWS_PER_SHOT):
-                        offset_x = (i - (GUARDHOUSE_ARROWS_PER_SHOT - 1) / 2.0) * 24
+                        offset_x = (i - (GUARDHOUSE_ARROWS_PER_SHOT - 1) / 2.0) * 40
                         offset_y = (i - (GUARDHOUSE_ARROWS_PER_SHOT - 1) / 2.0) * 8
                         self._last_ranged_events.append({
                             "type": "ranged_projectile",
@@ -97,5 +108,6 @@ class Guardhouse(Building):
                 else:
                     self.target = None
                     self._last_ranged_event = None
+                    self._last_ranged_events = []
 
         return should_spawn

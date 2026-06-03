@@ -446,20 +446,41 @@ class GameEngine:
 
     @property
     def selected_hero(self):
+        # WK122: the "hero" slot can hold a Hero, a Guard, or the TaxCollector.
+        kind = self.selection.selected_hero_kind
+        if kind == "guard":
+            sel_id = self.selection.selected_hero_id
+            for g in self.sim.guards:
+                if getattr(g, "entity_id", None) == sel_id and getattr(g, "is_alive", False):
+                    return g
+            self.selection.clear_hero()  # stale / dead reference
+            return None
+        if kind == "tax_collector":
+            tc = self.sim.tax_collector
+            if tc is not None:
+                return tc
+            self.selection.clear_hero()
+            return None
+        # kind == 'hero' (or None): existing behavior, byte-identical.
         if self.selection.selected_hero_id is None:
             return None
         for h in self.sim.heroes:
             if h.hero_id == self.selection.selected_hero_id:
                 return h
-        self.selection.selected_hero_id = None  # stale reference
+        self.selection.clear_hero()  # stale reference
         return None
 
     @selected_hero.setter
     def selected_hero(self, v):
+        # WK122: route Guard / TaxCollector into the shared "hero" slot with a kind tag.
         if v is None:
             self.selection.clear_hero()
+        elif isinstance(v, Guard):
+            self.selection.select_hero(v.entity_id, kind="guard")
+        elif isinstance(v, TaxCollector):
+            self.selection.select_hero(None, kind="tax_collector")
         else:
-            self.selection.select_hero(v.hero_id)
+            self.selection.select_hero(v.hero_id, kind="hero")
 
     @property
     def selected_building(self):

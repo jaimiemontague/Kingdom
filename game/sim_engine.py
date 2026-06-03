@@ -898,7 +898,20 @@ class SimEngine:
                         self.guards.append(g)
 
         for building in self.buildings:
-            if hasattr(building, "_last_ranged_event") and building._last_ranged_event is not None:
+            # WK122-BUG-B1: collect ALL ranged events. Buildings that fire a
+            # multi-arrow volley (e.g. Guardhouse) expose a non-empty
+            # ``_last_ranged_events`` LIST with one event per arrow (distinct
+            # origins). Previously only the singular ``_last_ranged_event`` (the
+            # first arrow) was collected, so arrow #2 was silently dropped and a
+            # single ProjectileVFX spawned. Prefer the plural list when present;
+            # otherwise fall back to the singular field (buildings that only set
+            # the singular). Clear both so events fire exactly once.
+            events_list = getattr(building, "_last_ranged_events", None)
+            if events_list:
+                building_ranged_events.extend(events_list)
+                building._last_ranged_events = []
+                building._last_ranged_event = None
+            elif getattr(building, "_last_ranged_event", None) is not None:
                 building_ranged_events.append(building._last_ranged_event)
                 building._last_ranged_event = None
         if building_ranged_events:

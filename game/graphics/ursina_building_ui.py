@@ -105,13 +105,18 @@ def _building_gold_overlay_y(ent, *, hy: float = 1.0) -> float:
 
 
 def _building_gold_overlay_world_y(ent, *, terrain_y: float, hy: float = 1.0) -> float:
-    """World-space Y for hold-G gold billboards: terrain + roof + clearance (WK61-R11 BUG-004)."""
+    """World-space Y for hold-G gold billboards: terrain + roof + clearance (WK61-R11 BUG-004).
+
+    WK122-BUG-A1: clearance trimmed from +1.2 to +0.3 so the ``$N`` label hugs the
+    roofline (``roof_local`` already encodes the roof-top estimate, incl. the +0.50
+    prefab cap), instead of floating ~roof+1.7 above prefab buildings.
+    """
     roof_local = _building_gold_overlay_y(ent, hy=hy)
     if getattr(ent, "_ks_prefab_container", False) or getattr(ent, "_ks_building_mode", None) == "prefab":
-        return float(terrain_y) + roof_local + 1.2
+        return float(terrain_y) + roof_local + 0.3
     if getattr(ent, "_ks_billboard_configured", False):
-        return float(terrain_y) + roof_local + 1.2
-    return float(terrain_y) + roof_local + 1.2
+        return float(terrain_y) + roof_local + 0.3
+    return float(terrain_y) + roof_local + 0.3
 
 
 def _configure_ks_overlay(ent) -> None:

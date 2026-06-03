@@ -18,12 +18,30 @@ from game.graphics.visual_specs import UnitVisualSpec
 # -----------------------------------------------------------------------
 
 def configure_ks_overlay(ent) -> None:
-    """Depth-off + on-top so labels/HP/gold overlays are not hidden by terrain or prefabs."""
+    """Depth-off + on-top so labels/HP/gold overlays are not hidden by terrain or prefabs.
+
+    WK122-BUG-A2: ``always_on_top`` + ``render_queue`` alone did NOT reliably force the
+    Text onto a top render bin, so taller/nearer buildings drawn later still occluded the
+    ``$N`` tax labels. We now also disable depth *write* and assign a genuine high-sort
+    Panda3D ``"fixed"`` bin (sort 60), so the entity draws after all opaque world geometry
+    regardless of draw order. ``set_depth_test``/``set_depth_write``/``set_bin`` are exposed
+    on the Ursina Entity via its Panda3D NodePath base. Shared by HP bars + name labels;
+    they were already depth-off + on-top, so the extra bin only reinforces their layering.
+    """
     if ent is None or getattr(ent, "_ks_overlay_cfg", False):
         return
     ent.billboard = True
     try:
         ent.set_depth_test(False)
+    except Exception:
+        pass
+    try:
+        ent.set_depth_write(False)
+    except Exception:
+        pass
+    try:
+        # Genuine top render bin: draw after all opaque world geometry (buildings/terrain/trees).
+        ent.set_bin("fixed", 60)
     except Exception:
         pass
     try:

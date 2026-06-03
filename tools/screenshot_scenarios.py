@@ -1433,6 +1433,30 @@ URSINA_CAPTURE_SCENARIOS: dict[str, dict[str, object]] = {
             "KINGDOM_URSINA_CAM_FOCUS_SPAN": "16",
         },
     },
+    # WK122-T3: deterministic guardhouse two-arrow capture (Jaimie's explicit ask —
+    # "start the game with the guard tower firing at an enemy and screenshot to make
+    # sure you see 2 distinct arrows"). The patch places the REAL Guardhouse + ONE
+    # goblin within GUARDHOUSE_ARROW_RANGE_TILES (default 3 tiles apart), holds the
+    # goblin alive/in-range, resets _arrow_timer each tick so the live Guardhouse.update
+    # genuinely fires (faithfulness/integration proof), and pins two mid-flight
+    # ProjectileVFX (distinct guardhouse origins, factor 40 X / 8 Y -> +/-20px / +/-4px,
+    # the same the real building uses -> same target) AFTER the tick so the grab always
+    # shows two distinct arrow billboards. Fixed oblique camera framed (tight, span 4)
+    # on the TWO-ARROW midpoint so the small billboards read; FPS overlay disabled.
+    # PM can iterate framing without code edits via env knobs (no default override
+    # needed here): KINGDOM_WK122_SEP_TILES (int 3), KINGDOM_WK122_CAM_SPAN (4.0),
+    # KINGDOM_WK122_CAM_ELEV (0.8), KINGDOM_WK122_PROGRESS (0.4),
+    # KINGDOM_WK122_ARROW_OFFSET_X (40.0), KINGDOM_WK122_ARROW_OFFSET_Y (8.0).
+    "ursina_guardhouse_arrows": {
+        "patch_path": "tools/wk122_guardhouse_arrows_capture_patch.py",
+        "default_ticks": 480,
+        "default_out_subdir": "wk122_guardhouse_arrows",
+        "stem": "guardhouse_arrows",
+        "env": {
+            "KINGDOM_URSINA_REVEAL_ON_START": "1",
+            "KINGDOM_URSINA_EDITORCAMERA": "0",
+        },
+    },
 }
 
 

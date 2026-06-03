@@ -24,10 +24,19 @@ class SelectionState:
     selected_building_id: Optional[str] = None
     selected_enemy_id: Optional[str] = None
     selected_peasant_id: Optional[str] = None
+    # WK122: the left "hero" panel slot can also hold a Guard or the TaxCollector.
+    # kind disambiguates which sim collection the id resolves against.
+    # Values: 'hero' | 'guard' | 'tax_collector' (None when nothing selected).
+    selected_hero_kind: Optional[str] = None
 
-    def select_hero(self, hero_id: str) -> None:
-        """Select a hero. Clears enemy and peasant selection."""
+    def select_hero(self, hero_id: Optional[str], kind: str = "hero") -> None:
+        """Select a hero (or guard / tax_collector). Clears enemy and peasant selection.
+
+        ``kind`` records which sim collection ``hero_id`` resolves against. For the
+        tax_collector (a singleton with no id) pass ``hero_id=None, kind='tax_collector'``.
+        """
         self.selected_hero_id = hero_id
+        self.selected_hero_kind = kind
         self.selected_enemy_id = None
         self.selected_peasant_id = None
 
@@ -51,6 +60,7 @@ class SelectionState:
 
     def clear_hero(self) -> None:
         self.selected_hero_id = None
+        self.selected_hero_kind = None
 
     def clear_building(self) -> None:
         self.selected_building_id = None
@@ -63,6 +73,7 @@ class SelectionState:
 
     def clear_all(self) -> None:
         self.selected_hero_id = None
+        self.selected_hero_kind = None
         self.selected_building_id = None
         self.selected_enemy_id = None
         self.selected_peasant_id = None
@@ -71,6 +82,7 @@ class SelectionState:
         """Clear selection if the destroyed entity was selected."""
         if self.selected_hero_id == entity_id:
             self.selected_hero_id = None
+            self.selected_hero_kind = None
         if self.selected_building_id == entity_id:
             self.selected_building_id = None
         if self.selected_enemy_id == entity_id:
