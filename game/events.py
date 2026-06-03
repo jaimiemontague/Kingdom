@@ -20,6 +20,8 @@ class GameEventType(str, Enum):
     BOUNTY_PLACED = "bounty_placed"
     BOUNTY_CLAIMED = "bounty_claimed"
     HERO_LEVEL_UP = "hero_level_up"
+    # WK124-T4a: cleric heals a wounded allied hero (sim emits; VFX/audio consume).
+    HERO_HEAL = "hero_heal"
     HERO_ENTERED_BUILDING = "hero_entered_building"
     HERO_EXITED_BUILDING = "hero_exited_building"
     # wk14: interior view feedback (audio; non-authoritative)

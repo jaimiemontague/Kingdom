@@ -5,7 +5,7 @@ from __future__ import annotations
 import pygame
 
 from config import COLOR_GOLD, COLOR_GREEN, COLOR_UI_BORDER, COLOR_WHITE
-from game.ui.building_renderers import render_occupants
+from game.ui.building_renderers import render_hp_block, render_occupants
 from game.ui.widgets import Button, HPBar
 
 
@@ -33,6 +33,8 @@ class EconomicPanelRenderer:
             panel.research_button_rect = None
             return self._render_construction_notice(panel, surface, y)
 
+        # WK124-T2: show HP unconditionally (matches the guardhouse menu).
+        y = render_hp_block(panel, surface, building, y)
         y = render_occupants(panel, surface, building, y)
 
         if hasattr(building, "potions_researched") and bool(building.potions_researched):
@@ -136,6 +138,8 @@ class EconomicPanelRenderer:
         if hasattr(building, "is_constructed") and not building.is_constructed:
             return self._render_construction_notice(panel, surface, y)
 
+        # WK124-T2: show HP unconditionally (matches the guardhouse menu).
+        y = render_hp_block(panel, surface, building, y)
         y = render_occupants(panel, surface, building, y)
 
         upgrades = panel.font_normal.render(
@@ -269,6 +273,8 @@ class EconomicPanelRenderer:
         if hasattr(building, "is_constructed") and not building.is_constructed:
             return self._render_construction_notice(panel, surface, y)
 
+        # WK124-T2: show HP unconditionally (matches the guardhouse menu).
+        y = render_hp_block(panel, surface, building, y)
         y = render_occupants(panel, surface, building, y)
 
         # Recovery rate (plan: 0.02 = 1 HP per second)
@@ -292,6 +298,8 @@ class EconomicPanelRenderer:
         return y
 
     def _render_trading_post(self, panel, surface: pygame.Surface, building, y: int) -> int:
+        # WK124-T2: show HP unconditionally (matches the guardhouse menu).
+        y = render_hp_block(panel, surface, building, y)
         income = panel.font_normal.render(
             f"Total Income: ${int(getattr(building, 'total_income_generated', 0))}",
             True,

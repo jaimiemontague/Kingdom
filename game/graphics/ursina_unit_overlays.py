@@ -20,17 +20,30 @@ from game.graphics.visual_specs import UnitVisualSpec
 def configure_ks_overlay(ent) -> None:
     """Depth-off + on-top so labels/HP/gold overlays are not hidden by terrain or prefabs.
 
-    WK122-BUG-A2: ``always_on_top`` + ``render_queue`` alone did NOT reliably force the
-    Text onto a top render bin, so taller/nearer buildings drawn later still occluded the
-    ``$N`` tax labels. We now also disable depth *write* and assign a genuine high-sort
-    Panda3D ``"fixed"`` bin (sort 60), so the entity draws after all opaque world geometry
-    regardless of draw order. ``set_depth_test``/``set_depth_write``/``set_bin`` are exposed
-    on the Ursina Entity via its Panda3D NodePath base. Shared by HP bars + name labels;
-    they were already depth-off + on-top, so the extra bin only reinforces their layering.
+    WK122-BUG-A2 / WK124-T1: the prior fix was *self-cancelling*. It called
+    ``set_bin("fixed", 60)`` and THEN ``always_on_top = True``. Ursina's ``always_on_top``
+    setter internally runs ``set_bin("fixed", 0)`` (and disables depth), so it clobbered the
+    high bin straight back to sort 0 -> the label ended at ``fixed,0`` and drew UNDER
+    buildings (``fixed,1``). The old ``render_queue = 2`` line was a no-op for ``Text`` (Text
+    has no ``.model``), so it never compensated.
+
+    Fix: set ``always_on_top`` FIRST (let its setter reset bin->fixed,0 + depth off), then
+    re-assert depth off, then assign the genuine high-sort ``"fixed"`` bin LAST so nothing
+    clobbers it. Sort 110 beats buildings (``fixed,1``) AND the instanced-unit "inside" geom
+    (``fixed,100``), so ``$N`` / HP bars / name labels win over both. ``set_depth_test`` /
+    ``set_depth_write`` / ``set_bin`` are exposed on the Ursina Entity via its Panda3D
+    NodePath base. Shared by HP bars, name labels, hero ``$N``/``Zzz``, tax-collector gold,
+    and the building tax-gold ``$N`` -- they all benefit (all should draw on top).
     """
     if ent is None or getattr(ent, "_ks_overlay_cfg", False):
         return
     ent.billboard = True
+    try:
+        # NOTE: this setter internally calls set_bin("fixed", 0) + disables depth, so it
+        # MUST run before the high-bin assignment below or it would clobber it back to 0.
+        ent.always_on_top = True
+    except Exception:
+        pass
     try:
         ent.set_depth_test(False)
     except Exception:
@@ -40,16 +53,9 @@ def configure_ks_overlay(ent) -> None:
     except Exception:
         pass
     try:
-        # Genuine top render bin: draw after all opaque world geometry (buildings/terrain/trees).
-        ent.set_bin("fixed", 60)
-    except Exception:
-        pass
-    try:
-        ent.always_on_top = True
-    except Exception:
-        pass
-    try:
-        ent.render_queue = 2
+        # Genuine top render bin: draw after all opaque world geometry. MUST be LAST.
+        # 110 > buildings (fixed,1) and instanced units (fixed,100).
+        ent.set_bin("fixed", 110)
     except Exception:
         pass
     try:

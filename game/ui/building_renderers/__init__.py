@@ -6,7 +6,38 @@ from typing import TYPE_CHECKING, Protocol
 
 import pygame
 
-from config import COLOR_GOLD, COLOR_RED, COLOR_WHITE
+from config import COLOR_GOLD, COLOR_GREEN, COLOR_RED, COLOR_WHITE
+from game.ui.widgets import HPBar
+
+
+def render_hp_block(panel, surface: pygame.Surface, building, y: int) -> int:
+    """Shared helper: render current/max HP text + bar UNCONDITIONALLY (WK124-T2).
+
+    Mirrors ``DefensivePanelRenderer._render_hp_block`` so guild / inn / market /
+    blacksmith / trading-post / guardhouse menus all show HP identically. Returns new y.
+    """
+    hp = int(getattr(building, "hp", 0) or 0)
+    max_hp = int(getattr(building, "max_hp", 0) or 0)
+    hp_text = panel.font_normal.render(f"HP: {hp}/{max_hp}", True, COLOR_WHITE)
+    surface.blit(hp_text, (10, y))
+    y += 25
+
+    bar_rect = pygame.Rect(10, y, panel.panel_width - 20, 12)
+    HPBar.render(
+        surface,
+        bar_rect,
+        hp,
+        max(1, max_hp),
+        color_scheme={
+            "bg": (60, 60, 60),
+            "good": COLOR_GREEN,
+            "warn": (220, 180, 90),
+            "bad": COLOR_RED,
+            "border": COLOR_WHITE,
+        },
+    )
+    y += 20
+    return y
 
 
 def render_occupants(panel, surface: pygame.Surface, building, y: int) -> int:

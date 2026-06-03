@@ -6,7 +6,7 @@ import pygame
 
 from config import COLOR_GOLD, COLOR_UI_BORDER, COLOR_WHITE
 
-from game.ui.building_renderers import render_occupants
+from game.ui.building_renderers import render_hp_block, render_occupants
 
 
 class GuildPanelRenderer:
@@ -21,6 +21,8 @@ class GuildPanelRenderer:
         y: int,
         economy,
     ) -> int:
+        # WK124-T2: show HP unconditionally (matches the guardhouse menu).
+        y = render_hp_block(panel, surface, building, y)
         y = render_occupants(panel, surface, building, y)
 
         hero_info = panel.get_heroes_for_building(building, heroes)

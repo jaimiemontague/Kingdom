@@ -28,7 +28,11 @@ from ursina.shaders import unlit_shader
 
 from game.graphics.terrain_texture_bridge import TerrainTextureBridge
 from game.graphics.ursina_sprite_unlit_shader import sprite_unlit_shader
-from game.graphics.vfx import get_projectile_billboard_surface
+from game.graphics.vfx import (
+    get_projectile_billboard_surface,
+    get_magic_billboard_surface,
+    get_heal_billboard_surface,
+)
 from game.graphics.ursina_coords import sim_px_to_world_xz
 from game.graphics.ursina_environment import _environment_model_path
 from game.graphics.terrain_height import get_terrain_height, is_initialized as _terrain_height_ok
@@ -49,21 +53,41 @@ PROJECTILE_BILLBOARD_Y = ENEMY_SCALE * 0.5
 
 
 def sync_snapshot_projectiles(r: "UrsinaRenderer", snapshot: "SimStateSnapshot", active_ids: set) -> None:
-    # Projectiles — VFX arrows as textured billboards (WK5 colors via get_projectile_billboard_surface)
+    # Projectiles — VFX billboards. Arrows (WK5) plus WK124 magic (wizard spell)
+    # and heal (cleric) orbs. Each texture is generated ONCE and cached on the
+    # renderer (FPS guardrail: no per-frame surface/texture regeneration).
     if r._projectile_tex is None:
         psurf = get_projectile_billboard_surface()
         r._projectile_tex = TerrainTextureBridge.surface_to_texture(
             psurf, cache_key=("ursina", "projectile_arrow_billboard_v1")
         )
+    if getattr(r, "_magic_tex", None) is None:
+        msurf = get_magic_billboard_surface()
+        r._magic_tex = TerrainTextureBridge.surface_to_texture(
+            msurf, cache_key=("ursina", "projectile_magic_billboard_v1")
+        )
+    if getattr(r, "_heal_tex", None) is None:
+        hsurf = get_heal_billboard_surface()
+        r._heal_tex = TerrainTextureBridge.surface_to_texture(
+            hsurf, cache_key=("ursina", "projectile_heal_billboard_v1")
+        )
     ptex = r._projectile_tex
     for proj in getattr(snapshot, "vfx_projectiles", ()) or ():
+        # Pick the billboard texture by projectile kind ("arrow" default).
+        pkind = getattr(proj, "kind", "arrow")
+        if pkind == "magic":
+            tex = r._magic_tex
+        elif pkind == "heal":
+            tex = r._heal_tex
+        else:
+            tex = ptex
         s = PROJECTILE_BILLBOARD_SCALE
         ent, obj_id = r._entity_render.get_or_create_entity(
             proj,
             model="quad",
             col=color.white,
             scale=(s, s, 1),
-            texture=ptex,
+            texture=tex,
             billboard=True,
         )
         if not getattr(ent, "_ks_billboard_configured", False):
@@ -80,7 +104,7 @@ def sync_snapshot_projectiles(r: "UrsinaRenderer", snapshot: "SimStateSnapshot",
         proj_terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
         r._entity_render.sync_billboard_entity(
             ent,
-            tex=ptex,
+            tex=tex,
             tint_col=color.white,
             scale_xyz=(s, s, 1),
             pos_xyz=(wx, proj_terrain_y + PROJECTILE_BILLBOARD_Y, wz),

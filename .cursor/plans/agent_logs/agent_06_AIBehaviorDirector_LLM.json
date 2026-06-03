@@ -1883,6 +1883,101 @@
           }
         }
       }
+    },
+    "wk124_hero_kit_ai_and_ui_fixes": {
+      "sprint_meta": {
+        "created_utc": "2026-06-03T00:00:00Z",
+        "plan_ref": ".cursor/plans/wk124_hero_kit_ai_and_ui_fixes.plan.md",
+        "role": "Agent 06 AIBehaviorDirector_LLM",
+        "sprint_id": "wk124_hero_kit_ai_and_ui_fixes",
+        "title": "WK124 Wave 2 - ranger late-game roam (T6), cleric seek-and-support (T4b), wizard spell-range engage confirm (T3b) (Agent 06)"
+      },
+      "rounds": {
+        "r1": {
+          "round_id": "r1",
+          "sprint_id": "wk124_hero_kit_ai_and_ui_fixes",
+          "status": "done",
+          "round_meta": {
+            "role": "Agent 06 AIBehaviorDirector_LLM",
+            "reports_to": "Agent 01 (PM)",
+            "launched_by": "Claude Code Agent-tool subagent (parent Agent 01 PM)",
+            "completed_utc": "2026-06-03T00:00:00Z",
+            "wave": "Wave 2 (after Agent 05 Wave-1 config consts + wizard ranged identity + cleric heal system landed)",
+            "phase": "T6 ranger late-game re-roam + T4b cleric support behavior + T3b wizard spell-range confirm. All gated so the WK67 300-tick decision digest stays byte-identical."
+          },
+          "what_i_changed": {
+            "ai/behaviors/exploration.py": [
+              "Imported RANGER_GLOBAL_FRONTIER_STRIDE_TILES, RANGER_REROAM_COMMIT_MS from config (read-only; Agent 05 added them).",
+              "Added _find_distant_frontier_tile(world, hero, rng, *, stride=RANGER_GLOBAL_FRONTIER_STRIDE_TILES, max_candidates=5): COARSE whole-map scan stepping by stride; finds nearest UNSEEN coarse-grid sample adjacent (within stride) to a SEEN/VISIBLE tile; sorted (dist_sq, gy, gx) with rng tie-break among the closest few; returns (gx,gy) or None when no distant frontier (map revealed). Deterministic: uses only the passed AI rng.",
+              "Added _roam_toward_distant_objective(ai, hero, view, now_ms): when the map is fully revealed, sets a patrol-style target toward the FARTHEST live lair (productive roam, not a combat lock); returns False (fall through to wander) if no live lair known or already on top of it.",
+              "Wired into explore() ranger branch: AFTER the local frontier scan returns empty (if not frontier_candidates), call _find_distant_frontier_tile -> set_target_position + target type explore_frontier + _frontier_commit_until_ms = now+RANGER_REROAM_COMMIT_MS; else _roam_toward_distant_objective. New branch fires ONLY when the local scan is empty (digest-safe)."
+            ],
+            "ai/behaviors/support.py (NEW)": [
+              "cleric_seek_and_support(ai, hero, view) -> bool, modeled on defense.defend_home_building. Scans view.heroes for the nearest distinct living friendly hero that is wounded (health_percent < CLERIC_HEAL_MIN_TARGET_PCT) OR in combat (state==HeroState.FIGHTING). If found: set_target_position(ally.x,ally.y) + state=MOVING + target type support_ally + _target_commit_until_ms anti-thrash; return True. If NO ally needs support: return False AND make ZERO state changes (pure read) -> cleric falls through to default behavior. Includes the defense.py-style commit-window early-return for an already-committed live target."
+            ],
+            "ai/task_router.py": [
+              "Added a hero_class==cleric-gated priority branch right AFTER the warrior economic-defense branch: if hero.state != FIGHTING and hero_class==cleric: if ai.support_behavior.cleric_seek_and_support(ai,hero,view): return."
+            ],
+            "ai/basic_ai.py": [
+              "Imported support in the from ai.behaviors import (...) block and set self.support_behavior = support in BasicAI.__init__."
+            ],
+            "ai/behaviors/__init__.py": [
+              "Added from . import support + 'support' to __all__ to match the existing eager-submodule pattern (keeps from ai.behaviors import support consistent; support imports only leaf deps -> no cycle)."
+            ]
+          },
+          "t3b_finding": "T3b required NO movement/AI change. Confirmed by reading the combat-approach path: ai/behaviors/movement.py:200 transitions a hero to FIGHTING at dist <= hero.attack_range, ai/behaviors/combat.py:46 only resumes MOVING when dist > attack_range, and game/systems/combat.py:141 fires the attack (and the ranged-projectile emit at 182-202) at dist <= hero.attack_range. Agent 05 already set wizard attack_range = TILE_SIZE * WIZARD_ATTACK_RANGE_TILES (4.5) and is_ranged_attacker=True (hero.py:134-137, 214) -> the wizard already stops at spell range, casts, and holds range via the SAME generic path the ranger (attack_range=6 tiles) uses. The ticket says add a stand-off ONLY if the wizard still walks into melee; it does not, so no class-gated stand-off was added (also the digest-safest choice). No ranger/cleric/warrior movement touched.",
+          "commands_run": [
+            {
+              "cmd": "python -c \"import ai.behaviors.exploration, ai.behaviors.support, ai.task_router, ai.basic_ai\"",
+              "exit_code": 0,
+              "result": "IMPORT_OK"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "result": "10 passed, 1 warning in 17.80s"
+            },
+            {
+              "cmd": "python -m pytest tests/test_ai_exploration.py -q",
+              "exit_code": 0,
+              "result": "5 passed, 1 warning in 0.15s"
+            },
+            {
+              "cmd": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "result": "[determinism_guard] PASS: no violations found"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "result": "[qa_smoke] DONE: PASS"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json > NUL",
+              "exit_code": 0,
+              "result": "JSON valid"
+            }
+          ],
+          "evidence": {
+            "wk67_digest": "tests/test_wk67_ai_boundary.py -> 10 passed (incl. test_ai_decision_digest_is_stable). Digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded stayed byte-identical; _AI_DECISION_DIGEST NOT re-baselined.",
+            "digest_safety_reasoning": "T6: new distant-scan branch fires only when the LOCAL frontier scan returns empty; in the 300-tick (~5 sim-sec) digest window Brina near-castle fog is never exhausted -> branch never fires -> no extra RNG draw -> digest unchanged. T4b: cleric_seek_and_support is a pure read (no state change, returns False) when no ally is wounded/fighting; the digest scenario has no enemies and full-HP heroes -> Cora always falls through to default behavior -> digest unchanged. T3b: no wizard in the digest and no AI change made anyway.",
+            "functional_t6": "Inline check: _find_distant_frontier_tile returns a coarse frontier tile when a near-castle bubble edge exists, and None when the whole map is SEEN.",
+            "functional_t4b": "Inline check: returns False with zero state change when all allies full-HP/not-fighting; returns True and sets state=MOVING toward the ally when an ally is wounded OR FIGHTING."
+          },
+          "constraints_honored": [
+            "Edited ONLY ai/behaviors/exploration.py, ai/behaviors/support.py (new), ai/task_router.py, ai/basic_ai.py, ai/behaviors/__init__.py (submodule registration), and this log.",
+            "Did NOT edit config.py (read consts only), graphics, ui, entities, sim_engine.",
+            "Determinism: used ai._ai_rng and sim_now_ms() only; no random.random()/time.time(). Determinism guard PASS.",
+            "Did NOT commit, did NOT run git."
+          ],
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11 (Wave 3): tests/test_wk124_ranger_idle_soak.py should now PASS post-fix (rangers leave the near-castle bubble late-game via _find_distant_frontier_tile + RANGER_REROAM_COMMIT_MS).",
+            "PM (Agent 01) on GPU box: confirm Ursina captures for the wizard magic projectile (T3c, Agent 09) and cleric heal burst (T4c, Agent 09); my T3b confirms the wizard engages at spell range so the projectile should originate from ~4.5 tiles.",
+            "Out-of-scope (deferred per plan): peacetime cleric-always-escort would move Cora and re-baseline the digest; needs Jaimie sign-off."
+          ]
+        }
+      }
     }
   }
 }

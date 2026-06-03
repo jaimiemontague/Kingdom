@@ -67,6 +67,14 @@ def update_hero(ai, hero, dt: float, view) -> None:
         if ai.defense_behavior.defend_economic_building_warrior(ai, hero, view):
             return
 
+    # WK124-T4b: Clerics seek and support wounded/fighting allies. Returns False
+    # (no takeover, no state change) when no ally needs support, so the cleric
+    # falls through to her default behavior. This is inert in the WK67 digest
+    # scenario (nobody wounded, no combat) → digest byte-identical. Class-gated.
+    if hero.state != HeroState.FIGHTING and getattr(hero, "hero_class", "") == "cleric":
+        if ai.support_behavior.cleric_seek_and_support(ai, hero, view):
+            return
+
     # Priority: defend home building if it's damaged.
     if hero.home_building and hero.home_building.is_damaged and hero.state != HeroState.FIGHTING:
         ai.defense_behavior.defend_home_building(ai, hero, view)

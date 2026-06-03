@@ -1457,6 +1457,52 @@ URSINA_CAPTURE_SCENARIOS: dict[str, dict[str, object]] = {
             "KINGDOM_URSINA_EDITORCAMERA": "0",
         },
     },
+    # WK124-T3: deterministic WIZARD spell capture. The patch places ONE real
+    # Hero(hero_class="wizard") + ONE goblin ~3 tiles apart (inside the wizard's
+    # 4.5-tile WIZARD_ATTACK_RANGE_TILES), holds the enemy alive/in-range, resets
+    # the wizard attack_cooldown each tick so the live CombatSystem genuinely emits
+    # a ranged_projectile {projectile_kind:"magic"} (faithfulness/integration proof),
+    # and pins ONE mid-flight ProjectileVFX(kind="magic") AFTER the tick so the grab
+    # always shows the purple magic orb. The wizard's "attack" (staff cast) clip is
+    # locked to a mid-cast frame so the body cast-pose holds. Fixed oblique camera
+    # framed (span 5) on the held orb; FPS overlay disabled. PM framing knobs (no
+    # default override needed): KINGDOM_WK124_SEP_TILES (3), KINGDOM_WK124_CAM_SPAN
+    # (5.0), KINGDOM_WK124_CAM_ELEV (0.8), KINGDOM_WK124_PROGRESS (0.45). Scene is
+    # selected by KINGDOM_WK124_SCENE=wizard (set below).
+    "ursina_wizard_cast": {
+        "patch_path": "tools/wk124_wizard_cleric_capture_patch.py",
+        "default_ticks": 480,
+        "default_out_subdir": "wk124_wizard_cast",
+        "stem": "wizard_cast",
+        "env": {
+            "KINGDOM_URSINA_REVEAL_ON_START": "1",
+            "KINGDOM_URSINA_EDITORCAMERA": "0",
+            "KINGDOM_URSINA_DISABLE_NEUTRAL_SPAWN": "1",
+            "KINGDOM_WK124_SCENE": "wizard",
+        },
+    },
+    # WK124-T4: deterministic CLERIC heal capture. The patch places ONE real
+    # Hero(hero_class="cleric") + ONE wounded Hero(hero_class="warrior") ally ~2 tiles
+    # apart (inside CLERIC_HEAL_RADIUS_TILES=4), re-wounds the ally below the 0.85
+    # heal threshold and resets the cleric _heal_cooldown_until_ms each tick so the
+    # live ClericHealSystem genuinely emits hero_heal (faithfulness), and pins ONE
+    # mid-flight ProjectileVFX(kind="heal") AFTER the tick so the grab always shows the
+    # GREEN heal bolt cleric->ally. (The green particle burst is pygame-only; the heal
+    # billboard is what reads in the Ursina 3D path.) Fixed oblique camera framed
+    # (span 5) on the held bolt; FPS overlay disabled. Same KINGDOM_WK124_* framing
+    # knobs as the wizard scene. Scene selected by KINGDOM_WK124_SCENE=cleric.
+    "ursina_cleric_heal": {
+        "patch_path": "tools/wk124_wizard_cleric_capture_patch.py",
+        "default_ticks": 480,
+        "default_out_subdir": "wk124_cleric_heal",
+        "stem": "cleric_heal",
+        "env": {
+            "KINGDOM_URSINA_REVEAL_ON_START": "1",
+            "KINGDOM_URSINA_EDITORCAMERA": "0",
+            "KINGDOM_URSINA_DISABLE_NEUTRAL_SPAWN": "1",
+            "KINGDOM_WK124_SCENE": "cleric",
+        },
+    },
 }
 
 

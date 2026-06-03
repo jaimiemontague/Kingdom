@@ -222,6 +222,18 @@ HERO_BASE_ATTACK = 10
 HERO_BASE_DEFENSE = 5
 HERO_SPEED = 120.0  # px/sec (baked: old 2 * 60)
 
+# WK124-T3a: Wizard ranged identity (spell attack). Wizard-gated in Hero.__init__
+# / Hero.get_ranged_spec — these never alter ranger/cleric/warrior values.
+WIZARD_ATTACK_RANGE_TILES = 4.5   # spell stand-off range (tiles); * TILE_SIZE = px
+WIZARD_SPELL_COLOR = (170, 90, 230)  # arcane purple magic projectile tint (RGB)
+WIZARD_SPELL_SIZE_PX = 4             # magic projectile billboard size (px)
+
+# WK124-T4a: Cleric heal tuning (ClericHealSystem reads these).
+CLERIC_HEAL_RADIUS_TILES = 4        # heal an allied hero within this radius (tiles)
+CLERIC_HEAL_AMOUNT = 8             # HP restored per heal
+CLERIC_HEAL_COOLDOWN_MS = 2500      # per-cleric cooldown between heals (sim-ms)
+CLERIC_HEAL_MIN_TARGET_PCT = 0.85   # only heal allies below this health fraction
+
 # Enemy settings
 GOBLIN_HP = 30
 GOBLIN_ATTACK = 5
@@ -373,6 +385,11 @@ CONVERSATION_TIMEOUT = 8.0
 RANGER_EXPLORE_BLACK_FOG_BIAS = 0.7  # 0.0-1.0: probability of picking frontier vs random wander (default 0.7 = 70% frontier)
 RANGER_FRONTIER_SCAN_RADIUS_TILES = 10  # Maximum radius (in tiles) to scan for black fog frontier tiles
 RANGER_FRONTIER_COMMIT_MS = 4000  # Commitment window (sim-time ms) to prevent rapid re-targeting of exploration goals
+# WK124-T6: ranger late-game roam (added here so Agent 06 only READS config).
+# Used only when the LOCAL frontier scan returns empty (never inside the 300-tick
+# WK67 digest window), so these are digest-safe.
+RANGER_GLOBAL_FRONTIER_STRIDE_TILES = 8  # coarse whole-map frontier scan stride (tiles)
+RANGER_REROAM_COMMIT_MS = 8000           # longer commit when roaming to a distant frontier (sim-ms)
 
 # --- WK53 Terrain Elevation (Agent 03: terrain_height.py + heightmap generation) ---
 # Maximum terrain elevation in world units (Ursina Y).

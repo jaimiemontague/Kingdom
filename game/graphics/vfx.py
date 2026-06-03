@@ -33,6 +33,7 @@ class ProjectileVFX:
     color: Tuple[int, int, int]  # Wood brown for arrows
     tip_color: Tuple[int, int, int]  # Bright tip pixel
     size_px: int  # 1, 2, or 3 pixels (default 2)
+    kind: str = "arrow"  # WK124-T3c/T4c: "arrow" (default) | "magic" | "heal" — picks the 3D billboard
 
     @property
     def x(self) -> float:
@@ -115,6 +116,21 @@ class VFXSystem:
         if x is None or y is None:
             return
 
+        if et == "hero_heal":
+            # WK124-T4c: cleric heal — green/gold particle burst on the healed
+            # target (pygame) PLUS a short-lived green heal bolt from the cleric
+            # to the target (so it reads in the Ursina 3D billboard path too).
+            self._spawn_heal(float(x), float(y))
+            from_x = event.get("from_x")
+            from_y = event.get("from_y")
+            if from_x is not None and from_y is not None:
+                self._spawn_projectile(
+                    float(from_x), float(from_y),
+                    float(x), float(y),
+                    "heal", None, 3,
+                )
+            return
+
         if et in ("hero_attack", "hero_attack_lair"):
             self._spawn_hit(float(x), float(y))
         elif et == "enemy_killed":
@@ -187,40 +203,81 @@ class VFXSystem:
                 )
             )
 
+    def _spawn_heal(self, x: float, y: float):
+        """WK124-T4c: cleric heal burst — gentle GREEN/GOLD motes rising on the
+        healed ally (modeled on ``_spawn_big`` but lighter/upward). Deterministic
+        position-seeded RNG — no wall-clock/global randomness."""
+        rnd = random.Random((int(x) << 16) ^ int(y) ^ 0x4EA1)
+        for _ in range(14):
+            ang = rnd.random() * 6.283
+            spd = 18 + rnd.random() * 50
+            vx = math.cos(ang) * spd
+            vy = math.sin(ang) * spd
+            # Mostly soft green with a few gold sparkles; bias velocity upward.
+            col = (120, 230, 130) if rnd.random() < 0.7 else (255, 225, 120)
+            self._particles.append(
+                VFXParticle(
+                    x=x,
+                    y=y,
+                    vx=vx,
+                    vy=vy - 45.0,  # rise (counteracts gravity in update())
+                    life=0.40 + rnd.random() * 0.25,
+                    color=col,
+                    size=2 + rnd.randint(0, 1),
+                )
+            )
+
     def _spawn_projectile(self, from_x: float, from_y: float, to_x: float, to_y: float,
                           kind: str, color: Optional[Tuple[int, int, int]], size_px: int):
         """
-        Spawn a visual-only projectile (arrow/bolt) traveling from source to target.
-        
-        WK5 Build B: Improved readability
+        Spawn a visual-only projectile traveling from source to target.
+
+        WK5 Build B (arrows): Improved readability
         - Color: Warm wood brown (#8B4513) for arrows
         - Tip highlight: Bright near-white pixel (#F5F5F5) at leading edge
         - Size: Default 2px, optional 3px variant (tip + shaft + tiny trail)
         - Lifetime: 250-450ms travel time (visible mid-flight)
         - Deterministic: seeded RNG from event fields
+
+        WK124 (kinds): ``kind`` selects the 3D billboard in the Ursina sync.
+        - "arrow" (default): wood-brown arrow (unchanged behavior).
+        - "magic":  wizard spell — arcane purple orb (color from spec).
+        - "heal":   cleric heal bolt — green orb (T4c).
+        For "magic"/"heal" the spec ``color`` is honored (not overridden); for
+        "arrow" the art-contract brown is always used.
         """
         # Deterministic seed from event fields (not wall-clock)
         seed = (int(from_x) << 16) ^ int(from_y) ^ (int(to_x) << 8) ^ int(to_y) ^ 0x4A2B
         rnd = random.Random(seed)
-        
+
         # Lifetime: 250-450ms (0.25-0.45 seconds) with deterministic jitter for visibility
         lifetime = 0.25 + rnd.random() * 0.20
-        
-        # Color: always use warm wood brown (art contract: same color for all ranged attackers)
-        # Warm wood brown: SaddleBrown #8B4513 = (139, 69, 19)
-        color = (139, 69, 19)
-        
-        # Tip color: bright near-white for visibility on dark backgrounds
-        tip_color = (245, 245, 245)  # #F5F5F5
-        
-        # Size: default 2px, allow up to 3px for variants
-        # If size_px is 1 or unset, default to 2px for Build B readability
-        if size_px < 1:
-            size_px = 2
-        size_px = max(1, min(3, int(size_px)))
-        if size_px == 1:
-            size_px = 2  # Upgrade 1px to 2px for Build B
-        
+
+        kind = (kind or "arrow")
+        if kind == "magic":
+            # WK124-T3c: wizard spell — arcane purple orb, use the spec color/size.
+            # Core color from spec (default WIZARD_SPELL_COLOR), bright lilac highlight.
+            color = tuple(color) if color else (170, 90, 230)
+            tip_color = (235, 200, 255)  # bright lilac highlight
+            size_px = max(2, min(4, int(size_px) if size_px else 4))
+        elif kind == "heal":
+            # WK124-T4c: cleric heal bolt — green core, pale-gold highlight.
+            color = tuple(color) if color else (90, 220, 120)
+            tip_color = (235, 255, 200)  # pale gold-green highlight
+            size_px = max(2, min(4, int(size_px) if size_px else 3))
+        else:
+            # Arrows: always warm wood brown (art contract: same color for all
+            # arrow attackers) + bright near-white tip on dark backgrounds.
+            kind = "arrow"
+            color = (139, 69, 19)  # SaddleBrown #8B4513
+            tip_color = (245, 245, 245)  # #F5F5F5
+            # Size: default 2px, allow up to 3px for variants
+            if size_px < 1:
+                size_px = 2
+            size_px = max(1, min(3, int(size_px)))
+            if size_px == 1:
+                size_px = 2  # Upgrade 1px to 2px for Build B
+
         self._projectiles.append(
             ProjectileVFX(
                 from_x=from_x,
@@ -233,6 +290,7 @@ class VFXSystem:
                 color=color,
                 tip_color=tip_color,
                 size_px=size_px,
+                kind=kind,
             )
         )
 
@@ -431,4 +489,49 @@ def get_projectile_billboard_surface() -> pygame.Surface:
     pygame.draw.polygon(surf, brown, [(16, cy), (22, cy - 5), (22, cy + 5)])
     _PROJ_BILLBOARD_CACHE = surf
     return surf
+
+
+def _make_orb_surface(core_rgb: Tuple[int, int, int], halo_rgb: Tuple[int, int, int]) -> pygame.Surface:
+    """Build a glowing 32×32 RGBA orb: soft translucent halo → solid core →
+    bright highlight. Used for the wizard-spell and cleric-heal billboards.
+    Generated once per palette and cached by the public getters (no per-frame alloc)."""
+    s = 32
+    surf = pygame.Surface((s, s), pygame.SRCALPHA)
+    cx = cy = s // 2
+    # Outer halo rings (large→small), increasing alpha for a soft glow falloff.
+    for radius, alpha in ((14, 40), (11, 80), (8, 140)):
+        pygame.draw.circle(surf, (halo_rgb[0], halo_rgb[1], halo_rgb[2], alpha), (cx, cy), radius)
+    # Solid core orb.
+    pygame.draw.circle(surf, (core_rgb[0], core_rgb[1], core_rgb[2], 255), (cx, cy), 6)
+    # Bright off-center highlight for an energetic, readable read.
+    hi = (min(255, core_rgb[0] + 70), min(255, core_rgb[1] + 70), min(255, core_rgb[2] + 70), 255)
+    pygame.draw.circle(surf, hi, (cx - 2, cy - 2), 2)
+    return surf
+
+
+# Cached 32×32 arcane orb for Ursina 3D billboards (WK124-T3c: wizard spell).
+_MAGIC_BILLBOARD_CACHE: pygame.Surface | None = None
+# Cached 32×32 green orb for Ursina 3D billboards (WK124-T4c: cleric heal).
+_HEAL_BILLBOARD_CACHE: pygame.Surface | None = None
+
+
+def get_magic_billboard_surface() -> pygame.Surface:
+    """RGBA arcane glowing ORB for the wizard spell (purple core + lighter halo).
+    Cached — generated once (FPS guardrail: no per-frame surface regeneration)."""
+    global _MAGIC_BILLBOARD_CACHE
+    if _MAGIC_BILLBOARD_CACHE is not None:
+        return _MAGIC_BILLBOARD_CACHE
+    # Wizard spell purple (matches config.WIZARD_SPELL_COLOR / spec default).
+    _MAGIC_BILLBOARD_CACHE = _make_orb_surface(core_rgb=(170, 90, 230), halo_rgb=(200, 150, 255))
+    return _MAGIC_BILLBOARD_CACHE
+
+
+def get_heal_billboard_surface() -> pygame.Surface:
+    """RGBA green glowing ORB for the cleric heal bolt (green core + pale halo).
+    Cached — generated once (FPS guardrail: no per-frame surface regeneration)."""
+    global _HEAL_BILLBOARD_CACHE
+    if _HEAL_BILLBOARD_CACHE is not None:
+        return _HEAL_BILLBOARD_CACHE
+    _HEAL_BILLBOARD_CACHE = _make_orb_surface(core_rgb=(90, 220, 120), halo_rgb=(170, 255, 190))
+    return _HEAL_BILLBOARD_CACHE
 

@@ -37,6 +37,7 @@ from game.systems import (
     NeutralBuildingSystem,
 )
 from game.systems.buffs import BuffSystem
+from game.systems.cleric_heal import ClericHealSystem
 from game.systems.difficulty import DifficultySystem, DifficultyLevel
 from game.systems.wave_events import WaveEventSystem
 from game.building_factory import BuildingFactory
@@ -137,6 +138,9 @@ class SimEngine:
         self.wave_event_system = WaveEventSystem(difficulty=self.difficulty_system)
         self.neutral_building_system = NeutralBuildingSystem(self.world)
         self.buff_system = BuffSystem()
+        # WK124-T4a: clerics heal wounded allied heroes (deterministic, no RNG).
+        # Inert when no ally is wounded -> keeps the WK67 AI-decision digest green.
+        self.cleric_heal_system = ClericHealSystem()
         self.building_factory = BuildingFactory()
         self.bounty_system = BountySystem()
         self.poi_interaction_system = POIInteractionSystem()
@@ -751,6 +755,9 @@ class SimEngine:
         # Fog + buffs + early pacing (castle from game_state)
         self._update_fog_of_war()
         self.buff_system.update(system_ctx, dt)
+        # WK124-T4a: cleric heals (mirrors the buff_system tick; no-op when no
+        # ally is wounded, so the WK67 digest scenario stays byte-identical).
+        self.cleric_heal_system.update(system_ctx, dt)
         castle = game_state.get("castle")
         self._maybe_apply_early_pacing_nudge(dt, castle)
 
