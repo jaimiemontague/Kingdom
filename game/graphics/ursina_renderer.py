@@ -55,6 +55,7 @@ from game.graphics.ursina_unit_overlays import (
     configure_ks_overlay as _configure_ks_overlay_impl,
     sync_ks_facing_overlay as _sync_ks_facing_overlay_impl,
     ensure_ks_name_label as _ensure_ks_name_label_impl,
+    free_entity_overlays as _free_entity_overlays,
     sync_hp_bar,
     sync_hero_gold_label,
     sync_hero_rest_label,
@@ -727,14 +728,12 @@ class UrsinaRenderer:
             # a no-op miss for building/projectile keys). Prevents unbounded growth.
             self._unit_facing_state.pop(obj_id, None)
             ent = self._entities.pop(obj_id)
-            gold = getattr(ent, "_ks_gold_label", None)
-            if gold is not None:
-                try:
-                    import ursina as _u
-
-                    _u.destroy(gold)
-                except Exception:
-                    pass
+            # WK123 C1 leak fix: free the unit's detached overlay child nodes
+            # (HP bar / name / gold / rest / tax-gold) BEFORE destroying the parent.
+            # ursina.destroy(parent) does NOT cascade to regular .children, so the
+            # overlays would otherwise orphan into scene.entities forever and the
+            # per-frame entity walk would grow without bound with cumulative deaths.
+            _free_entity_overlays(ent)
             import ursina
 
             ursina.destroy(ent)

@@ -63,6 +63,17 @@ from game.systems.nature import NatureSystem
 from game.systems.poi_interaction import POIInteractionSystem
 
 
+# WK123 C2: how long (sim-ms) a dead hero is retained in ``self.heroes`` after death.
+# Within this grace window the hero keeps building a ``HeroProfileSnapshot`` (so the
+# watch card, recall button, pin-name capture, low-health-alert cooldown and the
+# memorial/pin-liveness reads at hud.py:776/783 see exactly what they see today for a
+# freshly-dead pinned hero); past it, the hero is culled in the dead-entity cleanup
+# block so per-frame profile cost is bounded by O(alive + recently-dead) instead of
+# O(all-time hires). 30 s comfortably exceeds the pin's 10 s fallen-display window
+# (PIN_FALLEN_DISPLAY_MS) so nothing the player can interact with changes inside it.
+DEAD_HERO_RETENTION_MS = 30_000
+
+
 class SimEngine:
     """
     Headless simulation core.
@@ -432,6 +443,18 @@ class SimEngine:
             _hid = getattr(_h, "hero_id", None)
             if _hid is None:
                 continue
+            # WK123 C2: build profiles for alive heroes plus dead heroes still inside
+            # the retention window. ``build_hero_profile_snapshot`` is the heaviest
+            # per-hero per-frame work (it sorts known_places + profile_memory), so
+            # skipping long-dead heroes bounds this O(all-time hires) cost to
+            # O(alive + recently-dead). The window is enforced here AND by the cull in
+            # ``tick`` — heroes past it are removed from self.heroes entirely. Within the
+            # window the profile is identical to today's, preserving the watch-card /
+            # recall / memorial reads for a freshly-dead pinned hero.
+            if not getattr(_h, "is_alive", True):
+                _dead_since = getattr(_h, "_dead_since_ms", None)
+                if _dead_since is not None and (_ms - int(_dead_since)) > DEAD_HERO_RETENTION_MS:
+                    continue
             hero_profiles_by_id[str(_hid)] = build_hero_profile_snapshot(_h, self, now_ms=_ms)
         # WK67 Move 5: dead sim-side selection reads removed. Selection is
         # presentation-owned; the GameEngine wrapper overrides these keys from
@@ -605,10 +628,19 @@ class SimEngine:
             underground_areas=getattr(self, 'underground_areas', None),
             rubble_records=tuple(getattr(self, 'rubble_records', ())),
             # WK66 Round A-1: frozen render DTOs (additive; consumers flip in W2).
-            hero_dtos=tuple(unit_dto_from(h, "hero") for h in self.heroes),
+            # WK123 C2: skip dead heroes/peasants/guards at build time. Every render
+            # consumer of these DTO tuples already early-outs on ``not is_alive``
+            # (ursina_unit_sync :117/:289/:350, instanced_unit_renderer :466/:517/:537/:580,
+            # and the pygame registry render_hero/peasant/guard via hero_renderer:130 /
+            # worker_renderer:148,234 / registry:100) — so a dead unit's DTO is built every
+            # frame only to be discarded. Skipping it removes the all-time accumulation that
+            # made per-frame DTO cost scale with total hires instead of with the living set.
+            # Enemies/guards are already culled when dead (cleanup block below), but the
+            # guard filter is a cheap belt-and-suspenders guard against a mid-tick death.
+            hero_dtos=tuple(unit_dto_from(h, "hero") for h in self.heroes if getattr(h, "is_alive", True)),
             enemy_dtos=tuple(unit_dto_from(e, "enemy") for e in self.enemies),
-            peasant_dtos=tuple(unit_dto_from(p, "peasant") for p in self.peasants),
-            guard_dtos=tuple(unit_dto_from(g, "guard") for g in self.guards),
+            peasant_dtos=tuple(unit_dto_from(p, "peasant") for p in self.peasants if getattr(p, "is_alive", True)),
+            guard_dtos=tuple(unit_dto_from(g, "guard") for g in self.guards if getattr(g, "is_alive", True)),
             tax_collector_dto=(
                 unit_dto_from(_tax, "tax_collector") if _tax is not None else None
             ),
@@ -796,15 +828,46 @@ class SimEngine:
         cleanup_tick = getattr(self, '_cleanup_tick', 0)
         self._cleanup_tick = cleanup_tick + 1
         if getattr(self, '_dead_entity_dirty', False) or cleanup_tick % 60 == 0:
+            # WK123 C2: use the SAME clock the profile build uses (get_game_state reads
+            # ``timebase.now_ms()``, which is the deterministic sim clock when
+            # DETERMINISTIC_SIM is on and pygame wall-clock ticks otherwise). Reading
+            # self._sim_now_ms here would diverge in the real-play (non-deterministic)
+            # path — it stays 0 — and instant-cull every dead hero, breaking the memorial.
+            from game.sim.timebase import now_ms as _sim_now_ms
+            _now_ms = int(_sim_now_ms())
             # WK60 Feature 3: decrement guild hero count for newly dead heroes
             for hero in self.heroes:
                 if not getattr(hero, "is_alive", True) and not getattr(hero, "_guild_death_processed", False):
                     hero._guild_death_processed = True
+                    # WK123 C2: stamp the moment of death (sim-ms) so the profile-build
+                    # retention window in get_game_state and the hero cull below share a
+                    # single death time. Stamped exactly once, alongside the existing
+                    # one-shot guild-death bookkeeping.
+                    hero._dead_since_ms = _now_ms
                     home = getattr(hero, "home_building", None)
                     if home is not None and hasattr(home, "on_hero_death"):
                         home.on_hero_death()
             self.enemies = [e for e in self.enemies if getattr(e, "is_alive", False)]
             self.guards = [g for g in self.guards if getattr(g, "is_alive", False)]
+            # WK123 C2: cull dead PEASANTS immediately (they have no memorial / pin /
+            # profile UX — nothing reads a dead peasant — so this mirrors the
+            # enemy/guard cull and bounds self.peasants by the living set).
+            self.peasants = [p for p in self.peasants if getattr(p, "is_alive", False)]
+            # WK123 C2: TTL-cull dead HEROES. A dead hero is kept (and keeps building a
+            # profile) until DEAD_HERO_RETENTION_MS after death, preserving the memorial /
+            # pin-liveness / watch-card reads for a freshly-dead pinned hero; past the
+            # window it is removed so per-frame hero work is bounded by O(alive +
+            # recently-dead) instead of O(all-time hires). A hero that died this tick may
+            # not yet carry a stamp (defensive ``is None`` keeps it until next pass).
+            self.heroes = [
+                h
+                for h in self.heroes
+                if getattr(h, "is_alive", True)
+                or (
+                    getattr(h, "_dead_since_ms", None) is None
+                    or (_now_ms - int(getattr(h, "_dead_since_ms"))) <= DEAD_HERO_RETENTION_MS
+                )
+            ]
             self._dead_entity_dirty = False
 
         # WK61-FIX: Destroyed-building cleanup (was missing from SimEngine — only ran

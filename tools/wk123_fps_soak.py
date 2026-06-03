@@ -15,16 +15,21 @@ What the harness wires up (all via existing game knobs — nothing reinvented):
   - ``KINGDOM_URSINA_AUTO_SCREENSHOT_PATH``         → sync screenshot at the auto-exit.
 
 The first-frame hook (in the generated patch) then:
-  (a) force-spawns the heavy scenario (>=24 heroes, ~100 buildings, 80 enemies) against
-      ``UrsinaApp.engine`` via ``tools/wk123_scenario.build_heavy_scenario``;
+  (a) force-spawns the heavy scenario (default 24 heroes / 24 buildings / 80 enemies —
+      the Sovereign's "20+ heroes, 20+ buildings, 75+ enemies" spec; overridable via the
+      --heroes/--buildings/--enemies CLI flags) against ``UrsinaApp.engine`` via
+      ``tools/wk123_scenario.build_heavy_scenario``. Earlier runs force-padded buildings to
+      100 (5x spec), which slammed all prefab instantiation into one frame (the rend spike);
   (b) LOCKS speed — fast: tb.set_time_multiplier(1.0) then no-ops the setter so an engine
       reset can't change it; normal: 0.5;
   (c) sets ``engine.zoom`` — out: config.ZOOM_MIN; normal: engine.default_zoom;
   (d) window — maximized: resize the Panda window to the desktop size (DEFAULT_BORDERLESS
       is already True); windowed: leave the default window;
-  (e) installs a tick_simulation wrapper that (i) tops enemies back up to the cap every
-      ~40 frames, (ii) every 15s wall (densifying to ~2s in minutes 15-17) appends a CSV
-      row, and (iii) forces a sync screenshot at the 15/16/17-min marks.
+  (e) installs a tick_simulation wrapper that (i) tops BOTH enemies (back up to the cap)
+      and heroes (back up to the --heroes target) every ~40 frames — without the hero
+      top-up the swarm kills all heroes by ~2.5 min and the run measures 0 heroes —
+      (ii) every 15s wall (densifying to ~2s in minutes 15-17) appends a CSV row, and
+      (iii) forces a sync screenshot at the 15/16/17-min marks.
 
 CSV columns: wall_ts, fps_ema, dt_ms, tick, rend, hudR, hudU, E, B, scene_entities,
              heroes, alive_heroes.
@@ -74,6 +79,9 @@ _WINDOW_MODE = {window_mode!r} # "maximized" | "windowed"
 _CSV_PATH = {csv_path!r}
 _SHOT_PREFIX = {shot_prefix!r}  # docs/screenshots/wk123_soak/<combo>
 _MINUTES = {minutes!r}
+_HEROES = {heroes!r}            # warriors to force-spawn (Sovereign spec: 20+)
+_BUILDINGS = {buildings!r}      # building-count target (Sovereign spec: 20+)
+_ENEMIES = {enemies!r}          # enemies to ring-spawn (Sovereign spec: 75+)
 
 _CSV_COLS = [
     "wall_ts", "fps_ema", "dt_ms", "tick", "rend", "hudR", "hudU",
@@ -156,7 +164,9 @@ def apply_patch():
         orig_init(self, ai_controller_factory)  # build the real world first
         engine = self.engine
 
-        counts = scn.build_heavy_scenario(engine, heroes=24, buildings_target=100, enemies=80)
+        counts = scn.build_heavy_scenario(
+            engine, heroes=_HEROES, buildings_target=_BUILDINGS, enemies=_ENEMIES
+        )
         _lock_speed()
         _set_zoom(engine)
         _maximize_window()
@@ -194,9 +204,12 @@ def apply_patch():
             state["frame"] += 1
             f = state["frame"]
 
-            # (i) keep the swarm pinned at the cap (measure time, not attrition).
+            # (i) keep BOTH the swarm and the hero band pinned (measure time, not
+            #     attrition): without the hero top-up the 80-enemy swarm kills all heroes
+            #     by ~2.5 min and the run measures 0 heroes instead of the spec ~24.
             if f % 40 == 0:
                 scn.topup_enemies(engine)
+                scn.topup_heroes(engine, target=_HEROES)
 
             now = _wall.perf_counter()
             elapsed = now - state["wall0"]
@@ -281,7 +294,8 @@ def _combo(zoom: str, speed: str, window: str) -> str:
 
 
 def build_patch_source(*, zoom: str, speed: str, window: str, csv_path: Path,
-                       shot_prefix: Path, minutes: float) -> str:
+                       shot_prefix: Path, minutes: float,
+                       heroes: int, buildings: int, enemies: int) -> str:
     return _PATCH_TEMPLATE.format(
         zoom_mode=zoom,
         speed_mode=speed,
@@ -289,6 +303,9 @@ def build_patch_source(*, zoom: str, speed: str, window: str, csv_path: Path,
         csv_path=str(csv_path),
         shot_prefix=str(shot_prefix),
         minutes=float(minutes),
+        heroes=int(heroes),
+        buildings=int(buildings),
+        enemies=int(enemies),
     )
 
 
@@ -323,6 +340,13 @@ def main() -> int:
     ap.add_argument("--window", choices=["windowed", "maximized"], default="maximized")
     ap.add_argument("--minutes", type=float, default=17.0,
                     help="Soak duration; maps to KINGDOM_URSINA_AUTO_EXIT_SEC = minutes*60.")
+    ap.add_argument("--heroes", type=int, default=24,
+                    help="Warriors to force-spawn (Sovereign spec: 20+; default 24).")
+    ap.add_argument("--buildings", type=int, default=24,
+                    help="Building-count target (Sovereign spec: 20+; default 24). "
+                         "Was force-padded to 100 (5x spec) in earlier runs.")
+    ap.add_argument("--enemies", type=int, default=80,
+                    help="Enemies to ring-spawn (Sovereign spec: 75+; default 80).")
     ap.add_argument("--fps-warmup-sec", type=float, default=5.0,
                     help="Seconds skipped before the on-exit FPS-probe collects samples.")
     ap.add_argument("--dry-run", action="store_true",
@@ -343,6 +367,7 @@ def main() -> int:
         build_patch_source(
             zoom=ns.zoom, speed=ns.speed, window=ns.window,
             csv_path=csv_path, shot_prefix=shot_prefix, minutes=ns.minutes,
+            heroes=ns.heroes, buildings=ns.buildings, enemies=ns.enemies,
         ),
         encoding="utf-8",
     )
@@ -358,7 +383,8 @@ def main() -> int:
     env.setdefault("PYTHONUNBUFFERED", "1")
 
     cmd = [sys.executable, str(runner_path)]
-    print(f"[wk123-soak] combo={combo} minutes={ns.minutes}")
+    print(f"[wk123-soak] combo={combo} minutes={ns.minutes} "
+          f"heroes={ns.heroes} buildings={ns.buildings} enemies={ns.enemies}")
     print(f"[wk123-soak] patch  : {patch_path}")
     print(f"[wk123-soak] runner : {runner_path}")
     print(f"[wk123-soak] log    : {log_path}")

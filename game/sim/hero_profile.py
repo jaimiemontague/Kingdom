@@ -517,12 +517,31 @@ def build_hero_profile_snapshot(
         else:
             last_dec = ld0 if isinstance(ld0, dict) else None
 
-    kp = getattr(hero, "known_places", None)
-    kp_vals = tuple(kp.values()) if isinstance(kp, dict) else ()
-    sorted_places = sort_known_places(kp_vals)
+    # WK123 perf: the two sorts below (over <=100 known_places + <=30 profile_memory) are
+    # ~half the per-hero build cost and run for EVERY hero EVERY frame via get_game_state.
+    # Cache the sorted tuples keyed on the hero's memory version (bumped only when memory
+    # actually mutates — see Hero._profile_memory_version + the add/update/evict paths in
+    # game/entities/hero_memory.py). On a version hit we reuse the prior tuples verbatim, so
+    # the emitted snapshot is byte-identical to the uncached path; only the volatile fields
+    # above (hp/xp/state/intent/...) are rebuilt every frame. The cache lives on the hero so
+    # it is naturally dropped when the hero is reclaimed (dead-hero TTL cull).
+    ver = getattr(hero, "_profile_memory_version", None)
+    cache = getattr(hero, "_profile_sorted_cache", None)
+    if ver is not None and cache is not None and cache[0] == ver:
+        sorted_places, sorted_mem = cache[1], cache[2]
+    else:
+        kp = getattr(hero, "known_places", None)
+        kp_vals = tuple(kp.values()) if isinstance(kp, dict) else ()
+        sorted_places = sort_known_places(kp_vals)
 
-    mem = getattr(hero, "profile_memory", None) or ()
-    sorted_mem = sort_memory_entries(mem)
+        mem = getattr(hero, "profile_memory", None) or ()
+        sorted_mem = sort_memory_entries(mem)
+
+        if ver is not None:
+            try:
+                hero._profile_sorted_cache = (ver, sorted_places, sorted_mem)
+            except Exception:
+                pass
 
     return HeroProfileSnapshot(
         identity=identity,

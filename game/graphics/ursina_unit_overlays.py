@@ -73,6 +73,67 @@ def sync_ks_facing_overlay(child, facing: float) -> None:
 
 
 # -----------------------------------------------------------------------
+# Overlay teardown (WK123 C1 leak fix)
+# -----------------------------------------------------------------------
+
+# Every ``_ks_*`` attr that holds a child Entity/Text overlay node attached to a
+# unit/building billboard. ``ursina.destroy(parent)`` does NOT cascade to regular
+# ``.children`` (Ursina's destroy.py has the child-recursion commented out), so on
+# removal these orphan into ``scene.entities`` forever unless freed explicitly.
+# Sources: ursina_unit_overlays (_ks_hp_bg/_ks_hp_fg/_ks_name_label/_ks_gold_label/
+# _ks_rest_label), ursina_unit_sync (_ks_tc_gold), ursina_building_ui
+# (_ks_hp_bar/_ks_label, plus _ks_gold_label which is parent=SCENE — so it is NOT
+# in ent.children and MUST be caught by this named-attr loop, not the child sweep).
+_OVERLAY_CHILD_ATTRS = (
+    "_ks_hp_bg",
+    "_ks_hp_fg",
+    "_ks_name_label",
+    "_ks_gold_label",
+    "_ks_rest_label",
+    "_ks_tc_gold",
+    "_ks_hp_bar",
+    "_ks_label",
+)
+
+
+def free_entity_overlays(ent) -> None:
+    """Destroy every overlay child Entity/Text attached to *ent* and clear its attrs.
+
+    Called on the removal path BEFORE ``ursina.destroy(ent)`` so the unit/building's
+    detached overlay nodes do not orphan into ``scene.entities`` (WK123 C1 leak). The
+    unit/building itself is destroyed by the caller; this only frees its overlays.
+
+    Belt-and-suspenders: after the named-attr sweep, also destroys any remaining
+    ``children`` / ``loose_children`` so an overlay not covered by a named attr is
+    still freed. Robust to already-destroyed entities / missing attrs.
+    """
+    if ent is None:
+        return
+    import ursina as _u
+
+    for attr in _OVERLAY_CHILD_ATTRS:
+        child = getattr(ent, attr, None)
+        if child is not None:
+            try:
+                _u.destroy(child)
+            except Exception:
+                pass
+            try:
+                setattr(ent, attr, None)
+            except Exception:
+                pass
+
+    for child in (
+        list(getattr(ent, "children", []) or [])
+        + list(getattr(ent, "loose_children", []) or [])
+    ):
+        try:
+            _u.destroy(child)
+        except Exception:
+            pass
+
+
+# -----------------------------------------------------------------------
 # Name label
 # -----------------------------------------------------------------------
 

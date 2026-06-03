@@ -213,6 +213,13 @@ class Hero(HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin):
         self._next_profile_memory_entry_id: int = 1
         self.profile_memory: list[HeroMemoryEntry] = []
         self.known_places: dict[str, KnownPlaceSnapshot] = {}
+        # WK123 perf: monotonically bumped whenever profile_memory / known_places mutate
+        # (add / update / evict). build_hero_profile_snapshot caches the sorted-tuple work
+        # (the per-frame sort over <=100 places + <=30 memories) keyed on this version, so a
+        # hero whose memory hasn't changed this frame reuses the prior sorted tuples instead
+        # of re-sorting. Volatile fields (hp/xp/state/intent/location) still rebuild every
+        # frame, so the emitted HeroProfileSnapshot is byte-identical to the uncached path.
+        self._profile_memory_version: int = 0
         self.profile_career: dict[str, int] = {
             "tiles_revealed": 0,
             "places_discovered": 0,

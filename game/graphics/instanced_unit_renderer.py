@@ -237,6 +237,10 @@ class InstancedUnitRenderer:
         self._geom_node_outside.set_transparency(TransparencyAttrib.M_alpha)
         self._geom_node_outside.set_depth_write(False)
         self._geom_node_outside.set_bin("transparent", 1)
+        # Camera-facing quad is single-sided; disable backface culling or units
+        # render invisible from the tilted RTS cam (mirrors shadow geom L227,
+        # legacy billboard double_sided, and instanced trees set_two_sided).
+        self._geom_node_outside.set_two_sided(True)
 
         self._geom_node_inside.set_shader(sh)
         self._geom_node_inside.set_texture(panda_atlas, 1)
@@ -245,6 +249,8 @@ class InstancedUnitRenderer:
         self._geom_node_inside.set_depth_write(False)
         self._geom_node_inside.set_depth_test(False)
         self._geom_node_inside.set_bin("fixed", 100)
+        # Same single-sided quad as the outside geom; must not be backface-culled.
+        self._geom_node_inside.set_two_sided(True)
 
     def _create_instanced_quad(self, geom_name: str) -> tuple[NodePath, Geom]:
         fmt = GeomVertexFormat.get_v3t2()
