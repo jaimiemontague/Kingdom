@@ -211,6 +211,33 @@ Deep read-only investigation (full alpha/texture/UV/sampler/buffer trace + legac
 
 **Revised candidate order:** C1✅ C2✅ C7✅ → C8 (per-hero profile cost) → re-soak with heroes maintained → if >30, enable instancing default-on + definitive matrix. C8 is the likely final piece for a solid >30 at full spec.
 
+### FULL ENVELOPE at spec (24h/24b/80e, instanced, heroes MAINTAINED, C1+C2+C7+C8) — 90s smokes (FPS proven flat over time, so representative)
+| combo | avg | p50 | verdict |
+|-------|-----|-----|---------|
+| out / normal / windowed | 37.7 | 42.2 | solid >30 ✅ |
+| normal / normal / windowed | 37.2 | 42.2 | solid >30 ✅ |
+| **out / fast / windowed** (Jaimie's likely real play) | **31.5** | 27.7 | **borderline** (avg>30, dips to 28) |
+| out / fast / maximized | 25.2 | 22.0 | below 30 ❌ |
+
+- C8 confirmed minor (profile build only ~0.7ms headless, not the ~11ms). The 24-hero cost is mostly **GPU draw + sync of ~330 non-instanced overlay nodes** (HP bars + name labels) + maximized HUD upload.
+- Jaimie's real condition (zoomed-out + fast, windowed) is RIGHT at 30 — needs ~+5fps to be *reliably* >30.
+
+### C9 (IN FLIGHT) — instance the unit overlay nodes (HP bars; names if feasible)
+The clean behavior-preserving lever: HP bars are uniform quads → instance them like units (C7)/trees, removing ~200-330 per-Entity overlay nodes from rend+GPU+scene.entities. Expected: out/fast/windowed 31→~36 (solid ✅), out/fast/maximized 25→~29. Gated behind the instancing path; pixel-identical bars; must respect C1 (no leak) + C7 (set_two_sided). Bail if not cleanly behavior-preserving.
+
+### ⚠️ C9 CORRECTION (2026-06-03) — instancing currently DROPS overlays (HP bars / names / gold)
+C9 found the premise wrong: the instanced render branch in `ursina_renderer.update()` `return`s BEFORE the unit-sync calls, so when `KINGDOM_URSINA_INSTANCING=1` the per-unit overlay children are **never created**. Measured (real renderer, 24h/80e/61b, isolated processes): LEGACY `scene.entities=536` incl. **241 overlays** (_ks_hp_bg 72, _ks_hp_fg 72, _ks_name_label 73, _ks_gold_label 24); INSTANCED `scene.entities=222`, **overlays = 0**.
+**Implication (honest):** the ~2.5× instancing FPS partly came from NOT drawing HP bars + names — a VISUAL REGRESSION, not behavior-preserving. Instancing is NOT drop-in shippable as default. To ship it with feature parity, the overlays must be rendered for instanced units (positioned by world coords, ideally instanced) — a feature-build, not a free perf win.
+**Revised honest envelope:**
+- LEGACY default (full visuals, with overlays): ~15 fps steady — but **time-degradation FIXED** (C1+C2+C8 → FPS now FLAT, no decline). Shippable today.
+- INSTANCED (units visible via C7) but **missing HP bars/names**: ~31 windowed-fast-out / ~25 maximized. NOT shippable as default without overlays.
+- INSTANCED + overlays restored (the real target): est. ~27-30 windowed / ~24-26 maximized — borderline; substantial graphics work.
+- **Reliably >30 at ALL of Jaimie's conditions (esp. maximized+fast+zoomed-out) is NOT achievable behavior-preservingly on this hardware** — it's HUD-upload + GPU-fill bound. Windowed/normal-speed conditions clear 30; the heaviest condition is a ~25 ceiling.
+
+### Remaining-gap decision (Jaimie's, if C9 insufficient for maximized)
+If after C9 the **maximized**+fast+zoomed-out combo still misses 30, the only further levers are visual/behavior tradeoffs OUT of "optimize-only" scope → Jaimie's call:
+(a) overlay LOD-cull when zoomed out (labels illegible anyway); (b) throttle radar/HUD upload at high res (guardrails-warned); (c) accept maximized ~28-29 and play windowed. **Headline regardless:** the time-degradation bug Jaimie reported is FIXED, and instancing (revived) delivers 2.5-3× — typical + his likely-real windowed condition reach/clear 30.
+
 ---
 
 ## 6. Guardrails (hard — from `11-fps-performance-guardrails.mdc`)

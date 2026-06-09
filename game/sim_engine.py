@@ -166,6 +166,14 @@ class SimEngine:
         self._fog_revision = 0
         self._fog_revealers_snapshot = None
 
+        # WK125-T2: publish the pause-frozen sim clock NOW (= 0) so entities
+        # constructed before the first update() (e.g. starter heroes/buildings)
+        # stamp their timestamps from sim-time, not the wall clock. Without this
+        # now_ms() would still fall back to pygame.time.get_ticks() during the
+        # construction window, giving a huge first-stamp (negative stuck-delta /
+        # delayed first meal) on the very first tick.
+        set_sim_now_ms(self._sim_now_ms)
+
     def _reset_global_sim_state(self) -> None:
         """WK68 R0: reset every module/class-global piece of sim state per build.
 
@@ -686,12 +694,15 @@ class SimEngine:
         from game.systems.navigation import get_pathfinding_budget
         get_pathfinding_budget().begin_frame()
 
-        # Deterministic sim-time accounting
-        if DETERMINISTIC_SIM:
-            self._sim_now_ms += int(round(float(dt) * 1000.0))
-            set_sim_now_ms(self._sim_now_ms)
-        else:
-            set_sim_now_ms(None)
+        # Sim-time accounting: ALWAYS drive a monotonic, pause-frozen sim clock so
+        # now_ms() never falls back to the real wall clock (pygame.time.get_ticks()).
+        # update() is the ONLY set_sim_now_ms caller and is skipped while paused
+        # (lifecycle._prepare_sim_and_camera returns False), so this clock freezes on
+        # pause and never jumps on resume / with app uptime. DETERMINISTIC_SIM now
+        # governs ONLY RNG/order determinism, not the clock — DET=1 already used this
+        # exact accumulator, so the WK67 digest stays byte-identical.
+        self._sim_now_ms += int(round(float(dt) * 1000.0))
+        set_sim_now_ms(self._sim_now_ms)
 
         # Ensure all buildings have event bus for interior enter/exit events.
         for building in self.buildings:
@@ -835,11 +846,15 @@ class SimEngine:
         cleanup_tick = getattr(self, '_cleanup_tick', 0)
         self._cleanup_tick = cleanup_tick + 1
         if getattr(self, '_dead_entity_dirty', False) or cleanup_tick % 60 == 0:
-            # WK123 C2: use the SAME clock the profile build uses (get_game_state reads
-            # ``timebase.now_ms()``, which is the deterministic sim clock when
-            # DETERMINISTIC_SIM is on and pygame wall-clock ticks otherwise). Reading
-            # self._sim_now_ms here would diverge in the real-play (non-deterministic)
-            # path — it stays 0 — and instant-cull every dead hero, breaking the memorial.
+            # WK125-T1: read death time through timebase.now_ms() — the SAME single
+            # clock the get_game_state profile-build retention window reads (hero_profile.py).
+            # update() now ALWAYS publishes self._sim_now_ms via set_sim_now_ms in BOTH
+            # modes, so now_ms() == self._sim_now_ms here in real play; the pre-WK125
+            # wall-clock divergence (now_ms() on pygame ticks while self._sim_now_ms
+            # stayed 0 in the non-deterministic path) is gone. We deliberately keep the
+            # timebase read (not self._sim_now_ms) so the death-stamp and the profile
+            # build remain a SINGLE clock even if a caller drives time via timebase
+            # directly — the WK123-C2 contract the dead-hero TTL test pins.
             from game.sim.timebase import now_ms as _sim_now_ms
             _now_ms = int(_sim_now_ms())
             # WK60 Feature 3: decrement guild hero count for newly dead heroes
