@@ -45,8 +45,30 @@ def engage(
         hero.set_target_position(enemy.x, enemy.y)
 
 
+def building_threatened(view: Any, building: Any, radius_tiles: int) -> bool:
+    """True iff ``building`` faces an ACTUAL threat: recently damaged
+    (``is_under_attack``, the 3 s window that exists to prevent permanent
+    "defend forever") OR a live enemy within ``radius_tiles`` of its center.
+
+    WK127-T1: the task router gates the home/castle defend hijack on this
+    instead of ``is_damaged`` (any missing HP, forever) — a chipped building
+    with stalled repairs and no enemies must NOT statue its heroes.
+    Deterministic, read-only: no RNG, no state writes.
+    """
+    if getattr(building, "is_under_attack", False):
+        return True
+    radius = TILE_SIZE * radius_tiles
+    cx, cy = building.center_x, building.center_y
+    for enemy in as_ai_view(view).enemies:
+        if getattr(enemy, "is_alive", False) and enemy.distance_to(cx, cy) < radius:
+            return True
+    return False
+
+
 def defend_castle(ai: Any, hero: Any, view: Any, castle: Any) -> None:
-    """Send hero to defend the castle when it's damaged."""
+    """Send hero to defend the castle when it is threatened (recently damaged
+    or a live enemy nearby — see ``building_threatened``; WK127-T1 dropped the
+    old chip-damage gate)."""
     view = as_ai_view(view)
     enemies = view.enemies
 
@@ -85,7 +107,9 @@ def defend_castle(ai: Any, hero: Any, view: Any, castle: Any) -> None:
 
 
 def defend_home_building(ai: Any, hero: Any, view: Any) -> None:
-    """Hero defends their damaged home building."""
+    """Hero defends their threatened home building (recently damaged or a live
+    enemy nearby — see ``building_threatened``; WK127-T1 dropped the old
+    chip-damage gate)."""
     view = as_ai_view(view)
     enemies = view.enemies
 

@@ -57,7 +57,9 @@ class HeroRestMixin:
         if building is None:
             self.state = HeroState.IDLE
             return False
-        if getattr(building, "is_damaged", False):
+        # WK127-T5: cannot start resting in a building under attack (recently
+        # damaged); permanent chip damage (is_damaged) must NOT block resting.
+        if getattr(building, "is_under_attack", False):
             self.state = HeroState.IDLE
             return False
 
@@ -114,8 +116,10 @@ class HeroRestMixin:
                 self.pop_out_of_building()
                 return False
 
-        # Check if building is damaged - must pop out and defend.
-        if getattr(rest_building, "is_damaged", False):
+        # Check if building is under attack (recently damaged) - must pop out
+        # and defend. WK127-T5: a FRESH hit ejects resting heroes; permanent
+        # chip damage (is_damaged) must not.
+        if getattr(rest_building, "is_under_attack", False):
             self.pop_out_of_building()
             return False
 
@@ -170,8 +174,9 @@ class HeroRestMixin:
         """Check if hero can rest at their home building."""
         if not self.home_building:
             return False
-        # Cannot rest in damaged buildings
-        return not self.home_building.is_damaged
+        # Cannot rest in buildings under attack (recently damaged) — WK127-T5:
+        # permanent chip damage must not block resting forever.
+        return not self.home_building.is_under_attack
 
     def finish_resting(self):
         """Finish resting and leave home."""

@@ -81,8 +81,9 @@ def get_fallback_decision(context: dict) -> dict:
         return FALLBACK_DECISIONS["hunger_seek_meal"]
 
     # V1.3 Extension: More aggressive potion buying
-    # Can shop and needs potions (lowered threshold from <2 to <3, and removed low_health requirement)
-    if sit["can_shop"] and inv["potions"] < 3:
+    # WK127-T2: threshold re-aligned to <2 — do_shopping only buys at potions<2,
+    # so <3 sent heroes on guaranteed zero-purchase trips (marketplace orbit).
+    if sit["can_shop"] and inv["potions"] < 2:
         for item in context["shop_items"]:
             if item["type"] == "potion" and item["can_afford"]:
                 return FALLBACK_DECISIONS["can_shop_needs_potion"]

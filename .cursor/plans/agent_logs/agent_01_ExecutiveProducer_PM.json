@@ -7053,6 +7053,190 @@
      ]
     }
    }
+  },
+  "wk125_paused_walltime_hero_freeze": {
+   "sprint_meta": {
+    "status": "complete_verified_pending_jaimie_playtest_and_commit",
+    "created_utc": "2026-06-03",
+    "plan_doc": ".cursor/plans/wk125_paused_walltime_hero_freeze.plan.md",
+    "version_target": "patch (stability bugfix)",
+    "owner_agent": "10_PerformanceStability_Lead",
+    "consult": "03_TechnicalDirector (sim contract)",
+    "orchestration": "PM driving Agent 10 directly (investigation done via 8-agent diagnosis workflow).",
+    "root_cause": "Shipped play DETERMINISTIC_SIM=0 -> SimEngine.update() calls set_sim_now_ms(None) every tick -> now_ms() falls back to pygame.time.get_ticks() (real wall clock). That clock advances while PAUSED (render loop runs, sim update skipped) and grows with app uptime, while hero AI timestamps (last_progress_ms, next_meal_due_ms, bounty started_ms, *_commit_until_ms) only refresh on a sim tick. After long real uptime now_ms() is huge vs stale stamps, so stuck-recovery / hunger_urgent / bounty timeout / commit windows all trip for ALL heroes. Confirmed by 5 scouts + empirical headless repro (DET=0 collapses on +1hr get_ticks jump; DET=1 immune) + 2 adversarial reviews.",
+    "definition_of_done": [
+     "now_ms() is a pause-frozen monotonic sim clock in ALL modes (never falls back to get_ticks from update())",
+     "New tests/test_wk125_walltime_freeze.py fails pre-fix, passes post-fix",
+     "Full suite green; WK67 digest byte-identical (no re-baseline); determinism guard clean; WK124 ranger soak green",
+     "Non-sim now_ms() callers audited (cosmetic pause-freeze accepted or converted to get_ticks)",
+     "Jaimie confirms via live pause/resume repro"
+    ]
+   },
+   "rounds": {
+    "r1": {
+     "round_meta": {
+      "status": "done",
+      "owner_agent": "01_ExecutiveProducer_PM",
+      "orchestrated_by": "01 (diagnosis workflow -> Agent 10 fix)"
+     },
+     "pm_status_summary": "WK125 COMPLETE & VERIFIED. Agent 10 fixed the wall-clock timebase: SimEngine.update now ALWAYS drives the monotonic pause-frozen sim clock (no more set_sim_now_ms(None) fallback to pygame.time.get_ticks()), + publishes the clock at construction, + audited non-sim now_ms() callers (all deltas, no conversions). New regression test fails pre-fix (now_after_jump=3601383) / passes post-fix (now_after_jump=527, 6/6 heroes move). Full suite 1538 passed/5 skipped/0 failed; WK67 digest byte-identical; determinism guard clean; WK124 ranger soak green. PM independently re-verified. Uncommitted pending Jaimie go-ahead.",
+     "pm_bug_tickets": [
+      {
+       "id": "WK125-BUG-001",
+       "title": "All heroes freeze/idle after the game has been open ~1hr (even if paused the whole time)",
+       "severity": "major",
+       "owner_agent": "10_PerformanceStability_Lead",
+       "reporter": "human_playtest",
+       "repro_steps": [
+        "Open the game",
+        "Leave it PAUSED for ~1 hour (or play a long session)",
+        "Hit play",
+        "Observe: basically all heroes stand still / churn idle"
+       ],
+       "expected": "Heroes keep acting normally regardless of how long the app has been open or paused.",
+       "actual": "now_ms() = pygame.time.get_ticks() (wall clock) advances while paused/over uptime while hero AI timestamps stay stale -> every staleness gate trips for all heroes.",
+       "acceptance_test": [
+        "python -m pytest tests/test_wk125_walltime_freeze.py -q",
+        "python -m pytest tests/test_wk67_ai_boundary.py -q (byte-identical)",
+        "manual: python main.py -> pause a while -> resume -> heroes move normally"
+       ],
+       "status": "fixed_verified"
+      }
+     ],
+     "pm_next_actions_by_agent": {
+      "10": "Implement WK125-T1..T4 per plan doc: always-monotonic pause-frozen now_ms in SimEngine.update; publish at construction; audit non-sim now_ms callers; new regression test. Run full gate sweep. DO NOT COMMIT.",
+      "03": "Consult only: review the sim_engine.py/timebase.py contract change (clock semantics)."
+     },
+     "pm_send_list_minimal": {
+      "implementer": [
+       "10"
+      ],
+      "consult": [
+       "03"
+      ],
+      "intelligence_by_agent": {
+       "10": "high",
+       "03": "low"
+      },
+      "do_not_send": [
+       "02",
+       "04",
+       "05",
+       "06",
+       "07",
+       "08",
+       "09",
+       "11",
+       "12",
+       "13",
+       "14",
+       "15"
+      ],
+      "rationale": "10 (high - timebase/pause/determinism reasoning, same class as WK123). 03 (low - contract review)."
+     },
+     "pm_evidence": {
+      "regression": "tests/test_wk125_walltime_freeze.py: pre-fix now_after_jump=3601383 (FAIL) -> post-fix 527 (<60000, PASS); 6/6 heroes net-move 171-408px after +1hr get_ticks jump; hunger_urgent all False; not all-idle.",
+      "digest": "tests/test_wk67_ai_boundary.py 10 passed; _AI_DECISION_DIGEST byte-identical (no re-baseline).",
+      "full_suite": "pytest tests/ -q -> 1538 passed, 5 skipped, 0 failed.",
+      "determinism_guard": "PASS",
+      "qa_smoke": "DONE: PASS (exit 0)"
+     },
+     "pm_files_changed": {
+      "modified": [
+       "game/sim_engine.py",
+       "game/sim/timebase.py",
+       "tests/test_engine.py (one assertion that pinned the OLD buggy contract; cross-domain Agent 03/11 review)"
+      ],
+      "new": [
+       "tests/test_wk125_walltime_freeze.py"
+      ]
+     },
+     "pm_commits": [
+      "NONE yet -- WK125 fix uncommitted; awaiting Jaimie go-ahead to commit/push (will stage by path, exclude concurrent wk123 + junk)."
+     ],
+     "pm_followups": [
+      "Agent 03/11: ratify the test_engine.py assertion change (old test pinned the buggy 'clock does not advance in DET=0' contract).",
+      "If heroes STILL freeze under the live 1hr repro after this lands, chase a residual geometric/deadlock vector (a hero that can't displace enough to self-heal) -- per the diagnosis adversarial note.",
+      "SUPERSEDED BY WK127: heroes DID still freeze in live play (rangers/wizards near guild ~15 min, active play). WK125 was real but orthogonal (pause/uptime). Active-play root cause = damaged-home-building defend hijack -- see wk127_midgame_idle_defend_pin."
+     ]
+    }
+   }
+  },
+  "wk127_midgame_idle_defend_pin": {
+   "sprint_meta": {
+    "created_utc": "2026-06-09T00:00:00Z",
+    "plan_doc": ".cursor/plans/wk127_midgame_idle_defend_pin.plan.md",
+    "reported_by": "human_playtest (Jaimie): rangers/wizards idle near guild hall after ~15 min of gameplay, worsening over time; prior session wrongly closed this via WK125"
+   },
+   "rounds": {
+    "r1": {
+     "round_meta": {
+      "status": "done",
+      "owner_agent": "01_ExecutiveProducer_PM",
+      "orchestrated_by": "01 (2-agent diagnosis -> Agent 06 fix dispatch)"
+     },
+     "pm_status_summary": "ROOT CAUSE CONFIRMED (empirical 35-sim-min realistic soak + static trace): ai/task_router.py:79-81 hijacks every tick into defend_home_building whenever home_building.is_damaged (any missing HP, forever); with no enemy within 5 tiles, defense.py:121-126 parks the hero IDLE within 2 tiles of the guild permanently (peasant repairs stall under swarm, so the flag never clears). Rangers pinned from sim-min 3, wizards min 7, full statue-freeze (idle 1.00, 0 px/min) by min 19-21. Castle branch (router:60) has the same is_damaged flaw. Secondary attractor: zero-purchase shopping loop (wants potions<5 / fallback <3 vs buy-rule <2; naked gold>=50 blacksmith branch; no cooldown). WK124 soak missed both (neutralized enemies + zeroed gold). Fix round dispatched to Agent 06 (Fable).",
+     "pm_bug_tickets": [
+      {
+       "id": "WK127-BUG-001",
+       "title": "Heroes (rangers/wizards first) permanently idle near their guild after ~15 min of active play",
+       "severity": "major",
+       "owner_agent": "06_AIBehaviorDirector_LLM",
+       "reporter": "human_playtest",
+       "repro_steps": [
+        "Play normally (FAST speed) ~15-20 min until guild buildings have taken any chip damage",
+        "Watch rangers/wizards over several minutes: parked within ~2 tiles of their guild, IDLE, not eating/resting/exploring"
+       ],
+       "expected": "Heroes defend their guild only while an actual threat is present (recently damaged or enemy nearby), otherwise live their normal loop.",
+       "actual": "is_damaged (hp<max_hp, forever) gates the defend branch -> per-tick hijack above hunger/rest/idle/explore -> permanent IDLE park at the guild.",
+       "acceptance_test": [
+        "python -m pytest tests/test_wk127_midgame_idle.py -q (fails pre-fix, passes post-fix)",
+        "python -m pytest tests/test_wk67_ai_boundary.py -q (digest byte-identical)",
+        "tmp/wk127_realistic_soak.py re-run: no ranger/wizard idle plateau in min 15-35"
+       ],
+       "status": "assigned"
+      }
+     ],
+     "pm_next_actions_by_agent": {
+      "06": "Implement WK127-T1 (threat-gate home/castle defend via building_threatened helper using is_under_attack OR enemy proximity), T2 (zero-purchase shopping cooldown + predicate alignment), T3 (regression tests in tests/test_wk127_midgame_idle.py) per plan doc. Run all gates. DO NOT COMMIT.",
+      "01": "T4 verification: re-run realistic soak + full gate sweep on combined tree; update hub; hand Jaimie live-confirm steps."
+     },
+     "pm_send_list_minimal": {
+      "implementer": ["06"],
+      "consult": ["03"],
+      "intelligence_by_agent": {"06": "high", "03": "low"},
+      "do_not_send": ["02", "04", "05", "07", "08", "09", "10", "11", "12", "13", "14", "15"],
+      "rationale": "06 (high - AI priority/routing semantics + digest-safety reasoning; owns ai/ lane incl. its tests). 03 (low - router contract sanity). Diagnosis already completed by PM-orchestrated scouts."
+     },
+     "pm_evidence": {
+      "empirical_soak": "tmp/wk127_soak_stdout_35min.log + tmp/wk127_soak_per_hero_min35_hz20_seed20260609_simseed1.log: ranger idle-frac .55->.84->1.00 (min 1-5 / 6-10 / 21+), wizard .18->.69->1.00, near-guild frac 1.00; reproduced on SIM_SEED=777 too",
+      "mechanism_drill": "tmp/wk127_drill2_stdout.log: defend_home 1200/1200 ticks/min late-game; Ranger0 cumulative defend_home=24699 vs handle_idle=3; ranger guild frozen 192/200 from min 2, wizard guild 140/200 from min 6",
+      "static_trace": "task_router.py:79-81 + :60 (is_damaged hijack), defense.py:121-126 (no-enemy park), base.py:264-268 (is_under_attack 3s window exists precisely to prevent defend-forever but unused here), shopping loop: hero_economy.py:170 / prompt_templates.py:85-88 / shopping.py:108-131 / exploration.py:359-383"
+     }
+    },
+    "r2": {
+     "round_meta": {
+      "status": "done",
+      "owner_agent": "01_ExecutiveProducer_PM",
+      "orchestrated_by": "01 (Agent 06 r2 hardening + adversarial review + flip-and-restore QA + PM gate sweep)"
+     },
+     "pm_status_summary": "WK127 COMPLETE & VERIFIED, pending Jaimie live confirm + commit decision. r1 fix (threat-gate the home/castle defend hijack via building_threatened: is_under_attack 3s window OR live enemy within 5/6 tiles; zero-purchase shopping cooldown + want/buy predicate alignment) survived adversarial review (SHIP-WITH-NITS); r2 closed all should-fixes: same-disease rest bug (hero_rest.py 3x is_damaged -> is_under_attack — chipped guild no longer blocks resting forever nor ejects resting heroes), castle-branch regression test, rest regression test, wants_to_shop mirrors do_shopping exactly, docstrings/dead-arm/dup-helper nits. ALL GATES GREEN: full suite 1543 passed/5 skipped/0 failed; WK67 digest byte-identical; qa_smoke PASS; determinism guard PASS. 35-sim-min realistic soak (enemies+gold live): REPRODUCED_CLASSES=NONE — idle 0.22-0.42 with 147-328 px/min displacement in minutes 15-35 vs pre-fix 0.94-1.00 idle at 0 px (statue). Flip-and-restore proved every regression test fails on its pre-fix condition. NOTHING COMMITTED.",
+     "pm_evidence": {
+      "gates": "pytest tests/ -q: 1543 passed, 5 skipped, 0 failed (353s); test_wk67_ai_boundary.py 10 passed (digest byte-identical, no re-baseline); test_wk127_midgame_idle.py 5 passed; qa_smoke --quick PASS; determinism_guard PASS",
+      "soak_post_fix": "tmp/wk127_soak_post_r2_stdout.log VERDICT: REPRODUCED_CLASSES=NONE (pre-fix logs preserved: tmp/wk127_soak_stdout_35min.log, tmp/wk127_drill2_stdout.log)",
+      "fail_pre_fix_proofs": "guild-pin pinned_fraction=1.0000 (r1); castle-flip pinned_fraction=1.0000; rest-flip hero never RESTING; shop-loop 11 trips/2min pre vs 2 post; all flips restored byte-identical (SHA256 + git diff --stat)"
+     },
+     "pm_files_changed": {
+      "modified": ["ai/task_router.py", "ai/behaviors/defense.py", "ai/behaviors/shopping.py", "ai/behaviors/exploration.py", "ai/decision_moments.py", "ai/prompt_templates.py", "game/entities/hero_economy.py", "game/entities/hero_rest.py"],
+      "new": ["tests/test_wk127_midgame_idle.py (5 regression tests)"]
+     },
+     "pm_commits": ["NONE — awaiting Jaimie go-ahead; stage by path, exclude tmp/, soak logs, PNGs, and the concurrent WK125 lane unless Jaimie wants both batched."],
+     "pm_followups": [
+      "Jaimie live confirm: python main.py, play ~20+ min at FAST, watch rangers/wizards across several minutes — they should keep exploring/fighting/eating/resting even after guilds take chip damage.",
+      "Future sprint candidates: peasant repair throughput under swarm (the enabler); wizard exploration flavor (fixed 6-10 tile patrol zone assigned once); defend_home 5-tile scan vs skeleton-archer 6-tile range (heroes can park at a bombarded guild without engaging — pre-existing)."
+     ]
+    }
+   }
   }
  }
 }

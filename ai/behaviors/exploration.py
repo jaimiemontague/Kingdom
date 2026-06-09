@@ -20,6 +20,7 @@ from game.sim.timebase import now_ms as sim_now_ms
 from game.world import Visibility
 
 from ai.behaviors.movement import route_to_building
+from ai.behaviors.shopping import blacksmith_has_affordable_upgrade, shop_cooldown_active
 from ai.behaviors.view_compat import as_ai_view
 
 # WK84 Round D-4: patrol-zone assignment now lives in ``ai.behaviors.zones``
@@ -359,6 +360,10 @@ def _idle_seek_meal(ai: Any, hero: Any, view: Any) -> bool:
 def _idle_shopping(ai: Any, hero: Any, view: Any) -> bool:
     """Check if hero wants to go shopping (full health, has gold, needs potions)."""
     buildings = view.buildings
+    # WK127-T2: the last completed trip bought nothing — don't re-orbit the
+    # shops until the zero-purchase cooldown (sim-time) expires.
+    if shop_cooldown_active(hero):
+        return False
     if hero.hp >= hero.max_hp:
         # V1.3 extension: check marketplace first, then blacksmith.
         marketplace = ai.shopping_behavior.find_marketplace_with_potions(buildings)
@@ -373,8 +378,14 @@ def _idle_shopping(ai: Any, hero: Any, view: Any) -> bool:
             return True
 
         # WK15: Base shopping on available items
+        # WK127-T2: require a buyable upgrade — the naked `gold >= 50` check
+        # sent maxed-out heroes on endless zero-purchase blacksmith trips.
         blacksmith = ai.shopping_behavior.find_blacksmith(buildings, hero)
-        if blacksmith and hero.gold >= 50:  # Assume upgrades cost at least 50 gold.
+        if (
+            blacksmith
+            and hero.gold >= 50
+            and blacksmith_has_affordable_upgrade(hero, blacksmith)
+        ):
             ai._debug_log(f"{hero.name} -> going to Blacksmith for upgrades")
             route_to_building(hero, view.world, buildings, blacksmith)
             hero.state = HeroState.MOVING

@@ -156,18 +156,16 @@ class HeroEconomyMixin:
         if self.gold < 30:
             return False
 
-        # V1.3 Extension: More aggressive potion buying
-        # If no potions and gold >= 30, want to buy one potion
+        # WK127-T8: want-to-shop fires ONLY when a do_shopping buy rule can
+        # actually succeed — mirror ai/behaviors/shopping.do_shopping exactly:
+        #   priority 1: potions == 0 (gold >= 30 already guaranteed above)
+        #   priority 2: gold >= 50 and potions < 2
+        # The old middle clause (potions < 2 with only 30-49 gold) fired where
+        # NO buy rule could succeed -> zero-purchase marketplace orbit.
         if self.potions == 0 and marketplace_has_potions:
             return True
 
-        # V1.3 Extension: Buy potions even when potions > 0, but not at max
-        # Lower threshold: if potions < 2 and gold >= 30, want to stock up
-        if self.potions < 2 and marketplace_has_potions and self.gold >= 30:
-            return True
-
-        # If gold >= 50, might want to buy more potions (LLM decides)
-        if self.gold >= 50 and self.potions < self.max_potions and marketplace_has_potions:
+        if self.gold >= 50 and self.potions < 2 and marketplace_has_potions:
             return True
 
         return False

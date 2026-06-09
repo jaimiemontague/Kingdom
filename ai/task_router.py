@@ -55,9 +55,18 @@ def update_hero(ai, hero, dt: float, view) -> None:
         ai.handle_resting(hero, dt, view)
         return
 
-    # Priority: defend castle if damaged or under attack (unless already fighting).
+    # Priority: defend castle when actually threatened (unless already fighting).
+    # WK127-T1: was `castle.is_damaged or is_under_attack` — a merely-chipped
+    # castle with no enemies near must NOT hijack every hero, forever.
+    # building_threatened checks is_under_attack first, then enemies within
+    # 6 tiles — one tile wider than the home-guild gate (5) because the castle
+    # is the kingdom anchor and defend_castle pulls heroes from anywhere.
     castle = view.castle
-    if castle and (castle.is_damaged or getattr(castle, "is_under_attack", False)) and hero.state != HeroState.FIGHTING:
+    if (
+        castle
+        and ai.defense_behavior.building_threatened(view, castle, 6)
+        and hero.state != HeroState.FIGHTING
+    ):
         clear_direct_prompt_commit(hero)
         ai.defense_behavior.defend_castle(ai, hero, view, castle)
         return
@@ -75,8 +84,15 @@ def update_hero(ai, hero, dt: float, view) -> None:
         if ai.support_behavior.cleric_seek_and_support(ai, hero, view):
             return
 
-    # Priority: defend home building if it's damaged.
-    if hero.home_building and hero.home_building.is_damaged and hero.state != HeroState.FIGHTING:
+    # Priority: defend home building when actually threatened.
+    # WK127-T1: was `is_damaged` (any missing HP, forever) — with repairs
+    # stalled that pinned heroes IDLE at their guild permanently. 5 tiles =
+    # the radius defend_home_building already scans for its target.
+    if (
+        hero.home_building
+        and ai.defense_behavior.building_threatened(view, hero.home_building, 5)
+        and hero.state != HeroState.FIGHTING
+    ):
         ai.defense_behavior.defend_home_building(ai, hero, view)
         return
 
