@@ -1,5 +1,70 @@
 # Changelog
 
+## Prototype v1.6.0 — The Fun Gameplay Update
+
+Everything from WK60 through WK129 in one release: the "Make It Fun" gameplay program (waves, difficulty, hunger/food economy, taxes), a major hero-kit expansion (wizard spells, cleric heals, ranger roaming), a long UI/HUD polish arc, a ~60-sprint architecture cleanup, and the headline **Mythos performance overhaul** — 13–15 → 44–49 FPS at the 80-enemy swarm under the player's real conditions (fast speed, zoomed out), and time-flat over 20-minute soaks.
+
+### Waves, Difficulty & Defense (WK60–61, WK122)
+- **Wave events:** scheduled enemy waves with HUD warning toasts and wave-cleared notifications; compositions tuned up from the original 3–8 enemy trickles after playtesting, with wolf-pack spawn fixes so the toast always matches a real visible pack.
+- **Difficulty selector:** Easy / Normal / Hard in the pause menu, with a Lock button + confirmation. Difficulty scaling is applied through a single `DifficultySystem.apply_to_enemy` path (spawner, lairs, and wave events all consistent).
+- **Starting kingdom:** new games begin with a Warriors Guild, Rangers Guild, Marketplace, Guardhouse, and a starter Food Stand pre-built — straight into the action.
+- **Guardhouse arrows:** the guardhouse fires at nearby enemies — now a true **two-arrow volley from two distinct points** on the building (the second arrow was silently dropped before WK122).
+- **Guild hero cap (8 per guild)** with UI feedback, and hero hire cost set to 100 gold.
+- **Bounty flags render in 3D** (pole, pennant, `$reward` text) — they were invisible in the Ursina renderer before.
+- **Dev mode:** `$env:KINGDOM_DEV_MODE=1` gives free heroes, infinite gold, and no guild cap for sandboxing.
+
+### Economy: Hunger, Food & Taxes (WK61)
+- **Hero hunger:** heroes get hungry and buy meals at Food Stands (~10 gold), including while busy adventuring — hunger no longer silently skips fighting or broke heroes.
+- **Marketplace tax flow that actually flows:** passive taxable gold accrual (100–400g every ~2 minutes) plus tax on real hero potion purchases (potions now researched/buyable in normal play). The tax collector picks it up and carries it home.
+- **Hold-`G` tax overlay:** world-space `$N` labels float just above each building's roof and **draw on top of all world geometry** (fixed twice — WK122 height/layering, WK124 final on-top pass). Shows `$0` correctly while held.
+
+### Hero Kit Expansion (WK124)
+- **Wizards cast spells:** visible cast pose + purple magic-orb projectile, with kiting behavior — no more melee-poking wizards.
+- **Clerics heal:** clerics move to support wounded allied heroes and heal them with a visible green heal orb.
+- **Rangers roam in the late game:** once nearby fog is exhausted, rangers head out to the frontier instead of going idle near the castle (~10-minute seize-up fixed).
+- All new class behaviors are gated to be inert in the deterministic AI-decision scenario — the WK67 digest stayed byte-identical (no behavioral re-baseline).
+
+### Hero AI Reliability (WK125, WK127, WK129)
+- **Pause-frozen monotonic sim clock (WK125):** all gameplay timing now runs on a sim clock that freezes while paused and scales with game speed — fixes heroes freezing after long pauses / wall-clock jumps.
+- **Midgame idle-defend fix (WK127):** heroes no longer get permanently pinned "defending" their guild after ~15 minutes. The defend-home hijack fired on `is_damaged` (true forever once repairs stall); it is now threat-gated (`is_under_attack` 3s window or a live enemy within range). Also fixed the same-disease rest bug and a zero-purchase shopping loop. Verified with a 35-sim-minute realistic soak with per-minute movement telemetry.
+- **Audio timing (WK129):** sound cooldowns are back on the wall clock (audio is non-authoritative presentation) — fixes every sound playing once then muting forever after any pause, and doubled cooldowns at Normal speed.
+
+### Quests, POIs & Exploration
+- **Points of interest** across the map (wizard tower and friends) with discovery toasts, hero POI interactions, and the underground/dungeon interaction path.
+- **Quest/travelogue panel and building-interior micro-views** in the right panel (Enter Building, interior occupant views), polished across the UI sprints.
+
+### UI & HUD Polish (WK61, WK93–103 follow-ups, WK115, WK121, WK122, WK124)
+- **Readable hero chat:** the cramped chat popup became an in-column split layout — hero sheet shrinks/scrolls on top, chat gets a readable band below, at both 1024x576 and 1920x1080.
+- **Resizable left sidebar:** draggable split handles between left-column segments (works with the Ursina pointer), with WK115 polish — no floating orphan drag bar, hero cards no longer cramped, pinned watch-card chat grows properly.
+- **Watch card fixes (WK121):** clicking the pinned hero watch-card header no longer maximizes it over the entire left sidebar.
+- **Guard & tax-collector selection (WK122):** clicking a guard or the tax collector opens their info panel instead of crashing — the panels existed since WK49 but the selection wiring was broken.
+- **Building panels:** Guild / Inn / Marketplace menus show building HP like the guardhouse; defensive-building panels show HP, guard stats, and Demolish.
+- **Enemy sounds** wired for all enemy types; horn SFX on wave warnings.
+
+### Architecture & Stability Program (WK62–WK122, ~60 sprints — summarized)
+- **Hard sim / render / AI boundaries:** the renderer consumes frozen render DTOs and can no longer mutate sim state; the AI works through a read-only `AiGameView`; presentation state split out of the sim snapshot.
+- **God-file decomposition:** `sim_engine.py`, `engine.py` (actions/selection/lifecycle facades), `hero.py` (mixins), `input_handler.py`, `audio_system.py`, `ursina_renderer.py` (6 slices), the terrain/fog collab (1783 → 170 LOC), `ursina_app.py` (camera/input/overlay/frame-loop), and `hud.py` (11 slices) — all behind delegating wrappers, verbatim-diff gated.
+- **Dedup & dead-code:** single-source `BUILDING_DEFS` registry, `ENEMY_STATS` table, shared AI movement/engage helpers, AI vocab consolidation, the 8 WK34 zombie building types purged, dead SystemRunner wiring deleted.
+- **Determinism as the safety net:** the WK67 300-tick AI-decision digest (`b73961…`) stayed **byte-identical across the entire program** — every refactor provably behavior-preserving. The test suite grew from ~339 to **1,537+ passing tests**.
+- Correctness wins along the way: double sim-time advance fixed, pause time-leak fixed, pathfinding got a deterministic per-frame budget (with defer-not-wipe so heroes never lose a valid path), entity IDs everywhere.
+
+### Performance: The Mythos Overhaul (WK123 + Mythos + WK129) — the headline
+- **FPS time-degradation fixed (WK123):** two slow leaks (a unit-overlay leak and dead-hero accumulation) made FPS decay after 10+ minutes; both fixed and pinned by a leak regression test + a 20-minute soak harness. Long sessions are now **time-flat**.
+- **GPU unit instancing default-on** with full overlay parity (HP bars, name labels, gold labels — the gap that kept it opt-in before), plus the upside-down-sprite fix and unit blob shadows off.
+- **Sim-tick stack + engine config pass:** vsync handling, HUD zero-copy texture upload, spawn-hitch elimination (building-prefab prewarm + multi-enemy wave spawns staggered across ticks — `KINGDOM_SPAWN_STAGGER`, default on). Hero spawning no longer micro-lags.
+- **Result at the gate scenario** (≥20 heroes + ≥20 buildings + ≥75 enemies, fastest speed, zoomed out, sustained 20+ minutes): **15.4 → 48.6 FPS windowed, 13.1 → 44.4 FPS maximized**, with 149/150 soak samples above 30 FPS in minutes 15–20. Sovereign playtest accepted.
+- **WK129 polish:** heroes entering buildings are pinned at the building anchor in the instanced renderer — no more sprites rubberbanding across the facade on enter/exit.
+- Forest density untouched throughout — all gains came from rendering/sim optimization, never from cutting trees or grass.
+
+### Performance Summary
+| Metric | v1.5.8 | v1.6.0 |
+|---|---|---|
+| FPS @ 80-enemy swarm, fast speed, zoomed out (windowed) | 15.4 | **48.6** |
+| FPS @ 80-enemy swarm, fast speed, zoomed out (maximized) | 13.1 | **44.4** |
+| FPS after 15–20 min of play | degrades (leaks) | **time-flat** (149/150 soak rows >30) |
+| Hero/wave spawn micro-hitches | frequent | **eliminated** (prewarm + staggered spawns) |
+| Test suite | ~339 tests | **1,537+ tests** |
+
 ## Prototype v1.5.8 — Major FPS Leap with Tree Instancing, Terrain Fog Shading, and Batching
 
 ### Performance Summary

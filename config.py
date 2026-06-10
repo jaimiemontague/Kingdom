@@ -115,8 +115,8 @@ RESEARCH_DURATION_MS_PER_100_GOLD = 10_000  # e.g. 200 cost = 20s, 300 = 30s
 WINDOW_WIDTH = 1920
 WINDOW_HEIGHT = 1080
 FPS = 60
-PROTOTYPE_VERSION = "1.5.8"
-GAME_TITLE = "Kingdom Sim (Prototype v1.5.8) — Major FPS Leap with Tree Instancing, Terrain Fog Shading, and Batching"
+PROTOTYPE_VERSION = "1.6.0"
+GAME_TITLE = "Kingdom Sim (Prototype v1.6.0) — The Fun Gameplay Update"
 DEFAULT_BORDERLESS = True
 
 # Determinism / simulation settings (env-driven; read at import time)

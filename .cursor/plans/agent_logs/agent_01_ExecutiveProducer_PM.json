@@ -7290,6 +7290,21 @@
           "evidence": "tmp/mythos/*.csv + docs/screenshots/mythos_soak/* + .cursor/plans/mythos_lag_fix.plan.md results log"
         }
       }
+    },
+    "v1_6_0_release": {
+      "sprint_meta": {
+        "created_utc": "2026-06-10T04:09:26Z",
+        "branch": "main"
+      },
+      "rounds": {
+        "round_1_release": {
+          "pm_status_summary": "Prototype v1.6.0 - The Fun Gameplay Update - RELEASED on main. Covers WK60-WK129 (v1.5.9 was never stamped; last release was v1.5.8 @ WK58): waves/difficulty/defense, hunger+food+tax economy, hero kit expansion (wizard/cleric/ranger), quests/POIs/interiors, UI/HUD polish arc, the WK62-WK122 architecture program (WK67 digest byte-identical throughout; 339 -> 1537+ tests), and the Mythos performance overhaul (15.4->48.6 fps windowed / 13.1->44.4 maximized at the 80-enemy gate scenario, time-flat 20-min soaks) + WK129 polish (audio wall-clock, inside-hero pin). Version stamped in config.py + README; CHANGELOG entry added. qa_smoke PASS at release.",
+          "release": {
+            "version": "1.6.0",
+            "title": "The Fun Gameplay Update"
+          }
+        }
+      }
     }
   }
 }

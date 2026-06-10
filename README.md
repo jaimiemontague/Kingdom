@@ -4,7 +4,7 @@ A Majesty-inspired fantasy kingdom simulation game where heroes are controlled b
 
 ## Prototype Version
 
-This repository is currently stamped as **Prototype v1.5.8 — Major FPS Leap with Tree Instancing, Terrain Fog Shading, and Batching** (WK58: instanced tree rendering, heightmap-aware fog-overlay early-out, static terrain batching, frustum + culling composition fixes, post-`/revealmap` `after_avg` 13.5 → 28.4 FPS; see `config.py` and `CHANGELOG.md`).
+This repository is currently stamped as **Prototype v1.6.0 — The Fun Gameplay Update** (WK60–WK129: wave events + difficulty system, hunger/food economy + marketplace tax flow, wizard spells / cleric heals / ranger roaming, quest & POI exploration, a ~60-sprint architecture cleanup guarded by a byte-identical determinism digest, and the Mythos performance overhaul — 13–15 → 44–49 FPS at the 80-enemy swarm, time-flat over 20-minute sessions; see `config.py` and `CHANGELOG.md`).
 
 ## Overview
 
@@ -19,12 +19,14 @@ In this game, you play as a ruler who builds a kingdom and hires heroes to defen
 ## Features
 
 - **Indirect Control**: Place buildings and bounties, but heroes decide their own actions
-- **LLM-Powered Decisions**: Heroes consult AI for strategic choices
+- **LLM-Powered Decisions**: Heroes consult AI for strategic choices, and you can chat with them in plain English
 - **Multiple LLM Providers**: Support for OpenAI, Claude, Gemini, Grok, or mock AI
-- **Hero Personalities**: Each hero has a unique personality affecting decisions
-- **Economic System**: Build, hire, and tax your way to kingdom prosperity
-- **Wave-Based Combat**: Defend against goblin invasions
+- **Hero Classes & Kits**: Warriors, rangers (frontier roaming), wizards (visible spell casting + kiting), and clerics (ally heals) — each with a unique personality affecting decisions
+- **Economic System**: Hunger and meals at food stands, marketplace shopping and potion research, taxable gold collected by the tax collector (hold `G` to see each building's stash), and bounty rewards
+- **Wave-Based Combat & Difficulty**: Scheduled enemy waves (goblins, wolves, skeletons, spiders, bandits, and worse) with HUD warnings, lairs to raid, a guardhouse that fires arrow volleys, and an Easy/Normal/Hard difficulty selector
+- **Exploration**: Fog of war, points of interest with discovery events, building interiors, and quest/travelogue views
 - **Peasants + Construction**: Newly placed buildings start at 1 HP and must be built; peasants also repair and prioritize castle repairs
+- **3D Ursina Renderer**: Default 3D presentation with terrain elevation, instanced trees and units (GPU instancing default-on), fog-of-war shading, and a pygame HUD — 44+ FPS sustained at 100+ units
 
 ## Requirements
 
