@@ -438,12 +438,15 @@ def test_build_hero_context_hero_and_situation_subkeys():
     assert set(ctx["hero"].keys()) == _HERO_SUB_KEYS
     assert set(ctx["situation"].keys()) == _SITUATION_KEYS
     # Inventory + stat block contracts that downstream prompt-packs depend on.
+    # WK134: accessory + backpack added (WK131 item slots reaching the chat blob).
     assert set(ctx["inventory"].keys()) == {
         "weapon",
         "weapon_attack",
         "armor",
         "armor_defense",
         "potions",
+        "accessory",
+        "backpack",
     }
     assert isinstance(ctx["hero_stat_block"], str) and ctx["hero_stat_block"]
     assert isinstance(ctx["known_places_llm"], list)

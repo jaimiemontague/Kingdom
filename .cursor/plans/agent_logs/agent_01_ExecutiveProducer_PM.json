@@ -7580,6 +7580,58 @@
           "pm_next_actions_by_agent": {}
         }
       }
+    },
+    "wk134_llm_verification": {
+      "sprint_meta": {
+        "created_utc": "2026-06-10T00:00:00Z",
+        "plan": ".cursor/plans/wk130_hero_world_roadmap.plan.md",
+        "roadmap_section": "WK134 — LLM Connection Verification Pass"
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "pm_status_summary": "WK134 kickoff (final roadmap sprint): wire the dead accept_bounty LLM action for real; prompt-snapshot tests proving items/POIs/quest context reach real serialized prompts; provider audit (ANTHROPIC_MODEL env override, loud mock fallback, timeout never stalls heroes); E2E command-following tests for every direct-prompt tool_action; docs/llm_connection.md for Jaimie.",
+          "pm_next_actions_by_agent": {
+            "06_AIBehavior": "Full WK134 scope per roadmap (owns ai/* + providers + tests + doc).",
+            "01_PM": "Live chat session on GPU box if an API key exists in .env; final gates; commit/push; roadmap close."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "06"
+              ]
+            ],
+            "intelligence_by_agent": {
+              "06": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Single-lane ai/ sprint; 06 high (cross-cutting verification + bridge wiring)."
+          }
+        },
+        "r2_close": {
+          "pm_status_summary": "WK134 CLOSED (pending final qa_smoke). 06: accept_bounty wired for REAL (root cause was a parse-level reject in llm_brain that made the bridge branch unreachable; now deterministic nearest/id-matched commit via bounty_pursuit, explore fallback); prompt-snapshot tests prove items/POIs/quest blocks reach real prompts and are absent in digest-shaped contexts; Claude provider unpinned from deprecated haiku-3 (ANTHROPIC_MODEL override, default claude-sonnet-4-6) and timeout actually passed to the SDK; loud mock fallback (warning + one-shot HUD toast + provider_fallback flag); 20s sim-ms pending-decision watchdog so a hung provider can never freeze consults; chat blob now carries accessory/backpack; 28-test E2E matrix over every direct-prompt tool_action; docs/llm_connection.md written. PM ran a LIVE OpenAI round-trip through LLMBrain.request_conversation: tool_action=explore, obey, in-character response — provider path verified on real keys.",
+          "evidence": {
+            "targeted_gates": "147 passed (e2e+bridge+wk50+direct-prompt+chat+quest-llm+digest)",
+            "live_provider": "OpenAIProvider, no fallback, explore command obeyed",
+            "doc": "docs/llm_connection.md"
+          },
+          "roadmap_status": "WK130-WK134 ALL DELIVERED. Roadmap .cursor/plans/wk130_hero_world_roadmap.plan.md complete pending Sovereign playtest.",
+          "pm_next_actions_by_agent": {}
+        }
+      }
     }
   }
 }

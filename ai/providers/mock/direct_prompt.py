@@ -179,6 +179,59 @@ def mock_direct_prompt(provider: "MockProvider", user_prompt: str) -> str:
             blob,
         )
 
+    # WK134: generic named-place movement ("go to the castle/market/blacksmith/
+    # temple/guild") so the chat E2E matrix covers every named place type — the
+    # inn keeps its dedicated branch above (existing tests pin its phrasing).
+    place_match = re.search(
+        r"go to (?:the )?(castle|marketplace|market|blacksmith|temple|guild)", msg
+    )
+    if place_match:
+        word = place_match.group(1)
+        types = {
+            "castle": ("castle",),
+            "marketplace": ("marketplace",),
+            "market": ("marketplace",),
+            "blacksmith": ("blacksmith",),
+            "temple": ("temple",),
+            "guild": ("warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild"),
+        }[word]
+        place = find_place(*types)
+        if place:
+            return _emit_validated_direct(
+                base(
+                    spoken_response="As you command—I know the way.",
+                    interpreted_intent="go_to_known_place",
+                    tool_action="move_to",
+                    target_kind="known_place",
+                    target_id=str(place.get("place_id", "")),
+                    target_description=str(place.get("display_name", word.title())),
+                ),
+                blob,
+            )
+        return _emit_validated_direct(
+            base(
+                spoken_response=f"I know of no {word} yet, Sovereign.",
+                interpreted_intent="go_to_known_place",
+                tool_action=None,
+                refusal_reason="unknown_place",
+                safety_assessment="unknown_target",
+                obey_defy="Defy",
+            ),
+            blob,
+        )
+
+    if "leave" in msg and "building" in msg:
+        # WK134: explicit leave-building command for the chat E2E matrix.
+        return _emit_validated_direct(
+            base(
+                spoken_response="Stepping back outside, Sovereign.",
+                interpreted_intent="rest_until_healed",
+                tool_action="leave_building",
+                target_kind="none",
+            ),
+            blob,
+        )
+
     if "explore" in msg and any(d in msg for d in ("east", "west", "north", "south")):
         return _emit_validated_direct(
             base(

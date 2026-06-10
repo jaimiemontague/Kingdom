@@ -2262,6 +2262,75 @@
      ]
     }
    }
+  },
+  "wk134_llm_verification": {
+   "sprint_meta": {
+    "created_utc": "2026-06-10T00:00:00Z",
+    "plan_ref": ".cursor/plans/wk130_hero_world_roadmap.plan.md section 'WK134 - LLM Connection Verification Pass'",
+    "role": "Agent 06 AIBehaviorDirector_LLM",
+    "sprint_id": "wk134_llm_verification",
+    "title": "WK134 - LLM connection verification: accept_bounty wired for real, prompt-snapshot tests, provider audit (ANTHROPIC_MODEL + loud mock fallback + pending watchdog), chat E2E command matrix, docs/llm_connection.md"
+   },
+   "rounds": {
+    "r1_kickoff": {
+     "round_id": "r1_kickoff",
+     "sprint_id": "wk134_llm_verification",
+     "status": "done",
+     "round_meta": {
+      "role": "Agent 06 AIBehaviorDirector_LLM",
+      "reports_to": "Agent 01 (PM)",
+      "launched_by": "Claude Code subagent, WK134 r1 kickoff single-lane dispatch",
+      "completed_utc": "2026-06-10T00:00:00Z",
+      "phase": "Single lane: ai/* + providers + tests + docs. No game/ui/config edits, no commits, no git."
+     },
+     "what_i_changed": {
+      "ai/behaviors/llm_bridge.py": [
+       "accept_bounty no-op (the dead 'pass' at the old L192) replaced with a real commit: _commit_accept_bounty mirrors maybe_take_bounty's COMMIT path (is_available_for/is_valid filters + start_bounty_pursuit + _last_bounty_pick_ms) but NOT its gating (the LLM already made the strategic choice). Selection is DETERMINISTIC, no RNG: decision target matched against bounty_id first, else nearest valid available bounty (same nearest convention as _resolve_move_target). Success -> intent pursuing_bounty + record_decision; no valid bounty -> debug log + record_decision + degrade to exploration_behavior.explore (same shape as unresolvable move_to).",
+       "request_llm_decision now drains any stale undelivered response (ai.llm_brain.get_decision) before queuing, so a late answer to a watchdog-abandoned request can never be misread as the answer to a NEW moment."
+      ],
+      "ai/prompt_templates.py": [
+       "AUTONOMOUS_ONLY_ACTIONS = frozenset({'accept_bounty'}) - deliberately NOT added to ToolAction/TOOL_ACTIONS so the chat validator keeps rejecting it (Sovereign cannot order bounty accepts by chat) while the autonomous parse path lets it through to the per-moment allowlist."
+      ],
+      "ai/llm_brain.py": [
+       "_parse_response also accepts AUTONOMOUS_ONLY_ACTIONS (accept_bounty previously hard-rejected here, which made the bridge branch unreachable - the real reason it 'lied to the LLM').",
+       "Loud provider fallback: _mock_fallback(reason) prints ONE warning line + sets provider_fallback / provider_fallback_reason flags (UI-readable). _create_provider now also substitutes mock when the provider constructed but is_available() is False (missing key/package) - previously that degraded silently to static fallback decisions on every request.",
+       "set_event_bus emits a ONE-SHOT HUD_MESSAGE toast (existing GameEventType.HUD_MESSAGE bridge in engine) when provider_fallback is set - no game/ code touched."
+      ],
+      "ai/providers/claude_provider.py": [
+       "Model no longer pinned to deprecated claude-3-haiku-20240307 (retires 2026-04-19). Resolution: explicit arg > ANTHROPIC_MODEL env (via .env) > DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-4-6' (current Sonnet-class; documented rationale in module docstring).",
+       "timeout param now actually passed to client.messages.create (was accepted and ignored -> SDK long default could stall the worker)."
+      ],
+      "ai/task_router.py": [
+       "WK134 watchdog: PENDING_LLM_DECISION_TIMEOUT_MS = 20_000 sim-ms. When pending_llm_decision is set and no response has arrived past the window, pending clears (debug-logged) so a hung provider can never permanently suppress consults / quest approaches. Lives inside the 'ai.llm_brain truthy' branch - no-LLM digest path untouched."
+      ],
+      "ai/context_builder.py": [
+       "inventory dict gains additive 'accessory' + 'backpack' keys (WK131 slots reached only autonomous prompts via HeroInventorySnapshot; the direct-prompt chat blob embeds THIS dict). All existing readers use named keys; digest unaffected (verified)."
+      ],
+      "ai/providers/mock/direct_prompt.py": [
+       "Generic named-place matcher: 'go to (the) castle|market(place)|blacksmith|temple|guild' -> go_to_known_place move_to (or unknown_place Defy). Inn keeps its dedicated branch (existing tests pin it).",
+       "'leave ... building' -> tool_action leave_building (rest_until_healed carrier; validator keeps leave_building when indoors)."
+      ],
+      "tests/test_wk134_llm_e2e.py (NEW)": [
+       "28 tests: accept_bounty both directions (full LLMBrain worker path with stub provider -> commit; no-bounty -> explore fallback; targeted bounty_id preference; parse+validator acceptance), prompt snapshots (autonomous rich: weapon/armor/accessory/backpack + nearby_pois compact + quest_offer block; digest-shaped: NONE of those keys; chat blob both ways), provider audit (ANTHROPIC_MODEL override/default/explicit, unknown-provider + claude-no-key loud fallback, one-shot HUD_MESSAGE, hanging-provider watchdog through real task_router.update_hero), chat E2E matrix (move_to castle/market/blacksmith/inn + unknown-place Defy, explore N/S/E/W with displacement-sign asserts, fight Defy no-state-change, retreat via seek_healing, use_potion consumes+heals, buy_item -> shopping intent, leave_building)."
+      ],
+      "docs/llm_connection.md (NEW)": [
+       "Provider selection (.env LLM_PROVIDER / --provider / key env vars / ANTHROPIC_MODEL), loud-fallback signals, what heroes will/won't obey in chat, quest accept/decline mechanics (occasional approach, 15-sim-min decline cooldown, mock >=50g rule), known limits (timeouts, watchdog, mock mode, advisory-output validation), 2-minute smoke procedure."
+      ]
+     },
+     "findings": [
+      "accept_bounty was doubly dead: even before the bridge no-op, ai.llm_brain._parse_response hard-rejected it (not in the seven ToolAction strings), so the LLM's choice never reached apply_llm_decision at all.",
+      "WK131 accessory/backpack reached ONLY autonomous prompts (HeroInventorySnapshot); the chat blob's inventory had weapon/armor/potions only - fixed additively in ContextBuilder.",
+      "ClaudeProvider ignored its timeout parameter entirely; and a provider that constructed without a key degraded silently to static fallback decisions per-request rather than mock.",
+      "A hung provider previously wedged a hero's consult loop forever (pending_llm_decision never cleared; quest approaches also blocked via _hero_is_preemptible) - hero kept patrolling but never consulted again. Fixed with the 20s sim-time watchdog.",
+      "accept_bounty remains chat-rejected by design (not in TOOL_ACTIONS): the Sovereign's lever stays bounty gold, not direct orders."
+     ],
+     "gates": {
+      "wk134_gate_set": "python -m pytest tests/test_wk134_llm_e2e.py tests/test_llm_bridge_apply_decision.py tests/test_wk50_phase2a_decision_contracts.py tests/test_wk50_phase2b_direct_prompt_contracts.py tests/test_direct_prompt_integration.py tests/test_wk112_direct_prompt_validator.py tests/test_chat_direct_feedback.py tests/test_wk126_quest_llm_decision.py tests/test_wk67_ai_boundary.py -q -> 147 passed",
+      "digest_rail": "tests/test_wk67_ai_boundary.py -q -> 10 passed (byte-identical; accept_bounty wiring never touches the no-LLM heuristic path)",
+      "full_suite": "PENDING at log-write time - started and awaited; result in final report"
+     }
+    }
+   }
   }
  }
 }

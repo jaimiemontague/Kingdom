@@ -94,9 +94,23 @@ class ContextBuilder:
             "inventory": {
                 "weapon": hero.weapon["name"] if hero.weapon else "Fists",
                 "weapon_attack": hero.weapon["attack"] if hero.weapon else 0,
-                "armor": hero.armor["name"] if hero.armor else "None", 
+                "armor": hero.armor["name"] if hero.armor else "None",
                 "armor_defense": hero.armor["defense"] if hero.armor else 0,
                 "potions": hero.potions,
+                # WK134: WK131 item slots were reaching only the autonomous
+                # prompts (via HeroInventorySnapshot); the direct-prompt (chat)
+                # blob embeds THIS dict, so carry them here too. Additive keys
+                # only — every existing reader (fallback decisions, mock
+                # responders, inputs_summary) reads named keys.
+                "accessory": (
+                    (getattr(hero, "accessory", None) or {}).get("name", "")
+                    if isinstance(getattr(hero, "accessory", None), dict)
+                    else ""
+                ),
+                "backpack": [
+                    str(getattr(it, "name", it))
+                    for it in (getattr(hero, "backpack", None) or ())
+                ],
             },
             "personality": hero.personality,
             "current_state": hero.state.name,

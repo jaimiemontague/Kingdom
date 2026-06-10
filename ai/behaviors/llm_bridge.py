@@ -51,6 +51,76 @@ def _resolve_move_target(target: str, view: Any, hero: Any) -> tuple[float, floa
     return (float(getattr(best, "center_x", 0)), float(getattr(best, "center_y", 0)))
 
 
+def _commit_accept_bounty(ai: Any, hero: Any, view: Any, target: str) -> bool:
+    """WK134: resolve an LLM ``accept_bounty`` decision to a real bounty commit.
+
+    Mirrors the heuristic ``bounty_pursuit.maybe_take_bounty`` COMMIT path
+    (availability/validity filters + ``start_bounty_pursuit`` + pick-timestamp),
+    but NOT its gating (cooldowns / health / min-score): the LLM was only
+    offered ``accept_bounty`` while the IDLE_SEEKING_ACTIVITY moment held, and
+    the strategic choice is the model's — this resolver only picks WHICH bounty.
+
+    Selection is deterministic (no RNG draw — keeps any future digest scenario
+    with bounties stable): the ``target`` string is matched against bounty ids
+    first (the prompt's ``bounty_options`` carry ``id``), else the nearest
+    valid available bounty wins (same nearest convention as
+    ``_resolve_move_target``).
+
+    Returns True iff the hero committed to a bounty.
+    """
+    # Lazy import (mirrors the quest_offer import below): bounty_pursuit is a
+    # behaviors sibling; keeping it out of top-level imports avoids any
+    # load-order surprise for the direct-prompt chat path.
+    from ai.behaviors import bounty_pursuit
+
+    view = as_ai_view(view)
+    bounties = list(view.bounties or [])
+    if not bounties:
+        return False
+
+    now_ms = sim_now_ms()
+    buildings = view.buildings or []
+    ttl_ms = int(getattr(ai, "bounty_assign_ttl_ms", 15_000) or 15_000)
+
+    candidates = []
+    for bounty in bounties:
+        if hasattr(bounty, "is_available_for") and not bounty.is_available_for(
+            hero.name, now_ms, ttl_ms
+        ):
+            continue
+        if hasattr(bounty, "is_valid") and not bounty.is_valid(buildings):
+            continue
+        candidates.append(bounty)
+    if not candidates:
+        return False
+
+    chosen = None
+    want_id = str(target or "").strip()
+    if want_id:
+        for bounty in candidates:
+            if str(getattr(bounty, "bounty_id", "")) == want_id:
+                chosen = bounty
+                break
+    if chosen is None:
+
+        def _dist(b: Any) -> float:
+            try:
+                gx, gy = (
+                    b.get_goal_position(buildings)
+                    if hasattr(b, "get_goal_position")
+                    else (b.x, b.y)
+                )
+                return float(hero.distance_to(gx, gy))
+            except Exception:
+                return float("inf")
+
+        chosen = min(candidates, key=_dist)
+
+    bounty_pursuit.start_bounty_pursuit(ai, hero, chosen, view)
+    hero._last_bounty_pick_ms = now_ms
+    return True
+
+
 def should_consult_llm(ai: Any, hero: Any, view: Any) -> bool:
     """Determine if we should ask the LLM for a decision (WK50: named decision moments)."""
     view = as_ai_view(view)
@@ -76,6 +146,10 @@ def request_llm_decision(ai: Any, hero: Any, view: Any) -> None:
         base_context = ContextBuilder.build_hero_context(hero, legacy)
         autonomous = build_llm_context_for_moment(hero, legacy, moment, now_ms=now)
         context = {**base_context, "wk50_autonomous": autonomous}
+        # WK134: discard any stale undelivered response (e.g. from a request the
+        # pending-decision watchdog abandoned) so a late answer to an OLD moment
+        # is never misread as the answer to THIS one.
+        ai.llm_brain.get_decision(hero.name)
         ai.llm_brain.request_decision(hero.name, context)
         hero.pending_llm_decision = True
         hero.last_llm_decision_time = now
@@ -190,7 +264,35 @@ def apply_llm_decision(
         )
         ai.exploration_behavior.explore(ai, hero, view)
     elif action == "accept_bounty":
-        pass
+        # WK134: previously a dead no-op while IDLE_SEEKING_ACTIVITY offered
+        # accept_bounty to the LLM. Now routes through the bounty-pursuit
+        # commit path; with no resolvable bounty it degrades to explore (same
+        # shape as the unresolvable move_to fallback below).
+        if _commit_accept_bounty(ai, hero, view, target or ""):
+            ai.set_intent(hero, "pursuing_bounty")
+            ai.record_decision(
+                hero,
+                action="accept_bounty",
+                reason=reason or "Accepting a bounty",
+                intent="pursuing_bounty",
+                inputs_summary=inputs_summary,
+                source=source,
+            )
+        else:
+            ai._debug_log(
+                f"{hero.name} accept_bounty: no valid bounty available; exploring instead",
+                throttle_key=f"{hero.name}_accept_bounty_fallback",
+            )
+            ai.set_intent(hero, "idle")
+            ai.record_decision(
+                hero,
+                action="accept_bounty",
+                reason=reason or "No valid bounty available; exploring",
+                intent="idle",
+                inputs_summary=inputs_summary,
+                source=source,
+            )
+            ai.exploration_behavior.explore(ai, hero, view)
     elif tool_action == "leave_building" or action == "leave_building":
         if getattr(hero, "is_inside_building", False):
             hero.pop_out_of_building()

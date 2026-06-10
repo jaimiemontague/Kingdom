@@ -18,6 +18,16 @@ from game.sim.direct_prompt_commit import (
     clear_direct_prompt_commit,
     expire_direct_prompt_commit_if_timed_out,
 )
+from game.sim.timebase import now_ms as sim_now_ms
+
+# WK134: watchdog for a hung/slow provider. A pending LLM request whose answer
+# has not arrived within this many sim-ms is abandoned (pending_llm_decision
+# cleared) so the hero can consult again — otherwise a provider that ignores
+# LLM_TIMEOUT (or a wedged worker) suppresses every future consult AND the
+# quest-giver approach forever. Sim-time on purpose (deterministic under pause /
+# FAST speed); generously above LLM_TIMEOUT (5s wall) and CONVERSATION_TIMEOUT
+# (8s wall) even at 2x sim speed.
+PENDING_LLM_DECISION_TIMEOUT_MS = 20_000
 
 
 def update_hero(ai, hero, dt: float, view) -> None:
@@ -159,6 +169,17 @@ def update_hero(ai, hero, dt: float, view) -> None:
                     ai, hero, decision, view, source=src, context=context
                 )
                 hero.pending_llm_decision = False
+            else:
+                # WK134 watchdog: never let a hung provider wedge this hero —
+                # pending_llm_decision must ALWAYS clear (see constant above).
+                last = int(getattr(hero, "last_llm_decision_time", 0) or 0)
+                if sim_now_ms() - last > PENDING_LLM_DECISION_TIMEOUT_MS:
+                    hero.pending_llm_decision = False
+                    ai._debug_log(
+                        f"{hero.name} -> abandoned stale LLM request (> "
+                        f"{PENDING_LLM_DECISION_TIMEOUT_MS}ms, provider slow/hung)",
+                        throttle_key=f"{hero.name}_llm_pending_timeout",
+                    )
     else:
         # Committed to destination: do not apply a stale pending decision when we later become IDLE.
         if hero.pending_llm_decision:

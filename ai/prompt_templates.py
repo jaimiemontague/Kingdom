@@ -13,6 +13,14 @@ VALID_ACTIONS = {a.value for a in ToolAction}
 TOOL_ACTIONS = {a.value for a in ToolAction}
 OBEY_DEFY_VALUES = ("Obey", "Defy")
 
+# WK134: actions valid ONLY on the autonomous decision-moment path (offered via
+# DecisionMoment.allowed_actions, e.g. IDLE_SEEKING_ACTIVITY's accept_bounty).
+# Deliberately NOT added to ToolAction/TOOL_ACTIONS: the direct-prompt (chat)
+# validator must keep rejecting them — the Sovereign cannot order a bounty
+# accept by chat — while ai.llm_brain._parse_response must let them through so
+# decision_output_validator can check them against the moment's allowlist.
+AUTONOMOUS_ONLY_ACTIONS = frozenset({"accept_bounty"})
+
 
 # Fallback decisions for when LLM is unavailable or times out
 FALLBACK_DECISIONS = {

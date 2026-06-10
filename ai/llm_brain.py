@@ -18,6 +18,7 @@ from ai.prompt_templates import (
     VALID_ACTIONS,
     TOOL_ACTIONS,
     OBEY_DEFY_VALUES,
+    AUTONOMOUS_ONLY_ACTIONS,
     get_fallback_decision,
 )
 from config import LLM_PROVIDER, LLM_TIMEOUT, CONVERSATION_TIMEOUT
@@ -37,6 +38,12 @@ class LLMBrain:
     
     def __init__(self, provider_name: str = None):
         self.provider_name = provider_name or LLM_PROVIDER
+        # WK134: loud provider-fallback signal. True when the REQUESTED provider
+        # could not be used and MockProvider was substituted; readable by UI
+        # (e.g. debug overlay) without importing provider modules.
+        self.provider_fallback = False
+        self.provider_fallback_reason = ""
+        self._fallback_notice_sent = False
         self.provider = self._create_provider()
         
         # Request queue: (hero_key, context) or (hero_key, payload, mode) for conversation
@@ -61,34 +68,74 @@ class LLMBrain:
     def set_event_bus(self, event_bus) -> None:
         """Set EventBus for emitting LLM prompt/response events (called by engine/main)."""
         self._event_bus = event_bus
+        # WK134: one-shot HUD/system message when the requested provider fell
+        # back to mock — surfaced via the existing HUD_MESSAGE toast bridge.
+        if (
+            self.provider_fallback
+            and not self._fallback_notice_sent
+            and event_bus is not None
+            and GameEventType is not None
+        ):
+            self._fallback_notice_sent = True
+            try:
+                event_bus.emit(
+                    {
+                        "type": GameEventType.HUD_MESSAGE.value,
+                        "text": (
+                            f"LLM provider '{self.provider_name}' unavailable — "
+                            "using mock AI (check API key / .env)"
+                        ),
+                        "color": (255, 165, 0),
+                    }
+                )
+            except Exception:
+                pass
     
+    def _mock_fallback(self, reason: str):
+        """WK134: substitute MockProvider LOUDLY — one warning line + flags the UI can read."""
+        from ai.providers.mock_provider import MockProvider
+
+        self.provider_fallback = True
+        self.provider_fallback_reason = str(reason)
+        print(
+            f"WARNING: LLM provider '{self.provider_name}' unavailable "
+            f"({reason}); falling back to MOCK provider — heroes will use "
+            "canned decisions. Check your API key / .env."
+        )
+        return MockProvider()
+
     def _create_provider(self):
-        """Create the appropriate LLM provider."""
+        """Create the appropriate LLM provider (WK134: loud mock fallback)."""
         try:
             if self.provider_name == "openai":
                 from ai.providers.openai_provider import OpenAIProvider
-                return OpenAIProvider()
+                provider = OpenAIProvider()
             elif self.provider_name == "claude":
                 from ai.providers.claude_provider import ClaudeProvider
-                return ClaudeProvider()
+                provider = ClaudeProvider()
             elif self.provider_name == "gemini":
                 from ai.providers.gemini_provider import GeminiProvider
-                return GeminiProvider()
+                provider = GeminiProvider()
             elif self.provider_name == "grok":
                 from ai.providers.grok_provider import GrokProvider
-                return GrokProvider()
+                provider = GrokProvider()
             elif self.provider_name == "mock":
                 from ai.providers.mock_provider import MockProvider
                 return MockProvider()
             else:
-                print(f"Unknown provider: {self.provider_name}, using mock")
-                from ai.providers.mock_provider import MockProvider
-                return MockProvider()
+                return self._mock_fallback(f"unknown provider name {self.provider_name!r}")
         except Exception as e:
-            print(f"Failed to create provider {self.provider_name}: {e}")
-            print("Falling back to mock provider")
-            from ai.providers.mock_provider import MockProvider
-            return MockProvider()
+            return self._mock_fallback(f"init failed: {e}")
+        # WK134: a provider that constructed but reports unavailable (missing
+        # API key / missing package) would raise on EVERY request and silently
+        # degrade to static fallback decisions — substitute mock loudly instead.
+        try:
+            available = bool(provider.is_available())
+        except Exception:
+            available = False
+        if not available:
+            return self._mock_fallback("provider not available (missing API key or package)")
+        return provider
     
     def start(self):
         """Start the background worker thread."""
@@ -222,7 +269,14 @@ class LLMBrain:
                     action = tool_action
                 if not action:
                     return None
-                if action not in VALID_ACTIONS and action not in TOOL_ACTIONS:
+                if (
+                    action not in VALID_ACTIONS
+                    and action not in TOOL_ACTIONS
+                    and action not in AUTONOMOUS_ONLY_ACTIONS
+                ):
+                    # WK134: autonomous-only verbs (accept_bounty) must survive
+                    # parsing; the per-moment allowlist in
+                    # decision_output_validator remains the real gate.
                     return None
 
                 target = decision.get("target", "")
