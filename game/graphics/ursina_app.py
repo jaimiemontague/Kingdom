@@ -61,6 +61,44 @@ class UrsinaApp:
         os.environ["SDL_VIDEODRIVER"] = "dummy"
         pygame.init()
 
+        # Mythos S1 (`vsync-off`): Panda's default ``sync-video`` is TRUE and quantizes
+        # every frame up to a vblank multiple (16.7/33.3ms at 60Hz) — measured ~10-16ms
+        # of pure present-wait per frame at exactly the 30fps gate. Ursina 8.3.0's
+        # ``Ursina(vsync=...)`` kwarg is dead code (window._ready never consumes it, and
+        # ``apply_settings`` re-sets vsync=True post-open; runtime disable is
+        # unimplemented — window.py:497-508), so the ONLY working lever is the prc store
+        # BEFORE the window opens. Env hatch ``KINGDOM_VSYNC=1`` restores stock vsync
+        # for A/B soaks. With vsync off, light scenes (menus) would spin uncapped, so we
+        # also set a sleep-based frame cap (``clock-mode limited`` — caps without
+        # quantizing: a frame slower than the cap interval is never rounded up).
+        # ``KINGDOM_FPS_CAP`` overrides the cap (default 60; 0 = uncapped).
+        self._vsync_enabled = os.environ.get("KINGDOM_VSYNC", "").strip() == "1"
+        if not self._vsync_enabled:
+            from panda3d.core import loadPrcFileData
+            loadPrcFileData("kingdom-perf", "sync-video false")
+            try:
+                _fps_cap = float(os.environ.get("KINGDOM_FPS_CAP", "").strip() or 60.0)
+            except ValueError:
+                _fps_cap = 60.0
+            if _fps_cap > 0:
+                loadPrcFileData("kingdom-perf", "clock-mode limited")
+                loadPrcFileData("kingdom-perf", f"clock-frame-rate {_fps_cap:g}")
+
+        # Mythos S2 (text-font-cache-patch): patch ursina.Text's font/resolution
+        # class properties BEFORE the first Text exists (Ursina() itself creates the
+        # window fps-counter Text). Stock Text() re-runs FontPool.load_font AND
+        # appends a duplicate directory to Panda's global model-path on EVERY label
+        # (5-21 ms each, degrading over the session as the path grows) — the unit
+        # spawn micro-hitch root cause. The patch memoizes the shared font object
+        # once; rendering is pixel-identical (FontPool already shares one font
+        # object per name — see game/graphics/ursina_text_font_cache.py).
+        try:
+            from game.graphics.ursina_text_font_cache import apply_text_font_cache_patch
+            _font_patched = apply_text_font_cache_patch()
+            print(f"[prewarm] ursina Text font-cache patch applied: {_font_patched}")
+        except Exception as _e:
+            print(f"[prewarm] ursina Text font-cache patch skipped: {_e}")
+
         self.app = Ursina(
             title='Kingdom Sim - Ursina 3D Viewer',
             borderless=False,
@@ -69,8 +107,40 @@ class UrsinaApp:
             # (and audiostream / music) on a steady cadence.
             development_mode=False,
         )
+        # Mythos S1 (`vsync-off`): re-assert AFTER Ursina() returns — ursina's
+        # ``window.apply_settings`` (window.py:82) writes ``sync-video true`` back into
+        # the prc store during init, which would silently re-enable vsync on any GL
+        # context rebuild (e.g. a fullscreen toggle). The already-open window keeps the
+        # boot-time setting; this keeps the store consistent for rebuilds.
+        if not self._vsync_enabled:
+            from panda3d.core import loadPrcFileData
+            loadPrcFileData("kingdom-perf", "sync-video false")
+        # One-line boot state for soak logs (A/B forensics).
+        try:
+            from panda3d.core import ConfigVariableBool
+            _sv = bool(ConfigVariableBool("sync-video"))
+        except Exception:
+            _sv = self._vsync_enabled  # best-effort fallback: report the requested state
+        from game.graphics.ursina_scene_ignore import mark_scene_ignore, scene_ignore_enabled
+        print(
+            f"[mythos] vsync={'on' if _sv else 'off'} "
+            f"(KINGDOM_VSYNC={os.environ.get('KINGDOM_VSYNC', '') or 'unset'}) "
+            f"scene_ignore={'on' if scene_ignore_enabled() else 'off'} "
+            f"(KINGDOM_SCENE_IGNORE={os.environ.get('KINGDOM_SCENE_IGNORE', '') or 'unset'})",
+            flush=True,
+        )
         window.exit_button.visible = False
         window.fps_counter.enabled = True
+        # Mythos S1 (`scene-entities-ignore`): Kingdom has ZERO world colliders (picking
+        # is analytic — ursina_pick.py), yet ursina's mouse.update runs two
+        # CollisionTraverser passes + an unhover scan per frame. ``traverse_target=None``
+        # is the escape hatch ursina documents (mouse.py:39). Same env gate as the
+        # entity-ignore marks.
+        if scene_ignore_enabled():
+            try:
+                mouse.traverse_target = None
+            except Exception:
+                pass
 
         # PyInstaller / frozen-bundle: register asset directories on Panda3D's model-path
         # so that Entity(model=...) and loader.loadModel() resolve correctly from _MEIPASS.
@@ -183,6 +253,9 @@ class UrsinaApp:
         self.ui_overlay.setTransparency(TransparencyAttrib.M_alpha)
         self.ui_overlay.set_depth_test(False)
         self.ui_overlay.set_depth_write(False)
+        # Mythos S1 (`scene-entities-ignore`): the HUD quad has no update/input — skip
+        # it in ursina's per-frame entity walk (texture refresh is explicit in run_frame).
+        mark_scene_ignore(self.ui_overlay)
 
         if ai_controller_factory:
             self.engine.ai_controller = ai_controller_factory()
@@ -276,6 +349,18 @@ class UrsinaApp:
         self._fps_probe_elapsed = 0.0
         self._fps_probe_samples: list[float] = []
         self._fps_probe_stage_samples: dict[str, list[float]] = {}
+        # Mythos S0 (`gate-measurement-harness`): optional wall-clock acceptance window.
+        # KINGDOM_URSINA_FPS_WINDOW_SEC="900:1200" -> on exit, the probe summary emits a
+        # single greppable "[fps-probe-window 900:1200] ..." line with avg/p10/p50/min
+        # fps computed ONLY from frames inside that window (whole-run percentiles
+        # overstate the minute-15..20 gate 2-3x on a 20-min soak). Dead unless both this
+        # env and KINGDOM_URSINA_FPS_PROBE are set.
+        self._fps_probe_window_sec = self._parse_fps_probe_window_env()
+        self._fps_probe_window_samples: list[float] = []
+        # Mythos S0: igLoop bracket state (sort-49/51 tasks around Panda's igLoop@50);
+        # installed lazily by run_frame only when slowlog/probe instrumentation is on.
+        self._igloop_bracket_installed = False
+        self._igloop_last_ms = 0.0
 
         # WK122 perf: the per-frame loop allocates ~130 DTOs + profile snapshots; the
         # default gen0 threshold (700) triggers very frequent collections → periodic
@@ -299,6 +384,37 @@ class UrsinaApp:
             print(f"[prewarm] building prefab models warmed: {_warmed}")
         except Exception as _e:
             print(f"[prewarm] building prefab model prewarm skipped: {_e}")
+
+        # Mythos S2 (unit-prewarm-extension): warm the remaining cold first-spawn
+        # assets so the FIRST hero/arrow/label of a session doesn't hitch — the
+        # 2048x2048 unit atlas (measured 269ms CPU + ~16MB GPU upload on the first
+        # unit render), the three projectile/magic/heal billboard textures (first
+        # volley), the Text font + glyph pages + overlay quad render states (first
+        # label), and — when KINGDOM_URSINA_INSTANCING=1 — the instanced unit
+        # renderer's shaders/buffer textures. Uses NodePath.prepare_scene (no frame
+        # rendered, nothing can flash). Behavior-preserving: identical assets, just
+        # created at load time; bounded (~0.3-0.5s). Never blocks startup.
+        try:
+            from game.graphics.ursina_prewarm import prewarm_unit_spawn_assets
+            _warm_stats = prewarm_unit_spawn_assets(renderer=self.renderer, base=self.app)
+            print(f"[prewarm] unit spawn assets warmed: {_warm_stats}")
+        except Exception as _e:
+            print(f"[prewarm] unit spawn asset prewarm skipped: {_e}")
+
+    @staticmethod
+    def _parse_fps_probe_window_env() -> tuple[float, float] | None:
+        """Parse KINGDOM_URSINA_FPS_WINDOW_SEC="<lo>:<hi>" (seconds) -> (lo, hi) | None."""
+        raw = os.environ.get("KINGDOM_URSINA_FPS_WINDOW_SEC", "").strip()
+        if not raw or ":" not in raw:
+            return None
+        try:
+            lo_s, hi_s = raw.split(":", 1)
+            lo, hi = float(lo_s), float(hi_s)
+        except ValueError:
+            return None
+        if hi <= lo or lo < 0.0:
+            return None
+        return (lo, hi)
 
     @staticmethod
     def _read_int_env(name: str, default: int, *, min_value: int, max_value: int) -> int:

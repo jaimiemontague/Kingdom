@@ -172,6 +172,9 @@ def _sync_building_worldspace_ui(
                 color=color.green if ratio > 0.5 else color.red,
                 scale=(1.0 * ratio, 0.05, 1), y=1.5, billboard=True, unlit=True)
             hp_bar_ent.set_depth_test(False)
+            # Mythos S1 (`scene-entities-ignore`): renderer-managed — no update/input.
+            from game.graphics.ursina_scene_ignore import mark_scene_ignore
+            mark_scene_ignore(hp_bar_ent)
             ent._ks_hp_bar = hp_bar_ent
         else:
             hp_bar_ent.scale_x = ratio

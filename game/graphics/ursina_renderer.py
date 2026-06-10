@@ -316,6 +316,10 @@ class UrsinaRenderer:
             color=color.black,
             background=True,
         )
+        # Mythos S1 (`scene-entities-ignore`): renderer-managed Text (mutated via
+        # .text writes only) — no update/input; skip it in ursina's entity walk.
+        from game.graphics.ursina_scene_ignore import mark_scene_ignore as _mark_scene_ignore
+        _mark_scene_ignore(self.status_text)
 
         # WK22 R3: per-sim-object billboard animation (wall clock). WK66: each entry
         # also tracks "last_seq" — the sim's anim_trigger_seq we last played — so a

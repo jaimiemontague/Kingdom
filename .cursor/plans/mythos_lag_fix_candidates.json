@@ -1,0 +1,791 @@
+{
+ "explorers": [
+  {
+   "area": "render-sync",
+   "summary": "The legacy per-Entity sync (~23ms 'rend' at 24 heroes/80 enemies/24 buildings) splits into three cost classes I measured directly. (1) Pure no-change Python/Panda property overhead: every visible unit re-runs sync_hp_bar (25.2us), ensure_ks_name_label (16.0us), sync_hero_gold_label (15.2us) and sync_hero_overlays_facing (44.7us hero / ~28us enemy) EVERY frame even when nothing changed, because Ursina's enabled-setter is unconditional (unstash + loose_children walk = 9.25us per redundant 'enabled=True') and sync_ks_facing_overlay writes scale_x+rotation_y unconditionally (9.37us per child) — at ~73 in-view units that is ~6-7ms/frame of fully skippable work. (2) Per-frame filesystem stats: _resolve_prefab_path does Path.is_file() per building per frame, measured 87us/call on this OneDrive tree → ~2.1ms at 24 buildings, ~8.7ms at 100, worse during construction (staged resolver stats multiple candidates). (3) Structural node count: ~241 overlay child nodes (HP bg/fg quads + Text labels) are each separate scene-graph nodes/draw calls; Ursina Text creation costs 5.7ms median, which is the hero/enemy-spawn micro-hitch (a wave of 10 enemies entering view = ~57ms hitch frame). build_snapshot adds ~1.3ms/frame of DTO allocation (5.6us/unit, 7.2us/building, rebuilt every render frame). Dirty-gating + caching (S effort) recovers ~8-10ms of legacy rend, but the legacy path cannot reach 30fps alone; the structural winner is a batched/instanced overlay renderer that BOTH cuts legacy node count AND fills the known overlay gap that blocks shipping the 2.5x instanced unit path (its branch returns at ursina_renderer.py:612 before any overlay sync).",
+   "n": 7
+  },
+  {
+   "area": "instancing-parity",
+   "summary": "The instanced unit path (KINGDOM_URSINA_INSTANCING=1) is the single biggest lever in the codebase: measured 13-15 fps legacy vs 31.5 avg windowed / 25.2 maximized at the gate scenario (wk123 plan results log), with rend collapsing 23ms to ~7ms. It is blocked from default-on by one feature gap and several correctness gaps. The feature gap: ursina_renderer.update() returns at line 612 before any unit-sync call, so HP bars, name labels, hero gold labels, and the tax-collector gold label are never created (measured: 241 overlay nodes legacy vs 0 instanced). The correctness gaps found by line-by-line diff of both paths: instanced units ignore terrain height (flat y=scale*0.5 vs legacy get_terrain_height; TERRAIN_HEIGHT_SCALE=5.0 means units bury into hills), all projectiles render as arrows (WK124 magic/heal kinds missing from the atlas), guards/peasants are squashed to uniform scale (legacy is non-uniform, and ursina_pick assumes legacy heights), the underground layer gate is skipped (dormant feature, low risk), and the added blob shadows pin to y=-0.048 instead of following terrain. Everything else survives: enemy fog gating, inside-building pass, anim FSM/facing parity, picking (pure math, no Entity dependence), bounties/rubble/buildings + their world-space UI (Entity-based in both branches), and the rest-Zzz label is dead code in legacy too. HP bars are trivially instanceable as ONE extra draw call (per-instance pos+fill-fraction, color derived in-shader), and name/gold text is best served by pre-rendered label cards instanced through the same pipeline plus a zoom LOD that culls all labels at the gate scenario's zoomed-out view (owner-authorized; HP bars stay). With those built, flipping the default converts the gate scenario from ~15 fps to ~30-31 windowed (and ~25 maximized, which remains HUD-upload/GPU-fill bound, outside this area), and eliminates hero-spawn micro-hitches because spawn no longer creates Entity+Text nodes. Buildings are a separate, smaller win: prefabs instantiate up to ~26 child Entities each, and per-building flattenStrong (loading pieces as Panda NodePaths instead of Ursina Entities) would cut draw calls and scene.entities walk cost at the 50-100-building pile.",
+   "n": 5
+  },
+  {
+   "area": "sim-tick",
+   "summary": "Measured headless on this box at the gate scenario (24 heroes / 80 enemies / ~45-61 buildings / 2083 trees, BasicAI wired): one sim tick costs mean 4.2-6.3 ms, p95 ~6.7 ms, p99 ~10 ms, worst observed 11-35 ms. At FAST (multiplier 1.0 = 20 ticks/wall-second, engine.py:1045, config.py:93-99) the sim burns ~85-120 ms CPU per wall-second, and frames at 13-15 fps bank ~1.5 ticks so they alternate 1- and 2-tick frames (4-12 ms of sim inside a render frame). A/B no-op deltas attribute the cost: fog ~1.45 ms/tick, hero AI ~1.30, hero-profile snapshots rebuilt for every hero every tick ~0.86 (UI-only data built at sim cadence), the 2083-entry tree-growth dict rebuilt every tick ~0.89 (growth is discrete, changing only at 2-minute boundaries), and POI discovery O(POIs x heroes) every tick ~0.59. The worst-tick spikes — the micro-hitch signature, including hero-spawn ticks which force a fog rebuild plus a first A* — are A* bursts (single ticks carrying 6-7.5 ms of pathfinding; the budget permits 24 plans/24k expansions per tick and chase goals key on integer-pixel positions of moving targets so they replan every 500 ms) and fog full rebuilds (1.5-5 ms each, every 3rd tick whenever any of ~50 revealers crosses a tile). A 6000-tick soak shows no cost growth — the WK123 fixes hold; this is steady-state cost. No shared spatial index exists (separation builds a throwaway grid per call; enemy retargeting, combat range checks, and AI threat gates are all linear scans), which is the scaling wall for the owner's hundreds-of-enemies ambition. Candidates 1-7 are largely independent and should cut mean tick cost from ~5 ms to ~1.5-2.5 ms and p99 from 10-35 ms to under ~8 ms; candidate 8 (FAST-speed dt scaling) halves whatever remains, with the renderer's existing sim_blend_fraction interpolation keeping motion smooth.",
+   "n": 9
+  },
+  {
+   "area": "hud-upload",
+   "summary": "The HUD path costs ~16-19ms/frame at maximized (hudR 3.9-4.8ms compose + hudU 11.6-14.2ms upload per tmp/wk123/soak_out_fast_maximized.log) vs ~10ms windowed — it is the single largest CPU stage and explains most of the 31-vs-25fps maximized gap. The hudU pipeline (game/graphics/ursina_app_ui_overlay.py:_refresh_ui_overlay_texture) pays, on EVERY changed frame: pygame.image.tobytes full-surface RGBA conversion (measured 7.6ms at 1920x1032 on this exact box), a full numpy row-diff (2.7ms), and per-band uploads through a PandaTexture→PNMImage→load_sub_image round trip (10.7ms per 180-row band, 3.1ms per 48-row band). Worse, the >50%-dirty / >6-run fallback calls setRamImageAs(full) which measures 50.4ms — a guaranteed visible hitch, and hero-spawn produces exactly the scattered multi-region dirty pattern (top-bar Heroes count + message feed + radar dot + left panel) that trips it; wave toasts fade alpha every frame in the same mid-band. The radar (224x180, hud_radar.py) redraws ~190 entity dots per frame, which is what makes the bottom band dirty every single frame and forces the whole changed-frame pipeline. The decisive measured finding: the engine.screen SRCALPHA surface's native memory layout (masks 0xff0000/0xff00/0xff/0xff000000) is byte-identical to Panda3D's F_rgba native BGRA RAM image (verified byte-equal on this box), so the entire convert/swizzle stack can be replaced by direct memoryview copies: band write 0.04ms (250x faster), full fallback ~0.3-7.7ms (7-150x faster), no tobytes at all. Combined with throttling radar dot redraw to 10Hz (making most frames hit the existing 0.57ms fingerprint early-out), hudU drops from ~12ms avg to ~2ms and the 50ms hitch class disappears — worth roughly +6-9 fps at the gate scenario maximized, essentially closing the windowed/maximized gap. A separate radar/topbar quad split is a clean structural follow-up but is no longer required for the gate once the zero-copy path lands. The watch-card pinned-hero minimap (render_coordinator.py) re-renders a full world minimap every frame when pinned and must be throttled or it re-opens the hitch path during real play.",
+   "n": 5
+  },
+  {
+   "area": "frame-loop",
+   "summary": "The per-frame sequence is fully serial on one thread: Ursina's _update task computes time.dt, runs mouse.update (2 collision traverses + pointer polls that Kingdom never consumes — picking is analytic in ursina_pick.py), then __main__.update = run_frame (gc-freeze check -> canvas sync -> pointer motion (cached, but invalidated every frame the camera moves) -> tick_simulation (handle_events + 0-4 fixed 50ms sim ticks, each calling a full get_game_state) -> fov/zoom sync -> build_snapshot + renderer.update -> render_pygame (HUD compose, includes 1 more get_game_state via FrameContext) -> HUD texture upload -> pan/terrain-clamp/auto-follow/zone-fog block), then a Python walk over ALL scene.entities (measured 1.30ms at 539 entities, 2.69ms at 1000 on this box), then Panda cull+draw+present with vsync ON (Panda default sync-video=true; Ursina's vsync arg is dead code in this version). The camera/fog/pointer block itself is already well-gated and cheap (zone-fog cached, terrain clamp ~us) — the real \"untracked remainder\" is OUTSIDE run_frame: soak logs show dt 43-48ms vs run_frame CPU 30-33ms at out/fast/maximized (11-15ms/frame gap, spiking 24-39ms), and at out/fast/windowed dt clusters at 33.9-35.7ms (the 2-vblank 60Hz bucket) against only ~23.5ms of CPU — strong evidence ~10ms/frame is vsync present-wait, which alone explains that combo sitting at 28-29.5fps instead of >35. Separately, get_game_state redundantly builds hero-profile DTOs for all heroes on every sim tick and on every pointer-path call although only HUD code consumes them (~1.5-3ms/frame at fast speed). The spawn micro-hitch is confirmed and quantified: every unit's name label is an Ursina Text whose construction costs 21.0ms (measured; mutation is 0.13ms, plain Panda TextNode 0.41ms), so each hero/enemy spawn (and first gold-label/Zzz) is a 21-80ms spike frame at the swarm. Biggest frame-loop levers in order: kill vsync (S, likely flips the gate combo over 30), pool the Text labels (kills the hitch), lazy hero profiles, trim/bypass the Ursina entity walk (scales with the hundreds-of-enemies goal), and an env-gated Panda Cull/Draw threaded-pipeline experiment to overlap CPU with GPU.",
+   "n": 6
+  },
+  {
+   "area": "spawn-hitch",
+   "summary": "The hero-spawn micro-hitch is almost entirely render-side, and the single dominant cost is Ursina Text label creation: every spawned unit's name/gold label calls ursina.text.Text.__init__, whose font_setter re-runs FontPool.load_font AND appends a duplicate directory to Panda's global model-path on EVERY Text (measured: 5.25-6.04 ms per Text on this box, 73% of it in load_font; model-path grows 16->216 dirs after ~200 Texts, degrading Text creation 5.9->7.3 ms over a session — a previously unknown time-degradation amplifier). Sim-side spawn cost is negligible (Hero.__init__ is plain field init, audio SFX are preloaded, gc thresholds already raised), so the fix surface is graphics-only. A measured property-setter patch (cache the font object, no-op redundant setPixelsPerUnit) cuts Text creation to 0.27 ms and the full hero-spawn render bundle (billboard + 2 HP-bar quads + name Text) from ~6.6 ms to 0.84 ms — a 6-enemy wave entering the zoomed-out viewport currently costs ~35-40 ms in one frame and would drop to ~4 ms. Building construction hitches are real and bigger: the WK122 prewarm caches only mesh parses, while each prefab instantiation (placement, neutral spawn every ~6 s, and each of the 3-4 construction-stage swaps) re-reads/parses the prefab JSON from disk and rebuilds up to ~26 child Entities with per-piece glTF color traversal — measured 2.6-64.4 ms per instantiate (inn_v2 = 64 ms) even after prewarm. Worse, the stage-swap destroy path frees only the prefab root, orphaning all piece children into scene.entities (measured +84 orphans in 5 swap cycles) — a C1-class leak the WK123 fix does not cover, which re-introduces time-degradation in construction-heavy real play and makes every subsequent ursina.destroy()'s linear `entity in scene.entities` scan slower. Finally, several one-time cold loads still hitch the first gameplay frames because the startup prewarm covers only building piece models: the 2048x2048 unit atlas builds lazily on the first unit render (measured 269 ms CPU + ~16 MB GPU upload), the projectile/magic/heal billboard textures generate on the first arrow volley, and the first Text loads the font. Note for the instancing roadmap: the instanced unit path has zero per-spawn node creation (its spawn behavior is ideal), but when C9 restores overlays for instanced units, these same Text costs return unless the font patch and pooling land first.",
+   "n": 6
+  },
+  {
+   "area": "alloc-gc",
+   "summary": "At the gate scenario (out/fast, ~100+ units, maximized) the WK123 soak telemetry shows dt=42-48ms (~23fps) split as: HUD texture upload (hudU) 11-14ms, sim tick 6.5-8ms, Ursina renderer sync 6.8-7.1ms, pygame HUD compose 4.0ms, and ~13ms GPU/Ursina-internal (tmp/wk123/soak_out_fast_maximized.log). The single largest CPU stage — hudU — is almost entirely allocation/conversion churn: pygame.image.tobytes allocates+swizzles an 8.3MB bytes object every changed frame (measured 8.0ms on this box), the dirty-band path then pays 7.2ms per band in PandaTexture+PNMImage conversions, and the >50%-dirty fallback setRamImageAs(\"RGBA\") costs a measured 52.8ms (matching the 25-69ms hudU spikes across 1303 slowframes). I verified headlessly that the pygame SRCALPHA surface's native byte order and Panda's native FRgba RAM order are both BGRA, so a direct memoryview memcpy (surf.get_view('1') -> tex.modify_ram_image()) is pixel-identical and runs in 0.69ms — a ~10-13ms/frame win that also eliminates ~190MB/s of bytes churn. Second, build_snapshot runs TWICE per frame (Ursina loop + FrameContext inside render_pygame) with no sim tick between, duplicating a measured 1.03ms DTO pass plus bounty-metric recompute. Third, the sim tick rebuilds a 2083-entry tree-growth dict (one fresh key-tuple per tree) every tick — 0.445ms x 2-3 ticks/frame at fast speed, and the dominant gen0 GC feeder (~6k tracked allocs/frame -> a measured 1.9ms gen0 pause every ~7-15 frames = visible jitter). Fourth, the legacy unit path writes .enabled=True and overlay facing properties unconditionally per overlay child per frame; Ursina's enabled-setter has no early-out and calls NodePath.unstash() every time (400 redundant unstash calls measured at 3.5ms). Together these alloc-side fixes are worth roughly 14-18ms/frame at the maximized gate scenario (~23fps -> ~33-36fps) on the default legacy path, plus removal of the 25-69ms HUD-upload hitches and the periodic ~2ms gen0 stalls that read as micro-hitches.",
+   "n": 8
+  },
+  {
+   "area": "panda-config",
+   "summary": "The app boots Ursina 8.3.0 / Panda3D 1.10.16 with zero engine-level tuning: no loadPrcFileData anywhere in game/ (grep), so every Panda default applies. Three big engine-level losses were confirmed. (1) VSYNC IS ON: panda default sync-video=True (measured) and ursina hard-forces window vsync True in apply_settings (window.py:82) — the Ursina(vsync=...) kwarg is silently dropped in 8.3.0 (_ready accepts it but never uses it). The soak logs prove the cost: the per-frame untracked gap (dt minus run_frame CPU) clusters at ~15-16.8ms and ~33-36ms — exact vblank multiples (tmp/wk123/soak_out_fast_maximized.log:59-103). (2) Single-threaded pipeline: threading-model='' (measured), true-threads wheel available; cull+draw+swap sit serialized after ~23ms of Python frame work (instanced gate combo dt 35.7ms vs 23.4ms tracked CPU — soak_out_fast_windowed.log:378). (3) Ursina's per-entity _update loop costs a measured 5.29ms/frame at the legacy scene size (536 entities) and drops to 0.09ms with ignore=True — pure engine overhead since renderer-managed entities have no update/input. Additionally, ursina Text creation measured 5.44ms each, and hero spawn creates 1-2 Texts + 2 quad entities (ursina_unit_overlays.py) — the hero-spawn micro-hitch mechanism. Mouse picking is near-free here (zero world colliders), trees are opaque instanced meshes (no overdraw issue), the 64x64 grass texture cannot thrash texture cache (mipmap candidate ruled OUT by measurement), and development_mode=False is already set. Stacked, the three config fixes are worth roughly 6-12ms/frame at the gate scenario — on the instanced path that is the difference between the borderline 31.5/25.2 fps and a solid >35 windowed / ~30 maximized; on today's legacy default they take ~13-15 to ~17-19 fps (still instancing-gated for 30+).",
+   "n": 5
+  },
+  {
+   "area": "prior-art",
+   "summary": "Prior art is extensive and the dead ends are well documented. TRIED+KEPT (do NOT undo): sim dt-clamp, multi-band HUD dirty upload, gc.freeze+thresholds, stationary-pointer cache, building-prefab prewarm, building pos/color dirty-gates, zone-fog cache, fog-overlay early-out gate (ursina_fog_overlay.py:60-63, was 19ms/frame), cave-shader DCE guard, fog/chunk visibility composition + camLens frustum rect + 8x8 static terrain batching + tree instancing (~2,083 trees -> ~16 draws, CHANGELOG v1.5.8), HUD PIL-bypass + GPU Y-flip + dirty-row upload (v1.5.7: hudU P90 49->12.7ms), unit texture atlas + global pathfinding budget + fixed-rate 20Hz sim tick + linear sim_blend interpolation (v1.6 rounds), and WK123's C1 overlay-destroy fix (ursina_unit_overlays.py:105), C2 dead-unit DTO-skip/peasant-cull/30s hero TTL, C7 set_two_sided on instanced unit geoms, C8 profile cache. TRIED+REJECTED (do NOT retry): GeoMipTerrain LOD (dormant, KINGDOM_URSINA_GEOMIPTERRAIN=0 — no FPS win + elevation distortion); blind sampler/alpha/binding swaps on the instanced shader (5 failed attempts; root cause was backface cull — sampler, UV V-flip and OmniBoundingVolume are verified correct, keep them); instancing default-ON (commit 7fe0828, reverted 0f8ca6d) — now blocked only on overlay parity, not invisibility; exponential constant-alpha lerp (\"lurch then crawl\"); sync-key early-outs that skip interpolation; headless sim-RSS leak hunting (empirically no sim-side leak); 2-min normal-speed probes as validation; tree/grass density cuts and MAX_ALIVE_ENEMIES reduction (hard-forbidden). KEY MEASURED NUMBERS at the gate spec (24h/24b/80e): legacy default = 13.1 avg fps out/fast/maximized (rend 23.3ms, tick 12.4ms, hudU 14.5ms) and 15.4 best-combo; instanced = rend collapses to ~7ms giving 31.5 avg out/fast/windowed and 25.2 maximized but with ZERO unit overlays (legacy scene=536 entities incl. 241 overlays vs instanced 222/0); 82 instanced enemies alone ~50 fps, +24 heroes costs ~17ms/frame of which only ~6ms is tick+rend — the rest is GPU draw + ~330 overlay nodes + maximized HUD upload. The single biggest documented unbuilt lever is therefore finishing C9 (overlays under instancing) + the now-authorized overlay zoom-LOD and HUD/radar throttle ideas the WK123 plan explicitly deferred to Jaimie's call, plus the never-built building batching lever from the guardrails doc and the deferred WK58 mitigations (numpy fog rebuild, prefab/terrain-height caches).",
+   "n": 9
+  },
+  {
+   "area": "architecture",
+   "summary": "At the gate scenario (out/fast, ~100+ units, integrated GPU) the default build spends a ~70ms frame roughly as: ~23ms legacy per-Entity unit sync (\"rend\", ursina_unit_sync.py full resync of every unit + ~240 overlay child nodes), ~7-12ms sim tick run inline on the render thread (2x fast speed doubles tick count), ~4ms pygame HUD compose, ~12-14ms full-window HUD->GPU upload, and ~13ms Panda cull/draw/swap serialized after all the Python work (soak logs: dt 42-47ms has CPU sum ~30ms even on the INSTANCED path). The architecture is a classic retained-OO design: live sim objects -> per-frame frozen DTO tuples (built TWICE per frame — once for the 3D renderer, once again inside render_pygame's FrameContext) -> a per-Entity scene-graph resync. The instanced renderer (opt-in) already proves the render wall is the per-Entity path: flipping it on collapses rend 23ms->7ms and lifts the gate combo from ~13-15 to ~25-31 fps, but it ships dark (it early-returns before overlay creation, so HP bars/names never exist — the documented C9 gap). The highest-leverage redesigns, in order: (1) make instancing the ONLY unit path with instanced HP bars + zoom-LOD pooled name labels and delete the legacy path (gets the measured 2.5x and fixes hero-spawn Text-creation hitches); (2) split the monolithic full-window HUD surface into per-region render targets so the radar/top-bar churn stops forcing an 8MB tobytes + full-frame numpy diff every frame (~10ms back at maximized); (3) move the sim accumulator off the render thread (or at minimum halve fast-speed tick rate), which removes the 2x-speed tax from the frame loop — the DTO/snapshot boundary already in place makes this genuinely buildable; (4) numpy SoA unit storage feeding the instance buffer near-zero-copy, which is the enabler for \"hundreds of enemies\"; (5) a one-line Panda `threading-model Cull/Draw` experiment to overlap the ~13ms C++ cull/draw with next-frame Python. C1+C2 alone project to ~33fps sustained at the worst combo (maximized+fast+out), and the stack gives comfortable headroom toward hundreds of enemies.",
+   "n": 6
+  },
+  {
+   "area": "profiling-infra",
+   "summary": "The WK123 measurement stack is solid for its original 17-min leak hunt but has concrete holes for the new minute-15-to-20 gate. Per-frame stage timing exists in run_frame (KINGDOM_FPS_SLOWLOG, tick/rend/hudR/hudU at game/graphics/ursina_app_frame.py:92-196) but is only exported as 120-frame stdout averages; the soak CSV's stage columns are dead — wk123_fps_soak.py:253 reads an engine attr (_wk123_last_stage_ms) that nothing ever sets, and its 'tick' column actually logs the whole frame dt (ursina_app_frame.py:97 vs wk123_fps_soak.py:258). The biggest unattributed cost block is everything outside run_frame (Panda igLoop cull+draw+swap+GPU wait): it is only printed on >40ms slowframes (ursina_app_frame.py:320) and never split — no igLoop/PStats instrumentation exists anywhere in game/. The screenshot path is actively dangerous for a 100-shot gate window: each in-loop shot forces TWO extra renderFrame() calls (~130-150ms at 13-15fps) plus a synchronous 1080p PNG encode I measured at 70-74ms on this box — roughly a 220-290ms hitch every 3s, which would corrupt the very FPS percentiles being gated. There is no spawn-hitch capture mode at all, despite hero-spawn micro-hitches being a named goal (spawn cost lands in rend via per-spawn Entity + Ursina Text label creation, ursina_unit_overlays.py:164-172). On the headless question: perf_render_benchmark.py does NOT isolate renderer.update (it samples whole-loop FPS around /revealmap with a 45-fps terrain bar); perf_stress_test.py is the real renderer.update isolator but opens a live GL window, never ticks the sim (stationary units under-exercise dirty paths), and uses a non-gate scenario. Seven harness-extension candidates below give the sprint per-frame CSV attribution, an igLoop split, cheap async screenshots, spawn-hitch capture, a windowed gate verdict, and an agent-runnable offscreen renderer bench.",
+   "n": 7
+  }
+ ],
+ "synthesis": {
+  "headline": "The lag is four stacked costs, each independently measured: (1) vsync quantization — Panda's default sync-video=true rounds every frame up to a 16.7ms vblank multiple and the Ursina vsync kwarg is dead code, costing ~10-16ms/frame at exactly the 30fps boundary; (2) the legacy per-Entity unit render path (~23ms rend at spec) for which a proven 2.5x instanced path already exists (31.5 fps windowed / 25.2 maximized measured) but is blocked from default by overlay parity gaps; (3) the HUD upload conversion stack (~12-14ms/frame maximized with a measured 50ms full-upload hitch fallback) which a verified byte-identical BGRA memcpy reduces to ~0.7-4ms; (4) sim tick doubled at FAST speed (~6-12ms/frame) dominated by five cacheable per-tick rebuilds. The hero-spawn hitch is root-caused and CONFIRMED: every Ursina Text() re-runs FontPool.load_font and appends a duplicate model-path dir (5.3-21ms per label, degrading over the session), plus prefab construction-stage swaps that cost 11-64ms AND leak ~26 orphan entities per swap (an uncovered C1-class leak that re-introduces time-degradation in real play). Strategy: ship the confirmed S-effort wins first (vsync off, HUD zero-copy, font patch, orphan-free, dirty gates, lazy profiles, caches) — these alone should put windowed past 30 and kill the hitches — then execute the instancing-default stack (instanced HP bars + parity fixes + zoom-LOD labels + linear interp + flip), which is the only mapped route to a solid >30 sustained at the maximized worst combo with headroom for hundreds of enemies. Sim-tick M-items flatten p99; building batching and the architecture reserve (spatial grid, SoA, sim thread, Cull/Draw) stay gated behind soak evidence and are only pulled if the cheap stacks plus instancing miss the bar.",
+  "ranked_candidates": [
+   {
+    "rank": 1,
+    "id": "vsync-off",
+    "title": "Disable vsync via loadPrcFileData('sync-video false') before Ursina() — frames are quantizing to vblank multiples at exactly the 30fps gate",
+    "stack": "S1-engine-config",
+    "mechanism": "Panda default sync-video=True (measured on this box) and Kingdom never overrides it — verified ursina_app.py:64-71 constructs Ursina() with no vsync/prc config. Ursina 8.3.0's vsync kwarg is dead code: window._ready never consumes it, apply_settings re-sets vsync=True post-open (window.py:82), runtime disable is 'not yet implemented' (window.py:497-508). Soak evidence: out/fast/windowed dt clusters at 33.9-35.7ms (the 2-vblank bucket) against only ~23.5ms run_frame CPU — ~10ms/frame pure present-wait, pinning that combo at 28-29.5 fps just under the gate; maximized shows dt 43-48ms vs 30-33ms CPU with gpu_or_ursina spikes 24-39ms. Vsync also amplifies every micro-hitch (a slight vblank miss pays the whole next interval). [Merged: frame-loop:vsync-off-sync-video + panda-config:prc-vsync-off]",
+    "fix": "In UrsinaApp.__init__ BEFORE Ursina() at game/graphics/ursina_app.py:64: loadPrcFileData('kingdom-perf','sync-video false'); re-assert it AFTER Ursina() returns (apply_settings writes sync-video True back into the prc store, which would re-enable vsync on any GL context rebuild e.g. fullscreen toggle). Env hatch KINGDOM_VSYNC=1 to restore. Optionally clock-mode limited + clock-frame-rate 60 to avoid uncapped spin in menus. Do NOT use the Ursina kwarg or window.vsync (both dead).",
+    "expected_gain": "out/fast/windowed: 28-29.5 -> ~36-40 fps (work ~26-28ms no longer rounds to 33.3); out/fast/maximized: 21-23 -> ~25-30. Flips the borderline gate combo decisively over 30 and removes the 33<->50ms bucket alternation that reads as judder. Biggest gain-per-line in the entire list.",
+    "risk": "Tearing (low: Win10 DWM composites windowed and borderless-maximized, preventing tears); Intel driver control panel could force vsync anyway — verify with the A/B soak before claiming the win; uncapped fps in light scenes (mitigate with clock-mode limited).",
+    "effort": "S",
+    "confidence": "high",
+    "evidence": [
+     "game/graphics/ursina_app.py:64-71 — verified this session: Ursina(title=..., borderless=False, fullscreen=False, development_mode=False), no vsync arg, no loadPrcFileData anywhere in game/",
+     "site-packages/ursina/window.py:14-76 (_ready never writes sync-video prc), :82 (apply_settings re-sets vsync=True), :497-508 (runtime disable unimplemented)",
+     "Measured on this box: ConfigVariableBool('sync-video') == True; ConfigVariableString('threading-model') == ''",
+     "tmp/wk123/soak_out_fast_windowed.log: dt=33.9/35.7/34.6/34.7ms vs tick+rend+hudR+hudU ~22.6-23.8ms (10ms gap = 2-vblank bucket) at E=85",
+     "tmp/wk123/soak_out_fast_maximized.log: dt 43.4-47.8ms vs ~30-33ms CPU; [slowframe2] gpu_or_ursina gap clusters at 15.0/15.4/16.0/16.4/16.8 and 33-36ms — vblank multiples"
+    ]
+   },
+   {
+    "rank": 2,
+    "id": "hud-bgra-zero-copy",
+    "title": "Replace HUD upload (tobytes RGBA + PNMImage band round-trip + setRamImageAs fallback) with native BGRA memoryview copy — verified byte-identical",
+    "stack": "S3-hud-upload",
+    "mechanism": "Every changed frame pays: pygame.image.tobytes(surf,'RGBA') full-surface swizzle at ursina_app_ui_overlay.py:97 (verified this session; measured 7.6-8.0ms at 1920x1032), full numpy row diff (:181-183, ~2.7ms), per-band temp PandaTexture->PNMImage->load_sub_image (:154-176, 7.2-10.7ms per 120-180-row band), and the >50%-dirty/>6-run fallback setRamImageAs(raw,'RGBA') (:207-210, measured 50.4-52.8ms — a guaranteed hitch; 1303 slowframes in the maximized soak, spikes 25-69ms). Hero-spawn dirties 3-4 scattered regions (top-bar count + message + radar dot + left panel) which trips exactly this fallback — it IS part of the spawn hitch. DECISIVE: two explorers independently verified the pygame SRCALPHA surface's native byte layout (masks 0xff0000/0xff00/0xff/0xff000000, pitch==W*4) is byte-identical to Panda F_rgba native BGRA RAM (bytes(tex.get_ram_image()) == surface view). hudU = 11.6-14.2ms avg maximized vs 4.9-7.8 windowed. [Merged: hud-upload:hud-bgra-zero-copy-upload (confirmed) + alloc-gc:hud-upload-bgra-memcpy]",
+    "fix": "Rewrite _refresh_ui_overlay_texture's upload body: keep the 0.57ms crc32 fingerprint early-out (:79-95, verified), then primary path = full-surface memcpy: dst = memoryview(tex.modify_ram_image()).cast('B'); dst[:] = memoryview(surf.get_view('1')).cast('B') — measured 0.69ms, pixel-identical, keeps the existing texture_scale=(1,-1) GPU Y-flip. Keep the row-diff + band-slice variant (band write measured 0.04ms/180 rows) as a fallback selectable by env if igLoop shows full-texture DMA cost on this iGPU. NEVER setRamImageAs('RGBA'). One-time get_masks()/pitch assert with tobytes('BGRA') fallback (8.6ms, still no 50ms swizzle). Views must not outlive the function (get_view locks the surface). GUARDRAIL NOTE: this SUPERSEDES, not reverts, the WK123 multi-band guardrail — same pixels, strictly less CPU; update 11-fps-performance-guardrails.mdc wording when shipping.",
+    "expected_gain": "hudU ~12-14ms -> ~1.3-4ms at maximized (~+8-13ms/frame => 23 -> ~29-31 fps from this alone); ~4-6ms windowed. Eliminates the 25-69ms hudU hitch class entirely (spawn/toast frames) and ~190MB/s of 8.3MB bytes churn feeding GC.",
+    "risk": "modify_ram_image marks the whole texture dirty -> full ~8MB GPU DMA per changed frame (the >50% path already did this regularly; UMA iGPU copy is cheap — verify the dt-minus-CPU gap doesn't grow via the igLoop timer). Surface-lock leak if a view escapes. Byte-order assumption guarded by the startup mask assert.",
+    "effort": "S",
+    "confidence": "confirmed",
+    "evidence": [
+     "game/graphics/ursina_app_ui_overlay.py:97 — verified this session: raw_data = pygame.image.tobytes(surf,'RGBA') after the fingerprint early-out at :87-95",
+     "game/graphics/ursina_app_ui_overlay.py:154-176 (PNMImage band round-trip), :207-210 + :218/:221/:224 (setRamImageAs full fallback paths), :226 (_hud_prev_raw 8.3MB retention)",
+     "Measured (two independent explorers, this box): tobytes 7.60/8.02ms; band PNM 7.24-10.65ms; setRamImageAs FULL 50.39/52.83ms; direct memoryview band 0.04ms; full memcpy 0.69ms; byte-equality proof bytes(tex.get_ram_image())==surface native view",
+     "tmp/wk123/soak_out_fast_maximized.log: hudU avg 11.6-14.2ms, spikes 25.6-68.8ms across 1303 slowframes",
+     "game/display_manager.py:121 (engine.screen = SRCALPHA surface — the exact surface benchmarked)"
+    ]
+   },
+   {
+    "rank": 3,
+    "id": "text-font-cache-patch",
+    "title": "Patch Ursina Text font/resolution properties: per-Text FontPool.load_font reload + unbounded model-path growth is the spawn-hitch root cause (22x measured fix)",
+    "stack": "S2-spawn-hitch",
+    "mechanism": "Every unit spawn creates 1-2 Ursina Text labels (name at ursina_unit_sync.py:186/:276/:340/:396, gold at :192, tc at :444-451, all via ursina_unit_overlays.py:163-173 — creation site verified this session). Text.__init__ runs font_setter on EVERY construction (site-packages/ursina/text.py:52-65, :266-287): getModelPath().append_path(fonts dir) — a DUPLICATE dir per Text, model-path measured growing 16->216 dirs over ~200 Texts — then FontPool.load_font (4.1ms, 73% of cost) then font.clear() wiping the shared glyph cache. Measured: Text creation 5.25-6.04ms (one explorer) to 21ms (another, colder conditions), DEGRADING 5.9->7.3ms as the session accrues — a previously unknown time-degradation amplifier that directly threatens the min15-20 gate. A 6-enemy wave entering the zoomed-out viewport = ~35-40ms in ONE frame. Verified: attribute-level patching of Text.font_setter does NOT work (generate_properties_for_class bakes properties); class-property replacement does. [Merged: spawn-hitch:text-font-cache-patch (confirmed, root cause) + frame-loop:text-label-pool-spawn-hitch measurements]",
+    "fix": "Startup monkeypatch next to the existing prewarm in game/graphics/ursina_app.py:289-301: replace utext.Text.font with property(orig.fget, cached_setter) using a {font_name: font_object} memo (only first load falls through — also stops the model-path append), and Text.resolution with a guarded setter that no-ops when abs(getPixelsPerUnit()-value)<eps (REQUIRED: sharing the font object otherwise hits Panda's get_num_pages()==0 assert — reproduced). Measured result with exactly this patch: Text creation median 0.27ms (22x), full hero-spawn render bundle (billboard+HP+name) 6.6ms -> 0.84ms (8x). Guard with try/except + stock fallback for ursina upgrades. One live screenshot to confirm labels pixel-identical.",
+    "expected_gain": "Hero-hire spike shrinks ~5-11ms; 6-unit wave burst ~35-40ms -> ~4ms; kills the monotonic per-spawn slowdown and unbounded model-path growth taxing every later font/model lookup. Converts the visible spawn/wave micro-hitch (gate criterion #2) into sub-frame noise. Still required even under instancing-default (labels exist when zoomed in).",
+    "risk": "Monkeypatching third-party properties — ursina upgrade could rename the setter (fallback guard). Shared-font semantics are UNCHANGED from stock (FontPool already shares; stock just kept clearing the glyph cache). Custom-resolution Texts would keep the default unless the guard falls back — none exist in game labels.",
+    "effort": "S",
+    "confidence": "confirmed",
+    "evidence": [
+     "game/graphics/ursina_unit_overlays.py:163-173 — verified this session: lab = Text(text=..., parent=ent, billboard=True, ...) on first label sync",
+     "site-packages/ursina/text.py:52-65 (__init__ sets self.font every time), :266-287 (font_setter: append_path + load_font + font.clear()), :355 (resolution assert on shared font)",
+     "MEASURED: load_font 165ms/40 calls (cProfile, 73% of Text cost); model-path 16->216 dirs; Text creation 5.9->7.3ms degradation; with patch: 0.27ms median, spawn bundle 6.6->0.84ms",
+     "VERIFIED: attribute patch ineffective (baked properties); class-property replacement effective; resolution-setter assert reproduced and fixed by the guard"
+    ]
+   },
+   {
+    "rank": 4,
+    "id": "overlay-dirty-gates",
+    "title": "Dirty-gate all no-change overlay writes (enabled=True unstash storm, facing scale_x/rotation_y, building HP bar) — measured ~6ms/frame of pure no-op",
+    "stack": "S4-render-sync-quickwins",
+    "mechanism": "Every visible unit, every frame, with zero state change: sync_ks_facing_overlay unconditionally writes child.scale_x + child.rotation_y (ursina_unit_overlays.py:69-78; 9.37us/child measured; 5 hero children :301-304, 3 enemy :307-310); sync_hp_bar re-runs hp_bg/hp_fg.enabled=True + configure calls (:233-236); name label (:178 — verified this session: lab.enabled=True every frame in the else-branch), gold label (:264-265), tc gold (ursina_unit_sync.py:455). Ursina's enabled setter has NO same-value gate — hasattr + unstash + loose_children walk every time (entity.py:191-209), 9.25us per redundant write; 400 redundant unstash calls measured at 3.5ms raw. Steady-state per-unit: hero ~101us, enemy ~69us -> ~6.1ms/frame at ~73 in-view units. Same anti-pattern on the damaged-building HP bar (ursina_building_ui.py:177-179) and bounty parts (ursina_misc_props_sync.py:147-150). WK58 precedent: the identical gate on buildings was worth 1.5-2ms. [Merged: render-sync:overlay-dirty-gates (confirmed) + alloc-gc:overlay-enabled-unstash-gate]",
+    "fix": "Mirror the existing _ks_last_* pattern: (a) stamp _ks_last_facing per overlay child and early-return when unchanged; (b) gate every enabled write with `if not getattr(x,'_enabled',True): x.enabled = True` (the getter is a plain attr read, entity.py:188-189) — gate on the REAL _enabled attr, not a shadow flag, so external disables stay correct; (c) configure_ks_overlay only at create; (d) key building HP bar writes on (hp,max_hp); (e) gate bounty part positions on last-pos; (f) hoist lazy imports in _facing_from_dto wrappers (ursina_renderer.py:406-419). Files: ursina_unit_overlays.py, ursina_building_ui.py, ursina_misc_props_sync.py, ursina_unit_sync.py:455.",
+    "expected_gain": "~5.5-6.5ms/frame on the legacy default at the gate scenario (measured 6.1ms no-change sync, >90% skippable): legacy rend 23.3 -> ~17.5ms (~+1.5-2.5 fps now). Retains value as the legacy fallback path's floor and for zoomed-in overlay scenarios after the instancing flip.",
+    "risk": "Very low — behavior-identical when gates track real state. Facing gate must key per-child (children created lazily after parent facing settled). Anything disabling an overlay elsewhere already writes _enabled, so the real-attr gate is safe.",
+    "effort": "S",
+    "confidence": "confirmed",
+    "evidence": [
+     "game/graphics/ursina_unit_overlays.py:69-78, :178 (verified this session), :233-236, :264-265, :301-310",
+     "game/graphics/ursina_unit_sync.py:208, :279, :455; game/graphics/ursina_building_ui.py:177-179; game/graphics/ursina_misc_props_sync.py:147-150",
+     "site-packages/ursina/entity.py:191-209 (enabled setter unstash+loose_children, no same-value gate), :727-730 (scale_x), :646-648 (rotation_y)",
+     "Measured: facing no-change 9.37us/call; redundant enabled=True 9.25us; 400 raw unstash = 3.48ms; per-unit steady-state hero 101us/enemy 69us -> ~6.1ms @73 units",
+     "Precedent: game/graphics/ursina_entity_render_collab.py:270-275 (WK58 building dirty-gate worth 1.5-2ms)"
+    ]
+   },
+   {
+    "rank": 5,
+    "id": "prefab-swap-orphan-free",
+    "title": "Fix uncovered C1-class leak: construction stage-swap destroys the prefab root but orphans ~26 piece children into scene.entities (measured +84/5 cycles)",
+    "stack": "S2-spawn-hitch",
+    "mechanism": "On every construction-stage swap (plot->20->50->final) and prefab-path change, get_or_create_prefab_building_entity (ursina_entity_render_collab.py:100-107) and the 3d-building variant (:71-78) call u.destroy(ent) WITHOUT freeing children; ursina destroy's child recursion is commented out, so the ~26 piece Entities from _load_prefab_instance (ursina_prefabs.py:296-308) stay in scene.entities forever (Panda nodes detach so it's visually invisible). Measured: 5 instantiate+destroy cycles grew scene.entities 238->322 (+84 = exact summed piece counts). The WK123 C1 fix covers only unit/dead-building paths (ursina_renderer.py:736, ursina_building_sync.py:105). Real play (neutral building every ~6s x 3-4 stages each) accrues ~1.5-2k orphans by minute 15-20, inflating the per-frame Ursina entity walk and every destroy's linear scan — the SAME mechanism C1 proved costs multiple fps by minute 15. WK123 soaks force-spawned constructed buildings, so this never showed in the gate logs.",
+    "fix": "In both destroy branches of ursina_entity_render_collab.py (:73-77, :100-107), call ursina_unit_overlays.free_entity_overlays(ent) before u.destroy(ent) — its children/loose_children sweep (ursina_unit_overlays.py:132-139) already destroys piece children and the named-attr sweep frees _ks_hp_bar/_ks_label/_ks_gold_label. Add a stage-swap regression test mirroring tests/test_wk123_scene_entity_leak.py asserting scene.entities returns to baseline after N swap cycles.",
+    "expected_gain": "Protects 'FPS flat minute 15-20' in construction-heavy real play — prevents re-emergent time-degradation (the exact failure mode the gate measures) plus keeps each destroy O(live). Without this, every other win decays over the session.",
+    "risk": "Very low — same pattern as the shipped C1 fix; free_entity_overlays already try/excepts destroy. Only edge: double-destroy of an already-freed child (already guarded).",
+    "effort": "S",
+    "confidence": "confirmed",
+    "evidence": [
+     "game/graphics/ursina_entity_render_collab.py:100-107 and :71-78 (u.destroy(ent) with no child free)",
+     "game/graphics/ursina_prefabs.py:296-308 (pieces created parent=root -> orphans)",
+     "site-packages/ursina/destroy.py ~:87-91 (child recursion commented out), ~:101 (linear 'entity in scene.entities' scan per destroy)",
+     "MEASURED: scene.entities 238 -> 322 after 5 instantiate+destroy cycles (+84 = 25+26+5+21+7 pieces)",
+     "game/graphics/ursina_renderer.py:736 + ursina_building_sync.py:105 (C1 fix covers only these paths)"
+    ]
+   },
+   {
+    "rank": 6,
+    "id": "hud-radar-throttle-10hz",
+    "title": "Throttle radar minimap dot redraw to ~10Hz so most frames hit the existing 0.57ms fingerprint early-out",
+    "stack": "S3-hud-upload",
+    "mechanism": "render_radar_minimap redraws ~190 dots every frame (hud_radar.py:90-244: buildings :133-158, POIs :170-214, enemies :216-223, heroes :226-237, called unconditionally from hud.py:895), so the 224x180 radar band has changed pixels virtually every frame and the fingerprint early-out at ursina_app_ui_overlay.py:87-95 (verified this session) never fires — forcing the full changed-frame upload pipeline every frame. Also ~1-1.5ms of hudR: per-dot function-local 'from game.world import Visibility' + try/except + world_to_grid (:120-131). This was WK123's deferred lever (b), explicitly pre-approved as a Jaimie-call tradeoff, now authorized. [Merged: hud-upload:hud-radar-throttle-10hz + prior-art:hud-radar-upload-throttle]",
+    "fix": "Sim-time throttle (sim_now_ms, pause-safe) around _render_radar_minimap: re-render the dot overlay every ~100ms into a cached 224x180 surface, blit the cached surface on intermediate frames (identical pixels keep the band clean so the fingerprint fires). Hoist the Visibility import and precompute world->radar scale outside the loops. Force redraw on pin/selection/POI-discovery change.",
+    "expected_gain": "Most mid-wave frames collapse hudU to the 0.57ms fingerprint path: combined with hud-bgra-zero-copy, hudU avg ~12 -> ~1.5-2ms maximized; standalone ~12 -> ~4-5ms. Also cuts the full-texture GPU DMA to ~1-in-3 frames (~1-2ms of the untracked bucket) and ~1ms of hudR. Net ~3-5ms/frame on top of zero-copy at maximized.",
+    "risk": "Radar dots update at 10Hz — sub-pixel motion per frame at 224px, imperceptible. Cache invalidation needed on radar-relevant events. No density/enemy-count impact (guardrail-safe).",
+    "effort": "S",
+    "confidence": "high",
+    "evidence": [
+     "game/ui/hud_radar.py:120-131 (in-loop import per dot), :133-237 (per-frame dot loops); game/ui/hud.py:894-895 (unconditional call)",
+     "game/graphics/ursina_app_ui_overlay.py:87-95 — verified this session: quick-fingerprint early-out exists and returns before tobytes; fingerprint measured 0.57ms",
+     "tmp/wk123/soak_out_fast_maximized.log: hudU 11.6-14.2ms every 120-frame window (no clean windows = dirty every frame)",
+     ".cursor/plans/wk123_fps_time_degradation.plan.md:239 — verified this session: lever (b) 'throttle radar/HUD upload at high res' listed as the named Jaimie-call lever"
+    ]
+   },
+   {
+    "rank": 7,
+    "id": "lazy-hero-profiles",
+    "title": "Stop building hero-profile snapshots in every get_game_state call (per sim tick + render pass + pointer path) — build lazily on HUD access",
+    "stack": "S5-sim-tick",
+    "mechanism": "get_game_state builds a HeroProfileSnapshot (~8 frozen dataclasses + asdict recursion) for EVERY alive+recently-dead hero on EVERY call (sim_engine.py:449-470 / :452-470); it is called once per SIM TICK (lifecycle.py:32 — 1-2 ticks/frame at FAST), once per frame by the HUD render pass (frame_context.py:47), and once per frame by the pointer path while panning (ursina_app_input.py:71-80,106 — cache key includes camera pos/rot). Profiled: 7,848 builds/300 ticks, 0.519s cum (13% of tick); A/B caching saved 0.86ms/tick. Repo-wide grep: hero_profiles_by_id is consumed ONLY by HUD code (hud.py:767/1046, hud_left_layout.py:342, hud_panel_buttons.py:198, hud_watch_card.py:58) + engine.py:965 — nothing sim-side reads it. [Merged: sim-tick:lazy-hero-profiles (confirmed A/B) + frame-loop:lazy-hero-profiles-per-tick + alloc-gc:hero-profile-lazy-build]",
+    "fix": "Replace the eager dict with a lazy Mapping (dict subclass for test compat) capturing (live hero list, now_ms, _profile_memory_version, sim_tick): builds-and-caches a profile on first .get/__getitem__; .keys()/__contains__ served from the id set without building (preserves 'hero_alive = id in profiles' and the dead-hero TTL window semantics at sim_engine.py:466-469). Alert-watcher low-health check gets a cheap vitals path. Keep build_hero_profile_snapshot itself unchanged (AI ContextBuilder still calls it at LLM cadence). Update the 2 tests asserting dict-ness.",
+    "expected_gain": "~0.86ms/tick measured x 1-2 ticks/frame + the render/pointer calls = ~1.5-3ms/frame at FAST with 20+ heroes (+1-2.5 fps at the 30fps margin) plus large gen0 alloc reduction (8 dataclasses x ~26 heroes x 20Hz removed).",
+    "risk": "Low: identical snapshot contents when accessed (capture _ms at creation). Tests test_hero_profile_integration.py:151 / test_wk123_dead_hero_ttl.py:53 need Mapping/dict-subclass semantics. WK67 digest unaffected (profile building is read-only; same guarantee C8 relied on).",
+    "effort": "S",
+    "confidence": "confirmed",
+    "evidence": [
+     "game/engine_facades/lifecycle.py:32 (get_game_state per sim tick); game/sim_engine.py:449-470 (per-call build loop); game/sim/hero_profile.py:424-560",
+     "game/presentation/frame_context.py:47 (render-pass call); game/graphics/ursina_app_input.py:71-80,106 (pointer-path call invalidated every frame while panning)",
+     "Profiled: 7,848 builds/300 ticks = 0.519s cum; A/B cached delta +0.86ms/tick; 67k _asdict_inner calls/300 ticks",
+     "Consumer grep (3 independent explorers): HUD-only — hud.py:767,1046; hud_left_layout.py:342; hud_panel_buttons.py:198; hud_watch_card.py:58; engine.py:965"
+    ]
+   },
+   {
+    "rank": 8,
+    "id": "prefab-path-resolve-cache",
+    "title": "Cache prefab JSON path resolution + parsed JSON — currently a Path.is_file() stat per building per frame (87us each on this OneDrive tree)",
+    "stack": "S4-render-sync-quickwins",
+    "mechanism": "sync_snapshot_buildings calls _resolve_prefab_path for EVERY in-view building EVERY frame (ursina_building_sync.py:200-202), ending in Path.is_file() (ursina_prefabs.py:222-233) — measured 87.4us/call (bare is_file 64.4us) on this OneDrive-synced tree => ~2.1ms at 24 buildings, ~8.7ms at 100. Unconstructed buildings stat MULTIPLE candidates per frame via _resolve_construction_staged_prefab/_first_existing (:168-219) for the whole construction duration. Separately each actual instantiation re-reads + re-parses the prefab JSON from disk (:248). The WK122 prewarm only caches mesh parses — path resolution and JSON parse were never cached. [Merged: render-sync:prefab-path-resolve-cache (confirmed) + wk58 deferred 2.B + spawn-hitch:prefab-instance-pool stage 1]",
+    "fix": "Module-level memos in ursina_prefabs.py: (a) _resolve_prefab_path keyed (bts, is_lair); (b) staged resolver keyed (base_prefab, tw, th, stage_bucket); (c) parsed-JSON dict keyed on path (files never change at runtime). ~15 lines total, no behavior change; clear memos under the existing KINGDOM_URSINA_PREFAB_TEST env for dev iteration.",
+    "expected_gain": "~2.0ms/frame at 24 buildings scaling to ~8.5ms at the 100-building late-game city (the gate window IS late-game); removes the multi-stat staged-resolver cost during construction phases and the JSON re-parse component of construction hitches.",
+    "risk": "Near zero — prefab JSONs added/deleted mid-session would not be picked up (never happens in play).",
+    "effort": "S",
+    "confidence": "confirmed",
+    "evidence": [
+     "game/graphics/ursina_building_sync.py:200-204 (per-building per-frame resolve + staged resolver)",
+     "game/graphics/ursina_prefabs.py:222-233 (is_file), :168-180 (_first_existing loops), :183-219 (staged multi-stat), :248 (json.loads(read_text()) per instantiation), :368-394 (prewarm covers only load_model)",
+     "Measured: _resolve_prefab_path 87.40us/call; bare Path.is_file() 64.41us on this tree"
+    ]
+   },
+   {
+    "rank": 9,
+    "id": "tree-growth-incremental",
+    "title": "Incrementally update the 2083-entry _tree_growth_by_tile dict instead of rebuilding it every sim tick (growth changes only at 2-minute boundaries)",
+    "stack": "S5-sim-tick",
+    "mechanism": "Verified this session: sim_engine.py:715-738 does pre_keys=set(...) then a full dict comprehension over self.trees (Tree.key property = fresh tuple alloc per access, nature.py:20-22) plus a set-diff, EVERY tick when trees exist. NatureSystem only changes growth at 2-minute stage boundaries (systems/nature.py:53-61), so >99.9% of rebuilds are byte-identical. Measured: 0.445-0.891ms/tick at ~2083 trees, 624,900 Tree.key calls/300 ticks; ~2,100 tuple allocs/tick making it the single biggest gen0 GC feeder (gen0 pause measured 1.88ms every ~7-15 frames at threshold 50000). x2-3 ticks/frame at FAST. Guardrail-safe: zero change to tree density or visuals. [Merged: sim-tick:incremental-tree-growth-dict (confirmed) + alloc-gc:tree-growth-dict-rebuild + prior-art wk123 C5]",
+    "fix": "NatureSystem.tick returns/appends the trees whose growth actually changed plus new saplings; SimEngine updates only those keys and removes keys in chop/footprint-removal paths (which already know the tile); new-sapling TileType stamping keys off the spawn list. Cache Tree.key in __post_init__ (coords never change). Regression test: incremental dict == full rebuild after N ticks under DETERMINISTIC_SIM.",
+    "expected_gain": "~0.9-1.8ms/frame at FAST + ~3x slower gen0 cadence (fewer 1.9ms GC pauses) — roughly +1 fps average plus measurable jitter reduction.",
+    "risk": "Low: consumers see identical values; a missed chop/removal site would leave stale blocked tiles — covered by the parity regtest. Feeds buildability/blocking + WK67 digest path: incremental update must produce an identical mapping.",
+    "effort": "S",
+    "confidence": "confirmed",
+    "evidence": [
+     "game/sim_engine.py:715-738 — verified this session: pre_keys set + full dict comprehension {t.key: float(getattr(t,'growth_percentage',0.25))} + new_keys set-diff every tick",
+     "game/systems/nature.py:53-61 (discrete 2-minute stage boundaries); game/entities/nature.py:20-22 (Tree.key tuple per access)",
+     "Measured: rebuild 0.445/0.891ms per tick @~2083 trees; 624,900 key calls/300 ticks; gen0 collect 1.88ms at threshold 50000 (ursina_app.py:285)"
+    ]
+   },
+   {
+    "rank": 10,
+    "id": "poi-discovery-throttle",
+    "title": "Throttle POI discovery to every ~8 ticks + precompute POI centers (currently O(POIs x heroes) with hypot+getattr chains every tick)",
+    "stack": "S5-sim-tick",
+    "mechanism": "check_poi_discovery runs EVERY tick (sim_engine.py:936): for each of ~29 undiscovered POIs it recomputes the center from poi_def.size then math.hypot against every alive hero with per-hero getattr fallbacks (poi_discovery.py:30-48). Profiled 0.271s tottime/300 ticks; A/B no-op = +0.59ms/tick.",
+    "fix": "Run every 8th tick (0.4s at FAST — heroes cover <1 tile in that window vs the discovery radius, so no missed discoveries); cache (cx,cy) per POI at placement; iterate a shrinking _undiscovered_pois list; squared-distance compare.",
+    "expected_gain": "~0.55 of 0.59ms/tick = ~0.8-1.1ms per 2-tick frame at FAST.",
+    "risk": "Very low: discovery toast/reveal fires up to 0.4s later. WK67 digest scenario has no POI approach — verify anyway.",
+    "effort": "S",
+    "confidence": "confirmed",
+    "evidence": [
+     "game/sim/poi_discovery.py:30-48 (per-tick full POIxHero scan); game/sim_engine.py:936 (unconditional call)",
+     "Measured: 0.271s tottime/300 ticks (cProfile); A/B no-op delta +0.59ms/tick"
+    ]
+   },
+   {
+    "rank": 11,
+    "id": "snapshot-once-per-frame",
+    "title": "Build RenderSnapshot + FrameContext ONCE per frame — it currently runs twice (Ursina loop + render_pygame) with no sim tick between",
+    "stack": "S4-render-sync-quickwins",
+    "mechanism": "ursina_app_frame.py:165 builds the snapshot for renderer.update, then :184 render_pygame -> EngineRenderCoordinator.render -> FrameContext.build (render_coordinator.py:42) calls engine.build_snapshot AGAIN (frame_context.py:46); the tick is at :93 so the second snapshot is byte-equivalent waste. Each pass: ~120 UnitDTO (5.6us each) + ~45 BuildingDTO (7.2us) + tuple(self.trees) over 2083 + bounty_system.update_ui_metrics over heroes x enemies x buildings (sim_engine.py:610-618, :652-668) = measured 1.03ms/pass x2 plus ~600 tracked allocs/frame (non-slots frozen dataclasses = 2 allocs each). [Merged: alloc-gc:frame-snapshot-dedup + architecture:frame-context-once-dirty-sync + render-sync:snapshot-dto-trim]",
+    "fix": "run_frame builds one FrameContext before renderer.update and render_pygame consumes the cached one (engine._frame_ctx keyed on a per-frame serial); update_ui_metrics runs once (optionally throttle to ~4Hz — it feeds bounty flag text only). Optional extension: skip enemy DTOs on fog-hidden tiles sim-side (renderer drops them anyway at ursina_unit_sync.py:229-234) AFTER verifying pygame/minimap consumers.",
+    "expected_gain": "~1.5-2.5ms/frame at the gate (duplicate DTO+metrics pass removed) + ~600 fewer tracked allocs/frame feeding gen0.",
+    "risk": "Very low for the dedup (provably identical snapshots — no tick between). The fog-skip extension changes what non-Ursina consumers see — gate it separately on the WK67 digest + qa_smoke.",
+    "effort": "S",
+    "confidence": "high",
+    "evidence": [
+     "game/graphics/ursina_app_frame.py:93 (tick), :165 (snapshot #1), :184 (render_pygame)",
+     "game/engine_facades/render_coordinator.py:42-44 + game/presentation/frame_context.py:45-49 (snapshot #2 + game_state per frame)",
+     "game/sim_engine.py:610-618 (update_ui_metrics per pass), :652-668 (DTO tuple builds)",
+     "Measured: 120 UnitDTO=0.729ms + 45 BuildingDTO=0.302ms per pass, x2/frame; UnitDTO non-slots dataclass = 2 tracked allocs each (render_dto.py:40-86)"
+    ]
+   },
+   {
+    "rank": 12,
+    "id": "scene-entities-ignore",
+    "title": "Set ignore=True on all renderer-managed entities + mouse.traverse_target=None — Ursina's per-entity update walk and dead collision traverses are pure waste",
+    "stack": "S1-engine-config",
+    "mechanism": "Ursina's _update iterates ALL scene.entities every frame (main.py:196-220): removal-membership test, .enabled property, has_disabled_ancestor parent-chain walk (entity.py:1298-1311), hasattr(update), scripts loop — measured 1.3ms (one explorer) to 5.3ms (another, with 1-deep parenting) at the legacy 536-entity scene, dropping to 0.09ms with ignore=True; the same walk re-runs on every key event incl. held-WASD repeats (main.py:286-317). mouse.update runs two CollisionTraverser passes + unhover scan per frame (mouse.py:213-245) though Kingdom has ZERO world colliders — picking is analytic (ursina_pick.py:29-79) and no Kingdom render entity defines update() (grep: only ursina_app.py:458). [Merged: panda-config:scene-entities-ignore-flag + frame-loop:ursina-update-walk-trim stage (a); stage (b) custom-task replacement deferred as optional follow-up]",
+    "fix": "ent.ignore=True at every creation site: get_or_create_entity/_3d_building/_prefab_building (ursina_entity_render_collab.py:57,:81,:110 incl. prefab children), overlay children (ursina_unit_overlays.py:164,:209,:218,:255,:279), fog overlay quad, HUD quad, terrain/misc props. NOT EditorCamera or window.fps_counter. Plus mouse.traverse_target=None (the escape hatch mouse.py:39 documents). Dev assert that no renderer-managed entity defines update/input/on_click.",
+    "expected_gain": "~1-5ms/frame at today's scene (measurement spread between explorers — the A/B soak settles it), scaling linearly with entity count (prevents a new wall at the hundreds-of-enemies goal) + smoother WASD panning (input walk).",
+    "risk": "ignore=True skips input propagation to those entities — safe today (no on_click/hover consumers; UI hover is pygame-side); a future entity needing ursina update() must not get the flag — mitigate with the creation-helper + test. mouse change permanently disables ursina world hover (unused).",
+    "effort": "S",
+    "confidence": "high",
+    "evidence": [
+     "site-packages/ursina/main.py:196-220 (walk body), :286-317 (per-input walk); entity.py:1298-1311 (has_disabled_ancestor chain)",
+     "site-packages/ursina/mouse.py:39 (traverse_target=None escape hatch), :213-245 (two traverses + unhover per frame)",
+     "Measured: 1.299ms @539 entities (flat) / 5.287ms @536 (1-deep parenting); 0.091ms with ignore=True; unhover 0.034ms",
+     "game/graphics/ursina_pick.py:29-79 (analytic picking, no colliders); ursina_entity_render_collab.py:84 (collider=None); grep: no Kingdom render entity defines update",
+     ".cursor/plans/wk123_fps_time_degradation.plan.md:229 (scene.entities 536 legacy / 222 instanced at spec)"
+    ]
+   },
+   {
+    "rank": 13,
+    "id": "label-zoom-lod-pooled",
+    "title": "Zoom-LOD cull name/gold labels when zoomed out (legacy now) + fixed pool of pre-created Text labels at near zoom (instanced-path label parity later)",
+    "stack": "S4-render-sync-quickwins",
+    "mechanism": "At the gate zoom the ~97-100 scale-10 billboard Text labels are physically illegible yet each is synced (~16us) and drawn (every Text = its own unbatched TextNode draw — the worst node type on this iGPU) every frame. WK123 explicitly listed 'overlay LOD-cull when zoomed out' as deferred lever (a), now authorized (verified plan :238-239 this session). Double duty: this is ALSO the label-parity mechanism for the instancing flip — at the gate zoom labels cull to zero (preserving the measured 31.5 fps), and at near zoom a fixed pool of ~40 pre-created Text entities is positioned onto on-screen units (no runtime Text construction = no spawn hitch), simpler and lower-risk than the label-card atlas variant (deferred). [Merged: render-sync:label-zoom-lod + prior-art:overlay-lod-zoom-cull + instancing-parity:inst-label-cards-lod (pooled-Text variant chosen over atlas) + architecture pooled-label tier]",
+    "fix": "Compute labels_visible once per frame from camera zoom/height (renderer already reads camera per frame in ursina_frustum.py:50-56); when False skip ensure_ks_name_label/sync_hero_gold_label and disable existing labels ONCE (gated). Hysteresis on the threshold; env-tunable KINGDOM_LABEL_ZOOM_CULL default on; keep HP bars (gameplay info, readable as strips); keep labels for the selected/pinned hero regardless of zoom. Phase 2 (instancing flip): the near-zoom pool assigns labels to nearest on-screen units via .text mutation (0.13ms measured). Screenshot-verify both sides of the threshold.",
+    "expected_gain": "Legacy at gate zoom: removes ~100 TextNode draws + ~1.5ms sync => +1.5-3 fps. Under instancing-default: preserves the full 31.5/25.2 measured envelope (labels cost zero at the gate) while giving zoomed-in feature parity.",
+    "risk": "Visible behavior change (labels pop at a zoom threshold) — explicitly pre-approved lever; needs hysteresis + screenshot review at both zooms per memory rules.",
+    "effort": "S",
+    "confidence": "high",
+    "evidence": [
+     ".cursor/plans/wk123_fps_time_degradation.plan.md:238-239 — verified this session: '(a) overlay LOD-cull when zoomed out (labels illegible anyway)' named as the deferred Jaimie-call lever",
+     "game/graphics/ursina_unit_sync.py:186,:275-276,:340,:396,:437 (label sync sites); ursina_unit_overlays.py:146-179 (verified creation/update path this session)",
+     ".cursor/plans/wk123_fps_time_degradation.plan.md:229 (73 name + 24 gold Text nodes at spec); measured Text .text mutation 0.13ms vs 5.3-21ms construction",
+     "game/graphics/ursina_frustum.py:50-56 (camera height read per frame — the LOD signal)"
+    ]
+   },
+   {
+    "rank": 14,
+    "id": "astar-burst-cap-tile-goals",
+    "title": "Tile-quantize chase goals + halve the per-tick A* burst budget — single ticks currently carry 6-7.5ms of pathfinding (the sim-side hitch signature)",
+    "stack": "S5-sim-tick",
+    "mechanism": "advance_along_path_to keys replans on the PIXEL position of a moving target (navigation.py:250), so every chasing enemy invalidates its goal every tick and replans when its 500ms commit window expires (:255-267) — steady ~4.3 plans/tick that periodically align into bursts; the per-tick budget permits 24 plans/24k expansions (navigation.py:30-31, reset at sim_engine.py:694-695), so aligned bursts legally pack 6-7.5ms of A* into ONE tick — matching the measured worst ticks (11-35ms incl. fog). At FAST a 2-tick frame can carry two bursts. Hero-spawn ticks also force a first A*.",
+    "fix": "(a) Quantize goal_key to the goal TILE (world.world_to_grid) so a target moving within one tile never invalidates the path; (b) lengthen _path_commit_duration_ms to ~1000ms for targets >6 tiles away; (c) drop MAX_PLANS_PER_FRAME to ~8 and MAX_EXPANSIONS to ~8000 — the existing deferred-return contract (callers keep old path / direct-steer, navigation.py:153-159, hero.py:532-544) amortizes overflow gracefully.",
+    "expected_gain": "Plan demand ~4.3 -> ~1-2/tick; single-tick A* capped ~2-3ms instead of 6-7.5+. Large p99/hitch improvement (the visible sim-side micro-hitches incl. spawn ticks), ~0.2-0.5ms/tick average.",
+    "risk": "Medium-low: chase paths refresh ~1 tile later (slightly less aggressive cornering); WK67 digest moves (authorized — re-baseline).",
+    "effort": "S",
+    "confidence": "high",
+    "evidence": [
+     "game/systems/navigation.py:250-267 (pixel goal_key + 500ms commit), :30-31 (24 plans/24k expansions per tick); game/sim_engine.py:694-695 (per-tick reset)",
+     "game/systems/pathfinding.py:113-115 (per-plan cap dist*12 up to 8000)",
+     "Measured: top-15 worst ticks carry 6.04-7.46ms of A* in one tick; avg 4.3 plans/tick over a 6000-tick soak"
+    ]
+   },
+   {
+    "rank": 15,
+    "id": "unit-prewarm-extension",
+    "title": "Extend the startup prewarm: unit atlas build+GPU upload (269ms), projectile/magic/heal textures, font + first-Text, shader warm, instanced-renderer first tick",
+    "stack": "S2-spawn-hitch",
+    "mechanism": "prewarm_building_prefab_models covers ONLY building meshes (ursina_app.py:289-301). Still cold at first gameplay use: the 2048x2048 unit atlas builds lazily on the FIRST unit render (unit_atlas.py:34-40 via ursina_renderer.py:426 — measured 269ms CPU + ~16MB GPU upload in that frame); projectile/magic/heal textures generate on the first volley (ursina_misc_props_sync.py:59-73); first Text loads the font (314ms worst first-ever measured) and first instances of each shader trigger driver GLSL compiles (5-50ms each on iGPUs). [Merged: spawn-hitch:startup-prewarm-units-fonts-vfx + prior-art:unit-asset-prewarm-spawn-hitch]",
+    "fix": "In the existing prewarm block: (a) UnitAtlasBuilder.get().get_ursina_texture(); (b) build the three VFX textures via their TerrainTextureBridge cache keys; (c) one hidden warm bundle (billboard quad + Text + HP quad) rendered for one frame behind loading to force font/glyph/shader/state warm; (d) tick the instanced renderer once (its shaders/buffer textures warm on first update — matters once instancing is default).",
+    "expected_gain": "Removes the 'first hero / first arrow / first label' hitch class (~270ms + 16MB upload worst single frame) — players attribute these to spawning. No steady-state change; +0.3-0.5s startup.",
+    "risk": "Minimal — extends a shipped pattern; verify the warm frame doesn't flash visibly.",
+    "effort": "S",
+    "confidence": "high",
+    "evidence": [
+     "game/graphics/ursina_app.py:289-301 (prewarm hook, models only); game/graphics/unit_atlas.py:34-40,:73-111 (lazy singleton + 16MB lazy GPU texture); game/graphics/ursina_renderer.py:426-427 (first call = first unit frame)",
+     "game/graphics/ursina_misc_props_sync.py:59-73 (lazy VFX textures)",
+     "Measured: UnitAtlasBuilder.get() 269.0ms / 540 frames; Text first-ever font load 314ms"
+    ]
+   },
+   {
+    "rank": 16,
+    "id": "inst-hp-bars",
+    "title": "Instanced HP bars: ONE extra draw call for all unit health bars (per-instance pos + fill fraction, in-shader color) — the key parity piece for the default flip",
+    "stack": "S6-instancing-default",
+    "mechanism": "Legacy creates 2 Entity quads per unit in bin fixed,110 (sync_hp_bar, ursina_unit_overlays.py:186-241; configure_ks_overlay :44-59) — 144 of the 241 measured overlay nodes at spec. The instanced branch returns before ALL unit overlay sync (verified this session: ursina_renderer.py:592-612, `return` at :612 before sync calls at :617-625), so flipping instancing default today silently drops every HP bar — the exact C9 trap that reverted the previous flip. Restoring them as Entities would give back ~3-5ms (plan est. 27-30 fps); instancing them costs ~1 draw + ~0.2-0.4ms CPU pack. [Merged: instancing-parity:inst-hp-bars + render-sync:overlay-batch-renderer HP part + prior-art:instanced-default-overlay-parity HP part]",
+    "fix": "Add an HP-bar pass inside InstancedUnitRenderer: new RGBA32F buffer texture (2 texels/instance: pos+hp_frac; bar dims), one quad GeomNode via the existing _create_instanced_quad pattern (instanced_unit_renderer.py:255-296: OmniBoundingVolume + set_final + set_instance_count) with set_two_sided(True) (C7 invariant), depth off, set_bin('fixed',110) mirroring configure_ks_overlay exactly. Shader = copy of the billboard vertex (instanced_unit_shader.py:31-44) made anisotropic (camRight*v.x*bar_w + camUp*v.y*bar_h + camUp*bar_y); fragment needs NO texture: uv.x<=hp_frac ? (frac>0.5?green:red) : gray — pixel-equivalent to the legacy left-anchored fg-over-bg. Pack inside the existing per-unit loops (heroes :471-492, enemies :495-519, peasants :522-540, guards :542-557, inside-heroes :585-606); skip hp<=0 and spec.hp_bar_w==0; world dims from visual_specs.py:93-173; DTO already carries hp/max_hp (render_dto.py:50-51).",
+    "expected_gain": "Enables the default flip WITHOUT giving back the C7 win: holds ~30-31 fps windowed / ~25 maximized with full HP-bar parity (vs est. 27-30 if restored as Entities). Combined with the flip this is the route to the gate.",
+    "risk": "Shader bar placement/size math (verify via legacy-vs-instanced pixel diff at the deterministic 20-warrior scene per guardrails); fixed-bin tie at 110 with building labels (draw-order tie acceptable); 1024-instance buffer cap must log on overflow.",
+    "effort": "M",
+    "confidence": "high",
+    "evidence": [
+     "game/graphics/ursina_renderer.py:592-612 — verified this session: instanced branch syncs buildings/bounties/rubble then `return`s at :612 before _sync_snapshot_heroes/enemies at :617-625",
+     "game/graphics/ursina_unit_overlays.py:186-241 (two-quad logic to replicate), :44-59 (fixed,110 + depth-off contract)",
+     "game/graphics/instanced_unit_renderer.py:195-201,:255-296,:447-454 (buffer/quad/pack patterns to clone); :243,:253 (C7 set_two_sided lines that must survive)",
+     ".cursor/plans/wk123_fps_time_degradation.plan.md:225-234 — verified this session: C9 correction (241 overlay nodes legacy incl. 144 HP quads, instanced 0; 'NOT shippable as default without overlays'; est. 27-30 with Entity overlays vs 31.5 without)"
+    ]
+   },
+   {
+    "rank": 17,
+    "id": "inst-parity-gap-fixes",
+    "title": "Fix the 5 silent instanced-path divergences blocking the flip: terrain-Y, projectile kinds (magic/heal render as arrows), non-uniform guard/peasant scales, layer gate, shadow ground-follow",
+    "stack": "S6-instancing-default",
+    "mechanism": "Line-by-line diff of both paths: (1) instanced packs flat wy=scale*0.5 (instanced_unit_renderer.py:489,516,537,554,568) vs legacy get_terrain_height+scale*0.5 (ursina_unit_sync.py:165-166) — with TERRAIN_HEIGHT_SCALE=5.0 (config.py:397) units/arrows bury into hills; (2) atlas packs only the arrow VFX frame (unit_atlas.py:99-101) so WK124 wizard 'magic'/cleric 'heal' orbs render as arrows (:574-582 vs legacy per-kind ursina_misc_props_sync.py:77-83); (3) the 1-float scale layout squashes guards (0.5,0.7) and peasants (0.42,0.231) to uniform (instanced_unit_renderer.py:55-56 vs ursina_unit_sync.py:83-86) and ursina_pick assumes legacy heights (ursina_pick.py:90-98) so clicks misalign; (4) layer gate skipped (legacy ursina_unit_sync.py:120-127); (5) blob shadows pinned to y=-0.048 (shadow_instanced_shader.py:39) — wrong on hills once (1) lands. Each alone is a 'reject the flip on sight' visual/correctness bug — what reverted the WK123 Round B flip era.",
+    "fix": "(1) wy=get_terrain_height(wx,wz)+scale*0.5 per pack loop (~1us/call, ~120 calls/frame); (2) pack magic/heal frames into the atlas + select UV by getattr(proj,'kind','arrow') (~10 lines); (3) move to 3 texels/instance carrying scale_x_signed + scale_y, shader stride update — restores proportions AND pick alignment; (4) skip packing when dto.layer != renderer._camera_active_layer; (5) shadow floorY = instancePos.y - abs(scale)*0.5 - 0.002. Keep the 35 existing instancing tests green + pixel-diff verification.",
+    "expected_gain": "No fps change (O(N) trivial adds, ~0.1-0.2ms terrain sampling) — pure correctness that prevents the default flip being rejected, which is what kills the +15fps lever.",
+    "risk": "The 3-texel stride touches unit+shadow shaders simultaneously — a stride bug makes units vanish again (the C7 history). Mitigate: tests + pixel diff; inside-building buffer keeps its current Y (screen-composited at fixed,100).",
+    "effort": "M",
+    "confidence": "high",
+    "evidence": [
+     "game/graphics/instanced_unit_renderer.py:489,516,537,554,568,574-582 (flat Y + arrow-only UV), :55-56 (uniform-scale squash), :39-46 (layout)",
+     "game/graphics/ursina_unit_sync.py:165-166 (terrain-Y), :83-86 (non-uniform scales), :120-127 (layer gate); config.py:397 (TERRAIN_HEIGHT_SCALE=5.0)",
+     "game/graphics/unit_atlas.py:99-101 (only arrow packed); ursina_misc_props_sync.py:77-83,104 (legacy per-kind tex + terrain-Y); shadow_instanced_shader.py:39 (SHADOW_FLOOR_Y); ursina_pick.py:82-99"
+    ]
+   },
+   {
+    "rank": 18,
+    "id": "inst-linear-interp",
+    "title": "Port linear sim_blend interpolation to the instanced path — it currently uses the exponential smoothing pattern prior art REJECTED ('lurch then crawl')",
+    "stack": "S6-instancing-default",
+    "mechanism": "Legacy was fixed in v1.5.7 to linear interpolation via sim_blend_fraction (ursina_renderer.py:554) after exponential constant-alpha blending was explicitly rejected. The instanced renderer does render-only exponential trailing: lerp = 1.0 - exp(-SMOOTHING_SPEED*dt) (instanced_unit_renderer.py:410-413) — the exact rejected pattern; the packaging guide independently documents heroes 'frame skipping / teleporting' under the instanced renderer, matching project memory. Shipping instancing as default ships the rejected motion model — and the gate bar is 'smooth', not just >30 avg.",
+    "fix": "CPU-blend previous+current sim positions with snapshot sim_blend_fraction before packing (cheapest; the legacy machinery and _frame_blend/_frame_tick_id at ursina_renderer.py:439-461 already exist), or pack both positions and blend in-shader. Deterministic-capture tests use tick-based blending.",
+    "expected_gain": "No avg-fps change; eliminates the 20Hz lurch/teleport so the >30 result also FEELS smooth (prior 'jittery at 55fps' lesson: variance/motion matter as much as avg). Required for the flip to be accepted.",
+    "risk": "Mis-blended positions can desync units from instanced HP bars/selection — blend ONCE and feed both passes from the same blended array.",
+    "effort": "M",
+    "confidence": "high",
+    "evidence": [
+     "game/graphics/instanced_unit_renderer.py:410-413 (exponential trailing); game/graphics/ursina_renderer.py:554 + :439-461 (legacy linear sim_blend machinery)",
+     ".cursor/plans/Old Plans/FPS Improvement Not Improving Game Investigation.txt:47-56 (exponential alpha rejected)",
+     ".cursor/plans/packaging_guide_pyinstaller.md:670-674 (hero skip/teleport documented under instanced renderer); project memory: hero perf in frozen build"
+    ]
+   },
+   {
+    "rank": 19,
+    "id": "inst-default-flip",
+    "title": "Flip KINGDOM_URSINA_INSTANCING default to 1 (latched once, '=0' rollback hatch, legacy path kept) + stale-doc/test cleanup + GPU verification protocol — the +15fps carrier",
+    "stack": "S6-instancing-default",
+    "mechanism": "Verified this session: ursina_renderer.py:592 reads the env per frame with default '0', and the comment block at :587-591 still claims instancing is BROKEN (units invisible) — stale since C7 fixed it (set_two_sided, pixel-diff verified 2026-06-03). Measured at spec with C1+C2+C7+C8: legacy 13.1-15.4 avg vs instanced 31.5 avg windowed / 25.2 maximized (verified plan :214-220), rend 23.3 -> ~7ms; instanced spawn allocates only dict entries + buffer rows (no Entity/Text) so the flip ALSO removes the remaining spawn-hitch surface. The previous flip (7fe0828, reverted 0f8ca6d) failed on invisibility — now fixed; overlays are the only real blocker, addressed by ranks 16-18 + 13. Stale guardrails/memory will mislead future agents into re-reverting unless updated. [Merged: instancing-parity:inst-default-flip-checklist + prior-art:instanced-default-overlay-parity + architecture:unify-instanced-render-path — 'delete legacy' DEFERRED: legacy stays as the =0 fallback]",
+    "fix": "Order, AFTER ranks 16+17 (+13's pool, +18): (1) latch the mode once in UrsinaRenderer.__init__ (default '1', '=0' hatch, mirroring instanced_nature_renderer.py:1002-1009); (2) keep legacy sync_snapshot_* intact as fallback; (3) leak interactions: C1 free_entity_overlays stays load-bearing for buildings in both branches; new instanced buffers keep the per-id prune (instanced_unit_renderer.py:617-627); (4) headless regression asserting two_sided on both geom nodes (C7 can't silently regress); (5) audit tests/tools (perf_ursina_stress.py:75 already assumes '1'); (6) update stale docs: guardrails mdc :74-83, instanced_unit_renderer.py:6 docstring, ursina_renderer.py:587-591 comment, project memory note; (7) verification on the GPU box: legacy-vs-instanced pixel diff with overlays MATCHING at the deterministic scene, screenshots both zooms, then the wk123 soak matrix with heroes maintained.",
+    "expected_gain": "THE fps landing: default goes 13-15 -> ~30-31 windowed / ~25+ maximized at the gate spec (measured envelope, minus ~1ms for instanced HP bars), stacking multiplicatively with vsync-off + HUD stack to clear 30 maximized. Hero-spawn hitches structurally eliminated on the default path.",
+    "risk": "Shipping before parity lands = the exact C9 trap (visual regression revert). Any latent instanced bug becomes default-path — mitigated by the '=0' hatch, the 35 instancing tests, pixel diff, and the 17-min soak. Guardrails doc edit must keep its other content intact.",
+    "effort": "S",
+    "confidence": "high",
+    "evidence": [
+     "game/graphics/ursina_renderer.py:587-612 — verified this session: per-frame env read default '0' + stale 'known unresolved texture-binding bug (units invisible)' comment",
+     ".cursor/plans/wk123_fps_time_degradation.plan.md:214-235 — verified this session: measured envelope 31.5/25.2 instanced vs 13.1-15.4 legacy; C9 correction text",
+     "game/graphics/instanced_unit_renderer.py:243,:253 (C7 lines), :617-627 (prune pattern); instanced_nature_renderer.py:1002-1009 (default-on env pattern)",
+     ".cursor/rules/11-fps-performance-guardrails.mdc:74-83 (stale OPT-IN/BROKEN section); prior flip 7fe0828 reverted 0f8ca6d (root cause since fixed by C7)",
+     "tests/perf_ursina_stress.py:75 (already assumes default '1')"
+    ]
+   },
+   {
+    "rank": 20,
+    "id": "overlay-text-pool-budget",
+    "title": "Free-list pool for overlay Text/quad nodes + per-frame creation budget — caps residual spawn/wave/pan bursts after the font patch",
+    "stack": "S2-spawn-hitch",
+    "mechanism": "Even post-font-patch, each newly visible unit synchronously creates 4-5 nodes in one frame (billboard ursina_unit_sync.py:155-163, HP quads, name Text, gold Text) = 0.84ms/unit measured; a wave/pan burst of 20 units = ~17ms in one frame (today, pre-patch: ~130ms). free_entity_overlays destroys on death (ursina_unit_overlays.py:105-139) so every kill+respawn re-pays. At the gate's constant enemy churn (kills + respawn toward the 80 cap) this fires continuously. Note: largely superseded for the DEFAULT path once instancing flips (no per-unit nodes), but remains load-bearing for the legacy fallback and the near-zoom label pool (rank 13). Includes the gold-label text-rebuild throttle as polish (text_setter does a full TextNode teardown per change, 0.65ms align measured). [Merged: 4 explorer pooling proposals + overlay-pool-budget + goldlabel-textnode-rebuild]",
+    "fix": "Typed free-list pools in ursina_unit_overlays/entity_render_collab: free_entity_overlays returns nodes (disable + reparent to hidden pool root, full state reset checklist: text/scale/color/bin/_ks_* attrs) instead of destroy; creation paths pop from pool (.text mutation = 0.13ms); pre-seed ~64 Texts/128 quads/64 billboards at the prewarm hook; creation budget ~8 bundles/frame nearest-camera-first, deferring labels a frame. Pools BOUNDED (cap + destroy overflow) to preserve the C1 invariant; extend the scene-entity leak regtest to the pool. Gold labels: quantize updates or setText on the single section.",
+    "expected_gain": "Worst-case burst <2ms/frame (from ~17ms post-patch / ~130ms today); removes hundreds of Entity constructions + destroy linear scans per session. Mostly insurance + legacy-fallback smoothness once instancing is default.",
+    "risk": "Pool-reset bugs show stale labels on wrong units (reset checklist + reuse test); 1-2 frame label delay under budget (imperceptible); must not double-free with C1 paths.",
+    "effort": "M",
+    "confidence": "high",
+    "evidence": [
+     "game/graphics/ursina_unit_sync.py:155-163,:123-138 (creation once per lifetime; cull only toggles enabled)",
+     "game/graphics/ursina_unit_overlays.py:105-139 (destroy on death -> respawn re-pays), :163-173/:209-226/:255-259 (creation sites, verified :163-173 this session)",
+     "Measured: bundle 6.6ms today / 0.84ms post-font-patch; 6-unit wave 35-40ms; Text .text 0.13ms; gold align/calcWidth 0.65ms/rebuild; destroy linear scan site-packages/ursina/destroy.py ~:101"
+    ]
+   },
+   {
+    "rank": 21,
+    "id": "building-prefab-template-flatten",
+    "title": "Build each prefab ONCE at startup, flatten_strong, instantiate via copy_to — kills 11-64ms construction/neutral-spawn hitches AND cuts ~26 nodes/building to 1-3 draws",
+    "stack": "S7-building-batching",
+    "mechanism": "Every instantiation (placement, neutral spawn ~every 6s, EACH of 3-4 construction-stage swaps) runs _load_prefab_instance: up to ~26 child Entities + per-piece glTF color traversal + tint + texture override (ursina_prefabs.py:236-336). Measured AFTER full prewarm: inn_v2 64.4ms, inn_v2_build_20 16.6ms, farm_v2 11.1ms — single-frame stutters recurring through the whole gate window. Steady-state: hundreds of NodePaths/draws + scene.entities entries at the 20-100-building city; guardrails line 90 lists 'batch the buildings (like the trees)' as the never-built lever, now authorized. [Merged: spawn-hitch:prefab-instance-pool stage 2 + instancing-parity:buildings-flatten-per-prefab + prior-art:building-batch-instancing]",
+    "fix": "At startup (existing prewarm hook): build each unique prefab+stage once (~20 JSONs + stages), apply per-piece textures/tints BEFORE flatten_strong (flatten bakes states), stash as template NodePaths with _ks_prefab_authored_ft/_ks_prefab_xz_spread metadata; runtime instantiation = template.copy_to(root_entity) — one node copy. Keep ONE Ursina root Entity per building so picking keys/overlay sync/free paths are untouched; root.color tint (damaged/construction) still applies to flattened geometry via ColorAttrib (ursina_entity_render_collab.py:280-288 already dirty-gates it); stage swaps already destroy/recreate the root so re-template naturally (and rank 5's orphan-free covers the destroy). Screenshot-verify EVERY building type + each construction stage per memory rules.",
+    "expected_gain": "Construction/spawn hitches 11-64ms -> ~1-5ms per event (recurring every ~6s at the gate); steady-state ~26 -> 1-3 draws per building = est. 2-4ms/frame combined GPU+cull+entity-walk at the late-game city (+2-3 fps, helps maximized/GPU-bound most; grows with city size).",
+    "risk": "flatten bakes render state — texture/tint ordering bugs lose per-piece looks (broad screenshot pass required); copy_to shares GeomVertexData (fine unless per-instance vertex edits appear); medium-size surgery in a load-bearing loader.",
+    "effort": "M",
+    "confidence": "high",
+    "evidence": [
+     "game/graphics/ursina_prefabs.py:236-336 (per-piece Entity + glTF traversal + tint per instantiation), :368-394 (prewarm = mesh parse only)",
+     "MEASURED post-prewarm: inn_v2 64.4ms/25 pieces; inn_v2_build_20 16.6ms; farm_v2 11.1ms; marketplace 5.0ms; plot_2x2 2.6ms",
+     "game/graphics/ursina_entity_render_collab.py:94-116 (destroy/recreate on stage change = natural re-template point), :280-288 (root color tint survives flatten)",
+     ".cursor/rules/11-fps-performance-guardrails.mdc:90 (lever (b), never built); instanced_nature_renderer.py:170-220 (Panda-native load pattern); CHANGELOG v1.5.8 (flatten_strong precedent)"
+    ]
+   },
+   {
+    "rank": 22,
+    "id": "fog-cadence-discovery-prefilter",
+    "title": "Slow fog rebuild cadence (3 -> 5-6 ticks) + distance-prereject the per-hero building-discovery scan; optional incremental reveal",
+    "stack": "S5-sim-tick",
+    "mechanism": "Fog rebuilds every 3rd tick whenever ANY of ~50 revealers crossed a tile (fog.py:38-42,117-128) — near-continuous with 24 moving heroes at FAST. Each rebuild demotes the whole visible set + re-reveals every circle (world.py:237-249,166-205; 1.5-5ms each) PLUS discover_known_buildings_after_fog iterates every candidate building x every hero x footprint tile with no distance prereject (hero_profile.py:345-376; 148,362 _iter_building_tiles calls/300 ticks). A/B no-fog delta = 1.45ms/tick. Hero spawn adds a revealer -> forces a full rebuild + discovery scan on the spawn tick (part of the spawn hitch).",
+    "fix": "(a) Throttle 3 -> 5-6 ticks (250-300ms fog latency at FAST, invisible zoomed out); (b) prereject per (hero,building): skip when squared grid distance > (r+building_diag)^2; (c) optionally incremental update_visibility (diff per-revealer grid positions already in the snapshot at fog.py:124) — needs a SEEN-demotion parity test.",
+    "expected_gain": "(a)+(b) ~0.7-1.0 of the 1.45ms/tick + rebuild spikes 3.6-5 -> ~1.5-2ms; (c) another ~0.3ms/tick. Directly shrinks the hero-spawn tick spike.",
+    "risk": "Fog reveal latency +~150ms (imperceptible); ranger tile-XP/discovery timing shifts a few ticks (digest moves — authorized); (c) needs the parity test.",
+    "effort": "M",
+    "confidence": "high",
+    "evidence": [
+     "game/sim/fog.py:38-42,117-128 (throttle + dirty snapshot); game/world.py:237-249,166-205 (demote-all + re-reveal-all)",
+     "game/sim/hero_profile.py:345-376 (no distance prereject)",
+     "Measured: A/B no-fog +1.45ms/tick; 1.5-5.0ms per rebuild; 148,362 _iter_building_tiles calls/300 ticks; 100 rebuilds/300 ticks"
+    ]
+   },
+   {
+    "rank": 23,
+    "id": "tree-blocking-set-walkability",
+    "title": "Precomputed blocking-tree tile set: is_walkable's TREE branch becomes one set lookup instead of a 5-call chain (biggest sim-side hitch lever — forest A*)",
+    "stack": "S5-sim-tick",
+    "mechanism": "is_walkable on a TREE tile chains get_tile -> BLOCKING check -> getattr -> callable -> try/except -> float(fn(...)) -> SimEngine._tree_growth_lookup (re-imports lumber per call, sim_engine.py:263-265) -> dict get + tuple alloc (world.py:107-122, lumber.py:52-54). A* calls is_walkable 8x per expanded node (pathfinding.py:61-81); profiled 110,881 calls/300 ticks; single forest plans cost up to 6-7.5ms; the map has 2,083 tree tiles so most paths hit the slow branch.",
+    "fix": "Maintain world.blocked_tree_tiles set (growth >= 0.75 only), updated at the few mutation sites (piggybacks on rank 9's changed-trees list: stage crossings, sapling spawn, chop, footprint removal). TREE branch becomes `(x,y) not in blocked_tree_tiles`. Debug assert comparing set vs dict lookup under DETERMINISTIC_SIM.",
+    "expected_gain": "Forest A* per-expansion ~2-4x cheaper; with rank 14, p99 tick drops from ~10ms (35ms worst) toward ~5-6ms — the biggest sim-side lever on micro-hitches incl. hero-spawn first-paths.",
+    "risk": "Low-medium: a missed update site desyncs walkability from visuals — covered by the assert + parity regtest; semantics stay exactly 'growth >= 0.75' (world.py:121).",
+    "effort": "M",
+    "confidence": "high",
+    "evidence": [
+     "game/world.py:107-122 (TREE branch chain); game/sim_engine.py:263-265 + game/sim/lumber.py:52-54 (per-call indirection)",
+     "game/systems/pathfinding.py:61-81 (8 is_walkable per node)",
+     "Measured: 110,881 is_walkable calls/300 ticks; worst ticks carry 6.0-7.5ms of A*"
+    ]
+   },
+   {
+    "rank": 24,
+    "id": "ai-threat-cache-staggered",
+    "title": "Per-tick threat-scan memo on AiGameView + round-robin stagger of non-urgent hero gates (castle-threat computed 24x per tick today)",
+    "stack": "S5-sim-tick",
+    "mechanism": "task_router.update_hero runs the full gate stack for every hero every tick (basic_ai.py:195-198 -> task_router.py:22-177): castle building_threatened(6) scans all enemies (defense.py:48-65), per-hero home-guild threat, neutral-defense scan, hunger, rest any()-over-enemies. The castle gate and nearest-enemy-to-castle are HERO-INDEPENDENT yet computed 24x/tick (defend_castle 6,144 calls/300 ticks). A/B no-AI delta = 1.30ms/tick.",
+    "fix": "(a) Per-tick memo on AiGameView (rebuilt each tick at sim_engine.py:748): castle_threatened, nearest_enemy_to_castle, per-building threatened, computed once on first request; (b) stagger neutral-defense/hunger/rest/LLM-consult round-robin every 2nd-3rd tick keyed crc32(hero_id) (the existing replan-stagger pattern, hero.py:515-520); keep movement/FIGHTING/castle-emergency per-tick.",
+    "expected_gain": "~0.6-0.9 of the 1.3ms/tick = ~1-1.5ms per 2-tick frame at FAST; scales with hero count.",
+    "risk": "Hero reactions lag up to ~150ms (imperceptible); WK67 digest moves (authorized); castle-attack override MUST stay per-tick (WK15 behavior).",
+    "effort": "M",
+    "confidence": "high",
+    "evidence": [
+     "ai/task_router.py:36-101 (per-hero per-tick gate stack); ai/behaviors/defense.py:48-65,:84-89 (hero-independent scans, 6,144 calls/300 ticks)",
+     "ai/basic_ai.py:195-198 (every hero every tick); Measured: A/B no-AI +1.30ms/tick"
+    ]
+   },
+   {
+    "rank": 25,
+    "id": "hud-compose-trims",
+    "title": "hudR compose trims: cache message text surfaces, hoist per-dot radar imports, pre-create the command-bar surface/font",
+    "stack": "S3-hud-upload",
+    "mechanism": "hudR is a steady 3.9-4.8ms maximized. Avoidable: hud_messages.py:42-44 font.renders every visible message EVERY frame (TextLabel.get_surface cache exists at widgets.py:57-79 but is unused here); hud_radar.py:120-131 in-loop import + try/except ~190x/frame; command-mode bar creates a full-width SRCALPHA surface + SysFont per frame while open (hud.py:996-1012) and its 500ms blink dirties a full-width band.",
+    "fix": "Cache message surfaces keyed (text,color) via TextLabel.get_surface; hoist Visibility import + grid scale out of radar loops (shared with rank 6); pre-create command-bar bg/font, re-render only on buffer/blink change. No layout/visual changes.",
+    "expected_gain": "~0.5-1.5ms/frame of hudR at maximized; keeps the command-mode band clean 29/30 frames.",
+    "risk": "Negligible — caching identical pixels; bounded caches already exist (widgets.py:24-34).",
+    "effort": "S",
+    "confidence": "high",
+    "evidence": [
+     "game/ui/hud_messages.py:42-44; game/ui/hud_radar.py:120-131; game/ui/hud.py:996-1012; game/ui/widgets.py:57-79 (existing cache to reuse)",
+     "tmp/wk123/soak_out_fast_maximized.log: hudR 3.9-4.8ms"
+    ]
+   },
+   {
+    "rank": 26,
+    "id": "watchcard-minimap-throttle",
+    "title": "Throttle the pinned-hero watch-card live minimap (full world mini-render per frame) to ~10Hz — invisible in soaks, present in real play",
+    "stack": "S3-hud-upload",
+    "mechanism": "When a hero is pinned, render_coordinator.py:62-82 calls _render_hero_minimap every frame: a full world render (terrain + every DTO + fog) into a ~224px rect (:164-243, only the surface OBJECT is cached :181-183). Several ms of hudR per frame plus a third large dirty row-run that pushes the dirty-diff toward the full-upload fallback during exactly the 'watching my hero fight' moments. The wk123 soaks ran UNPINNED, so the gate logs never saw this cost — but Jaimie uses the pin.",
+    "fix": "Reuse e._minimap_surface and re-render contents every ~100ms sim time (cache keyed pinned-hero id + rect size); blit cached surface between; optional half-res + 2x blit; force refresh on pin/layer change.",
+    "expected_gain": "Pinned-play frames recover ~3-8ms compose and avoid wide-band/full-upload escalation — keeps pinned play at unpinned fps. No effect on soak numbers (which is why it must not be skipped just because the harness can't see it).",
+    "risk": "10Hz thumbnail (fine); cache invalidation on pin switch/layer change or it shows the wrong scene for 100ms.",
+    "effort": "S",
+    "confidence": "medium",
+    "evidence": [
+     "game/engine_facades/render_coordinator.py:62-82 (per-frame pinned call), :164-243 (full mini-render, no throttle)",
+     "game/graphics/ursina_app_ui_overlay.py:207-210 (the fallback this feeds; full upload measured 50.39ms)"
+    ]
+   },
+   {
+    "rank": 27,
+    "id": "fog-texture-numpy",
+    "title": "Vectorize the 62,500-tile fog overlay texture rebuild with numpy LUT (WK58 deferred 1.B/1.C) — kills a recurring 16-19ms hitch at fast speed",
+    "stack": "S4-render-sync-quickwins",
+    "mechanism": "The kept fog early-out gate stops per-frame rebuilds, but each fog_revision advance still runs a pure-Python 62,500-iteration tile loop (ursina_fog_overlay.py:107-115, verified still present by the explorer) + frombuffer + upload — ~16-19ms per execution (WK58 measurement). At the gate (24 heroes roaming at FAST, fog constantly revealed) revisions advance frequently => recurring multi-frame spikes that depress exactly the p10/p50 'dips to 28' keeping out/fast/windowed borderline. Distinct from rank 22 (sim-side visibility recompute) — this is the render texture build.",
+    "fix": "numpy: view world.visibility as an array, LUT-map UNSEEN/SEEN/VISIBLE -> RGBA via np.take, flip rows, write into the existing _fog_tile_buf; optionally dirty-row updates. Output must be byte-identical (row-orientation bug history documented at :97-102; fog regression test exists).",
+    "expected_gain": "Each rebuild ~16-19ms -> <1ms; +1-2 avg fps but the real win is the p10 floor at fast speed.",
+    "risk": "Low — byte-identical target + existing regression test.",
+    "effort": "S",
+    "confidence": "medium",
+    "evidence": [
+     "game/graphics/ursina_fog_overlay.py:107-115 (per-tile Python loop verified present), :60-63 (the kept early-out gate — not undone), :97-102 (orientation history)",
+     ".cursor/plans/Old Sprints/wk58_round5_profile_findings.md:63-99,251-273 (19ms p50; deferred designs)",
+     ".cursor/plans/wk123_fps_time_degradation.plan.md:219 (verified this session: out/fast/windowed p50 27.7, 'dips to 28' — spike-sensitive)"
+    ]
+   },
+   {
+    "rank": 28,
+    "id": "gate-measurement-harness",
+    "title": "Gate-window measurement harness: real per-frame stage columns in the soak CSV, 20-min runs with min15-20 shot window, async screenshots, [fps-probe-window] verdict line, igLoop bracket timers, spawn-hitch ring-buffer capture",
+    "stack": "S0-measurement",
+    "mechanism": "The current harness cannot certify the gate: the soak CSV's stage columns are dead (wk123_fps_soak.py:253 reads _wk123_last_stage_ms which NOTHING sets; :258's 'tick' column actually logs whole-frame dt per ursina_app_frame.py:97; :271 writes empty strings); screenshots are hard-coded to minutes (15,16,17) and each one forces 2 extra renderFrame() calls + a synchronous PNG encode measured 70-74ms = a ~220-290ms hitch that would poison the very percentiles being gated at a 3s cadence; the FPS probe prints whole-run percentiles only (debug_probe.py:219-252) so 20-min averages overstate the min15-20 window 2-3x; everything outside run_frame (Panda cull/draw/swap ~10-20ms/frame) is only printed on >40ms slowframes and never split (no igLoop/PStats instrumentation in game/ — grep); and no spawn-hitch metric exists at all despite being a gate criterion. [Merged: all 6 core profiling-infra candidates; the offscreen renderer bench is an optional add-on]",
+    "fix": "(1) Stash a per-frame stage dict (tick/rend/hudR/hudU/run_frame_cpu/outside) in run_frame's slowlog block; fill the CSV columns + add outside_ms. (2) Flags --shot-window 15:20 --shot-interval 3 --dense-window 15:20 --minutes 20; shot_flag/shot_ms CSV columns. (3) Async screenshots: NO mid-loop renderFrame (window already holds the presented frame; keep the x2 only in the shutdown path), getScreenshot+bytes copy (~10-25ms) -> daemon-thread PIL encode; validate one shot pixel-matches sync. (4) KINGDOM_URSINA_FPS_PROBE_WINDOW=900:1200 emitting a single greppable [fps-probe-window] avg/min/p10/p50/p90 line. (5) Bracket igLoop with sort-49/51 taskMgr tasks (igLoop runs at sort 50) + pre/post sub-timers inside run_frame -> splits the unattributed block into GPU-draw vs camera/fog/pointer CPU (decides vsync/threading questions). (6) --spawn-every N forced spawns + 32-frame ring buffer emitting [spawn-hitch] post_max/pre_p50; generic [hitch] line for any frame >1.5x rolling median in-window.",
+    "expected_gain": "No direct fps — but it defines every stack's keep/revert gate, removes ~100 artificial 4-5x-frame-time spikes per run from the gate window (the screenshot fix is worth +1-2 'honest' avg fps and a truthful p10), and provides the spawn-hitch pass metric (post_max/pre_p50 <= 1.5 over >=20 spawns).",
+    "risk": "Near-zero runtime risk (dead-by-default flags); PIL row-order/BGR mistakes (one-shot validation + --shot-sync escape); igLoop bracket assumes stock sort-50 (one-time sanity print).",
+    "effort": "M",
+    "confidence": "confirmed",
+    "evidence": [
+     "tools/wk123_fps_soak.py:253 (dead _wk123_last_stage_ms read — repo grep: no writer), :258+:271 (tick column = frame dt; rend/hudR/hudU written as ''), :226-233 (shots hard-coded to (15,16,17)), :219 (dense threshold hard-coded)",
+     "game/graphics/ursina_app_frame.py:95-97,171-192,300-325 (stage timers exist; outside block printed only on >40ms slowframes)",
+     "game/graphics/ursina_app_debug_probe.py:267-270 (renderFrame x2 exists for the SHUTDOWN path), :293-315 (sync encode), :203-252 (whole-run-only percentiles)",
+     "Measured: PNMImage.write 1920x1080 PNG = 69.9-73.7ms on this box; grep igLoop/PStat over game/ = no matches"
+    ]
+   },
+   {
+    "rank": 29,
+    "id": "churn-microfixes",
+    "title": "Cheap churn/GC leftovers: projectile billboard ring pool (C6), VFX debris FIFO cap (C3), terrain-height + dynamic-tree dirty pre-checks (WK58), second gc.freeze + paced gen0",
+    "stack": "S4-render-sync-quickwins",
+    "mechanism": "Bundle of verified-present small items: legacy projectiles are id(proj)-keyed create/destroy churn per arrow (ursina_misc_props_sync.py:75-113, Entity create 0.14ms + destroy linear scan; wk123 C6 never implemented — moot once instancing is default since the instanced path draws projectiles in-renderer, so legacy-fallback only); vfx.py:73,312 _debris is append-only (RSS-only leak); WK58's terrain-height cache + dynamic-tree len/sum pre-check never built (grep confirmed); gen0 fires every ~7-15 frames (1.88ms measured) and aligns with spawn bursts — after ranks 2/9/11 cut alloc rate ~5-8x, a second gc.freeze at ~minute 2 + explicit gc.collect(0) on under-budget frames decorrelates the pause from slow frames. [Merged: render-sync:projectile-billboard-pool + prior-art:wk123-leftover-microfixes + prior-art:wk58-deferred-sync-caches + alloc-gc:gc-gen0-pacing]",
+    "fix": "Ring pool ~32 pre-configured projectile billboards (position/texture writes only, excluded from destroy accounting); FIFO-cap _debris at ~200; terrain-height memo per tile cell invalidated on flatten events; len+sum pre-check before the tree-dict equality walk; gc: second freeze + scheduled gen0 (never disable gc — Panda/Ursina cycles need it).",
+    "expected_gain": "~0.5-1.5ms/frame combined + removes a periodic ~2ms GC stall every 0.5-1s and a steady node-churn source. Stack-fill, not headline.",
+    "risk": "Low: pool texture swap per kind (set_texture_if_changed handles); height-cache invalidation on building-placement flattening is the only correctness edge.",
+    "effort": "S",
+    "confidence": "medium",
+    "evidence": [
+     "game/graphics/ursina_misc_props_sync.py:75-113 (id(proj) churn); game/graphics/vfx.py:73,312 (unbounded _debris); .cursor/plans/wk123_fps_time_degradation.plan.md:117-124 (C3/C5/C6 'only if needed', never applied)",
+     ".cursor/plans/Old Sprints/wk58_round5_profile_findings.md:291-311,382-401,456-463 + grep: no _prefab_path_cache/_terrain_height_cache ever built",
+     "game/graphics/ursina_app.py:285 + ursina_app_frame.py:29-35 (current gc config); measured gen0 collect 1.88ms @~50k young objects"
+    ]
+   },
+   {
+    "rank": 30,
+    "id": "fast-dt-scaling",
+    "title": "CONDITIONAL: scale tick dt by the speed multiplier at FAST (10 ticks/s of dt=0.1 instead of 20 of dt=0.05) — halves remaining sim CPU at the gate speed",
+    "stack": "S5-sim-tick",
+    "mechanism": "Speed tiers multiply ACCUMULATED time, not tick size: FAST drains 20 fixed 50ms ticks/wall-second vs NORMAL's 10 (lifecycle.py:141-166, engine.py:1045-1046, config.py:93-99), so every per-tick cost counts double at exactly the gate condition. The renderer already interpolates between ticks via sim_blend_fraction (ursina_renderer.py:456,554), so smoothness does not depend on tick rate. This is also phase-0 of the architecture sim-thread idea — take this LONG before considering threads. [Merged: sim-tick:fast-speed-dt-scaling + architecture:sim-worker-thread-decouple phase 0]",
+    "fix": "In tick_simulation: effective_dt = FIXED_SIM_DT * (multiplier/SPEED_NORMAL), drained in effective_dt steps, clamped at 0.1s (SLOW tiers unchanged). All sim consumers already take dt as a parameter. Re-baseline the WK67 digest + dt-sensitive tests. Run AFTER the other S5 items so it halves the already-reduced remainder, and only if the gate still needs sim headroom.",
+    "expected_gain": "Halves remaining sim CPU at FAST: standalone ~4-6ms/frame today; ~1-2ms after the rest of S5 lands. Converts 2-tick catch-up frames to 1-tick (frame-evenness win).",
+    "risk": "Medium: coarser combat/AI granularity at FAST (cooldowns 1000-1500ms vs 100ms resolution — fine; 15.6px/tick fastest movers stay sub-tile, no tunneling); digest + soak re-baselines; behavior change is authorized but needs a balance sanity soak.",
+    "effort": "M",
+    "confidence": "medium",
+    "evidence": [
+     "game/engine_facades/lifecycle.py:141-166 (accumulator; multiplier adds tick count); game/engine.py:1045-1046 (FIXED_SIM_DT=1/20); config.py:93-99 (FAST=2x ticks)",
+     "game/graphics/ursina_renderer.py:456,554 (linear interpolation independent of tick rate)",
+     "Measured: mean 4.2-6.3ms/tick x 20 ticks/s at FAST = 85-120ms CPU/wall-second"
+    ]
+   },
+   {
+    "rank": 31,
+    "id": "hud-region-split",
+    "title": "CONDITIONAL: split radar (and top bar) onto their own small GPU quads/textures so the window-sized HUD texture goes fully static most frames",
+    "stack": "S8-architecture-reserve",
+    "mechanism": "Even after zero-copy + radar throttle, any radar/top-bar change marks the whole window-sized texture's RAM modified and Panda re-uploads the full ~8MB to the iGPU (no GPU-side dirty-rect) — part of the ~13ms untracked gpu_or_ursina bucket. The radar is 224x180 (161KB), top bar Wx48. Take ONLY if the igLoop timer still shows the maximized gap after S3 lands. [Merged: hud-upload:hud-split-radar-topbar-textures + architecture:hud-region-render-targets, scoped down — full 5-region split only if the radar/top-bar split proves insufficient]",
+    "fix": "Own pygame Surface + PandaTexture + fullscreen-anchored quad per region at the same screen rects (reuse the ui_overlay scale math at ursina_app_ui_overlay.py:65-68 and resize invalidation :229-246); radar updates at 10Hz via zero-copy (~0.1ms); main texture then changes only on menu/selection/toast events. Hit-testing unaffected (virtual pygame coords vs hud_layout rects).",
+    "expected_gain": "Removes the residual per-changed-frame ~8MB GPU DMA (~1-3ms maximized) and caps HUD cost independent of window size; +1-2ms beyond S3.",
+    "risk": "Quad placement must track aspect/resize exactly or regions drift; layering with modals; more moving parts for less gain — strictly after S3 measurement.",
+    "effort": "M",
+    "confidence": "medium",
+    "evidence": [
+     "game/graphics/ursina_app_ui_overlay.py:112-124 (single window-sized texture), :65-68 + :229-246 (scale/resize machinery to replicate)",
+     "game/ui/hud_layout.py:19-21,103-108 (radar rect), :73,94 (top bar)",
+     "Measured: radar 224x180 full update 1.19ms even WITH tobytes; tmp/wk123/soak_out_fast_maximized.log untracked ~13ms/frame"
+    ]
+   },
+   {
+    "rank": 32,
+    "id": "panda-threading-culldraw",
+    "title": "CONDITIONAL experiment: env-gated Panda 'threading-model Cull/Draw' to overlap C++ cull+draw with next-frame Python",
+    "stack": "S8-architecture-reserve",
+    "mechanism": "threading-model='' (measured; true-threads wheel confirmed) — app, cull, draw serialized on one thread; after vsync-off isolates the present-wait, the igLoop bracket will show how much of the ~12-20ms Panda-side block remains. Pipelined rendering makes frame time ~max(app,cull,draw) instead of the sum; upstream ursina ships the exact prc line commented out (window.py:23). Three explorers independently proposed this; all flag it experimental. [Merged: frame-loop + panda-config + architecture variants]",
+    "fix": "Env-gated KINGDOM_PANDA_THREADING ('', 'Cull', 'Cull/Draw') via loadPrcFileData BEFORE Ursina() at ursina_app.py:64; default OFF; A/B with the 17-min soak; stress points = HUD texture RAM writes + instanced buffer modify_ram_image (pipeline-cycled Textures are the supported pattern, but Intel driver threading is the unknown); screenshot path needs a sync check. NEVER measure stacked with the vsync A/B — isolate variables.",
+    "expected_gain": "If the residual block is cull+draw: realistically +15-30% at out/fast/maximized (e.g. 25 -> 29-30). Zero gain if the driver serializes GL — cheap to learn via the gate.",
+    "risk": "Highest-instability knob: rare driver/race crashes around runtime texture modification and resize; +1 frame latency (fine for RTS). Strictly env-gated, instant revert.",
+    "effort": "M",
+    "confidence": "low",
+    "evidence": [
+     "Measured: ConfigVariableString('threading-model')=='' ; Thread.is_true_threads()==True",
+     "site-packages/ursina/window.py:23 (knob commented out upstream)",
+     "tmp/wk123/soak_out_fast_windowed.log dt 35.7 vs ~23.4ms CPU; maximized [slowframe2] gaps 24.6-39ms",
+     "game/graphics/ursina_app.py:64 — verified insertion point pre-Ursina()"
+    ]
+   },
+   {
+    "rank": 33,
+    "id": "billboard-mbinary-alpha-test",
+    "title": "CONDITIONAL: switch unit/shadow billboards from M_alpha blending to M_binary alpha-test (cutout) — restore depth-write, cut blend fill on the iGPU",
+    "stack": "S8-architecture-reserve",
+    "mechanism": "All unit billboards use M_alpha + depth_write off (legacy: ursina_entity_render_collab.py:119-127; instanced: instanced_unit_renderer.py:222,:237,:248 incl. 'transparent' bin) — every covered pixel pays read-modify-write blending and swarm sprites fully overdraw each other. Sprites are FT_nearest pixel-art (alpha effectively hard 0/1), so blending buys nothing; M_binary = alpha-tested opaque with early-z. Targets the residual GPU-fill bound at maximized that the plan names.",
+    "fix": "M_binary + depth-write on for instanced unit/shadow geoms (move out of 'transparent' bin) and legacy apply_pixel_billboard_settings; KEEP the HUD quad on M_alpha (real soft alpha); verify inside-building compositing (fixed,100) and HP-bar layering; quick visual pass on overlapping swarms (z-fight check).",
+    "expected_gain": "~0.5-2ms GPU fill at the 100+ swarm, growing toward hundreds-of-enemies and at maximized resolution; removes blend-state toggles between draws.",
+    "risk": "Hard cutout edges (invisible for nearest-sampled pixel art, but screenshot-verify); future soft-alpha VFX must opt back in; z-fighting on interpenetrating sprites.",
+    "effort": "S",
+    "confidence": "low",
+    "evidence": [
+     "game/graphics/ursina_entity_render_collab.py:119-127 (M_alpha + depth_write False + render_queue 1); game/graphics/instanced_unit_renderer.py:222-251 (M_alpha + transparent bin; FT_nearest at :192-193)",
+     ".cursor/plans/wk123_fps_time_degradation.plan.md:235 — verified this session: maximized combo named 'HUD-upload + GPU-fill bound'"
+    ]
+   },
+   {
+    "rank": 34,
+    "id": "shared-spatial-grid",
+    "title": "SCALING ENABLER: one shared per-tick spatial hash for all proximity queries (separation/retarget/combat/threat-gates) — precondition for hundreds of enemies",
+    "stack": "S8-architecture-reserve",
+    "mechanism": "No shared spatial index exists: separation builds and discards a private grid per call (separation.py:42-53), enemy retargeting linearly scans all peasants+heroes+guards+buildings (enemy.py:291-364), combat scans heroes x enemies (combat.py:137-143), AI threat gates scan all enemies per building (defense.py:48-65). ~1-1.5ms/tick today at ~125 units, but O(N^2)-shaped: at 300 enemies (the owner's stated ambition — MAX_ALIVE_ENEMIES must GROW) these become ~10+ms/tick and wall the gate.",
+    "fix": "One grid per tick at the top of SimEngine.update (cell ~2 tiles, O(N) build <0.1ms); query_radius(x,y,r,kinds) on the sim view; convert consumers incrementally (separation first, then combat in-range, enemy.find_target via expanding rings, then threat gates); sort bucket contents by entity id for determinism; keep brute-force behind a flag for parity diffing.",
+    "expected_gain": "~0.5-1.0ms/tick today; the real payoff is keeping tick roughly FLAT from 80 to 300 enemies instead of tripling — required for 'more enemies, not fewer' at 30+.",
+    "risk": "Medium: equidistant-target tie-breaks change (digest moves — authorized); cell-radius boundary bugs — pin with brute-force-vs-grid parity test.",
+    "effort": "L",
+    "confidence": "high",
+    "evidence": [
+     "game/sim/separation.py:42-53 (throwaway private grid — proof of concept in-tree); game/entities/enemy.py:291-364; game/systems/combat.py:137-143; ai/behaviors/defense.py:48-65,84-89,131-137",
+     "Guardrail: MAX_ALIVE_ENEMIES >= 80 stays; owner wants hundreds"
+    ]
+   },
+   {
+    "rank": 35,
+    "id": "numpy-soa-unit-store",
+    "title": "SCALING ENABLER: contiguous numpy SoA unit arrays as render truth — vectorized instance-buffer fill, kills per-unit DTO/pack Python cost",
+    "stack": "S8-architecture-reserve",
+    "mechanism": "Hot per-unit state crosses sim->render as ~120 frozen UnitDTOs (~30 getattr each, non-slots = 2 tracked allocs each) and the instanced packer does per-unit dict lookups + 2x struct.pack_into (instanced_unit_renderer.py:441-463). Fine at 100 units after rank 11 (~1ms/pass); at 300+ enemies the per-unit Python becomes ~6-8ms/frame. The verified HUD memcpy primitive (0.69ms/8.3MB into modify_ram_image) proves the zero-copy buffer-fill mechanism. [Merged: alloc-gc:sim-render-soa-arrays + architecture:numpy-soa-unit-store]",
+    "fix": "game/sim/unit_arrays.py: preallocated SoA (x,y,hp,max_hp,alive,kind,class_id,state_id,facing,anim_seq,flags; cap 2048) + stable slot registry with generation counters; phase 1 mirror (one post-tick write-through pass), phase 2 vectorized instanced pack (affine transform + np.take UV table + single np.copyto into modify_ram_image; radar dots = two vectorized multiplies), phase 3 retire bulk DTOs (keep thin DTOs for UI/selected + pygame consumers). Gate each phase on the instancing pixel-diff + qa_smoke.",
+    "expected_gain": "~2-4ms/frame today; strategic: per-unit render-thread cost ~30-60us -> ~0.3us, making 300-enemy render-side cost ~0.1ms — the substrate for the hundreds-of-enemies goal.",
+    "risk": "Largest data-model change: WK66/68 DTO-parity tests, five sync paths, anim FSM must go array-form; slot-reuse bugs = wrong-sprite flicker (generation counters). Only after S6 ships and only when enemy counts actually rise.",
+    "effort": "L",
+    "confidence": "medium",
+    "evidence": [
+     "game/sim/render_dto.py:152-209 + game/sim_engine.py:652-668 (per-frame conversion); game/graphics/instanced_unit_renderer.py:441-463 (pack loop — direct SoA consumer); game/ui/hud_radar.py:216-237 (vectorizable)",
+     "Measured: 110 UnitDTO 0.58-0.73ms/pass; memcpy primitive 0.69ms/8.3MB verified"
+    ]
+   },
+   {
+    "rank": 36,
+    "id": "sim-worker-thread",
+    "title": "LAST RESORT: sim accumulator on a worker thread, render interpolates frozen double-buffered snapshots",
+    "stack": "S8-architecture-reserve",
+    "mechanism": "tick_simulation runs inline in the render frame (ursina_app_frame.py:93); at FAST, 2x ticks compound exactly when fps drops (ticks-per-frame rises toward the 4-cap). The render boundary is already thread-ready (frozen DTOs, snapshot.py:31-90 — the WK66-68 migration removed live-entity render reads) and the render thread spends most of its time in GIL-releasing C (pygame blits, memcpy, Panda renderFrame), so 50-80% of tick cost genuinely overlaps. Only worth XL effort if ranks 1-30 + S6 leave the gate unmet — rank 30 (dt scaling) captures most of the win for a fraction of the risk.",
+    "fix": "SimThread owns the tick loop + builds snapshots post-tick into a double-buffered slot (atomic swap); input via the existing InputEvent queue; game_state dict frozen at handoff (audit live hero/building refs at sim_engine.py:482-486); LLM/event-bus stays sim-side; phase-gated behind KINGDOM_SIM_THREAD=1 with the single-thread path intact; digest/tests keep the headless single-thread path.",
+    "expected_gain": "Removes ~6-12ms of tick from the render frame at FAST and ends catch-up compounding; on top of the full stack ~33 -> 40+ fps maximized.",
+    "risk": "Highest-risk item in the list: torn reads from any remaining live-object UI access, AI callback thread-affinity, debugging cost. Explicitly LAST.",
+    "effort": "XL",
+    "confidence": "medium",
+    "evidence": [
+     "game/graphics/ursina_app_frame.py:93; game/engine_facades/lifecycle.py:141-166 (accumulator, 4-tick cap); game/sim/snapshot.py:31-90 (frozen boundary)",
+     "game/sim_engine.py:482-486 (live refs in game_state — the audit surface)",
+     "tmp/wk123 soaks: tick 5.7-12.4ms/frame at FAST across paths"
+    ]
+   }
+  ],
+  "execution_order": [
+   {
+    "stack": "S0-measurement (gate harness first)",
+    "rationale": "Every later stack's keep/revert decision needs per-frame stage attribution inside min 15-20, an honest screenshot cadence (the current sync shots inject ~250ms hitches that would poison the gate numbers), the igLoop split (decides whether residual cost is GPU-draw vs run_frame CPU — which arbitrates the vsync/threading/HUD forks), and a quantified spawn-hitch metric. All flags dead-by-default; zero gameplay risk. The optional offscreen renderer bench can be added opportunistically if agents need headless iteration.",
+    "candidate_ids": [
+     "gate-measurement-harness"
+    ],
+    "gate": "Harness self-check: soak CSV stage columns populated with real values; [fps-probe-window 900:1200] line emitted; one async screenshot pixel-matches the sync path; igloop_ms + outside_ms sane (sum to dt within ~1ms); [spawn-hitch] lines emitted on forced spawns; no fps delta with flags off."
+   },
+   {
+    "stack": "S1-engine-config quick wins",
+    "rationale": "Three S-effort, zero-visual-cost engine knobs with the best gain-per-line in the list. Vsync alone likely flips out/fast/windowed over 30 (frames straddle the 33.3ms vblank boundary with ~10ms of pure wait). ignore=True + mouse.traverse_target=None remove pure Ursina-internal overhead that scales with entity count. Each independently env-revertible.",
+    "candidate_ids": [
+     "vsync-off",
+     "scene-entities-ignore"
+    ],
+    "gate": "A/B 20-min soak at out/fast windowed AND maximized: [fps-probe-window] avg/p10 improve (windowed target: avg >30); screenshots show no tearing/artifacts; igLoop timer confirms the present-wait shrank. Revert via KINGDOM_VSYNC=1 / flag removal if worse."
+   },
+   {
+    "stack": "S2-spawn-hitch stack",
+    "rationale": "Directly attacks gate criterion #2 (hero-spawn hitch elimination) with the CONFIRMED root cause (font reload + model-path growth — also a session-long degradation amplifier threatening the min15-20 window) plus the uncovered C1-class prefab-swap leak that re-introduces time-degradation in construction-heavy real play. Prewarm + pool/budget mop up the remaining first-use and burst costs. All measured; orphan-free and font patch are the two highest-stakes correctness items in the whole plan.",
+    "candidate_ids": [
+     "text-font-cache-patch",
+     "prefab-swap-orphan-free",
+     "unit-prewarm-extension",
+     "overlay-text-pool-budget"
+    ],
+    "gate": "Spawn-hitch capture: post_max/pre_p50 <= 1.5 over >=20 forced spawns in the gate window AND no frame >80ms attributable to spawn/construction; stage-swap regtest shows scene.entities flat after N swap cycles; one live screenshot confirms labels pixel-identical post font-patch."
+   },
+   {
+    "stack": "S3-HUD upload stack",
+    "rationale": "hudU is the single largest tracked CPU stage at maximized (11-14ms avg, 25-69ms spikes) and most of the windowed/maximized gap. The zero-copy rewrite is CONFIRMED byte-identical and supersedes (not reverts) the multi-band guardrail — update the guardrails doc in the same commit. Radar throttle makes the existing fingerprint early-out actually fire; watch-card throttle covers the real-play pinned path the soaks never exercised. Region split deliberately deferred to S8.",
+    "candidate_ids": [
+     "hud-bgra-zero-copy",
+     "hud-radar-throttle-10hz",
+     "hud-compose-trims",
+     "watchcard-minimap-throttle"
+    ],
+    "gate": "Soak CSV: hudU avg < 2.5ms at maximized with ZERO setRamImageAs-class hitch frames (>20ms hudU) in min 15-20; HUD screenshots pixel-identical vs before (incl. radar, messages, command bar, pinned watch card); igLoop timer shows no compensating GPU-DMA growth."
+   },
+   {
+    "stack": "S4-legacy render-sync quick wins",
+    "rationale": "Confirmed/cheap reductions of the 23ms legacy rend stage and frame-loop waste: ~6ms of measured no-op overlay writes, ~2-8.5ms of per-frame filesystem stats (grows with city size), the duplicate snapshot build, label LOD (pre-approved lever (a), double-duty as the instancing label-parity design), the fog-texture spike, and the churn/GC leftovers. These raise the legacy floor (which remains the rollback path), shrink spike sources, and are all measurable on the harness. Dropped here: overlay-batch-renderer (superseded by S6's instanced HP bars + label LOD) and half-rate HUD compose (superseded by S3).",
+    "candidate_ids": [
+     "overlay-dirty-gates",
+     "prefab-path-resolve-cache",
+     "snapshot-once-per-frame",
+     "label-zoom-lod-pooled",
+     "fog-texture-numpy",
+     "churn-microfixes"
+    ],
+    "gate": "Soak rend column drops >=5ms at spec on the legacy path; screenshots at both sides of the label-LOD threshold (plus selected-hero exception) reviewed; WK67 digest byte-identical for the behavior-neutral items (dirty gates, caches, snapshot dedup); fog texture output byte-identical (existing regtest)."
+   },
+   {
+    "stack": "S5-sim-tick stack",
+    "rationale": "Sim runs inline at 2x tick rate at the gate speed; candidates cut mean tick ~5ms -> ~1.5-2.5ms and p99 from 10-35ms to <8ms (the sim-side micro-hitch class, incl. hero-spawn fog+A* ticks). Three items are CONFIRMED via A/B; the M items (fog cadence, AI cache, tree-blocking set) are independent and individually gated. fast-dt-scaling held LAST within the stack and taken only if the gate still needs sim headroom (digest re-baseline + balance soak required).",
+    "candidate_ids": [
+     "lazy-hero-profiles",
+     "tree-growth-incremental",
+     "poi-discovery-throttle",
+     "astar-burst-cap-tile-goals",
+     "tree-blocking-set-walkability",
+     "fog-cadence-discovery-prefilter",
+     "ai-threat-cache-staggered",
+     "fast-dt-scaling"
+    ],
+    "gate": "Headless tick bench at the gate scenario: mean <= 2.5ms, p99 <= 8ms over a 6000-tick soak; incremental-vs-full parity asserts green (tree dict, blocking set, fog visibility); WK67 digest byte-identical for the neutral items, re-baselined ONLY for the explicitly-authorized behavior shifts (A* quantization, cadence changes, dt scaling); soak tick column confirms on the GPU box."
+   },
+   {
+    "stack": "S6-instancing-default stack (the headline lever)",
+    "rationale": "The only mapped route to >30 sustained at the maximized worst combo: measured 31.5/25.2 fps vs 13-15 legacy, blocked solely by overlay parity + 5 correctness gaps + the rejected motion model. Order inside the stack: HP bars -> parity gaps -> linear interp -> (label pool from S4's LOD design) -> flip with latch + '=0' hatch + stale-doc cleanup. Legacy path is KEPT as the rollback hatch (architecture's 'delete legacy' deferred). This is where the gate lands; with S1+S3 already in, expect ~35-40 windowed / ~30+ maximized. Prior-art compliance: the previous flip revert was root-caused (C7) and this flip is parity-gated, exactly as the WK123 plan prescribes.",
+    "candidate_ids": [
+     "inst-hp-bars",
+     "inst-parity-gap-fixes",
+     "inst-linear-interp",
+     "inst-default-flip"
+    ],
+    "gate": "On the GPU box: legacy-vs-instanced pixel diff at the deterministic 20-warrior scene with overlays MATCHING; screenshots at both zooms + hills (terrain-Y) + magic/heal volleys + guard click-pick; two_sided regression test green; then the full 20-min soak matrix with heroes maintained: min15-20 [fps-probe-window] avg >30 AND p10 >=27 at out/fast/windowed, avg >=28-30 maximized, spawn-hitch metric still passing. KINGDOM_URSINA_INSTANCING=0 rollback validated before merging."
+   },
+   {
+    "stack": "S7-building batching",
+    "rationale": "After units are instanced, buildings become the dominant remaining per-Entity/draw cost (and construction instantiation is the biggest remaining hitch class at 11-64ms). Template+flatten+copy_to addresses both with one design, on the never-built guardrails lever (b). Scheduled after S6 because the instancing soak tells us how much maximized headroom is still needed; skippable if the gate is already comfortably met (but recommended regardless for the hundreds-of-enemies/large-city direction).",
+    "candidate_ids": [
+     "building-prefab-template-flatten"
+    ],
+    "gate": "Per-building-type AND per-construction-stage screenshot parity (broad coverage per memory rules — every prefab, damaged tint, construction tint); construction-event frame cost < 5ms in the spawn/hitch capture; maximized soak delta >= +1.5 fps or revert."
+   },
+   {
+    "stack": "S8-architecture reserve (conditional / scaling)",
+    "rationale": "Pulled only if S1-S7 leave the gate unmet at maximized, or when the owner actually scales to hundreds of enemies. Order within: hud-region-split (if igLoop still shows HUD DMA), threading experiment (cheap to learn, env-gated, measured in isolation), M_binary (if GPU-fill-bound), then the two scaling enablers (spatial grid, SoA) which are about the 300-enemy future rather than today's gate, and the sim worker thread strictly last (dt-scaling in S5 captures most of its win at a fraction of the risk).",
+    "candidate_ids": [
+     "hud-region-split",
+     "panda-threading-culldraw",
+     "billboard-mbinary-alpha-test",
+     "shared-spatial-grid",
+     "numpy-soa-unit-store",
+     "sim-worker-thread"
+    ],
+    "gate": "Each item individually env-gated and A/B-soaked at the gate combo with variables isolated (never stacked with another experiment in the same run); keep only on a clean win: threading needs a crash-free 17-min soak + >=+2 fps; spatial-grid/SoA need brute-force-vs-optimized parity tests green + flat tick/pack cost at 300 spawned enemies; anything ambiguous reverts."
+   }
+  ]
+ }
+}

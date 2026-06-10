@@ -27,6 +27,7 @@ from ursina import Entity, Vec3, color, Text, scene
 from ursina.shaders import unlit_shader
 
 from game.graphics.terrain_texture_bridge import TerrainTextureBridge
+from game.graphics.ursina_scene_ignore import mark_scene_ignore
 from game.graphics.ursina_sprite_unlit_shader import sprite_unlit_shader
 from game.graphics.vfx import (
     get_projectile_billboard_surface,
@@ -178,6 +179,11 @@ def sync_snapshot_bounties(r: "UrsinaRenderer", snapshot: "SimStateSnapshot", ac
             reward_text.world_position = Vec3(wx, terrain_y + r._BOUNTY_POLE_HEIGHT + r._BOUNTY_TEXT_OFFSET_Y, wz)
             reward_text.world_scale = Vec3(0.15, 0.15, 0.15)
 
+            # Mythos S1 (`scene-entities-ignore`): renderer-managed props — no update/input.
+            mark_scene_ignore(pole)
+            mark_scene_ignore(flag)
+            mark_scene_ignore(reward_text)
+
             r._bounty_entities[bid] = [pole, flag, reward_text]
 
     # Remove entities for claimed/expired bounties
@@ -247,6 +253,8 @@ def sync_snapshot_rubble(r: "UrsinaRenderer", snapshot: "SimStateSnapshot") -> N
                 rotation_y=rock_rot,
                 color=color.rgb(0.6, 0.55, 0.5),  # dusty gray-brown
             )
+            # Mythos S1 (`scene-entities-ignore`): static prop — no update/input.
+            mark_scene_ignore(rock)
             entities.append(rock)
 
         r._rubble_entities[rec.record_id] = entities

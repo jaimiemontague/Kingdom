@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import os
 import time
 from typing import TYPE_CHECKING
 
@@ -11,11 +12,37 @@ import pygame
 from config import COLOR_BLACK, MAX_ALIVE_ENEMIES
 from game.graphics.font_cache import get_font
 from game.presentation.frame_context import FrameContext
+from game.sim.timebase import now_ms as sim_now_ms
 from game.systems import perf_stats
 
 if TYPE_CHECKING:
     from game.engine import GameEngine
     from game.sim.snapshot import SimStateSnapshot
+
+
+# Mythos S3 (watchcard-minimap-throttle): the pinned-hero watch-card minimap is a
+# FULL world mini-render (terrain + every DTO + fog) that previously re-rendered
+# every frame while a hero was pinned — several ms of hudR plus a third large
+# dirty row-run pushing the HUD upload toward its full-upload fallback during
+# exactly the "watching my hero fight" moments. It now re-renders at most every
+# 1000/KINGDOM_WATCHCARD_HZ ms of SIM time (default 10Hz; 0 = every frame) and
+# blits the cached surface between — identical pixels, <=100ms content latency
+# (authorized). Forced re-render on pin switch / rect resize (cache key).
+_WATCHCARD_HZ_CACHE: list[float] = []
+
+
+def _watchcard_refresh_hz() -> float:
+    if not _WATCHCARD_HZ_CACHE:
+        try:
+            hz = float(os.environ.get("KINGDOM_WATCHCARD_HZ", "10") or "10")
+        except Exception:
+            hz = 10.0
+        _WATCHCARD_HZ_CACHE.append(hz)
+    return _WATCHCARD_HZ_CACHE[0]
+
+
+def _reset_watchcard_hz_for_tests() -> None:
+    _WATCHCARD_HZ_CACHE.clear()
 
 
 class EngineRenderCoordinator:
@@ -169,6 +196,48 @@ class EngineRenderCoordinator:
         snapshot: SimStateSnapshot,
     ):
         e = self._e
+
+        # Mythos S3 (watchcard-minimap-throttle): re-render the world mini-render
+        # at ~10Hz sim time; blit the cached surface on intermediate frames.
+        hero_key = str(
+            getattr(hero, "entity_id", "") or getattr(hero, "hero_id", "") or id(hero)
+        )
+        cache_key = (hero_key, int(rect.width), int(rect.height))
+        hz = _watchcard_refresh_hz()
+        now = int(sim_now_ms())
+        mini = getattr(e, "_minimap_surface", None)
+        due = (
+            hz <= 0
+            or mini is None
+            or mini.get_size() != (rect.width, rect.height)
+            or getattr(e, "_minimap_cache_key", None) != cache_key
+            or now >= int(getattr(e, "_minimap_next_redraw_ms", 0))
+        )
+        if due:
+            self._compose_hero_minimap(rect, hero, snapshot)
+            e._minimap_cache_key = cache_key
+            e._minimap_next_redraw_ms = now + (int(1000.0 / hz) if hz > 0 else 0)
+        mini_surf = e._minimap_surface
+
+        dest = pygame.Rect(rect.x, rect.y, mini_surf.get_width(), mini_surf.get_height())
+        prev_clip = surface.get_clip()
+        try:
+            surface.set_clip(dest.clip(surface.get_clip()))
+            surface.blit(mini_surf, dest.topleft)
+        finally:
+            surface.set_clip(prev_clip)
+
+    def _compose_hero_minimap(
+        self,
+        rect: pygame.Rect,
+        hero,
+        snapshot: SimStateSnapshot,
+    ):
+        """Full world mini-render into ``e._minimap_surface`` (pre-Mythos body of
+        ``_render_hero_minimap`` minus the screen blit). ``watch_card_map_world_center``
+        is captured HERE so the click->world mapping always matches the pixels on
+        screen (the cached frame), not the hero's live position."""
+        e = self._e
         from game.graphics.render_context import set_render_zoom
         from game.world import Visibility
 
@@ -223,14 +292,6 @@ class EngineRenderCoordinator:
 
         pygame.draw.rect(mini_surf, (100, 100, 100), mini_surf.get_rect(), 2)
         pygame.draw.rect(mini_surf, (40, 40, 40), mini_surf.get_rect().inflate(-4, -4), 1)
-
-        dest = pygame.Rect(rect.x, rect.y, mini_surf.get_width(), mini_surf.get_height())
-        prev_clip = surface.get_clip()
-        try:
-            surface.set_clip(dest.clip(surface.get_clip()))
-            surface.blit(mini_surf, dest.topleft)
-        finally:
-            surface.set_clip(prev_clip)
 
         hud = getattr(e, "hud", None)
         if hud is not None:

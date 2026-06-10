@@ -81,7 +81,59 @@ problem, not one axis.
 
 ## 4. Candidate fixes (filled by the discovery workflow — ranked)
 
-*(populated after `mythos-lag-discovery` returns)*
+**Discovery completed 2026-06-09** — 11 explorers + synthesis (12 agents, ~2M tokens, 73 raw
+candidates → 36 ranked). **Full per-candidate detail (mechanism, fix design, evidence,
+file:line citations): `.cursor/plans/mythos_lag_fix_candidates.json`** (committed). Theory of
+the lag — four stacked, independently measured costs:
+
+1. **vsync quantization** — Panda defaults `sync-video` ON (Ursina's vsync kwarg is dead
+   code); every frame rounds up to a 16.7 ms vblank multiple (~10–16 ms lost at the 30 fps
+   boundary; explains the 33↔50 ms alternation that reads as jitter).
+2. **Legacy per-Entity unit render** (~23 ms rend at spec) — proven 2.5× instanced path
+   exists but is blocked from default by overlay parity gaps (+ 4 correctness gaps found:
+   terrain-height, projectile kinds, non-uniform scales, shadow y).
+3. **HUD upload conversion stack** (~12–14 ms maximized + a measured 50 ms full-upload hitch
+   fallback) — pygame surface bytes are byte-identical to Panda F_rgba BGRA → zero-copy.
+4. **Sim tick doubled at FAST** (~6–12 ms/frame) — five cacheable per-tick rebuilds (hero
+   profiles, tree-growth dict, POI scans, fog, threat scans) + A* bursts for p99 spikes.
+
+**Hero-spawn hitch root-caused (confirmed):** every Ursina `Text()` re-runs
+`FontPool.load_font` + appends a duplicate model-path dir (5.3–21 ms/label, degrades over
+session); plus construction-stage prefab swaps cost 11–64 ms AND leak ~26 orphan entities
+per swap (an uncovered C1-class leak — re-introduces time-degradation in real play).
+
+### Ranked top candidates (gain @ gate combo; full list in the JSON)
+
+| # | id | stack | eff | conf | expected gain |
+|---|----|-------|-----|------|---------------|
+| 1 | vsync-off | S1 engine-config | S | high | windowed 28-29.5→~36-40; maximized 21-23→~25-30 |
+| 2 | hud-bgra-zero-copy | S3 HUD | S | **confirmed** | hudU 12-14→1.3-4 ms maximized; kills 25-69 ms hitch class |
+| 3 | text-font-cache-patch | S2 spawn-hitch | S | **confirmed** | 6-unit wave burst 35-40→~4 ms; kills per-spawn degradation |
+| 4 | overlay-dirty-gates | S4 legacy-rend | S | **confirmed** | ~5.5-6.5 ms/frame skippable no-change sync |
+| 5 | prefab-swap-orphan-free | S2 | S | **confirmed** | prevents re-emergent time-degradation (26 orphans/swap) |
+| 6 | hud-radar-throttle-10hz | S3 | S | high | with #2: hudU avg →~1.5-2 ms maximized |
+| 7 | lazy-hero-profiles | S5 sim | S | **confirmed** | ~1.5-3 ms/frame at FAST w/ 20+ heroes |
+| 8 | prefab-path-resolve-cache | S4 | S | **confirmed** | ~2 ms @24 bldgs → ~8.5 ms @100 (per-frame is_file() on OneDrive!) |
+| 9 | tree-growth-incremental | S5 | S | **confirmed** | ~0.9-1.8 ms/frame + gen0 GC relief |
+| 10 | poi-discovery-throttle | S5 | S | **confirmed** | ~0.8-1.1 ms/frame at FAST |
+| 11 | snapshot-once-per-frame | S4 | S | high | ~1.5-2.5 ms/frame (duplicate DTO pass) |
+| 12 | scene-entities-ignore | S1 | S | high | ~1-5 ms/frame, scales with entity count |
+| 13 | label-zoom-lod-pooled | S4 | S | high | ~100 TextNode draws gone at gate zoom |
+| 14 | astar-burst-cap-tile-goals | S5 | S | high | p99 spikes 6-7.5→~2-3 ms |
+| 15 | unit-prewarm-extension | S2 | S | high | kills first-spawn 270 ms hitch class |
+| 16-19 | inst-hp-bars / parity-gaps / linear-interp / **default-flip** | **S6 instancing-default** | M | high | **THE landing: default 13-15 → ~30-31 windowed / 25+ maximized, stacks with S1+S3** |
+| 21 | building-prefab-template-flatten | S7 | M | high | construction hitches 11-64→1-5 ms; +2-3 fps late-game |
+| 22-24 | fog-cadence / tree-blocking-set / ai-threat-cache | S5 | M | high | p99 tick 10-35 → ~5-6 ms |
+| 30 | fast-dt-scaling | S5 | M | medium | halves remaining sim CPU at FAST |
+| 31-36 | hud-region-split / culldraw-threading / mbinary-alpha / spatial-grid / numpy-soa / sim-worker-thread | S8 reserve | M-XL | low-high | pulled only if S1-S7 miss the bar; spatial-grid+SoA = the "hundreds" substrate |
+
+### Execution order (each stack A/B-gated by soak/smoke evidence)
+
+S0 measurement extras → **S1 engine-config (vsync!)** → **S2 spawn-hitch** → **S3 HUD
+zero-copy** → S4 legacy quick wins → S5 sim-tick → **S6 instancing-default (headline)** →
+S7 building batching → S8 architecture reserve (only as needed).
+Cheap+confirmed first: S1+S2+S3 alone are projected to put windowed past 30 and kill the
+hitches; S6 is the mapped route to >30 sustained at maximized with headroom for "hundreds".
 
 ## 5. Iteration protocol
 
@@ -94,7 +146,24 @@ problem, not one axis.
 
 ## 6. Results log (append-only — every run gets a row)
 
-*(starts after harness upgrade)*
+| date | build | combo | run | avg | p50 | p10 | min | rend | tick | hudR | hudU | verdict |
+|------|-------|-------|-----|-----|-----|-----|-----|------|------|------|------|---------|
+| 06-09 | BASELINE (53dccec) | out/fast/windowed | 2.5min smoke | 15.4 | 15.0 | 10.8 | 13.6* | 22.4 | 9.5 | 3.7 | 10.6 | FAIL (need >30) |
+| 06-09 | BASELINE (53dccec) | out/fast/maximized | 2.5min smoke | 13.1 | 12.7 | 9.4 | 10.2* | 23.8 | 11.4 | 4.0 | 17.3 | FAIL |
+
+| 06-09 | **R1 = S1+S2+S3** | out/fast/windowed | 2.5min smoke | **18.6** | 18.9 | 16.7 | 16.3 | 19.1 | 7.8 | 3.6 | **0.84** | FAIL (need >30) — +21% vs base |
+| 06-09 | **R1 = S1+S2+S3** | out/fast/maximized | 2.5min smoke | **19.0** | 19.2 | 17.5 | 15.5 | 18.3 | 7.7 | 3.8 | **1.29** | FAIL — **+45% vs base**; win/max gap CLOSED |
+
+\* min of window fps_ema rows (not single-frame min). Stage cols = fps-probe avg ms.
+Baseline notes: `gpu_or_ursina` untracked remainder frequently 20–45 ms with spikes >100 ms
+— consistent with vsync present-wait + GPU draw; hudU max 47.4 (windowed) / 75.9 (maximized)
+confirms the full-upload hitch class; tick max 96–229 ms = catch-up + A* burst class.
+
+**R1 outcome (committed):** vsync=off verified engaged; zero-copy verified (`BGRA layout
+verified` + hudU max 6.5 ms — the 47–76 ms hitch class is GONE); font patch + prewarm
+(509 ms startup) + orphan-free swaps in. New `igloop` stage attribution shows the remaining
+wall: **igloop ~20.5 ms (GPU cull/draw of ~300-400 legacy entities) + rend ~18-19 ms (legacy
+per-Entity sync)** → S6 instancing-default is the next lever, then S5 (tick 7.7 avg, max 135).
 
 ## 7. Definition of Done
 

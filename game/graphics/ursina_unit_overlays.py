@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from ursina import Entity, Text, color, scene, Vec3
 
+from game.graphics.ursina_scene_ignore import mark_scene_ignore
 from game.graphics.visual_specs import UnitVisualSpec
 
 
@@ -63,6 +64,11 @@ def configure_ks_overlay(ent) -> None:
             ent.z = -0.02
     except Exception:
         pass
+    # Mythos S1 (`scene-entities-ignore`): every overlay child (HP bars, name/gold/
+    # Zzz/tax labels, building gold) is configured exactly once through here — they are
+    # renderer-managed (no update/input), so drop them from ursina's per-frame entity
+    # walk. ~240 overlay nodes at the gate scenario otherwise re-walk every frame.
+    mark_scene_ignore(ent)
     ent._ks_overlay_cfg = True
 
 

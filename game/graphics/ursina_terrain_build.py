@@ -235,6 +235,11 @@ def build_3d_terrain(owner, world, buildings) -> None:
     grass_clumps, grass_stride = _grass_density_budget()
 
     root = Entity(name="terrain_3d_root")
+    # Mythos S1 (`scene-entities-ignore`): the terrain root has no update/input (its
+    # scatter children already use add_to_scene_entities=False) — skip it in ursina's
+    # per-frame entity walk.
+    from game.graphics.ursina_scene_ignore import mark_scene_ignore as _mark_scene_ignore
+    _mark_scene_ignore(root)
     water_tint = color.rgb(0.24, 0.48, 0.82)
 
     w_world = (tw * ts) / SCALE

@@ -208,6 +208,14 @@ def _record_fps_probe_sample(owner, dt: float) -> None:
         return
     if dt > 1e-9:
         owner._fps_probe_samples.append(1.0 / float(dt))
+        # Mythos S0 (`gate-measurement-harness`): also bucket the sample into the
+        # optional wall-clock acceptance window (KINGDOM_URSINA_FPS_WINDOW_SEC, parsed
+        # once in UrsinaApp.__init__). Dead unless that env is set.
+        win = getattr(owner, "_fps_probe_window_sec", None)
+        if win is not None and win[0] <= owner._fps_probe_elapsed <= win[1]:
+            samples = getattr(owner, "_fps_probe_window_samples", None)
+            if samples is not None:
+                samples.append(1.0 / float(dt))
 
 
 def _record_fps_probe_stage_ms(owner, name: str, started_at: float) -> None:
@@ -250,6 +258,24 @@ def _print_fps_probe_summary(owner) -> None:
             f"{name} frames={len(vals)} avg_ms={avg_ms:.3f} "
             f"p90_ms={p90_ms:.3f} max_ms={vals[-1]:.3f}"
         )
+    # Mythos S0 (`gate-measurement-harness`): single greppable acceptance-window verdict
+    # line — fps percentiles computed ONLY from frames whose probe-elapsed time fell
+    # inside KINGDOM_URSINA_FPS_WINDOW_SEC="<lo>:<hi>". Same percentile index style as
+    # the whole-run [fps-probe] line above.
+    win = getattr(owner, "_fps_probe_window_sec", None)
+    if win is not None:
+        wvals = sorted(getattr(owner, "_fps_probe_window_samples", None) or [])
+        if not wvals:
+            print(f"[fps-probe-window {win[0]:g}:{win[1]:g}] no samples in window")
+        else:
+            wavg = sum(wvals) / len(wvals)
+            wp10 = wvals[max(0, int(len(wvals) * 0.10) - 1)]
+            wp50 = wvals[max(0, int(len(wvals) * 0.50) - 1)]
+            print(
+                f"[fps-probe-window {win[0]:g}:{win[1]:g}] "
+                f"frames={len(wvals)} avg_fps={wavg:.1f} "
+                f"p10_fps={wp10:.1f} p50_fps={wp50:.1f} min_fps={wvals[0]:.1f}"
+            )
 
 
 def _maybe_auto_screenshot_then_quit(owner) -> None:
