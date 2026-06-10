@@ -1900,6 +1900,129 @@ def scenario_wk133_quest_ui(engine, *, seed: int) -> list[Shot]:
     ]
 
 
+def scenario_wk135_inventory_ui(engine, *, seed: int) -> list[Shot]:
+    """WK135: hero inventory UI — the exact Sovereign repro (ONE hero in an empty
+    world with exactly 5 items: equipped steel_sword/chain_mail/hawk_signet + 2
+    backpack items) for the BEFORE shots (hero panel Gear text + watch card),
+    plus AFTER shots of the InventoryPanel window at 1024x576 and 1920x1080 and
+    the hero panel with its Inventory button."""
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    _reveal_all(engine.world)
+
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        gx = MAP_WIDTH // 2 - 1
+        gy = MAP_HEIGHT // 2 - 1
+        castle = _place_building(engine, "castle", gx, gy)
+
+    cgx = int(getattr(castle, "grid_x", MAP_WIDTH // 2))
+    cgy = int(getattr(castle, "grid_y", MAP_HEIGHT // 2))
+    hx, hy = _tile_center_px(cgx + 3, cgy + 1)
+    hero = _place_hero(engine, "warrior", hx, hy)
+    hero.name = "Sir Aldric"
+
+    # Exactly 5 items: 3 equipped + 2 carried in the backpack (registry ItemDefs).
+    from game.content.items import get_item
+
+    for item_id in ("steel_sword", "chain_mail", "hawk_signet"):
+        hero.equip(get_item(item_id))
+    hero.add_to_backpack(get_item("dagger"))
+    hero.add_to_backpack(get_item("long_bow"))
+    hero.potions = 1  # consumables-row state (potion counter, not a backpack item)
+
+    def _apply_select_hero(eng: Any) -> None:
+        eng.screenshot_hide_ui = False
+        eng.selected_building = None
+        eng.selected_peasant = None
+        eng.selected_enemy = None
+        eng.selected_hero = hero
+        # Keep the documented world empty: ticks may have spawned enemies/peasants.
+        _clear_dynamic_entities(eng)
+        eng.show_perf = False
+        if hasattr(eng, "debug_panel"):
+            eng.debug_panel.visible = False
+        if hasattr(eng, "building_panel"):
+            eng.building_panel.deselect()
+        hud = getattr(eng, "hud", None)
+        if hud is not None:
+            hud._pin_slot.unpin()
+            inv = getattr(hud, "inventory_panel", None)
+            if inv is not None and getattr(inv, "visible", False):
+                inv.close()
+
+    def _apply_pinned_watch(eng: Any) -> None:
+        from game.sim.timebase import now_ms as sim_now_ms
+
+        _apply_select_hero(eng)
+        hud = getattr(eng, "hud", None)
+        if hud is not None:
+            hud._pin_slot.pin(str(getattr(hero, "hero_id", "") or ""), int(sim_now_ms()))
+            hud._pin_slot.pinned_name = str(getattr(hero, "name", "Hero"))
+            hud._pin_slot._just_pinned = False
+            hud._watch_card_expanded = True
+            hud._left_split_fracs = {"main": 0.45, "watch": 0.55}
+
+    def _apply_inventory_open(eng: Any) -> None:
+        _apply_select_hero(eng)
+        inv = getattr(getattr(eng, "hud", None), "inventory_panel", None)
+        if inv is not None:
+            inv.open(hero)
+
+    cx = float(getattr(castle, "center_x", getattr(castle, "x", 0.0)))
+    cy = float(getattr(castle, "center_y", getattr(castle, "y", 0.0)))
+    meta = {"scenario": "wk135_inventory_ui", "seed": int(seed)}
+    return [
+        Shot(
+            filename="wk135_before_hero_panel_1920.png",
+            label="WK135 before: hero panel Gear text block (5 items)",
+            center_x=cx, center_y=cy, zoom=1.4, ticks=0,
+            apply=_apply_select_hero,
+            meta={**meta, "shot": "before_hero_panel"},
+        ),
+        Shot(
+            filename="wk135_before_watch_card_1920.png",
+            label="WK135 before: pinned watch card gear line (5 items)",
+            center_x=cx, center_y=cy, zoom=1.4, ticks=0,
+            apply=_apply_pinned_watch,
+            meta={**meta, "shot": "before_watch_card"},
+        ),
+        Shot(
+            filename="wk135_inventory_window_1920.png",
+            label="WK135 after: inventory window open (1920x1080)",
+            center_x=cx, center_y=cy, zoom=1.4, ticks=0,
+            width=1920, height=1080,
+            apply=_apply_inventory_open,
+            meta={**meta, "shot": "inventory_window_1920"},
+        ),
+        Shot(
+            filename="wk135_hero_panel_inventory_button_1920.png",
+            label="WK135 after: hero panel with Inventory button",
+            center_x=cx, center_y=cy, zoom=1.4, ticks=0,
+            apply=_apply_select_hero,
+            meta={**meta, "shot": "hero_panel_inventory_button"},
+        ),
+        Shot(
+            filename="wk135_watch_card_bag_button_1920.png",
+            label="WK135 after: pinned watch card with Bag button",
+            center_x=cx, center_y=cy, zoom=1.4, ticks=0,
+            apply=_apply_pinned_watch,
+            meta={**meta, "shot": "watch_card_bag_button"},
+        ),
+        # NOTE: the 1024x576 shot stays LAST — tools/capture_screenshots.py only
+        # reconfigures the surface when a shot's size differs from the CLI size,
+        # so a non-CLI-size shot would leak its surface into later default shots.
+        Shot(
+            filename="wk135_inventory_window_1024.png",
+            label="WK135 after: inventory window open (1024x576)",
+            center_x=cx, center_y=cy, zoom=1.4, ticks=0,
+            width=1024, height=576,
+            apply=_apply_inventory_open,
+            meta={**meta, "shot": "inventory_window_1024"},
+        ),
+    ]
+
+
 def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
     scenario_name = str(scenario_name).strip()
     if scenario_name == "building_catalog":
@@ -1942,6 +2065,8 @@ def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
         return scenario_ursina_melee_combat(engine, seed=int(seed))
     if scenario_name == "wk133_quest_ui":
         return scenario_wk133_quest_ui(engine, seed=int(seed))
+    if scenario_name == "wk135_inventory_ui":
+        return scenario_wk135_inventory_ui(engine, seed=int(seed))
     raise ValueError(f"Unknown scenario: {scenario_name}")
 
 

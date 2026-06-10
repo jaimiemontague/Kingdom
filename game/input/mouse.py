@@ -122,6 +122,15 @@ def handle_mousedown(ih: "InputHandler", event):
                     return
                 if action in ("chat_band_close", "chat_band_open"):
                     return
+                # WK135: inventory window — modal click consumed / open request.
+                if action == "inventory_click":
+                    return
+                if isinstance(action, dict) and action.get("type") == "open_inventory":
+                    hero = action.get("hero")
+                    inv = getattr(c.hud, "inventory_panel", None)
+                    if inv is not None and hero is not None:
+                        inv.open(hero)
+                    return
                 if isinstance(action, dict) and action.get("type") == "select_hero_at_world":
                     c.try_select_hero_at_world(float(action.get("wx", 0.0)), float(action.get("wy", 0.0)))
                     return

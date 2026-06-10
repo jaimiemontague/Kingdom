@@ -154,10 +154,10 @@ def render_hero_watch_card_infocard(
         surface.blit(hud._watch_xp_label_surf, (left_x, row2_y))
         surface.blit(hud._watch_lv_label_surf, (right_x, row2_y))
 
+        lv_surf = hud._watch_lv_label_surf
+        bx = right_x + lv_surf.get_width() + 4
+        bh = max(16, lv_surf.get_height() + 2)
         if not hud._chat_visible:
-            lv_surf = hud._watch_lv_label_surf
-            bx = right_x + lv_surf.get_width() + 4
-            bh = max(16, lv_surf.get_height() + 2)
             bw = max(40, hud.font_tiny.size("Chat")[0] + 10)
             bw = min(bw, cx + cw - bx - 6)
             btn_r = pygame.Rect(bx, row2_y + max(0, (lv_surf.get_height() - bh) // 2), bw, bh)
@@ -172,6 +172,24 @@ def render_hero_watch_card_infocard(
                     ),
                 )
                 hud._chat_open_rect = btn_r
+                bx = btn_r.right + 4
+
+        # WK135: small Bag button (opens the inventory window for the pinned hero),
+        # drawn ONLY when it fits in the existing stats-row slack — the card and the
+        # WATCH_CARD_* layout constants are unchanged.
+        bag_w = max(34, hud.font_tiny.size("Bag")[0] + 10)
+        if bx + bag_w <= cx + cw - 6:
+            bag_r = pygame.Rect(bx, row2_y + max(0, (lv_surf.get_height() - bh) // 2), bag_w, bh)
+            NineSlice.render(surface, bag_r, hud._button_tex_normal, border=hud._button_slice_border)
+            bag_lbl = hud.font_tiny.render("Bag", True, (225, 205, 170))
+            surface.blit(
+                bag_lbl,
+                (
+                    bag_r.centerx - bag_lbl.get_width() // 2,
+                    bag_r.centery - bag_lbl.get_height() // 2,
+                ),
+            )
+            hud._inventory_open_rect = bag_r
 
         bar_y2 = row2_y + hud._watch_xp_label_surf.get_height() + 1
         xp_ratio = max(0.0, min(1.0, xp / max(1, xp_to_lv)))
@@ -249,6 +267,7 @@ def render_card_slot(
     hud._watch_card_chat_rect = None
     hud._chat_close_rect = None
     hud._chat_open_rect = None
+    hud._inventory_open_rect = None
     hud._card_slot_kind = None
 
     if hud._pin_slot.hero_id is None:

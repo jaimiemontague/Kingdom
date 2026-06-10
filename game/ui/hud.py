@@ -30,6 +30,7 @@ from game.ui.hud_layout import (
     RECALL_BTN_W,
 )
 from game.ui.interior_view_panel import InteriorViewPanel
+from game.ui.inventory_panel import InventoryPanel
 from game.ui.micro_view_manager import MicroViewManager, ViewMode
 from game.ui.quest_view_panel import QuestViewPanel
 from game.ui.speed_control import SpeedControlBar
@@ -325,6 +326,9 @@ class HUD:
         self._chat_visible: bool = False
         self._chat_close_rect: pygame.Rect | None = None
         self._chat_open_rect: pygame.Rect | None = None
+        # WK135: hero inventory window + watch-card Bag-button hit rect.
+        self.inventory_panel = InventoryPanel(self.screen_width, self.screen_height)
+        self._inventory_open_rect: pygame.Rect | None = None
         self._hero_menu_chat_rect: pygame.Rect | None = None
         self._hero_menu_hero_rect: pygame.Rect | None = None
         self._info_card = InfoCard()
@@ -764,6 +768,7 @@ class HUD:
     def on_resize(self, screen_width: int, screen_height: int) -> None:
         self.screen_width = int(screen_width)
         self.screen_height = int(screen_height)
+        self.inventory_panel.on_resize(self.screen_width, self.screen_height)
 
     def render_messages(self, surface: pygame.Surface, left_rect: pygame.Rect | None = None) -> None:
         from game.ui import hud_messages
@@ -1043,6 +1048,14 @@ class HUD:
                     self._cmdmode_hint_surf = hint_surf
                 surface.blit(hint_surf, (30, y + 10))
 
+        # WK135: hero inventory window (topmost HUD element; modal over the world).
+        if self.inventory_panel.visible:
+            inv_hero = self.inventory_panel.hero
+            if inv_hero is None or not bool(getattr(inv_hero, "is_alive", True)):
+                self.inventory_panel.close()
+            else:
+                self.inventory_panel.render(surface, cursor_pos=cursor_pos)
+
     def is_mouse_over_menu(
         self,
         pos: tuple[int, int],
@@ -1085,6 +1098,12 @@ class HUD:
             if self.memorial_card.handle_click((x, y)):
                 return "close_memorial_unpause"
             return None
+
+        # WK135: inventory window is modal — it consumes every click while open
+        # (X / outside-click close inside handle_click).
+        if self.inventory_panel.visible:
+            self.inventory_panel.handle_click((x, y))
+            return "inventory_click"
 
         bio = getattr(self, "building_interior_overlay", None)
         if bio is not None and getattr(bio, "visible", False):
@@ -1142,6 +1161,22 @@ class HUD:
         ):
             self._chat_visible = True
             return "chat_band_open"
+        # WK135: watch-card Bag button opens the pinned hero's inventory window.
+        if (
+            getattr(self, "_inventory_open_rect", None) is not None
+            and self._inventory_open_rect.collidepoint((x, y))
+            and pin.hero_id is not None
+        ):
+            pinned_hero = next(
+                (
+                    h
+                    for h in (game_state.get("heroes") or [])
+                    if str(getattr(h, "hero_id", "") or "") == str(pin.hero_id)
+                ),
+                None,
+            )
+            if pinned_hero is not None:
+                return {"type": "open_inventory", "hero": pinned_hero}
 
         if self.quit_rect is not None and self.quit_rect.collidepoint((x, y)):
             return "quit"

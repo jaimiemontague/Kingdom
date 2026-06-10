@@ -60,6 +60,12 @@ def handle_keydown(ih: "InputHandler", event):
 
     # ESC menu takes priority
     if event.key == 'esc':
+        # WK135: the hero inventory window closes first.
+        _inv = getattr(getattr(c, "hud", None), "inventory_panel", None)
+        if _inv is not None and getattr(_inv, "visible", False):
+            _inv.close()
+            return
+
         # WK126-T9: the quest-create modal (Herald's Post) closes first.
         _bp = getattr(c, "building_panel", None)
         _qcp = getattr(_bp, "quest_create_panel", None) if _bp is not None else None
@@ -166,6 +172,19 @@ def handle_keydown(ih: "InputHandler", event):
     elif event.key == 'h':
         # Hire a hero
         c.try_hire_hero()
+
+    elif event.key == 'i':
+        # WK135: toggle the inventory window for the selected hero.
+        # 'i' is free — WK114 Round B deleted the zombie building types whose
+        # hotkeys included I (library), so BUILD_HOTKEY_TO_TYPE no longer has it.
+        inv = getattr(c.hud, "inventory_panel", None)
+        if inv is not None:
+            if getattr(inv, "visible", False):
+                inv.close()
+            else:
+                hero = getattr(c, "selected_hero", None)
+                if hero is not None and hasattr(hero, "backpack"):
+                    inv.open(hero)
 
     elif event.key == 'space':
         # Center view on castle and reset to starting zoom

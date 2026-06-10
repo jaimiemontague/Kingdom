@@ -132,10 +132,13 @@ class HeroPanel:
         # WK61-FEAT-005: Chat button state
         self._chat_button_rect: pygame.Rect | None = None
         self._chat_button_visible: bool = False
+        # WK135: Inventory button state (same pattern as the Chat button).
+        self._inventory_button_rect: pygame.Rect | None = None
+        self._inventory_button_visible: bool = False
         self._current_hero = None
 
     def handle_click(self, mouse_pos: tuple[int, int]) -> dict | None:
-        """Check for chat button click (WK61-FEAT-005). Returns action dict or None."""
+        """Check for chat/inventory button clicks. Returns action dict or None."""
         if (
             self._chat_button_rect is not None
             and self._chat_button_visible
@@ -143,6 +146,14 @@ class HeroPanel:
             and self._chat_button_rect.collidepoint(mouse_pos)
         ):
             return {"type": "start_conversation", "hero": self._current_hero}
+        # WK135: Inventory button (below Chat) opens the inventory window.
+        if (
+            self._inventory_button_rect is not None
+            and self._inventory_button_visible
+            and self._current_hero is not None
+            and self._inventory_button_rect.collidepoint(mouse_pos)
+        ):
+            return {"type": "open_inventory", "hero": self._current_hero}
         return None
 
     def apply_menu_scroll(self, wheel_y: int) -> bool:
@@ -861,6 +872,17 @@ class HeroPanel:
             (180, 180, 200),
             shadow_color=(20, 20, 30),
         )
+        # WK135: discoverability hint — right-aligned on the Gear header line.
+        inv_hint = "(I) Inventory"
+        hint_w = self.font_tiny.size(inv_hint)[0]
+        TextLabel.render(
+            surface,
+            self.font_tiny,
+            inv_hint,
+            (panel_x + pad + bar_width - hint_w, y - scroll_off),
+            (150, 165, 200),
+            shadow_color=(20, 20, 30),
+        )
         y += line_skip_sm + 4
 
         TextLabel.render(
@@ -1072,7 +1094,29 @@ class HeroPanel:
         txt_x = chat_btn_rect_raw.x + (chat_btn_rect_raw.width - chat_txt.get_width()) // 2
         txt_y = chat_btn_rect_raw.y + (chat_btn_rect_raw.height - chat_txt.get_height()) // 2
         surface.blit(chat_txt, (txt_x, txt_y))
-        y += chat_btn_h + 8
+        y += chat_btn_h + 4
+
+        # WK135: Inventory button directly below Chat (same rect/hover/hit pattern).
+        inv_btn_h = 26
+        inv_btn_screen_y = y - scroll_off
+        inv_btn_rect_raw = pygame.Rect(panel_x + pad, inv_btn_screen_y, chat_btn_w, inv_btn_h)
+        self._inventory_button_rect = pygame.Rect(inv_btn_rect_raw)
+        inv_bottom = inv_btn_screen_y + inv_btn_h
+        inv_visible = (inv_btn_screen_y < viewport.bottom and inv_bottom > viewport.top)
+        self._inventory_button_visible = inv_visible
+        inv_hovered = inv_visible and inv_btn_rect_raw.collidepoint(mouse_pos)
+        inv_bg = (170, 130, 60) if inv_hovered else (140, 105, 45)
+        pygame.draw.rect(surface, inv_bg, inv_btn_rect_raw)
+        pygame.draw.rect(surface, self._frame_inner, inv_btn_rect_raw, 1)
+        inv_txt = self.theme.font_small.render("Inventory (I)", True, (255, 255, 255))
+        surface.blit(
+            inv_txt,
+            (
+                inv_btn_rect_raw.x + (inv_btn_rect_raw.width - inv_txt.get_width()) // 2,
+                inv_btn_rect_raw.y + (inv_btn_rect_raw.height - inv_txt.get_height()) // 2,
+            ),
+        )
+        y += inv_btn_h + 8
 
         def _finish_body_scroll() -> None:
             content_h = int(y) - body_start

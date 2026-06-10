@@ -7632,6 +7632,59 @@
           "pm_next_actions_by_agent": {}
         }
       }
+    },
+    "wk135_inventory_ui": {
+      "sprint_meta": {
+        "created_utc": "2026-06-10T00:00:00Z",
+        "plan": "Sovereign playtest feedback 2026-06-10",
+        "roadmap": "WK130-134 follow-up"
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "pm_status_summary": "Sovereign playtest feedback on WK131: items render only as text lines (W:/A:/Acc:/Bag) in the hero panel Gear block; no discoverable inventory UI. WK135 = (1) a capture test spawning one hero in an empty world with 5 items, screenshotting hero panel + watch card to document expected vs actual; (2) a REAL inventory window comparable to other games: equipment slot boxes (weapon/armor/accessory) + a 5-slot backpack grid + potions row, rarity-colored, opened from a visible Inventory button on the hero panel (and a hotkey), ESC closes. Screenshot-verified before close.",
+          "pm_next_actions_by_agent": {
+            "08_UXUIDirector": "Full implementation per dispatch prompt: capture scenario + inventory window + button/hotkey wiring + tests + screenshots."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "08"
+              ]
+            ],
+            "intelligence_by_agent": {
+              "08": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "UI-only sprint, single implementer; 08 high (new window component + interaction design)."
+          }
+        },
+        "r2_close": {
+          "pm_status_summary": "WK135 CLOSED (pending final qa_smoke). 08 delivered: capture scenario (lone hero, empty world, 5 items) producing before/after shots; new game/ui/inventory_panel.py — view-only inventory window with rarity-colored equipment slot boxes (Weapon/Armor/Accessory + stats), 5-slot backpack grid with n/5 header, potions row, footer explaining auto-equip/sell behavior; Inventory button on the hero panel under Chat + hotkey I + watch-card bag button; ESC/X/outside-click closes. r2 quick-fix: the stray tan squares in BOTH new modals were 1px 'stud' pixels in assets/ui/.../panel_modal.png stretched by NineSlice center-scaling — fixed in the texture (also cleans build catalog/pause menu). PM re-verified crops: clean.",
+          "evidence": {
+            "screenshots": "docs/screenshots/wk135_inventory/ (before/after + crops, PM-reviewed) + re-captured wk133_quest_ui",
+            "tests": "tests/test_wk135_inventory_ui.py + 33-test UI gate set green"
+          },
+          "known_deferred": [
+            "panel_top/panel_bottom.png have the same stud pixels (pre-existing HUD chrome) — clean later if Jaimie wants",
+            "inventory is view-only by design (heroes are autonomous); revisit if Jaimie wants manual equip"
+          ],
+          "pm_next_actions_by_agent": {}
+        }
+      }
     }
   }
 }
