@@ -7702,6 +7702,22 @@
           "pm_next_actions_by_agent": {}
         }
       }
+    },
+    "v1_6_1_release": {
+      "sprint_meta": {
+        "created_utc": "2026-06-10T00:00:00Z",
+        "plan": "Release: Prototype v1.6.1 — Items, Inventory, & Quests (WK130–WK136)"
+      },
+      "rounds": {
+        "r1_release": {
+          "pm_status_summary": "v1.6.1 RELEASED. Covers WK130 (sidebar/chat UX), WK131 (items core), WK132 (POIs round-out + Dragon), WK133 (quest vertical slice: Herald's Post + Quest-Giver + 4 types + LLM accept/decline), WK134 (LLM verification: accept_bounty wired, provider hardening), WK135 (inventory window after Sovereign feedback), WK136 (chat-hang fix: per-frame response polling + gpt-5-nano support). CHANGELOG v1.6.1 entry, README refresh, config 1.6.0->1.6.1 by Agent 13; no stray version strings. Suite 1,833 passing (was 1,604 at v1.6.0), WK67 digest byte-identical throughout, qa_smoke PASS on the release tree (wk136 close gate; only docs/version strings changed since).",
+          "evidence": {
+            "version_gate": "14 passed (version-adjacent tests), GAME_TITLE import verified",
+            "suite_at_wk136": "1,833 passed / qa_smoke DONE: PASS"
+          },
+          "pm_next_actions_by_agent": {}
+        }
+      }
     }
   }
 }

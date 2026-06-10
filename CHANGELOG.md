@@ -1,5 +1,47 @@
 # Changelog
 
+## Prototype v1.6.1 — Items, Inventory, & Quests
+
+Everything from WK130 through WK136: heroes now find, carry, equip, and sell **items** (with a real inventory window), a player-placed **Herald's Post** hands out **quests** heroes accept or decline with their own LLM minds, five new **points of interest** round out the map (including a Dragon Cave with a real Dragon boss), the left sidebar and chat got a usability overhaul, and the LLM connection got a verification-and-fix pass — headlined by the chat-hang fix and gpt-5-family support.
+
+### Items & Inventory (WK131, WK135)
+- **22-item registry:** tiered weapons and armor (subsuming the old hardcoded shop lists), accessories, and consumables, each with rarity (common / uncommon / rare / legendary), stat mods, prices, and flavor text.
+- **New accessory equip slot + 5-slot backpack**, with auto-equip-if-better — heroes upgrade themselves as they loot.
+- **Loot drops:** bosses always drop rare-or-better, regular enemies have a small drop chance, and POI caches roll items on top of gold — all seeded and deterministic (same seed, same drops).
+- **Heroes sell spare loot** they can't use while shopping, and the 25% sales tax flows to your treasury naturally.
+- **A real inventory window:** rarity-colored equipment slot boxes (Weapon / Armor / Accessory with stats), a 5-slot backpack grid, and a potions row — opened from the new **Inventory button** on the hero panel, the **`I` hotkey**, or the watch-card bag button; ESC / X / click-outside closes.
+- Hero panel Gear block and watch-card gear line for at-a-glance equipment.
+
+### Quests (WK133)
+- **Herald's Post** — a new player-placed building (hotkey **9**) with a Quest-Giver NPC who wanders out front wearing a classic yellow **"!"** when a quest is on offer.
+- **Four quest types:** raid a lair, slay a number of an enemy type, find a point of interest, and explore far afield. Rewards are gold, **escrowed from your treasury when you post the quest** and paid to the hero on completion.
+- **Heroes accept or decline via the LLM**, in character — a declined quest goes back on offer after a 15-minute cooldown for that hero.
+- **Quest-create dialog and an active quest board** so you can see what's posted, who took it, and how it's going.
+
+### Points of Interest (WK132)
+- **5 new POI types:** Mysterious Well (random outcome — gold, item, monster, or map reveal), Ruined Outpost (clear it for permanent vision), Windmill Ruin, Ancient Ruins (knowledge + loot + cascade reveal), and the **Dragon Cave** — a boss arena with a brand-new **Dragon** boss guarding legendary loot.
+- **Heroes' LLM context now includes nearby POIs** (in both autonomous decisions and player chat), so heroes can reason about — and talk about — what's out there.
+- Per-POI item loot tables on the new loot system, and rock scatter now varies by mountain zone.
+
+### UI & Chat (WK130, WK135)
+- **Left sidebar ~10% wider** (224 → 246px) — hero cards, minimap, and panels all breathe better.
+- **The chat window is finally big enough to chat in:** larger hero-menu chat and pinned watch-card chat bands, with comfortable input.
+- **Panel resizing standardized:** the drag handles between sidebar segments use a consistent 8px grab band, hit-testing matches the rendered geometry exactly, panels can never overlap at any drag position, and the stale-height pop when pinning heroes is gone.
+- **Modal cleanup:** stray tan artifact pixels in the shared modal panel texture were fixed at the source — cleaning up the inventory window, quest dialog, build catalog, and pause menu in one shot.
+
+### LLM Connection (WK134, WK136)
+- **The chat hang is fixed:** hero replies now deliver while the game is paused (which is exactly when you chat). Responses used to queue forever because reply polling only ran inside sim ticks.
+- **gpt-5-family support:** proper token budgets and reasoning-effort controls so models like gpt-5-nano return real in-character responses instead of the canned fallback (measured ~2.5s round-trips while paused).
+- **30-second conversation timeout** (autonomous decisions stay snappy at 5s) plus a "*<Hero> is thinking...*" indicator while you wait.
+- **`accept_bounty` wired for real** — the LLM action existed but was silently a no-op; heroes who accept a bounty now actually commit to it.
+- **Provider hardening:** failures fall back to mock *loudly* (HUD toast), a watchdog guarantees a hung provider can never freeze heroes, and the Claude provider got an `ANTHROPIC_MODEL` override off the deprecated pin.
+- **New `docs/llm_connection.md`** — how to configure each provider and what heroes will (and won't) obey.
+
+### Technical Notes
+- Test suite grew from ~1,604 to **1,833 passing** (~230 new tests), including a deterministic items soak, a four-quest-type completion soak, prompt-snapshot tests, and a 28-test chat-command E2E matrix.
+- The WK67 AI-decision determinism digest stayed **byte-identical** across all seven sprints — items, POIs, and quests are structurally unreachable in the digest scenario.
+- Font-cache use-after-free fixed (generation-guarded across pygame re-inits — was an SDL_ttf access violation in test runs).
+
 ## Prototype v1.6.0 — The Fun Gameplay Update
 
 Everything from WK60 through WK129 in one release: the "Make It Fun" gameplay program (waves, difficulty, hunger/food economy, taxes), a major hero-kit expansion (wizard spells, cleric heals, ranger roaming), a long UI/HUD polish arc, a ~60-sprint architecture cleanup, and the headline **Mythos performance overhaul** — 13–15 → 44–49 FPS at the 80-enemy swarm under the player's real conditions (fast speed, zoomed out), and time-flat over 20-minute soaks.

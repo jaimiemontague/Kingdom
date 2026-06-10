@@ -4,7 +4,7 @@ A Majesty-inspired fantasy kingdom simulation game where heroes are controlled b
 
 ## Prototype Version
 
-This repository is currently stamped as **Prototype v1.6.0 — The Fun Gameplay Update** (WK60–WK129: wave events + difficulty system, hunger/food economy + marketplace tax flow, wizard spells / cleric heals / ranger roaming, quest & POI exploration, a ~60-sprint architecture cleanup guarded by a byte-identical determinism digest, and the Mythos performance overhaul — 13–15 → 44–49 FPS at the 80-enemy swarm, time-flat over 20-minute sessions; see `config.py` and `CHANGELOG.md`).
+This repository is currently stamped as **Prototype v1.6.1 — Items, Inventory, & Quests** (WK130–WK136: a 22-item registry with loot drops and a real inventory window, quests via a player-placed Herald's Post with an LLM accept/decline Quest-Giver NPC, 5 new points of interest including a Dragon Cave boss arena, a wider sidebar with a usable chat window, and an LLM connection pass — chat-hang fix, gpt-5-family support; see `config.py` and `CHANGELOG.md`).
 
 ## Overview
 
@@ -19,12 +19,14 @@ In this game, you play as a ruler who builds a kingdom and hires heroes to defen
 ## Features
 
 - **Indirect Control**: Place buildings and bounties, but heroes decide their own actions
-- **LLM-Powered Decisions**: Heroes consult AI for strategic choices, and you can chat with them in plain English
+- **LLM-Powered Decisions**: Heroes consult AI for strategic choices, and you can chat with them in plain English — replies deliver even while paused, with gpt-5-family support (provider setup: `docs/llm_connection.md`)
 - **Multiple LLM Providers**: Support for OpenAI, Claude, Gemini, Grok, or mock AI
 - **Hero Classes & Kits**: Warriors, rangers (frontier roaming), wizards (visible spell casting + kiting), and clerics (ally heals) — each with a unique personality affecting decisions
+- **Items & Inventory**: A 22-item registry of rarity-tiered weapons, armor, accessories, and consumables; heroes loot drops from enemies, bosses, and POIs, auto-equip upgrades, carry a 5-slot backpack, and sell spares at shops — view it all in the inventory window (Inventory button or `I`)
+- **Quests**: Place a Herald's Post (hotkey `9`) and post quests — raid a lair, slay enemies, find a POI, explore far — with gold rewards held in escrow; heroes accept or decline via the LLM through a Quest-Giver NPC with a yellow "!"
 - **Economic System**: Hunger and meals at food stands, marketplace shopping and potion research, taxable gold collected by the tax collector (hold `G` to see each building's stash), and bounty rewards
 - **Wave-Based Combat & Difficulty**: Scheduled enemy waves (goblins, wolves, skeletons, spiders, bandits, and worse) with HUD warnings, lairs to raid, a guardhouse that fires arrow volleys, and an Easy/Normal/Hard difficulty selector
-- **Exploration**: Fog of war, points of interest with discovery events, building interiors, and quest/travelogue views
+- **Exploration**: Fog of war, points of interest with discovery events — wells, ruined outposts, ancient ruins, and a Dragon Cave boss arena among them — building interiors, and quest/travelogue views
 - **Peasants + Construction**: Newly placed buildings start at 1 HP and must be built; peasants also repair and prioritize castle repairs
 - **3D Ursina Renderer**: Default 3D presentation with terrain elevation, instanced trees and units (GPU instancing default-on), fog-of-war shading, and a pygame HUD — 44+ FPS sustained at 100+ units
 
