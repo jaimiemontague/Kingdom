@@ -46,6 +46,12 @@ class World:
         self.rng = get_rng("world_gen")
         # WK44 Stage 2: injected by SimEngine; called as tree_growth_lookup(tx,ty)->0..1
         self.tree_growth_lookup = None
+        # Mythos S5 (tree-blocking-set-walkability): injected by SimEngine — the
+        # live set of TREE tiles whose growth is >= 0.75 (the blocking threshold).
+        # When present, is_walkable/is_buildable's TREE branch is ONE set lookup
+        # instead of the 5-call tree_growth_lookup chain (A* calls is_walkable up
+        # to 8x per expanded node). None => fall back to the original chain.
+        self.blocked_tree_tiles = None
         self.generate_terrain()
 
         # WK53 Wave 2: heightmap for terrain elevation (generated after flat tiles).
@@ -110,6 +116,14 @@ class World:
         if tile in BLOCKING_TILES:
             return False
         if tile == TileType.TREE:
+            # Mythos S5: precomputed blocking-tile set (growth >= 0.75) — exact
+            # same semantics as the lookup chain below. A TREE tile missing from
+            # the growth dict reads growth 1.0 (blocked) in the old chain; such
+            # tiles only exist before SimEngine wires the set, when this attr is
+            # still None and the fallback runs.
+            bs = self.blocked_tree_tiles
+            if bs is not None:
+                return (x, y) not in bs
             g = 1.0
             fn = getattr(self, "tree_growth_lookup", None)
             if callable(fn):
@@ -129,6 +143,12 @@ class World:
                 if tile in BLOCKING_TILES:
                     return False
                 if tile == TileType.TREE:
+                    # Mythos S5: same blocking-tile set fast path as is_walkable.
+                    bs = self.blocked_tree_tiles
+                    if bs is not None:
+                        if (x + dx, y + dy) in bs:
+                            return False
+                        continue
                     g = 1.0
                     fn = getattr(self, "tree_growth_lookup", None)
                     if callable(fn):

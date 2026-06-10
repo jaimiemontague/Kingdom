@@ -33,7 +33,6 @@ blocks startup.
 """
 from __future__ import annotations
 
-import os
 import time
 
 
@@ -179,12 +178,15 @@ def prewarm_unit_spawn_assets(renderer=None, base=None) -> dict:
         timings["prepare_scene_ms"] = -1.0
 
     # ------------------------------------------------------------------
-    # (d) Instanced unit renderer (opt-in path only): pre-build its buffer
-    # textures / instanced geoms / shaders and hand the instance to the
-    # renderer so its first update() reuses it instead of cold-constructing.
-    # Geoms sit at instance_count=0 — zero draw, invisible.
+    # (d) Instanced unit renderer (Mythos S6: DEFAULT path — env helper reads
+    # KINGDOM_URSINA_INSTANCING with default "1"; "0" = legacy fallback):
+    # pre-build its buffer textures / instanced geoms / shaders and hand the
+    # instance to the renderer so its first update() reuses it instead of
+    # cold-constructing. Geoms sit at instance_count=0 — zero draw, invisible.
     # ------------------------------------------------------------------
-    if os.environ.get("KINGDOM_URSINA_INSTANCING", "0") == "1" and renderer is not None:
+    from game.graphics.instanced_unit_renderer import instanced_units_env_enabled
+
+    if instanced_units_env_enabled() and renderer is not None:
         t0 = time.perf_counter()
         try:
             if not hasattr(renderer, "_instanced_unit_renderer"):
@@ -197,6 +199,7 @@ def prewarm_unit_spawn_assets(renderer=None, base=None) -> dict:
                         inst._geom_node_outside,
                         inst._geom_node_inside,
                         inst._shadow_geom_node,
+                        inst._hp_bar_geom_node,
                     ):
                         if np_ is not None:
                             try:

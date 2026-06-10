@@ -14,6 +14,7 @@ frame-step order is preserved exactly.
 
 from __future__ import annotations
 
+import os
 import time
 from typing import TYPE_CHECKING
 
@@ -21,6 +22,27 @@ from game.sim.timebase import get_time_multiplier
 
 if TYPE_CHECKING:
     from game.engine import GameEngine
+
+# Mythos S5 (fast-dt-scaling) — DEFAULT OFF (KINGDOM_FAST_DT_SCALING=1 enables).
+# Speed tiers normally multiply ACCUMULATED time, not tick size: FAST (1.0)
+# drains 20 fixed 50ms ticks per wall-second vs NORMAL's 10, doubling per-tick
+# sim CPU at exactly the player's real condition. With this flag, speeds above
+# NORMAL scale the tick dt instead (FAST: 10 ticks/s of dt=0.1, clamped at 0.1s)
+# — the same sim seconds per wall second, at half the tick count. The effective
+# step is published as an INSTANCE ``_FIXED_SIM_DT`` so the render interpolation
+# (engine.build_presentation_frame blend = accumulator / _FIXED_SIM_DT) and the
+# backlog clamp stay consistent. OFF by default because it coarsens combat/AI dt
+# granularity at FAST (a real-play behavior change needing a balance soak) and
+# no headless gate exercises this path (the WK67 digest and observe_sync's
+# speed-scaling scenarios drive engine.update / the sim directly, bypassing this
+# accumulator) — so green gates could not certify it. Flip the env to A/B it in
+# the live soak.
+_FAST_DT_SCALING = os.environ.get("KINGDOM_FAST_DT_SCALING", "0") == "1"
+_FAST_DT_MAX_STEP = 0.1  # never coarser than 100ms sim steps
+try:
+    from config import SPEED_NORMAL as _SPEED_NORMAL
+except Exception:
+    _SPEED_NORMAL = 0.5
 
 
 def update(engine: "GameEngine", dt: float):
@@ -138,8 +160,22 @@ def tick_simulation(engine: "GameEngine", dt: float) -> tuple[float, float]:
     t1 = time.perf_counter()
 
     # Accumulate scaled sim time.
-    sim_time_to_advance = dt * get_time_multiplier()
+    multiplier = get_time_multiplier()
+    sim_time_to_advance = dt * multiplier
     engine._sim_accumulator += sim_time_to_advance
+
+    # Mythos S5 (fast-dt-scaling, env-gated default OFF): above NORMAL speed,
+    # drain the accumulator in proportionally larger steps instead of more
+    # 50ms ticks. Published as an instance attr so the blend divisor
+    # (engine.build_presentation_frame) and the clamps below stay consistent.
+    if _FAST_DT_SCALING:
+        base_dt = type(engine)._FIXED_SIM_DT
+        if multiplier > _SPEED_NORMAL > 0.0:
+            engine._FIXED_SIM_DT = min(
+                _FAST_DT_MAX_STEP, base_dt * (multiplier / _SPEED_NORMAL)
+            )
+        else:
+            engine._FIXED_SIM_DT = base_dt
 
     # Spiral-of-death guard: never bank more than one frame's worth of drainable sim
     # (MAX_TICKS * FIXED_DT). A single abnormal frame (one-time world build, alt-tab,

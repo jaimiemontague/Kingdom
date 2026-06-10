@@ -159,6 +159,17 @@ Baseline notes: `gpu_or_ursina` untracked remainder frequently 20–45 ms with s
 — consistent with vsync present-wait + GPU draw; hudU max 47.4 (windowed) / 75.9 (maximized)
 confirms the full-upload hitch class; tick max 96–229 ms = catch-up + A* burst class.
 
+| 06-09 | **R2 = R1+S5+S6** | out/fast/windowed | 2.5min smoke | **48.6** | 50.2 | 42.1 | 37.0 | 5.9 | 1.9 | 2.9 | 0.65 | **PASS (all rows >30)** |
+| 06-09 | **R2 = R1+S5+S6** | out/fast/maximized | 2.5min smoke | **44.4** | 45.9 | 38.8 | 36.4 | 6.2 | 2.1 | 3.2 | 1.04 | **PASS (all rows >30)** |
+
+**R2 outcome (committed):** S6 instancing DEFAULT-ON with full parity (instanced HP bars,
+terrain-Y, non-uniform scales, magic/heal orbs, legacy linear interp, pooled zoom-LOD
+labels; legacy path intact behind KINGDOM_URSINA_INSTANCING=0; 51 instancing tests) +
+S5 sim-tick stack (tick bench mean 4.7→2.3 ms, p99 15.1→9.0, max 130→50; WK67 digest
+BYTE-IDENTICAL with all defaults on; fast-dt-scaling built but default OFF pending balance
+soak). Baseline → R2: windowed 15.4→48.6 (3.2×), maximized 13.1→44.4 (3.4×). Remaining
+stages: igloop ~10 ms, rend ~6, hudR ~3, tick ~2. Next: definitive 20.5-min soaks.
+
 **R1 outcome (committed):** vsync=off verified engaged; zero-copy verified (`BGRA layout
 verified` + hudU max 6.5 ms — the 47–76 ms hitch class is GONE); font patch + prewarm
 (509 ms startup) + orphan-free swaps in. New `igloop` stage attribution shows the remaining

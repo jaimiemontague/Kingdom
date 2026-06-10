@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from config import TILE_SIZE
@@ -10,6 +11,35 @@ from game.sim.hero_guardrails_tunables import TARGET_COMMIT_WINDOW_S
 from game.sim.timebase import now_ms as sim_now_ms
 
 from ai.behaviors.view_compat import as_ai_view
+
+# Mythos S5 (ai-threat-cache-staggered, memo half): hero-INDEPENDENT threat
+# scans (castle/home-guild ``building_threatened``, the under-attack
+# economic/neutral building prefilters) used to be recomputed for every hero
+# every tick — 24x identical work at the gate scenario. They are memoized on the
+# AiGameView, which SimEngine rebuilds fresh each tick (sim_engine.update ->
+# build_ai_view), so the memo's lifetime is exactly one tick. Enemy/building
+# threat state does not mutate during the AI pass (combat/damage runs later in
+# the tick), so the memoized value == a fresh scan at every decision point —
+# exact equivalence, WK67 digest byte-identical (pinned by
+# tests/test_mythos_sim_tick.py). Views that cannot host the memo (the
+# slots-based legacy-dict adapter used by observe_sync/direct-prompt) silently
+# fall back to uncached scans. KINGDOM_AI_THREAT_MEMO=0 disables (A/B hatch).
+_THREAT_MEMO_ENABLED = os.environ.get("KINGDOM_AI_THREAT_MEMO", "1") != "0"
+
+
+def _view_tick_memo(view: Any) -> dict | None:
+    """Per-tick memo dict hosted on the AI view, or None when not memoizable."""
+    if not _THREAT_MEMO_ENABLED:
+        return None
+    memo = getattr(view, "_mythos_tick_memo", None)
+    if memo is None:
+        memo = {}
+        try:
+            # AiGameView is a frozen dataclass — bypass its setattr guard.
+            object.__setattr__(view, "_mythos_tick_memo", memo)
+        except (AttributeError, TypeError):
+            return None  # slots-based adapter (legacy dict path): no caching
+    return memo
 
 
 def _commit_until_ms(now_ms: int) -> int:
@@ -55,11 +85,25 @@ def building_threatened(view: Any, building: Any, radius_tiles: int) -> bool:
     with stalled repairs and no enemies must NOT statue its heroes.
     Deterministic, read-only: no RNG, no state writes.
     """
+    view = as_ai_view(view)
+    memo = _view_tick_memo(view)
+    if memo is not None:
+        key = ("threatened", id(building), int(radius_tiles))
+        hit = memo.get(key)
+        if hit is None:
+            hit = _building_threatened_scan(view, building, radius_tiles)
+            memo[key] = hit
+        return hit
+    return _building_threatened_scan(view, building, radius_tiles)
+
+
+def _building_threatened_scan(view: Any, building: Any, radius_tiles: int) -> bool:
+    """The original uncached scan (see ``building_threatened``)."""
     if getattr(building, "is_under_attack", False):
         return True
     radius = TILE_SIZE * radius_tiles
     cx, cy = building.center_x, building.center_y
-    for enemy in as_ai_view(view).enemies:
+    for enemy in view.enemies:
         if getattr(enemy, "is_alive", False) and enemy.distance_to(cx, cy) < radius:
             return True
     return False
@@ -154,6 +198,53 @@ def defend_home_building(ai: Any, hero: Any, view: Any) -> None:
 ECONOMIC_NEUTRAL_TYPES = ("farm", "food_stand")
 
 
+def _attacked_economic_buildings(view: Any) -> list:
+    """Hero-independent prefilter: under-attack economic buildings, in
+    ``view.buildings`` order (memoized per tick — see ``_view_tick_memo``)."""
+    memo = _view_tick_memo(view)
+    if memo is not None:
+        hit = memo.get("attacked_econ")
+        if hit is not None:
+            return hit
+    out = []
+    for building in view.buildings:
+        bt = getattr(building, "building_type", None)
+        if bt is not None and hasattr(bt, "value"):
+            bt = bt.value
+        if bt not in ECONOMIC_NEUTRAL_TYPES:
+            continue
+        if getattr(building, "hp", 0) <= 0:
+            continue
+        if not getattr(building, "is_under_attack", False):
+            continue
+        out.append(building)
+    if memo is not None:
+        memo["attacked_econ"] = out
+    return out
+
+
+def _attacked_neutral_buildings(view: Any) -> list:
+    """Hero-independent prefilter: under-attack neutral buildings, in
+    ``view.buildings`` order (memoized per tick — see ``_view_tick_memo``)."""
+    memo = _view_tick_memo(view)
+    if memo is not None:
+        hit = memo.get("attacked_neutral")
+        if hit is not None:
+            return hit
+    out = []
+    for building in view.buildings:
+        if not getattr(building, "is_neutral", False):
+            continue
+        if getattr(building, "hp", 0) <= 0:
+            continue
+        if not getattr(building, "is_under_attack", False):
+            continue
+        out.append(building)
+    if memo is not None:
+        memo["attacked_neutral"] = out
+    return out
+
+
 def defend_economic_building_warrior(ai: Any, hero: Any, view: Any) -> bool:
     """
     Warriors prioritize moving to defend nearby economic buildings (farm, food_stand) under attack.
@@ -180,16 +271,10 @@ def defend_economic_building_warrior(ai: Any, hero: Any, view: Any) -> bool:
     visibility_radius = TILE_SIZE * 8
     candidate = None
     candidate_dist = float("inf")
-    for building in buildings:
-        bt = getattr(building, "building_type", None)
-        if bt is not None and hasattr(bt, "value"):
-            bt = bt.value
-        if bt not in ECONOMIC_NEUTRAL_TYPES:
-            continue
-        if getattr(building, "hp", 0) <= 0:
-            continue
-        if not getattr(building, "is_under_attack", False):
-            continue
+    # Mythos S5: the type/hp/under-attack filter is hero-independent — iterate
+    # the per-tick prefiltered list (same buildings, same order) and keep only
+    # the per-hero distance check here. Result is identical to the full loop.
+    for building in _attacked_economic_buildings(view):
         dist = hero.distance_to(building.center_x, building.center_y)
         if dist <= visibility_radius and dist < candidate_dist:
             candidate = building
@@ -255,15 +340,13 @@ def defend_neutral_building_if_visible(ai: Any, hero: Any, view: Any) -> bool:
     }.get(cls, 0.8)
 
     # Find closest attacked neutral building within visibility.
+    # Mythos S5: the neutral/hp/under-attack filter is hero-independent —
+    # iterate the per-tick prefiltered list (same buildings, same order) and
+    # keep only the per-hero distance check here. Identical result; the RNG
+    # willingness draw below still happens only when a candidate is found.
     candidate = None
     candidate_dist = float("inf")
-    for building in buildings:
-        if not getattr(building, "is_neutral", False):
-            continue
-        if getattr(building, "hp", 0) <= 0:
-            continue
-        if not getattr(building, "is_under_attack", False):
-            continue
+    for building in _attacked_neutral_buildings(view):
         dist = hero.distance_to(building.center_x, building.center_y)
         if dist <= visibility_radius and dist < candidate_dist:
             candidate = building

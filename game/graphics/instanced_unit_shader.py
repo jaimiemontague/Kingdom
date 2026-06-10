@@ -20,13 +20,20 @@ out vec2 uvs;
 uniform samplerBuffer instanceData;
 
 void main() {
-    int base = gl_InstanceID * 2;
+    /* Mythos S6 (`inst-parity-gap-fixes`): 3 texels per instance —
+       texel0 = pos + signed x-scale, texel1 = uv region,
+       texel2 = (y_scale, 0, 0, 0) so guards (0.5 x 0.7) and peasants
+       (0.42 x 0.231) keep their legacy non-uniform proportions. */
+    int base = gl_InstanceID * 3;
     vec4 posScale = texelFetch(instanceData, base);
     vec4 uvRegion = texelFetch(instanceData, base + 1);
+    vec4 extra = texelFetch(instanceData, base + 2);
 
     vec3 instancePos = posScale.xyz;
     /* Negative w: projectile flag — billboard uses magnitude only (wk48 shadows skip via sign). */
-    float scale = abs(posScale.w);
+    float scaleX = abs(posScale.w);
+    /* Defensive: a zero/unset texel2 falls back to the uniform x-scale. */
+    float scaleY = (extra.x > 0.0) ? extra.x : scaleX;
 
     vec3 camRight = vec3(
         p3d_ModelViewMatrix[0][0],
@@ -38,8 +45,8 @@ void main() {
         p3d_ModelViewMatrix[2][1]);
 
     vec3 worldPos = instancePos
-        + camRight * p3d_Vertex.x * scale
-        + camUp * p3d_Vertex.y * scale;
+        + camRight * p3d_Vertex.x * scaleX
+        + camUp * p3d_Vertex.y * scaleY;
 
     gl_Position = p3d_ModelViewProjectionMatrix * vec4(worldPos, 1.0);
     float _v0 = 1.0 - uvRegion.y - uvRegion.w;   // V-flip: pygame top-down -> GL bottom-up (matches legacy texture_offset)

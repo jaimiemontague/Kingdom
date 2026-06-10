@@ -261,7 +261,16 @@ def test_advance_along_path_to_moves_enemy_toward_goal(headless_world) -> None:
 
 
 def test_advance_along_path_to_sets_path_and_goal(headless_world) -> None:
-    """One call with budget available should plan a path and record the goal key."""
+    """One call with budget available should plan a path and record the goal key.
+
+    Mythos S5 (astar-burst-cap-tile-goals): the goal key is now TILE-quantized
+    (``world.world_to_grid``) so a chase target moving within one tile no longer
+    invalidates the committed path — the same quantization Hero.update has
+    always used (hero.py:501). ``KINGDOM_ASTAR_TILE_GOALS=0`` restores the
+    legacy pixel key; this pin follows whichever mode is active.
+    """
+    import game.systems.navigation as nav
+
     world, buildings = headless_world
     sx, sy = _near_center(world)
     enemy = Goblin(sx, sy)
@@ -271,8 +280,12 @@ def test_advance_along_path_to_sets_path_and_goal(headless_world) -> None:
     get_pathfinding_budget().begin_frame()
     advance_along_path_to(enemy, world, buildings, goal_x, goal_y, 1.0 / 30.0, now_ms_val=1)
 
-    # Goal key recorded as the int-tuple the helper stores.
-    assert enemy._path_goal == (int(goal_x), int(goal_y))
+    if nav._ASTAR_TILE_GOALS:
+        # Goal key recorded as the goal TILE (default).
+        assert enemy._path_goal == world.world_to_grid(goal_x, goal_y)
+    else:
+        # Legacy pixel-keyed goal (env hatch).
+        assert enemy._path_goal == (int(goal_x), int(goal_y))
 
 
 def test_advance_along_path_to_survives_deferred_none(headless_world) -> None:

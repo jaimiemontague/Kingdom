@@ -47,6 +47,11 @@ def init_trees_from_world(sim: "SimEngine") -> None:
                 # Startup trees are mature. Only newly spawned trees after startup should be saplings.
                 sim.trees.append(Tree(int(tx), int(ty), growth_percentage=1.0, growth_ms_accum=10**9))
     sim._tree_growth_by_tile = {t.key: float(getattr(t, "growth_percentage", 0.25)) for t in sim.trees}
+    # Mythos S5: keep the blocking-tile set (growth >= 0.75) in lockstep after the
+    # bulk replace above (see SimEngine._rebuild_tree_blocking_set).
+    rebuild = getattr(sim, "_rebuild_tree_blocking_set", None)
+    if callable(rebuild):
+        rebuild()
 
 
 def tree_growth_lookup(sim: "SimEngine", tx: int, ty: int) -> float:
@@ -89,8 +94,14 @@ def remove_trees_in_footprint(sim: "SimEngine", grid_x: int, grid_y: int, w_tile
         pass
 
     # Keep lookup consistent immediately (used by World.is_buildable/is_walkable).
+    # Mythos S5: _remove_tree_growth also drops the key from the blocking-tile set
+    # (getattr-guarded: duck-typed fake sims in tests may lack the helper).
+    _rm = getattr(sim, "_remove_tree_growth", None)
     for k in removed_keys:
-        sim._tree_growth_by_tile.pop(k, None)
+        if callable(_rm):
+            _rm(k)
+        else:
+            sim._tree_growth_by_tile.pop(k, None)
 
     return len(removed_keys)
 
@@ -179,7 +190,13 @@ def chop_tree_at(sim: "SimEngine", tx: int, ty: int) -> float | None:
             sim.world.set_tile(tx_i, ty_i, int(TileType.GRASS))
     except Exception:
         pass
-    sim._tree_growth_by_tile.pop(key, None)
+    # Mythos S5: _remove_tree_growth also drops the key from the blocking-tile set
+    # (getattr-guarded: duck-typed fake sims in tests may lack the helper).
+    _rm = getattr(sim, "_remove_tree_growth", None)
+    if callable(_rm):
+        _rm(key)
+    else:
+        sim._tree_growth_by_tile.pop(key, None)
 
     # Ensure a single log stack per tile.
     sim.log_stacks = [ls for ls in sim.log_stacks if ls.key != key]

@@ -588,12 +588,17 @@ class UrsinaRenderer:
         self._terrain_fog.ensure_grid_debug_overlay(world, getattr(snapshot, "building_dtos", ()))
         if _stage_profile: _rec("09_ensure_grid_debug_overlay", _t0); _t0 = time.perf_counter()
 
-        # WK47 Wave 2b: hardware-instanced units (snapshot → buffer texture).
-        # Instancing is OPT-IN (default OFF) — set KINGDOM_URSINA_INSTANCING=1 to
-        # enable; it has a known unresolved texture-binding bug (units invisible)
-        # pending interactive GPU debugging. The default legacy per-Entity billboard
-        # path renders units correctly.
-        if os.environ.get("KINGDOM_URSINA_INSTANCING", "0") == "1":
+        # WK47 Wave 2b / Mythos S6: hardware-instanced units (snapshot → buffer
+        # texture). DEFAULT ON (`inst-default-flip`): the WK123 C7 set_two_sided
+        # fix solved the historical invisibility bug, and Mythos S6 closed the
+        # parity gaps that blocked the flip (instanced HP bars, pooled zoom-LOD
+        # name/gold labels, terrain-Y, non-uniform guard/peasant scales, WK124
+        # magic/heal projectile kinds, layer gate, terrain-following shadows,
+        # legacy linear sim-blend interpolation). Set KINGDOM_URSINA_INSTANCING=0
+        # for the legacy per-Entity billboard fallback (kept fully working).
+        # The mode is LATCHED on the first frame — no per-frame env reads and no
+        # mid-session path mixing.
+        if self._instancing_enabled():
             if not hasattr(self, "_instanced_unit_renderer"):
                 from game.graphics.instanced_unit_renderer import InstancedUnitRenderer
 
@@ -603,8 +608,21 @@ class UrsinaRenderer:
             # WK67 Wave 5: forward the sim tick so the instanced anim FSM uses the
             # SAME tick basis as the legacy path (deterministic captures under
             # DETERMINISTIC_SIM; wall-clock otherwise).
-            unit_ids = self._instanced_unit_renderer.update(snapshot, self._frame_tick_id)
+            # Mythos S6: also forward the sim blend fraction (`inst-linear-interp`
+            # — legacy-parity linear interpolation), the camera layer gate, and
+            # the frustum test (pooled-label budget goes to on-screen units).
+            unit_ids = self._instanced_unit_renderer.update(
+                snapshot,
+                self._frame_tick_id,
+                sim_blend=self._frame_blend,
+                active_layer=self._camera_active_layer,
+                in_view=self._entity_in_view,
+            )
             active_ids.update(unit_ids)
+            # Mythos S4+S6 (`label-zoom-lod-pooled`): pooled name/gold Text labels
+            # positioned on the instanced units; zoom-LOD culls them when zoomed
+            # out (selected hero exempt). Bounded pool — C1-leak compliant.
+            self._sync_instanced_unit_labels(frame)
             # Projectiles draw inside ``InstancedUnitRenderer`` (wk48); skip legacy Entities.
             # Bounty markers + rubble piles are Entity-based and independent of the
             # unit-draw path, so sync them here too (same calls/order as the legacy
@@ -638,6 +656,53 @@ class UrsinaRenderer:
         if _stage_profile: _rec("18_update_debug_status_text", _t0); _t0 = time.perf_counter()
         self._destroy_removed_entities(active_ids)
         if _stage_profile: _rec("19_destroy_removed_entities", _t0)
+
+    def _instancing_enabled(self) -> bool:
+        """Latched instanced-unit-path gate (Mythos S6 `inst-default-flip`).
+
+        Reads ``KINGDOM_URSINA_INSTANCING`` ONCE (default "1" = instanced; "0"
+        = legacy per-Entity fallback) and latches the mode for the session —
+        per-frame env reads allowed mid-session path flips, which would mix
+        Entity and instanced unit state. ``getattr`` default keeps bare
+        ``object.__new__`` test renderers working.
+        """
+        en = getattr(self, "_instancing_mode_latched", None)
+        if en is None:
+            from game.graphics.instanced_unit_renderer import instanced_units_env_enabled
+
+            en = bool(instanced_units_env_enabled())
+            self._instancing_mode_latched = en
+            try:
+                print(f"[mythos] instancing={'on' if en else 'off(legacy)'}", flush=True)
+            except Exception:
+                pass
+        return en
+
+    def _sync_instanced_unit_labels(self, frame) -> None:
+        """Mythos S4+S6 (`label-zoom-lod-pooled`): pooled name/gold labels.
+
+        Feeds the bounded Text pool from ``InstancedUnitRenderer.label_sources``
+        (built from the SAME blended positions packed into the instance buffer)
+        with the per-frame zoom ratio and the selected hero's stable id (its
+        labels bypass the zoom LOD).
+        """
+        iur = getattr(self, "_instanced_unit_renderer", None)
+        sources = getattr(iur, "label_sources", ()) if iur is not None else ()
+        pool = getattr(self, "_instanced_label_pool", None)
+        if pool is None:
+            from game.graphics.instanced_unit_labels import InstancedUnitLabelPool
+
+            pool = InstancedUnitLabelPool()
+            self._instanced_label_pool = pool
+        zoom = float(getattr(frame, "zoom", 1.0) or 1.0)
+        default_zoom = float(getattr(frame, "default_zoom", 1.0) or 1.0) or 1.0
+        sel = getattr(frame, "selected_hero", None)
+        selected_id = None
+        if sel is not None:
+            selected_id = str(
+                getattr(sel, "hero_id", None) or getattr(sel, "entity_id", None) or id(sel)
+            )
+        pool.sync(sources, zoom_ratio=zoom / default_zoom, selected_id=selected_id)
 
     def _ensure_shadow_bounds_once(self) -> None:
         if (

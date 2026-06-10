@@ -17,9 +17,12 @@ class Tree:
     growth_percentage: float = 0.25
     growth_ms_accum: int = 0
 
-    @property
-    def key(self) -> tuple[int, int]:
-        return (int(self.grid_x), int(self.grid_y))
+    def __post_init__(self) -> None:
+        # Mythos S5 (tree-growth-incremental): ``key`` was a property allocating a
+        # fresh tuple on EVERY access (~625k calls / 300 ticks at 2k trees). Tree
+        # coordinates never change after construction, so cache it once. Plain
+        # instance attribute == identical value to the old property.
+        self.key: tuple[int, int] = (int(self.grid_x), int(self.grid_y))
 
 
 @dataclass
