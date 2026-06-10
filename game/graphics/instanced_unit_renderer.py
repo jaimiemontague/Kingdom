@@ -247,6 +247,7 @@ class InstancedUnitRenderer:
         "_geom",
         "_unit_anim_state",
         "_interp_pos_by_id",
+        "_inside_ids",
         "_facing_by_id",
         "_frame_tick_id",
         "label_sources",
@@ -282,6 +283,12 @@ class InstancedUnitRenderer:
         # boundaries, blend by sim_blend_fraction). Replaces the exponential
         # render trailing that prior art rejected ("lurch then crawl").
         self._interp_pos_by_id: dict[str, list] = {}
+        # WK129 (inside-hero pin): hero ids rendered by the inside-building pass
+        # LAST frame. Inside heroes are pinned at the building anchor (never
+        # interpolated), and on the inside->outside transition the interp window
+        # is reset to the new sim position so the sprite SNAPS out instead of
+        # lerping from the building anchor (rubberband fix).
+        self._inside_ids: set[str] = set()
         # WK68 R2: renderer-OWNED facing per unit (1=right, -1=left), derived from
         # the DTO x-delta — same idiom as the migrated pygame HeroRenderer._facing.
         # Replaces ``_unit_facing_direction`` which mutated the live entity
@@ -734,7 +741,17 @@ class InstancedUnitRenderer:
             # it TERRAIN_HEIGHT_SCALE=5.0 buries units into hills.
             terrain_y = get_terrain_height(wx, wz) if terrain_ok else 0.0
             wy = terrain_y + HERO_SCALE * 0.5
-            vx, vy, vz = self._interp_visual_position(obj_id, wx, wy, wz, tick, blend)
+            if obj_id in self._inside_ids:
+                # WK129 (inside-hero pin): first frame back OUTSIDE after being
+                # inside a building — the sim pops the hero out at a new position
+                # (building center + 1 tile). Reset the interp window so the
+                # sprite SNAPS to the exit position instead of lerping out from
+                # the building anchor (the rubberband artifact).
+                self._inside_ids.discard(obj_id)
+                self._interp_pos_by_id[obj_id] = [(wx, wy, wz), (wx, wy, wz), tick]
+                vx, vy, vz = wx, wy, wz
+            else:
+                vx, vy, vz = self._interp_visual_position(obj_id, wx, wy, wz, tick, blend)
             pack_outside(vx, vy, vz, HERO_SCALE, uv, HERO_SCALE)
             pack_hp_bar(vx, vy, vz, h.hp, h.max_hp, "hero")
             add_label_source("hero", h, (vx, vy, vz))
@@ -882,10 +899,26 @@ class InstancedUnitRenderer:
             facing_in = self._facing_for_dto(h)
             if facing_in < 0:
                 uv = _flip_uv_horizontal(uv)
-            wx, wz = sim_px_to_world_xz(h.x, h.y)
+            # WK129 (inside-hero pin): legacy renders an inside hero as a
+            # STATIONARY billboard pinned ON the building (the pygame legacy
+            # path literally anchors at ``inside_building_center``; the sim also
+            # teleports the hero's x/y to the building center on entry). The
+            # instanced path must NOT interpolate this teleport: lerping the
+            # entry jump sweeps the sprite across the facade (and an in/out
+            # flap lerps back and forth = the rubberband bug). Pin at the
+            # building anchor (fall back to the sim position, which equals the
+            # center once inside) and RESET the interp window to the anchor so
+            # there is nothing stale to lerp from. Y stays terrain + half
+            # billboard height — the exact Y legacy uses for inside heroes
+            # (ursina_unit_sync.sync_snapshot_heroes).
+            anchor = getattr(h, "inside_building_center", None)
+            ax, ay = (float(anchor[0]), float(anchor[1])) if anchor is not None else (h.x, h.y)
+            wx, wz = sim_px_to_world_xz(ax, ay)
             terrain_y = get_terrain_height(wx, wz) if terrain_ok else 0.0
             wy = terrain_y + HERO_SCALE * 0.5
-            vx, vy, vz = self._interp_visual_position(obj_id, wx, wy, wz, tick, blend)
+            vx, vy, vz = wx, wy, wz
+            self._interp_pos_by_id[obj_id] = [(vx, vy, vz), (vx, vy, vz), tick]
+            self._inside_ids.add(obj_id)
             pack_inside(vx, vy, vz, HERO_SCALE, uv, HERO_SCALE)
             # Legacy shows HP bar + name/gold labels for inside heroes too (the
             # hero sync loop does not skip them); bars draw at fixed,110 over
@@ -918,6 +951,10 @@ class InstancedUnitRenderer:
         for oid in list(self._facing_by_id.keys()):
             if oid not in active_ids:
                 self._facing_by_id.pop(oid, None)
+
+        # WK129: drop inside-state for heroes that no longer render (death /
+        # despawn while inside) so a recycled id can't trigger a bogus exit-snap.
+        self._inside_ids.intersection_update(active_ids)
 
         return active_ids
 
@@ -989,6 +1026,7 @@ class InstancedUnitRenderer:
     def destroy(self) -> None:
         self._unit_anim_state.clear()
         self._interp_pos_by_id.clear()
+        self._inside_ids.clear()
         self._facing_by_id.clear()
         self.label_sources = []
         if self._geom_node_outside is not None:

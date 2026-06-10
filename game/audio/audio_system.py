@@ -156,11 +156,24 @@ class AudioSystem:
     def on_event(self, event: dict):
         """
         EventBus subscriber callback for single event dispatch.
+
+        WK129 audio-regression fix: cooldowns are stamped from the REAL wall
+        clock (``pygame.time.get_ticks()``), the clock this system shipped on
+        pre-WK125 (non-deterministic play published ``set_sim_now_ms(None)``,
+        so ``now_ms()`` fell back to ``get_ticks()``). WK125 silently rebased
+        ``now_ms()`` onto the pause-frozen sim clock, which broke audio:
+
+        * a frozen/stalled sim clock (menu pause, speed-0 pause, any sim
+          freeze) makes ``now - last_play`` permanently < cooldown, so every
+          sound key plays at most ONCE and then ALL audio is muted;
+        * at NORMAL speed (multiplier 0.5) every cooldown silently doubled.
+
+        Audio is non-authoritative presentation (never feeds the sim or the
+        WK67 digest), so real-time cooldowns are the correct timebase.
         """
         if not self.enabled:
             return
-        from game.sim.timebase import now_ms as sim_now_ms
-        self._emit_single_event(event, float(sim_now_ms()))
+        self._emit_single_event(event, float(pygame.time.get_ticks()))
 
     def _emit_single_event(self, event: dict, now_ms: float):
         if not event:

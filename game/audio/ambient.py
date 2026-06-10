@@ -130,8 +130,11 @@ def update_enemy_ambient(audio: "AudioSystem", enemies: List) -> None:
         return
 
     try:
-        from game.sim.timebase import now_ms as sim_now_ms
-        now = float(sim_now_ms())
+        # WK129 audio-regression fix: enemy-ambient scheduling runs on the REAL
+        # wall clock — the clock it shipped on pre-WK125 (see
+        # AudioSystem.on_event). A frozen/slow sim clock must not mute the
+        # growl/hiss ambience (audio is non-authoritative presentation).
+        now = float(pygame.time.get_ticks())
         audio._enemy_sounds.update_ambient(
             enemies, now,
             audio._camera_x, audio._camera_y,
