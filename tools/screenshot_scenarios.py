@@ -1516,6 +1516,24 @@ URSINA_CAPTURE_SCENARIOS: dict[str, dict[str, object]] = {
             "KINGDOM_WK124_SCENE": "cleric",
         },
     },
+    # WK132: one-shot capture of a single new POI prefab placed (discovered) south of
+    # the castle with a fixed footprint-framed oblique camera. Select the POI with
+    # KINGDOM_WK132_POI (mysterious_well | ruined_outpost | windmill_ruin |
+    # ancient_ruins | dragon_cave); framing knobs KINGDOM_WK132_CAM_SPAN /
+    # KINGDOM_WK132_CAM_ELEV. Run once per POI, overriding the env var:
+    #   $env:KINGDOM_WK132_POI="dragon_cave"; python tools/run_ursina_capture_once.py `
+    #       --scenario ursina_wk132_poi --out docs/screenshots/wk132_pois --stem dragon_cave
+    "ursina_wk132_poi": {
+        "patch_path": "tools/wk132_poi_capture_patch.py",
+        "default_ticks": 480,
+        "default_out_subdir": "wk132_pois",
+        "stem": "wk132_poi",
+        "env": {
+            "KINGDOM_URSINA_REVEAL_ON_START": "1",
+            "KINGDOM_URSINA_EDITORCAMERA": "0",
+            "KINGDOM_URSINA_DISABLE_NEUTRAL_SPAWN": "1",
+        },
+    },
 }
 
 

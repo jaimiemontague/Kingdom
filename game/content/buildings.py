@@ -160,6 +160,14 @@ BUILDING_DEFS: dict[str, BuildingDef] = {
     "poi_cave_entrance": _b("poi_cave_entrance", (2, 2), (80, 60, 40), 0, 4, is_poi=True),
     "poi_mine_entrance": _b("poi_mine_entrance", (2, 2), (100, 80, 60), 0, 4, is_poi=True),
     "poi_demon_portal": _b("poi_demon_portal", (2, 2), (180, 30, 30), 0, 4, is_poi=True),
+    # WK132 POI round-out (5 types; sizes mirror game/entities/poi.py POI_DEFINITIONS —
+    # without these entries Building.size fell back to (1,1) and the renderer squeezed
+    # each prefab into a single tile; found at the WK132 prefab screenshot review).
+    "poi_mysterious_well": _b("poi_mysterious_well", (1, 1), (100, 140, 160), 0, 0, is_poi=True),
+    "poi_ruined_outpost": _b("poi_ruined_outpost", (3, 3), (150, 140, 120), 0, 0, is_poi=True),
+    "poi_windmill_ruin": _b("poi_windmill_ruin", (2, 2), (170, 140, 90), 0, 0, is_poi=True),
+    "poi_ancient_ruins": _b("poi_ancient_ruins", (5, 5), (160, 160, 170), 0, 0, is_poi=True),
+    "poi_dragon_cave": _b("poi_dragon_cave", (3, 3), (150, 60, 40), 0, 0, is_poi=True),
 }
 
 

@@ -89,6 +89,15 @@ def build_direct_prompt_messages(hero_context: dict[str, Any], conversation_hist
         "conversation_tail": conversation_tail,
         "output_schema": output_schema,
     }
+    # WK132: compact nearby-POI strings so the Sovereign can reference nearby
+    # shrines/ruins in chat. hero_context["nearby_pois"] comes from
+    # ContextBuilder.build_hero_context (read-only AiGameView plumbing — no live
+    # sim objects). Key OMITTED entirely when no POIs are nearby.
+    from ai.behaviors.poi_awareness import format_nearby_pois_compact
+
+    nearby_pois_compact = format_nearby_pois_compact(hero_context.get("nearby_pois") or [])
+    if nearby_pois_compact:
+        blob["nearby_pois"] = nearby_pois_compact
     lines = [
         json.dumps(blob, indent=2, default=str),
         "",

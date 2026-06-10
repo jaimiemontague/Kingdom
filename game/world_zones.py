@@ -42,7 +42,11 @@ ZONES: list[Zone] = [
         angle_start=0,
         angle_end=360,
         enemy_palette=[],
-        poi_palette=["poi_shrine", "poi_treasure_cache"],
+        poi_palette=[
+            "poi_shrine",
+            "poi_treasure_cache",
+            "poi_mysterious_well",  # WK132
+        ],
         terrain_bias={
             "tree_density": 0.5,
             "rock_density": 0.3,
@@ -68,6 +72,8 @@ ZONES: list[Zone] = [
             "poi_abandoned_camp",
             "poi_treasure_cache",
             "poi_gravestone",
+            "poi_mysterious_well",  # WK132
+            "poi_ancient_ruins",    # WK132
         ],
         terrain_bias={
             "tree_density": 2.5,
@@ -94,6 +100,10 @@ ZONES: list[Zone] = [
             "poi_wizard_tower",
             "poi_shrine",
             "poi_treasure_cache",
+            "poi_mysterious_well",  # WK132
+            "poi_ruined_outpost",   # WK132
+            "poi_ancient_ruins",    # WK132
+            "poi_dragon_cave",      # WK132: highest-tier zone, max 1/map
         ],
         terrain_bias={
             "tree_density": 0.3,
@@ -120,6 +130,9 @@ ZONES: list[Zone] = [
             "poi_abandoned_camp",
             "poi_gravestone",
             "poi_demon_portal",
+            "poi_mysterious_well",  # WK132
+            "poi_ruined_outpost",   # WK132
+            "poi_ancient_ruins",    # WK132
         ],
         terrain_bias={
             "tree_density": 0.2,

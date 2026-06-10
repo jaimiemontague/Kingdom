@@ -1,0 +1,340 @@
+{
+  "prefab_id": "poi_ancient_ruins_v1",
+  "building_type": "poi_ancient_ruins",
+  "footprint_tiles": [5, 5],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_graveyard-kit_5.0",
+    "kenney_retro-fantasy-kit",
+    "kenney_nature-kit",
+    "kenney_survival-kit"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/pillar-obelisk-graveyard.glb",
+      "pos": [-0.7, 0.0, 2.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/pillar-obelisk-graveyard.glb",
+      "pos": [0.7, 0.0, 2.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLTF format/statue_column.glb",
+      "pos": [-1.3, 0.0, 1.6],
+      "rot": [0.0, 15.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLTF format/statue_columnDamaged.glb",
+      "pos": [1.3, 0.0, 1.6],
+      "rot": [0.0, -10.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/column-large-graveyard.glb",
+      "pos": [-0.9, 0.0, 1.2],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/column-large-graveyard.glb",
+      "pos": [-0.9, 0.0, 0.2],
+      "rot": [0.0, 10.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/column-large-graveyard.glb",
+      "pos": [-0.9, 0.0, -0.8],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/column-large-graveyard.glb",
+      "pos": [0.9, 0.0, 1.2],
+      "rot": [0.0, -5.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/column-large-graveyard.glb",
+      "pos": [0.9, 0.0, -0.8],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/column-large-graveyard.glb",
+      "pos": [0.9, 0.0, 0.2],
+      "rot": [0.0, 160.0, 90.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/column-large-graveyard.glb",
+      "pos": [1.5, 0.0, 0.5],
+      "rot": [0.0, 75.0, 90.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/column-large-graveyard.glb",
+      "pos": [-1.5, 0.0, -0.3],
+      "rot": [0.0, 280.0, 90.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/column-damaged.glb",
+      "pos": [-1.6, 0.0, 1.0],
+      "rot": [0.0, 25.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/column-damaged.glb",
+      "pos": [1.6, 0.0, 1.2],
+      "rot": [0.0, 340.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/stone-wall-column-graveyard.glb",
+      "pos": [-2.0, 0.0, -2.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/stone-wall-column-graveyard.glb",
+      "pos": [2.0, 0.0, -2.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/stone-wall-graveyard.glb",
+      "pos": [-1.5, 0.0, -2.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/stone-wall-graveyard.glb",
+      "pos": [-0.5, 0.0, -2.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/stone-wall-damaged-graveyard.glb",
+      "pos": [0.5, 0.0, -2.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/stone-wall-damaged-graveyard.glb",
+      "pos": [1.5, 0.0, -2.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/stone-wall-damaged-graveyard.glb",
+      "pos": [-2.0, 0.0, -1.0],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/stone-wall-graveyard.glb",
+      "pos": [-2.0, 0.0, 0.0],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/stone-wall-damaged-graveyard.glb",
+      "pos": [-2.0, 0.0, 1.0],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/stone-wall-damaged-graveyard.glb",
+      "pos": [2.0, 0.0, -1.0],
+      "rot": [0.0, 270.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/stone-wall-damaged-graveyard.glb",
+      "pos": [2.0, 0.0, 0.2],
+      "rot": [0.0, 270.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/stone-wall-graveyard.glb",
+      "pos": [2.0, 0.0, 1.2],
+      "rot": [0.0, 270.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/altar-stone-graveyard.glb",
+      "pos": [0.0, 0.0, -0.3],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/candle-multiple-graveyard.glb",
+      "pos": [0.0, 0.35, -0.3],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [0.8, 0.8, 0.8]
+    },
+    {
+      "model": "Models/GLB format/candle-graveyard.glb",
+      "pos": [-0.4, 0.0, -0.7],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/candle-graveyard.glb",
+      "pos": [0.4, 0.0, -0.7],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/candle-graveyard.glb",
+      "pos": [-0.4, 0.0, 0.1],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/candle-graveyard.glb",
+      "pos": [0.4, 0.0, 0.1],
+      "rot": [0.0, 270.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/urn-round-graveyard.glb",
+      "pos": [-1.7, 0.0, -1.7],
+      "rot": [0.0, 15.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/urn-square-graveyard.glb",
+      "pos": [1.7, 0.0, -1.7],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/urn-round-graveyard.glb",
+      "pos": [1.6, 0.0, -0.4],
+      "rot": [0.0, 220.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/urn-square-graveyard.glb",
+      "pos": [-1.6, 0.0, 0.4],
+      "rot": [0.0, 30.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/debris-graveyard.glb",
+      "pos": [0.5, 0.0, 0.8],
+      "rot": [0.0, 40.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/debris-graveyard.glb",
+      "pos": [-0.6, 0.0, -1.3],
+      "rot": [0.0, 190.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/debris-graveyard.glb",
+      "pos": [1.2, 0.0, -1.5],
+      "rot": [0.0, 80.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/debris-graveyard.glb",
+      "pos": [-1.2, 0.0, 1.9],
+      "rot": [0.0, 300.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/gravestone-debris-graveyard.glb",
+      "pos": [0.0, 0.0, 0.6],
+      "rot": [0.0, 20.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/gravestone-debris-graveyard.glb",
+      "pos": [-0.4, 0.0, -1.8],
+      "rot": [0.0, 250.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/grass-large.glb",
+      "pos": [-1.9, 0.0, 1.9],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/grass-large.glb",
+      "pos": [1.9, 0.0, 1.9],
+      "rot": [0.0, 120.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/grass-large.glb",
+      "pos": [0.3, 0.0, -1.5],
+      "rot": [0.0, 220.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/grass.glb",
+      "pos": [1.0, 0.0, 0.6],
+      "rot": [0.0, 45.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/grass.glb",
+      "pos": [-1.1, 0.0, -0.4],
+      "rot": [0.0, 160.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/grass.glb",
+      "pos": [0.8, 0.0, 1.8],
+      "rot": [0.0, 280.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/tree-shrub.glb",
+      "pos": [-1.7, 0.0, 2.0],
+      "rot": [0.0, 70.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/tree-shrub.glb",
+      "pos": [1.7, 0.0, 2.0],
+      "rot": [0.0, 200.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLTF format/plant_bushDetailed.glb",
+      "pos": [0.6, 0.0, -1.6],
+      "rot": [0.0, 30.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLTF format/plant_bushDetailed.glb",
+      "pos": [-0.9, 0.0, 1.8],
+      "rot": [0.0, 150.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLTF format/mushroom_tanGroup.glb",
+      "pos": [-1.3, 0.0, -1.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLTF format/flower_yellowA.glb",
+      "pos": [1.3, 0.0, 1.7],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    }
+  ],
+  "notes": "Ancient ruins (5x5, 54 pieces): south-facing entrance flanked by two obelisks and weathered statue columns; central aisle lined with two rows of large columns (5 standing, 3 toppled on their sides via Z-rot 90); two damaged retro-fantasy columns for variety; ruined stone wall perimeter (intact + damaged mix) closing the north/west/east faces with corner wall-columns; central stone altar with a cluster of candles on top and four floor candles; ceremonial urns in the corners; stone and rubble debris scattered throughout; grass, shrubs, bushes, mushrooms and a flower as overgrowth. Toppled-column ground contact needs the human visual review pass."
+}

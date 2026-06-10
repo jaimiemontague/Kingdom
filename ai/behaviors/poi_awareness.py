@@ -26,6 +26,23 @@ UNDISCOVERED_SEEN_POI_RADIUS_TILES = 20
 # Maximum POIs included in context (to keep LLM token cost low).
 MAX_CONTEXT_POIS = 6
 
+# WK132: maximum POIs serialized into actual LLM prompts (tighter than the
+# context bucket above — prompt token budget).
+MAX_PROMPT_POIS = 4
+
+# WK132: compass word -> compact abbreviation for prompt strings.
+_COMPASS_ABBREV = {
+    "north": "N",
+    "northeast": "NE",
+    "east": "E",
+    "southeast": "SE",
+    "south": "S",
+    "southwest": "SW",
+    "west": "W",
+    "northwest": "NW",
+    "here": "",
+}
+
 # Personality -> interaction_type preference weights.
 # Higher = more attractive.  Missing keys default to 1.0.
 PERSONALITY_POI_WEIGHTS: dict[str, dict[str, float]] = {
@@ -183,6 +200,51 @@ def get_nearby_pois_for_hero(hero: Any, context: dict) -> list[dict]:
     # Sort by distance, take top N.
     results.sort(key=lambda e: e["distance_tiles"])
     return results[:MAX_CONTEXT_POIS]
+
+
+# ---------------------------------------------------------------------------
+# WK132: compact prompt serialization
+# ---------------------------------------------------------------------------
+
+def format_nearby_pois_compact(entries: list[dict], limit: int = MAX_PROMPT_POIS) -> list[str]:
+    """Render get_nearby_pois_for_hero() entries as token-light prompt strings.
+
+    Discovered POI  -> "Forgotten Shrine (shrine, tier 2), 12 tiles NE"
+                       (suffix ", depleted" or ", visited" when applicable)
+    Undiscovered    -> "Unknown structure, 20 tiles E"
+
+    Returns at most ``limit`` strings (entries are already distance-sorted
+    upstream). Empty input -> empty list; callers must OMIT the prompt key
+    entirely in that case (WK67 digest scenario has no POIs and must stay
+    byte-identical).
+    """
+    out: list[str] = []
+    for e in (entries or [])[: max(0, int(limit))]:
+        try:
+            dist = int(round(float(e.get("distance_tiles", 0) or 0)))
+        except (TypeError, ValueError):
+            dist = 0
+        direction = _COMPASS_ABBREV.get(str(e.get("direction", "")).lower(), "")
+        dist_label = f"{dist} tiles {direction}".rstrip()
+
+        if str(e.get("type", "unknown")) == "unknown":
+            # Mystery form: seen-fog shape, no identity revealed.
+            out.append(f"Unknown structure, {dist_label}")
+            continue
+
+        name = str(e.get("name", "Unknown POI"))
+        poi_type = str(e.get("type", ""))
+        try:
+            tier = int(e.get("difficulty", 0) or 0)
+        except (TypeError, ValueError):
+            tier = 0
+        line = f"{name} ({poi_type}, tier {tier}), {dist_label}"
+        if e.get("depleted"):
+            line += ", depleted"
+        elif e.get("previously_visited"):
+            line += ", visited"
+        out.append(line)
+    return out
 
 
 # ---------------------------------------------------------------------------

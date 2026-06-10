@@ -130,6 +130,21 @@ ENEMY_STATS: dict[str, "EnemyStats"] = {
         is_boss=True,
         name="The Demon Overlord",
     ),
+    "dragon": EnemyStats(
+        # WK132: Dragon Cave boss — ~1.3x DemonOverlord (hp/atk/xp/gold).
+        # Speed kept at the Overlord's 72 px/s: a faster AND stronger boss
+        # would be un-kiteable for the level range that first finds the cave.
+        hp=650,
+        attack_power=39,
+        speed=72.0,
+        xp_reward=390,
+        gold_reward=650,
+        color=(220, 60, 20),
+        size=36,
+        has_attackers=True,
+        is_boss=True,
+        name="The Dragon",
+    ),
 }
 
 
@@ -683,4 +698,11 @@ class DemonOverlord(Enemy):
 
     def __init__(self, x: float, y: float):
         super().__init__(x, y, "demon_overlord")
+
+
+class Dragon(Enemy):
+    """WK132: Boss enemy at the Dragon Cave POI. Stats: ENEMY_STATS["dragon"]."""
+
+    def __init__(self, x: float, y: float):
+        super().__init__(x, y, "dragon")
 

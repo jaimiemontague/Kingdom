@@ -2143,6 +2143,56 @@
      ]
     }
    }
+  },
+  "wk132_pois_roundout": {
+   "sprint_meta": {
+    "created_utc": "2026-06-10T00:00:00Z",
+    "plan_ref": ".cursor/plans/wk130_hero_world_roadmap.plan.md (section WK132, scope item 2)",
+    "role": "Agent 06 AIBehaviorDirector_LLM",
+    "sprint_id": "wk132_pois_roundout",
+    "title": "WK132 - serialize compact nearby_pois into BOTH LLM prompt paths (autonomous decisions + chat) (Agent 06)"
+   },
+   "rounds": {
+    "r1_kickoff": {
+     "round_id": "r1_kickoff",
+     "sprint_id": "wk132_pois_roundout",
+     "status": "done",
+     "round_meta": {
+      "role": "Agent 06 AIBehaviorDirector_LLM",
+      "reports_to": "Agent 01 (PM)",
+      "launched_by": "Claude Code subagent (parent orchestrator), WK132 r1 kickoff dispatch",
+      "completed_utc": "2026-06-10T00:00:00Z",
+      "phase": "WK132 scope item 2: context_builder computes nearby_pois (poi_awareness.get_nearby_pois_for_hero, max 6) but it was DROPPED before any prompt serialization; the LLM never heard about POIs on either path."
+     },
+     "what_i_changed": {
+      "ai/behaviors/poi_awareness.py": [
+       "NEW format_nearby_pois_compact(entries, limit=MAX_PROMPT_POIS) -> list[str]: renders get_nearby_pois_for_hero() dict entries as token-light strings; discovered -> 'Forgotten Shrine (shrine, tier 2), 12 tiles NE' (+ ', depleted' / ', visited' suffix), undiscovered (type=='unknown') -> mystery form 'Unknown structure, 20 tiles E'; long descriptions never reach the prompt.",
+       "NEW MAX_PROMPT_POIS = 4 (tighter than MAX_CONTEXT_POIS=6 - prompt token budget) and _COMPASS_ABBREV (north->N ... northwest->NW, here->'').",
+       "Empty input -> empty list; callers OMIT the key entirely in that case (WK67 digest scenario has no POIs -> prompts byte-identical)."
+      ],
+      "ai/profile_context_adapter.py": [
+       "_compact_situation now adds out['nearby_pois'] = format_nearby_pois_compact(full.get('nearby_pois'), limit=_MAX_POIS) ONLY when non-empty (key absent otherwise). _MAX_POIS = 4.",
+       "Data source: ContextBuilder.build_hero_context's existing nearby_pois (poi_awareness over the view_to_legacy_context 'pois' tuple - read-only AiGameView, no live sim objects).",
+       "Carried by ALL DecisionMoment types via build_llm_context_for_moment -> current_situation (POIs are retreat/explore-relevant; 4 short strings is within budget)."
+      ],
+      "ai/prompt_packs.py": [
+       "build_direct_prompt_messages: blob['nearby_pois'] = same compact strings from hero_context.get('nearby_pois') (raw dicts from build_hero_context, which engine.send_player_message builds from the read-only AiGameView via view_to_legacy_context) - ONLY when non-empty. Sovereign can now say 'go check that shrine' and the hero LLM knows what's nearby."
+      ],
+      "tests/test_wk132_poi_prompts.py (NEW)": [
+       "14 tests: exact-format assertions for discovered ('Forgotten Shrine (shrine, tier 2), 12 tiles NE') and mystery form ('Unknown structure, 20 tiles E'); depleted/visited suffixes; cap at 4 (formatter + both pipelines); key ABSENT (not empty) on both paths when no POIs; all 5 DecisionMomentTypes carry it when POIs nearby; undiscovered POI identity does not leak into the autonomous prompt; descriptions never serialized; end-to-end chat blob from ContextBuilder pipeline."
+      ]
+     },
+     "data_flow_decision": "Autonomous decisions: context_builder.build_hero_context -> nearby_pois -> _compact_situation formats+caps. Chat: engine.send_player_message already passes the same build_hero_context output as hero_context -> prompt_packs formats+caps. Both ultimately read the AiGameView 'pois' tuple (WK67 boundary respected; no live sim objects handed to the AI).",
+     "digest_safety": "No-POI contexts produce NO key at all (not an empty list), so WK67 digest prompts are unchanged; digest also never consults the LLM. context_builder.py untouched.",
+     "gates": {
+      "pytest tests/test_wk132_poi_prompts.py": "PASS (14 passed)",
+      "pytest wk132_poi_prompts + wk50_phase2a + wk50_phase2b + direct_prompt_integration + wk112_direct_prompt_validator + wk67_ai_boundary": "PASS (108 passed)",
+      "pytest tests/ -q (full suite)": "see final report (run with other agents mid-edit in game/)"
+     },
+     "not_done_and_why": "Did not touch game/ (Agent 05 lane), ui/, config.py, providers. Did not add per-moment POI filtering - all 5 moments carry the block when POIs are nearby (documented choice; PM can ask for moment gating later).",
+     "did_not_commit": true
+    }
+   }
   }
  }
 }

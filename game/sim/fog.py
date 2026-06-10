@@ -122,7 +122,15 @@ def update_fog_of_war(sim: "SimEngine") -> None:
         if getattr(building, "is_lair", False) or hasattr(building, "stash_gold"):
             continue
         # POIs are world features, not player buildings — don't reveal fog.
+        # WK132 exception: a cleared Ruined Outpost (grants_vision=True) is a
+        # permanent revealer with radius poi_def.vision_radius (set by
+        # poi_interaction._handle_outpost). Digest-inert: the WK67 scenario
+        # has no POIs.
         if getattr(building, "is_poi", False):
+            if getattr(building, "grants_vision", False):
+                pv = int(getattr(getattr(building, "poi_def", None), "vision_radius", 0) or 0)
+                if pv > 0:
+                    revealers.append((building.center_x, building.center_y, pv))
             continue
         raw_bt = getattr(building, "building_type", None)
         btype_name = str(getattr(raw_bt, "value", raw_bt) or "")

@@ -124,6 +124,46 @@ def generate_terrain(world) -> None:
             if world.tiles[ty][tx] == TileType.TREE:
                 world.tiles[ty][tx] = TileType.GRASS
 
+    # WK132: zone-aware rock scatter (consumes terrain_bias["rock_density"]).
+    generate_rock_scatter(world)
+
+
+# Baseline per-grass-tile rock probability. Matches the legacy renderer hash
+# scatter density (`hash % 503 == 0` in ursina_terrain_build) so a rock_density
+# of 1.0 yields roughly the same rock count as the old uniform scatter.
+_ROCK_BASE_PROBABILITY = 1.0 / 503.0
+
+
+def generate_rock_scatter(world) -> None:
+    """WK132: scatter decorative rocks, biased by zone ``rock_density``.
+
+    Consumes ``Zone.terrain_bias["rock_density"]`` the same way tree_density
+    is consumed above (blend-weighted multiplier per tile). Results land in
+    ``world.rock_tiles`` (a set of (tx, ty) grass tiles) for renderers to
+    consume; the sim itself treats rocks as purely decorative (non-blocking).
+
+    Determinism: draws from a DEDICATED ``get_rng("rock_scatter")`` stream —
+    the legacy ``world_gen`` stream is untouched, so lake/forest layout and
+    every downstream placement draw stay byte-identical for a given seed.
+    """
+    from game.world import TileType
+
+    rng = get_rng("rock_scatter")
+    castle_cx, castle_cy = world.width // 2, world.height // 2
+    rocks: set[tuple[int, int]] = set()
+    for y in range(world.height):
+        row = world.tiles[y]
+        for x in range(world.width):
+            if row[x] != TileType.GRASS:
+                continue
+            zone, blend = get_zone_blend(x, y, castle_cx, castle_cy)
+            rock_mult = 1.0
+            if zone is not None:
+                rock_mult = 1.0 + (zone.terrain_bias.get("rock_density", 1.0) - 1.0) * blend
+            if rng.random() < _ROCK_BASE_PROBABILITY * rock_mult:
+                rocks.add((x, y))
+    world.rock_tiles = rocks
+
 
 def generate_heightmap(world) -> None:
     """WK53 Wave 2: Generate a Perlin-noise heightmap at 2x sub-tile resolution.

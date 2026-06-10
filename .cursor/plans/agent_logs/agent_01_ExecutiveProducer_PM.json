@@ -7433,6 +7433,74 @@
           "pm_next_actions_by_agent": {}
         }
       }
+    },
+    "wk132_pois_roundout": {
+      "sprint_meta": {
+        "created_utc": "2026-06-10T00:00:00Z",
+        "plan": ".cursor/plans/wk130_hero_world_roadmap.plan.md",
+        "roadmap_section": "WK132 — POIs Round-Out"
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "pm_status_summary": "WK132 kickoff: 5 new POI types (mysterious_well, ruined_outpost, windmill_ruin, ancient_ruins, dragon_cave), nearby_pois serialized into LLM prompts (digest-inert when empty), per-POI item loot tables on WK131 loot system, rock_density worldgen consumer. Per-zone fog tint DEFERRED (polish, compute budget). Contract: POI type ids exactly as listed; prefab building_type 'poi_<id>'; prefab files assets/prefabs/buildings/poi_<id>_v1.json.",
+          "pm_next_actions_by_agent": {
+            "05_GameplaySystems": "New POI definitions + handlers + placement palettes + per-POI loot tables + rock_density consumer. Lane: game/entities/poi.py, game/systems/poi_interaction.py, game/systems/poi_placement.py, game/systems/loot.py, game/worldgen.py, game/world_zones.py, tests/test_wk132_pois.py.",
+            "15_ModelAssembler": "Author 5 prefab JSONs per pois_proposal.md section 4 model lists. Lane: assets/prefabs/buildings/poi_*_v1.json only + validate_assets gate.",
+            "06_AIBehavior": "Serialize compact nearby_pois into autonomous decision context (_compact_situation) + chat prompt blob; empty => omitted (digest-inert). Lane: ai/profile_context_adapter.py, ai/prompt_packs.py, ai/context_builder.py if needed, tests/test_wk132_poi_prompts.py.",
+            "11_QA": "Wave 2: full gates + seeded interaction tests review; PM does Ursina captures."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "05",
+                "15",
+                "06"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "intelligence_by_agent": {
+              "05": "high",
+              "15": "medium",
+              "06": "high",
+              "11": "low"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14"
+            ],
+            "rationale": "Disjoint lanes wave 1; 05/06 high (new handlers + digest-safe prompt work), 15 medium (kitbash per spec), 11 low (gate run)."
+          }
+        },
+        "r2_close": {
+          "pm_status_summary": "WK132 CLOSED (pending final qa_smoke). 05: 5 new POI types + handlers (well random-outcome, outpost combat->permanent vision, windmill knowledge, ruins reveal+loot, dragon_cave boss with new Dragon enemy in BOSS_ENEMY_TYPES), placement palettes (+~5 POIs/map), rock_density worldgen consumer (own rock_scatter RNG stream). 06: nearby_pois serialized into BOTH autonomous + chat prompts (<=4 compact entries, key absent when none, digest-inert; 108-test gate green). 15: 5 prefab JSONs, r2 fix round after PM screenshot review rejected all 5 — root cause was MISSING BUILDING_DEFS entries (out-of-lane fix to game/content/buildings.py reviewed+accepted by PM) + prefab unit-convention errors; all 5 re-captured and PASS. PM authored tools/wk132_poi_capture_patch.py + ursina_wk132_poi scenario (control: existing graveyard rendered correct through same harness).",
+          "evidence": {
+            "captures": "docs/screenshots/wk132_pois/ (5 final fix PNGs + control, PM-reviewed)",
+            "agent05_full_suite": "1691 passed, 5 skipped",
+            "digest": "byte-identical",
+            "validate_assets": "errors=0, warns=46 pre-existing"
+          },
+          "lessons": [
+            "New building_type REQUIRES a BUILDING_DEFS entry or Building.size falls back to (1,1) and the renderer crushes the prefab — add to the new-POI checklist.",
+            "Prefab piece positions use tile-center convention: max |pos| = (footprint-1)/2."
+          ],
+          "known_deferred": [
+            "per-zone fog tint (polish)",
+            "rock_tiles renderer wiring (worldgen emits world.rock_tiles; graphics-lane follow-up)",
+            "pre-existing test_ursina_compute_anim_frame_seq_gating_headless failure when DETERMINISTIC_SIM=1 is in env (fails on clean HEAD too)"
+          ],
+          "pm_next_actions_by_agent": {}
+        }
+      }
     }
   }
 }

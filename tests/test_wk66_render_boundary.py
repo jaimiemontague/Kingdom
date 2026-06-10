@@ -867,7 +867,11 @@ def test_ursina_compute_anim_frame_seq_gating_headless():
 _FOG_GOLDEN = {
     "visible": 486,   # tiles == Visibility.VISIBLE (2)
     "seen": 313,      # tiles == Visibility.SEEN (1)
-    "discovered_buildings": 1,
+    # WK132: 1 -> 3. The POIs round-out (5 new types + modest budget rise)
+    # moved seed-3 POI placement, so two more POIs now sit inside the scripted
+    # ranger walk's reveal footprint. visible/seen are UNCHANGED — fog
+    # behaviour itself is byte-identical; this is placement-only drift.
+    "discovered_buildings": 3,
 }
 
 

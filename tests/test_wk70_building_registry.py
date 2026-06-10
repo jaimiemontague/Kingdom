@@ -63,6 +63,12 @@ EXPECTED_COSTS = {
     'poi_cave_entrance': 0,
     'poi_mine_entrance': 0,
     'poi_demon_portal': 0,
+    # WK132 POI round-out (5 new POI types added to BUILDING_DEFS).
+    'poi_mysterious_well': 0,
+    'poi_ruined_outpost': 0,
+    'poi_windmill_ruin': 0,
+    'poi_ancient_ruins': 0,
+    'poi_dragon_cave': 0,
 }
 
 EXPECTED_SIZES = {
@@ -105,6 +111,12 @@ EXPECTED_SIZES = {
     'poi_cave_entrance': (2, 2),
     'poi_mine_entrance': (2, 2),
     'poi_demon_portal': (2, 2),
+    # WK132 POI round-out (sizes mirror game/entities/poi.py POI_DEFINITIONS).
+    'poi_mysterious_well': (1, 1),
+    'poi_ruined_outpost': (3, 3),
+    'poi_windmill_ruin': (2, 2),
+    'poi_ancient_ruins': (5, 5),
+    'poi_dragon_cave': (3, 3),
 }
 
 EXPECTED_COLORS = {
@@ -147,6 +159,12 @@ EXPECTED_COLORS = {
     'poi_cave_entrance': (80, 60, 40),
     'poi_mine_entrance': (100, 80, 60),
     'poi_demon_portal': (180, 30, 30),
+    # WK132 POI round-out.
+    'poi_mysterious_well': (100, 140, 160),
+    'poi_ruined_outpost': (150, 140, 120),
+    'poi_windmill_ruin': (170, 140, 90),
+    'poi_ancient_ruins': (160, 160, 170),
+    'poi_dragon_cave': (150, 60, 40),
 }
 
 EXPECTED_MAX_OCCUPANTS = {
@@ -184,6 +202,12 @@ EXPECTED_MAX_OCCUPANTS = {
     'poi_cave_entrance': 4,
     'poi_mine_entrance': 4,
     'poi_demon_portal': 4,
+    # WK132 POI round-out.
+    'poi_mysterious_well': 0,
+    'poi_ruined_outpost': 0,
+    'poi_windmill_ruin': 0,
+    'poi_ancient_ruins': 0,
+    'poi_dragon_cave': 0,
 }
 
 # Post-purge factory registry (19 key -> class __name__).
@@ -239,12 +263,15 @@ EXPECTED_PLACEABLE = [
     'guardhouse',
 ]
 
-# The 5 monster lairs and the 12 POIs (plan §2 membership invariants).
+# The 5 monster lairs and the 17 POIs (plan §2 membership invariants; 12 Phase 1 +
+# 5 WK132 round-out).
 LAIRS = {'goblin_camp', 'wolf_den', 'skeleton_crypt', 'spider_nest', 'bandit_camp'}
 POIS = {
     'poi_shrine', 'poi_treasure_cache', 'poi_hermit_hut', 'poi_gravestone',
     'poi_abandoned_camp', 'poi_druid_grove', 'poi_wizard_tower', 'poi_graveyard',
     'poi_bandit_fortress', 'poi_cave_entrance', 'poi_mine_entrance', 'poi_demon_portal',
+    'poi_mysterious_well', 'poi_ruined_outpost', 'poi_windmill_ruin',
+    'poi_ancient_ruins', 'poi_dragon_cave',
 }
 
 
@@ -254,10 +281,10 @@ POIS = {
 
 def test_snapshot_self_consistency():
     """The embedded literals match the documented pre-WK70 counts and shape."""
-    assert len(EXPECTED_COSTS) == 34
-    assert len(EXPECTED_SIZES) == 39
-    assert len(EXPECTED_COLORS) == 39
-    assert len(EXPECTED_MAX_OCCUPANTS) == 34
+    assert len(EXPECTED_COSTS) == 39  # 34 pre-WK132 + 5 WK132 POIs
+    assert len(EXPECTED_SIZES) == 44  # 39 pre-WK132 + 5 WK132 POIs
+    assert len(EXPECTED_COLORS) == 44
+    assert len(EXPECTED_MAX_OCCUPANTS) == 39
     assert len(EXPECTED_REGISTRY_CLASSNAMES) == 19
     assert len(EXPECTED_HOTKEYS) == 10
     assert len(EXPECTED_PLACEABLE) == 10
@@ -386,7 +413,7 @@ def test_poi_membership_invariant():
     import config
     costs, sizes = set(config.BUILDING_COSTS), set(config.BUILDING_SIZES)
     colors, occ = set(config.BUILDING_COLORS), set(config.BUILDING_MAX_OCCUPANTS)
-    assert len(POIS) == 12
+    assert len(POIS) == 17  # 12 Phase 1 + 5 WK132 round-out
     # The 12 poi_* keys are present in ALL FOUR config maps.
     assert POIS <= costs
     assert POIS <= sizes

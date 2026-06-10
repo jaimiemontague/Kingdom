@@ -48,6 +48,7 @@ from game.entities.enemy import (
     Bandit,
     BanditLord,
     DemonOverlord,
+    Dragon,
     SkeletonArcher,
 )
 
@@ -58,8 +59,9 @@ from game.entities.enemy import (
 # so this is the complete volatile set.
 _VOLATILE_KEYS = ("entity_id", "x", "y")
 
-# The 7 stat-block shims, paired with their ENEMY_STATS key. SkeletonArcher is
+# The stat-block shims, paired with their ENEMY_STATS key. SkeletonArcher is
 # deliberately excluded — it is behavioral and not in the table.
+# WK132: Dragon (Dragon Cave boss) added as the 8th pure stat-block shim.
 SHIMS = [
     (Goblin, "goblin"),
     (Wolf, "wolf"),
@@ -68,9 +70,10 @@ SHIMS = [
     (Bandit, "bandit"),
     (BanditLord, "bandit_lord"),
     (DemonOverlord, "demon_overlord"),
+    (Dragon, "dragon"),
 ]
 
-# All 8 enemy types: shims + the behavioral SkeletonArcher.
+# All enemy types: shims + the behavioral SkeletonArcher.
 ALL_TYPES = [(cls, key) for cls, key in SHIMS] + [(SkeletonArcher, "skeleton_archer")]
 
 CLASS_NAMES = {
@@ -81,6 +84,7 @@ CLASS_NAMES = {
     "bandit": "Bandit",
     "bandit_lord": "BanditLord",
     "demon_overlord": "DemonOverlord",
+    "dragon": "Dragon",
     "skeleton_archer": "SkeletonArcher",
 }
 
@@ -132,6 +136,13 @@ EXPECTED_STATS = {
         hp=500, max_hp=500, attack_power=30, speed=72.0,
         xp_reward=300, gold_reward=500, color=(200, 30, 30), size=32,
         has_attackers=True, is_boss=True, name="The Demon Overlord",
+    ),
+    # WK132: Dragon Cave boss — NEW type (not a pre-WK73 literal); values are
+    # the WK132 design of record (~1.3x DemonOverlord, speed kept at 72).
+    "dragon": dict(
+        hp=650, max_hp=650, attack_power=39, speed=72.0,
+        xp_reward=390, gold_reward=650, color=(220, 60, 20), size=36,
+        has_attackers=True, is_boss=True, name="The Dragon",
     ),
     # SkeletonArcher: behavioral subclass (not in ENEMY_STATS). Stats + ranged
     # fields captured verbatim from its __init__. No `attackers`.
@@ -271,8 +282,8 @@ def test_shim_equals_base_enemy_with_key(cls, key):
 
 
 def test_enemy_stats_table_covers_the_seven_shims():
-    """ENEMY_STATS must have exactly an entry for each of the 7 shim keys, and
-    skeleton_archer must NOT be in the table (it is behavioral)."""
+    """ENEMY_STATS must have exactly an entry for each shim key (7 originals +
+    WK132 dragon), and skeleton_archer must NOT be in the table (behavioral)."""
     shim_keys = {key for _, key in SHIMS}
     assert shim_keys <= set(ENEMY_STATS.keys()), (
         f"ENEMY_STATS missing keys: {shim_keys - set(ENEMY_STATS.keys())}"
@@ -280,7 +291,7 @@ def test_enemy_stats_table_covers_the_seven_shims():
     assert "skeleton_archer" not in ENEMY_STATS, (
         "skeleton_archer is behavioral and must NOT be folded into ENEMY_STATS"
     )
-    # The table holds exactly the 7 shim keys — no strays.
+    # The table holds exactly the shim keys — no strays.
     assert set(ENEMY_STATS.keys()) == shim_keys, (
         f"ENEMY_STATS has unexpected keys: {set(ENEMY_STATS.keys()) - shim_keys}"
     )

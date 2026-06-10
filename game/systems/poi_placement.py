@@ -29,6 +29,7 @@ _RARITY_WEIGHTS: dict[str, float] = {
 _LEGENDARY_UNIQUE_TYPES: frozenset[str] = frozenset({
     "poi_bandit_fortress",
     "poi_demon_portal",
+    "poi_dragon_cave",  # WK132: max 1 per map, highest-tier zone (mountains)
 })
 
 
@@ -90,6 +91,8 @@ class POIPlacementSystem:
         "poi_abandoned_camp",
         "poi_gravestone",
         "poi_cave_entrance",
+        "poi_mysterious_well",  # WK132
+        "poi_windmill_ruin",    # WK132: frontier-ring exclusive
     ]
 
     def generate_pois(
@@ -192,15 +195,17 @@ class POIPlacementSystem:
         area = _estimate_zone_area(zone, castle_cx, castle_cy, rng)
         base = max(2, area // 600)
         bonus = zone.difficulty_tier - 1
-        total = min(20, max(2, base + bonus))
+        # WK132: +1 per zone for the 5-type palette expansion (total map budget
+        # rises ~+4 — "modest" per the WK132 scope; caps lifted to match).
+        total = min(21, max(2, base + bonus + 1))
 
         if zone.zone_id == "castle_town":
-            total = min(total, 3)
+            total = min(total, 4)
 
         # Cap outer zones (max_distance=999) to prevent too many POIs at far edges.
         # With center-biased sampling most will land in the inner portion anyway.
         if zone.max_distance >= 999:
-            total = min(total, 8)
+            total = min(total, 9)
 
         return total
 

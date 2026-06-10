@@ -26,7 +26,10 @@ from game.sim.determinism import get_rng
 ENEMY_DROP_CHANCE = 0.07
 
 # Bosses always drop, from the rare+ pool.
-BOSS_ENEMY_TYPES = ("bandit_lord", "demon_overlord")
+# WK132: "dragon" (Dragon Cave boss) added — the guaranteed rare+/legendary
+# drop rides the existing kill-event pipeline, so no extra cave-completion
+# loot hook is needed (single drop path, no double-dipping).
+BOSS_ENEMY_TYPES = ("bandit_lord", "demon_overlord", "dragon")
 
 # POI loot caches: chance of an item IN ADDITION to the existing gold roll.
 POI_ITEM_DROP_CHANCE = 0.35
@@ -72,7 +75,13 @@ class LootSystem:
 
     def roll_poi_drop(self, tier: int) -> ItemDef | None:
         """Roll an item for a POI loot cache (in addition to gold).
-        Pool scales with the POI difficulty tier."""
+        Pool scales with the POI difficulty tier.
+
+        WK132: the existing tier mapping already realises the per-type loot
+        spec, so no new pools were added: caches (t1) and wells (t2) hit the
+        common pool, Ancient Ruins (t3) the uncommon pool, and t4+ rare+.
+        Dragon Cave legendary loot comes from the dragon's guaranteed boss
+        kill drop (BOSS_ENEMY_TYPES), not from a poi drop roll."""
         if self._rng.random() >= POI_ITEM_DROP_CHANCE:
             return None
         tier = int(tier)

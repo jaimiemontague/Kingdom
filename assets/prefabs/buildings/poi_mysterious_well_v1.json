@@ -1,0 +1,57 @@
+{
+  "prefab_id": "poi_mysterious_well_v1",
+  "building_type": "poi_mysterious_well",
+  "footprint_tiles": [1, 1],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_fantasy-town-kit_2.0",
+    "kenney_nature-kit",
+    "kenney_graveyard-kit_5.0"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/fountain-round-fantasy-town.glb",
+      "pos": [0.0, 0.0, 0.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [0.42, 1.2, 0.42]
+    },
+    {
+      "model": "Models/GLTF format/rock_smallA.glb",
+      "pos": [0.5, 0.0, 0.14],
+      "rot": [0.0, 25.0, 0.0],
+      "scale": [1.2, 1.2, 1.2]
+    },
+    {
+      "model": "Models/GLTF format/rock_smallB.glb",
+      "pos": [-0.46, 0.0, 0.22],
+      "rot": [0.0, 140.0, 0.0],
+      "scale": [1.2, 1.2, 1.2]
+    },
+    {
+      "model": "Models/GLTF format/rock_smallC.glb",
+      "pos": [0.12, 0.0, -0.52],
+      "rot": [0.0, 70.0, 0.0],
+      "scale": [1.2, 1.2, 1.2]
+    },
+    {
+      "model": "Models/GLTF format/rock_smallE.glb",
+      "pos": [-0.34, 0.0, -0.42],
+      "rot": [0.0, 200.0, 0.0],
+      "scale": [1.2, 1.2, 1.2]
+    },
+    {
+      "model": "Models/GLB format/lantern-candle-graveyard.glb",
+      "pos": [0.5, 0.0, -0.4],
+      "rot": [0.0, -20.0, 0.0],
+      "scale": [1.6, 1.6, 1.6]
+    },
+    {
+      "model": "Models/GLB format/grass.glb",
+      "pos": [-0.46, 0.0, 0.48],
+      "rot": [0.0, 60.0, 0.0],
+      "scale": [2.0, 2.0, 2.0]
+    }
+  ],
+  "notes": "Mysterious well: round fountain re-posed as a dark well (XZ scale 0.42 so the rim radius ~0.46 tile sits inside the rock ring; Y 1.2 for a raised stone lip), ring of four small rocks just OUTSIDE the rim (ring radius ~0.5-0.55), a candle lantern, and a tuft of grass. WK132 fix round: prop scales raised (rocks 1.2, lantern 1.6, grass 2.0) — at 1.0 they rendered sub-pixel; the original layout also placed the rocks inside the basin. Visual-review follow-up: consider a dark-stone texture_override on the fountain piece per prefab_texture_override_standard.md."
+}

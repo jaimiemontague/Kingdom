@@ -18,6 +18,7 @@ _MAX_MEMORY = 10
 _MAX_ENEMIES = 5
 _MAX_ALLIES = 5
 _MAX_BOUNTIES = 5
+_MAX_POIS = 4
 
 
 def _compact_profile_dict(snapshot: HeroProfileSnapshot) -> dict[str, Any]:
@@ -102,7 +103,7 @@ def _compact_situation(hero: Any, game_state: dict) -> dict[str, Any]:
     enemies = list(full.get("nearby_enemies") or [])[:_MAX_ENEMIES]
     allies = list(full.get("nearby_allies") or [])[:_MAX_ALLIES]
     bounties = list(full.get("bounty_options") or [])[:_MAX_BOUNTIES]
-    return {
+    out = {
         "current_state": full.get("current_state"),
         "current_location_label": full.get("current_location"),
         "situation": full.get("situation"),
@@ -113,6 +114,14 @@ def _compact_situation(hero: Any, game_state: dict) -> dict[str, Any]:
         "distances": full.get("distances", {}),
         "hero_stat_block": full.get("hero_stat_block", ""),
     }
+    # WK132: compact nearby-POI strings (<= _MAX_POIS). Key is OMITTED entirely
+    # when no POIs are nearby — keeps the no-POI WK67 digest prompts unchanged.
+    from ai.behaviors.poi_awareness import format_nearby_pois_compact
+
+    pois_compact = format_nearby_pois_compact(full.get("nearby_pois") or [], limit=_MAX_POIS)
+    if pois_compact:
+        out["nearby_pois"] = pois_compact
+    return out
 
 
 def build_llm_context_for_moment(

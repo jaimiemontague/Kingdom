@@ -1,0 +1,74 @@
+{
+  "prefab_id": "poi_dragon_cave_v1",
+  "building_type": "poi_dragon_cave",
+  "footprint_tiles": [3, 3],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_nature-kit",
+    "kenney_graveyard-kit_5.0"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLTF format/cliff_blockCave_rock.glb",
+      "pos": [0.0, 0.0, 0.45],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [2.0, 1.6, 1.2]
+    },
+    {
+      "model": "Models/GLTF format/rock_tallA.glb",
+      "pos": [-1.0, 0.0, 0.3],
+      "rot": [0.0, 20.0, 0.0],
+      "scale": [1.6, 1.6, 1.6]
+    },
+    {
+      "model": "Models/GLTF format/rock_tallC.glb",
+      "pos": [1.0, 0.0, 0.35],
+      "rot": [0.0, 140.0, 0.0],
+      "scale": [1.5, 1.5, 1.5]
+    },
+    {
+      "model": "Models/GLB format/fire-basket-graveyard.glb",
+      "pos": [-0.7, 0.0, -0.85],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.5, 1.5, 1.5]
+    },
+    {
+      "model": "Models/GLB format/fire-basket-graveyard.glb",
+      "pos": [0.7, 0.0, -0.85],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.5, 1.5, 1.5]
+    },
+    {
+      "model": "Models/GLTF format/statue_obelisk.glb",
+      "pos": [-0.95, 0.0, -0.95],
+      "rot": [0.0, 15.0, 0.0],
+      "scale": [1.2, 1.2, 1.2]
+    },
+    {
+      "model": "Models/GLB format/gravestone-debris-graveyard.glb",
+      "pos": [-0.35, 0.0, -0.95],
+      "rot": [0.0, 210.0, 0.0],
+      "scale": [1.2, 1.2, 1.2]
+    },
+    {
+      "model": "Models/GLB format/debris-graveyard.glb",
+      "pos": [0.3, 0.0, -1.0],
+      "rot": [0.0, 320.0, 0.0],
+      "scale": [1.2, 1.2, 1.2]
+    },
+    {
+      "model": "Models/GLTF format/rock_smallB.glb",
+      "pos": [-1.0, 0.0, -0.5],
+      "rot": [0.0, 50.0, 0.0],
+      "scale": [1.4, 1.4, 1.4]
+    },
+    {
+      "model": "Models/GLTF format/rock_smallD.glb",
+      "pos": [1.0, 0.0, -0.55],
+      "rot": [0.0, 230.0, 0.0],
+      "scale": [1.4, 1.4, 1.4]
+    }
+  ],
+  "notes": "Dragon cave (3x3): cliff_blockCave_rock (a full cliff block with a carved cave mouth — the thin cliff_cave_rock face panel used pre-fix read as a flat slab) scaled 2.0x1.6 at the north edge with the mouth yawed 180 to face -z (the capture camera / approach side); flanked by two organic tall rocks for silhouette (the front pair was removed at the fix round — nature-kit green tint made them read as bushes crowding the mouth); two fire baskets flanking the approach; a lone warning obelisk and bone-like rubble kept to the sides so the mouth stays readable. Piece positions follow the tile-center convention (max |pos| = 1.0 for 3x3) so the renderer applies no XZ squeeze."
+}

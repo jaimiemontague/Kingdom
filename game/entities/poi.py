@@ -47,6 +47,9 @@ class PointOfInterest(Building):
         self.cooldown_remaining = 0.0
         # WK55: tick stamp of last interaction (renderer can flash/glow for ~1s)
         self.last_interaction_tick: int = 0
+        # WK132: set True when a cleared POI (e.g. Ruined Outpost) becomes a
+        # permanent fog-of-war revealer (radius = poi_def.vision_radius).
+        self.grants_vision: bool = False
 
         # POIs are always fully "constructed" — they exist as world features
         self.is_constructed = True
@@ -59,7 +62,7 @@ class PointOfInterest(Building):
 
 
 # ---------------------------------------------------------------------------
-# POI definitions — one per type (12 total for Phase 1)
+# POI definitions — one per type (12 Phase 1 + 5 WK132 round-out = 17 total)
 # ---------------------------------------------------------------------------
 
 POI_DEFINITIONS: dict[str, POIDefinition] = {
@@ -273,5 +276,100 @@ POI_DEFINITIONS: dict[str, POIDefinition] = {
         ),
         zone_affinity=("canyon_land",),
         elevation_preference="any",
+    ),
+    # -----------------------------------------------------------------
+    # WK132: POIs round-out — 5 remaining types from pois_proposal §4.
+    # Prefabs authored in parallel by Agent 15 as
+    # assets/prefabs/buildings/poi_<id>_v1.json (renderer falls back to
+    # "<building_type>_v1.json" automatically).
+    # -----------------------------------------------------------------
+    "poi_mysterious_well": POIDefinition(
+        poi_type="poi_mysterious_well",
+        display_name="Mysterious Well",
+        building_type="poi_mysterious_well",
+        size=(1, 1),
+        difficulty_tier=2,
+        rarity="uncommon",
+        interaction_type="well",
+        is_persistent=False,
+        vision_radius=0,
+        description=(
+            "A dark stone well ringed by smooth rocks. The water far below "
+            "is black and perfectly still — until you lean over the edge."
+        ),
+        zone_affinity=("castle_town", "darkwood", "mountains", "canyon_land"),
+        elevation_preference="any",
+    ),
+    "poi_ruined_outpost": POIDefinition(
+        poi_type="poi_ruined_outpost",
+        display_name="Ruined Outpost",
+        building_type="poi_ruined_outpost",
+        size=(3, 3),
+        difficulty_tier=3,  # proposal band 2-3; 3 picked for skeleton/goblin mix
+        rarity="uncommon",
+        interaction_type="outpost",
+        is_persistent=True,
+        vision_radius=5,  # permanent fog reveal radius once cleared
+        description=(
+            "Crumbled walls and a single intact watchtower mark an old "
+            "frontier outpost. Something has made its nest in the rubble, "
+            "but the tower still commands the surrounding land."
+        ),
+        zone_affinity=("mountains", "canyon_land"),
+        elevation_preference="any",
+    ),
+    "poi_windmill_ruin": POIDefinition(
+        poi_type="poi_windmill_ruin",
+        display_name="Windmill Ruin",
+        building_type="poi_windmill_ruin",
+        size=(2, 2),
+        difficulty_tier=1,
+        rarity="rare",
+        interaction_type="windmill",
+        is_persistent=True,
+        vision_radius=0,
+        description=(
+            "A leaning windmill with tattered sails creaks in the wind. "
+            "Broken fence posts trace the outline of a farmstead long "
+            "abandoned to the frontier."
+        ),
+        zone_affinity=("frontier",),  # placed via the unzoned frontier palette
+        elevation_preference="any",
+    ),
+    "poi_ancient_ruins": POIDefinition(
+        poi_type="poi_ancient_ruins",
+        display_name="Ancient Ruins",
+        building_type="poi_ancient_ruins",
+        size=(5, 5),
+        difficulty_tier=3,  # proposal band 3-4; 3 keeps loot in the uncommon pool
+        rarity="rare",
+        interaction_type="ruins",
+        is_persistent=True,
+        vision_radius=0,
+        description=(
+            "Toppled columns and moss-eaten walls of an elder civilisation. "
+            "Carvings on the central altar map the surrounding lands — and "
+            "hint at treasures the ages have not yet claimed."
+        ),
+        zone_affinity=("darkwood", "mountains", "canyon_land"),
+        elevation_preference="any",
+    ),
+    "poi_dragon_cave": POIDefinition(
+        poi_type="poi_dragon_cave",
+        display_name="Dragon Cave",
+        building_type="poi_dragon_cave",
+        size=(3, 3),
+        difficulty_tier=5,
+        rarity="legendary",
+        interaction_type="boss",
+        is_persistent=True,
+        vision_radius=0,
+        description=(
+            "A vast cave mouth framed by scorched rock and scattered bones. "
+            "Smoke curls from the darkness within, and the ground trembles "
+            "with a slow, enormous breathing."
+        ),
+        zone_affinity=("mountains",),
+        elevation_preference="high",
     ),
 }

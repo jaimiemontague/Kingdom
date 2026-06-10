@@ -1,0 +1,112 @@
+{
+  "prefab_id": "poi_ruined_outpost_v1",
+  "building_type": "poi_ruined_outpost",
+  "footprint_tiles": [3, 3],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_retro-fantasy-kit",
+    "kenney_fantasy-town-kit_2.0",
+    "kenney_graveyard-kit_5.0",
+    "kenney_survival-kit"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/wall-fortified.glb",
+      "pos": [-0.65, 0.0, -1.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/wall-fortified.glb",
+      "pos": [0.35, 0.0, -1.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/wall-broken-fantasy-town.glb",
+      "pos": [1.0, 0.0, -1.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/wall-broken-fantasy-town.glb",
+      "pos": [-1.0, 0.0, -0.3],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/stone-wall-damaged-graveyard.glb",
+      "pos": [-1.0, 0.0, 0.5],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/stone-wall-damaged-graveyard.glb",
+      "pos": [1.0, 0.0, -0.15],
+      "rot": [0.0, 270.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/stone-wall-damaged-graveyard.glb",
+      "pos": [1.0, 0.0, 0.65],
+      "rot": [0.0, 270.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/stone-wall-graveyard.glb",
+      "pos": [-0.55, 0.0, 1.0],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/wall-broken-fantasy-town.glb",
+      "pos": [0.55, 0.0, 1.0],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/debris-graveyard.glb",
+      "pos": [0.15, 0.0, 0.1],
+      "rot": [0.0, 45.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/gravestone-debris-graveyard.glb",
+      "pos": [-0.4, 0.0, 0.4],
+      "rot": [0.0, 210.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/debris-wood-graveyard.glb",
+      "pos": [0.5, 0.0, 0.4],
+      "rot": [0.0, 130.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/barrel.glb",
+      "pos": [0.7, 0.0, -0.55],
+      "rot": [0.0, 20.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/lantern-candle-graveyard.glb",
+      "pos": [-0.3, 0.0, -0.5],
+      "rot": [0.0, 25.0, 80.0],
+      "scale": [1.2, 1.2, 1.2]
+    },
+    {
+      "model": "Models/GLB format/grass-large.glb",
+      "pos": [0.8, 0.0, 0.8],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.2, 1.2, 1.2]
+    },
+    {
+      "model": "Models/GLB format/grass.glb",
+      "pos": [-0.75, 0.0, -0.7],
+      "rot": [0.0, 250.0, 0.0],
+      "scale": [1.5, 1.5, 1.5]
+    }
+  ],
+  "notes": "Ruined outpost (3x3): two intact fortified wall sections on the north face, damaged graveyard stone walls and slim broken-wall posts (wall-broken-fantasy-town is a thin end-post fragment, used as accents) around the rest of the perimeter with wide gaps, stone and wood debris in the courtyard, a leftover barrel, a toppled lantern, grass reclaiming the corners. Piece positions follow the tile-center convention (max |pos| = 1.0 for 3x3) so the renderer applies no XZ squeeze."
+}

@@ -157,7 +157,11 @@ _EXPECTED_DIGEST = {
     "gold": 2101,
     "n_heroes": 0,
     "n_enemies": 13,
-    "n_buildings": 43,
+    # WK132: 43 -> 48. POIs live in engine.buildings; the WK132 POIs round-out
+    # added 5 types to the zone palettes and +1 POI budget per zone, so seed-3
+    # worldgen now places 5 more POIs. Every other pinned value (gold, enemy
+    # multisets, sim clock) is unchanged — placement-only, expected drift.
+    "n_buildings": 48,
     "n_peasants": 1,
     "sim_now_ms": 10200,
     "enemy_type_counts": {
