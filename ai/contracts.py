@@ -48,6 +48,7 @@ class TargetType(str, Enum):
     DEFEND_CASTLE = "defend_castle"
     DEFEND_NEUTRAL = "defend_neutral"
     JOURNEY_EXPLORE = "journey_explore"
+    QUEST_OFFER = "quest_offer"  # WK126-T5: walking to a quest-giver NPC
 
     @classmethod
     def from_str(cls, value: str) -> Optional["TargetType"]:

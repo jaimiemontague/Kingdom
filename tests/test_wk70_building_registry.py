@@ -28,6 +28,17 @@ Covers Definition-of-Done item E (plan §4) and the membership invariants in pla
 # in WK114 Round B. Counts: COSTS=34, SIZES=39, COLORS=39, MAX_OCCUPANTS=34.
 # ---------------------------------------------------------------------------
 
+# WK133 (WK126-T2, Agent 07): herald_post joined BUILDING_DEFS as the 11th placeable.
+# Its cost is consumed from config.HERALD_POST_COST (Agent 05's constant, landing in
+# parallel; 150 fallback until then — see game.content.buildings._herald_post_cost).
+# Resolve the expectation the same way so the snapshot tracks the constant. NOTE: the
+# constant must be defined ABOVE config's `from game.content.buildings import
+# BUILDING_DEFS` line, or the def freezes at the 150 fallback and this test will
+# flag the divergence.
+import config as _config
+
+EXPECTED_HERALD_POST_COST = int(getattr(_config, 'HERALD_POST_COST', 150))
+
 EXPECTED_COSTS = {
     'castle': 0,
     'warrior_guild': 150,
@@ -47,6 +58,8 @@ EXPECTED_COSTS = {
     'temple_helia': 400,
     'temple_lunord': 400,
     'guardhouse': 300,
+    # WK133 herald_post (see EXPECTED_HERALD_POST_COST above).
+    'herald_post': EXPECTED_HERALD_POST_COST,
     'palace': 0,
     'house': 0,
     'farm': 0,
@@ -90,6 +103,8 @@ EXPECTED_SIZES = {
     'temple_helia': (3, 3),
     'temple_lunord': (3, 3),
     'guardhouse': (2, 2),
+    # WK133 herald_post.
+    'herald_post': (2, 2),
     'palace': (3, 3),
     'house': (1, 1),
     'farm': (3, 2),
@@ -138,6 +153,8 @@ EXPECTED_COLORS = {
     'temple_helia': (255, 165, 0),
     'temple_lunord': (176, 196, 222),
     'guardhouse': (128, 128, 128),
+    # WK133 herald_post (royal-blue banner).
+    'herald_post': (65, 105, 225),
     'palace': (184, 134, 11),
     'house': (120, 100, 80),
     'farm': (200, 170, 90),
@@ -186,6 +203,8 @@ EXPECTED_MAX_OCCUPANTS = {
     'temple_helia': 4,
     'temple_lunord': 4,
     'guardhouse': 0,
+    # WK133 herald_post (not enterable; quest-giver NPC stands beside it).
+    'herald_post': 0,
     'palace': 0,
     'house': 0,
     'farm': 0,
@@ -210,9 +229,9 @@ EXPECTED_MAX_OCCUPANTS = {
     'poi_dragon_cave': 0,
 }
 
-# Post-purge factory registry (19 key -> class __name__).
+# Post-purge factory registry (20 key -> class __name__).
 # Originally from `git show HEAD:game/building_factory.py` @ WK69 commit 2ee336c;
-# the 8 WK34 zombie mappings were removed in WK114 Round B.
+# the 8 WK34 zombie mappings were removed in WK114 Round B; WK133 added herald_post.
 EXPECTED_REGISTRY_CLASSNAMES = {
     'warrior_guild': 'WarriorGuild',
     'ranger_guild': 'RangerGuild',
@@ -232,6 +251,8 @@ EXPECTED_REGISTRY_CLASSNAMES = {
     'temple_helia': 'TempleHelia',
     'temple_lunord': 'TempleLunord',
     'guardhouse': 'Guardhouse',
+    # WK133 herald_post placement class (Agent 07; minimal Building subclass in special.py).
+    'herald_post': 'HeraldPost',
     'palace': 'Palace',
 }
 
@@ -248,6 +269,8 @@ EXPECTED_HOTKEYS = {
     'trading_post': '8',
     'temple': 'T',
     'guardhouse': 'U',
+    # WK133 herald_post — '9' extends the free 1-8 numeric build row.
+    'herald_post': '9',
 }
 
 EXPECTED_PLACEABLE = [
@@ -261,6 +284,8 @@ EXPECTED_PLACEABLE = [
     'trading_post',
     'temple',
     'guardhouse',
+    # WK133 herald_post (placeable_order=10, after guardhouse).
+    'herald_post',
 ]
 
 # The 5 monster lairs and the 17 POIs (plan §2 membership invariants; 12 Phase 1 +
@@ -281,17 +306,17 @@ POIS = {
 
 def test_snapshot_self_consistency():
     """The embedded literals match the documented pre-WK70 counts and shape."""
-    assert len(EXPECTED_COSTS) == 39  # 34 pre-WK132 + 5 WK132 POIs
-    assert len(EXPECTED_SIZES) == 44  # 39 pre-WK132 + 5 WK132 POIs
-    assert len(EXPECTED_COLORS) == 44
-    assert len(EXPECTED_MAX_OCCUPANTS) == 39
-    assert len(EXPECTED_REGISTRY_CLASSNAMES) == 19
-    assert len(EXPECTED_HOTKEYS) == 10
-    assert len(EXPECTED_PLACEABLE) == 10
-    # SIZES/COLORS share the same 39-key set; COSTS/OCCUPANTS share the same 34-key set.
+    assert len(EXPECTED_COSTS) == 40  # 34 pre-WK132 + 5 WK132 POIs + WK133 herald_post
+    assert len(EXPECTED_SIZES) == 45  # 39 pre-WK132 + 5 WK132 POIs + WK133 herald_post
+    assert len(EXPECTED_COLORS) == 45
+    assert len(EXPECTED_MAX_OCCUPANTS) == 40
+    assert len(EXPECTED_REGISTRY_CLASSNAMES) == 20  # 19 pre-WK133 + herald_post
+    assert len(EXPECTED_HOTKEYS) == 11  # 10 pre-WK133 + herald_post '9'
+    assert len(EXPECTED_PLACEABLE) == 11
+    # SIZES/COLORS share the same key set; COSTS/OCCUPANTS share the same key set.
     assert set(EXPECTED_SIZES) == set(EXPECTED_COLORS)
     assert set(EXPECTED_COSTS) == set(EXPECTED_MAX_OCCUPANTS)
-    # The 39-key set is exactly the 34-key set plus the 5 lairs.
+    # The SIZES key set is exactly the COSTS key set plus the 5 lairs.
     assert set(EXPECTED_SIZES) - set(EXPECTED_COSTS) == LAIRS
 
 
@@ -329,12 +354,12 @@ def test_config_max_occupants_byte_identical():
 # Order-independent (compare key->classname dicts).
 # ---------------------------------------------------------------------------
 
-def test_factory_registry_19_class_mappings():
+def test_factory_registry_20_class_mappings():
     from game.building_factory import BuildingFactory
     registry = BuildingFactory.BUILDING_REGISTRY
     derived = {key: cls.__name__ for key, cls in registry.items()}
     assert derived == EXPECTED_REGISTRY_CLASSNAMES
-    assert len(registry) == 19
+    assert len(registry) == 20  # WK133: + herald_post
     # POIs and castle/house/farm must NOT be in the placement registry.
     for absent in ('castle', 'house', 'farm', *POIS, *LAIRS):
         assert absent not in registry
@@ -376,7 +401,7 @@ def test_input_handler_hotkey_reverse_map():
     for building, key in EXPECTED_HOTKEYS.items():
         assert reverse[key.lower()] == building
     assert set(reverse.values()) == set(EXPECTED_PLACEABLE)
-    assert len(reverse) == 10
+    assert len(reverse) == 11  # WK133: + herald_post '9'
 
 
 # ---------------------------------------------------------------------------

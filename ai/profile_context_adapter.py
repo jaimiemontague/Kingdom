@@ -124,6 +124,48 @@ def _compact_situation(hero: Any, game_state: dict) -> dict[str, Any]:
     return out
 
 
+def _compact_quest_offer(hero: Any) -> dict[str, Any] | None:
+    """WK126-T6: compact quest-offer block for the QUEST_OFFER decision moment.
+
+    Reads the plain-data offer staged on the hero by the quest_offer arrival
+    handler (no live sim objects — same boundary discipline as nearby_pois).
+    Returns None when nothing is staged, so non-quest prompts are unchanged
+    (the WK67 digest scenario never stages an offer).
+    """
+    offer = getattr(hero, "_pending_quest_offer", None)
+    if not isinstance(offer, dict):
+        return None
+    from config import TILE_SIZE
+    from ai.decision_moments import (
+        QUEST_OFFER_ACCEPT_ACTION,
+        QUEST_OFFER_DECLINE_ACTION,
+    )
+
+    try:
+        dist_tiles = round(
+            float(hero.distance_to(float(offer.get("x", 0.0)), float(offer.get("y", 0.0))))
+            / float(TILE_SIZE),
+            1,
+        )
+    except Exception:
+        dist_tiles = 0.0
+    block: dict[str, Any] = {
+        "quest_type": str(offer.get("quest_type", "") or ""),
+        "target": str(offer.get("target", "") or ""),
+        "reward_gold": int(offer.get("reward", 0) or 0),
+        "objective_distance_tiles": dist_tiles,
+        "decision_rule": (
+            f"This is a quest offer. To ACCEPT the quest (accept_quest) respond with "
+            f"action '{QUEST_OFFER_ACCEPT_ACTION}'. To DECLINE it (decline_quest) "
+            f"respond with action '{QUEST_OFFER_DECLINE_ACTION}'."
+        ),
+    }
+    count = int(offer.get("count", 1) or 1)
+    if count > 1:
+        block["kill_count_required"] = count
+    return block
+
+
 def build_llm_context_for_moment(
     hero: Any,
     game_state: dict,
@@ -133,7 +175,7 @@ def build_llm_context_for_moment(
 ) -> dict[str, Any]:
     snapshot = build_hero_profile_snapshot(hero, None, now_ms=now_ms)
     profile_core = _compact_profile_dict(snapshot)
-    return {
+    out = {
         "moment": moment.to_prompt_dict(),
         "hero_profile": profile_core,
         "current_situation": _compact_situation(hero, game_state),
@@ -141,3 +183,11 @@ def build_llm_context_for_moment(
         "recent_memory": _filter_recent_memory(snapshot, moment),
         "allowed_actions": list(moment.allowed_actions),
     }
+    # WK126-T6: quest-offer context (type, target, reward, distance) — key is
+    # OMITTED entirely except for the QUEST_OFFER moment, keeping every other
+    # prompt byte-identical (same pattern as the WK132 nearby_pois key).
+    if moment.moment_type == DecisionMomentType.QUEST_OFFER:
+        quest_block = _compact_quest_offer(hero)
+        if quest_block is not None:
+            out["quest_offer"] = quest_block
+    return out

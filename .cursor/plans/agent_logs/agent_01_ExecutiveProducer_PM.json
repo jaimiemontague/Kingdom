@@ -7501,6 +7501,85 @@
           "pm_next_actions_by_agent": {}
         }
       }
+    },
+    "wk133_quests_vertical_slice": {
+      "sprint_meta": {
+        "created_utc": "2026-06-10T00:00:00Z",
+        "plan": ".cursor/plans/wk126_quest_giving_npcs.plan.md",
+        "roadmap": ".cursor/plans/wk130_hero_world_roadmap.plan.md section WK133"
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "pm_status_summary": "WK133 kickoff: execute the WK126 quest plan IN FULL (all four quest types — PM decision per roadmap WK133; cut to raid_lair-only if the sprint runs hot). PM decisions of record: rewards gold-only; escrow consumed on failure, giver re-armable; Quest-Giver NPC renders via classic (non-instanced) path with the '!' overlay. The wk126 plan is authoritative for tickets/lanes/digest guards/config/gates — agents MUST read it end-to-end. CENTRAL CONSTRAINT: WK67 digest byte-identical, RNG-draw ordering guards per plan section 'CENTRAL CONSTRAINT'.",
+          "pm_next_actions_by_agent": {
+            "05_GameplaySystems": "WK126 tickets T1 (Quest+QuestSystem), T2-entity (QuestGiver + spawn hook), T3 (economy fund_quest), T4-populate (build_ai_view), T7 (all four completion detectors), ALL config consts. Lanes per plan file-ownership table.",
+            "07_Content": "WK126 T2-def: Herald's Post BuildingDef in game/content/buildings.py (placeable, cost from config HERALD_POST_COST, free hotkey, distinct color). NOTE from WK132: new building types MUST have a BUILDING_DEFS entry with correct size or the renderer crushes the prefab.",
+            "03_TechDir": "WK126 T4-dataclass: quests+quest_givers read-only tuple fields on AiGameView (mirror bounties/pois), tests/test_wk126_ai_view_quests.py.",
+            "06_AIBehavior": "Wave 2: WK126 T5 (occasional approach, RNG-LAST guard ordering) + T6 (LLM accept/decline + 15-sim-min per-NPC decline cooldown).",
+            "08_UXUIDirector": "Wave 2: WK126 T9 quest-create dialog + active-quest board.",
+            "09_ArtDirector": "Wave 2: WK126 T8 yellow '!' overhead marker (Ursina billboard + pygame blit, dirty-gated, _OVERLAY_CHILD_ATTRS registered).",
+            "11_QA": "Wave 3: WK126 T10 soak + full sweep + RNG-position digest-safety verification."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "05",
+                "07",
+                "03"
+              ],
+              [
+                "06",
+                "08",
+                "09"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "intelligence_by_agent": {
+              "05": "high",
+              "07": "medium",
+              "03": "medium",
+              "06": "high",
+              "08": "high",
+              "09": "medium",
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Per wk126 plan send list; 10 consult folded into 09's dirty-gate requirement + PM capture."
+          }
+        },
+        "r2_close": {
+          "pm_status_summary": "WK133 CLOSED (pending final qa_smoke). Full WK126 plan delivered: Quest+QuestSystem+QuestGiver+economy escrow (05), herald_post def + HeraldPost factory class incl. placement-blocker fix (07), ai_view quest fields (03), occasional-approach with RNG-LAST guard + LLM accept/decline via explore/retreat carrier + 15-sim-min decline cooldown (06), quest-create dialog + active board (08), NPC render via snapshot attach + yellow '!' dirty-gated overlay incl. r2 fix after PM live-capture FAIL (09), herald_post prefab after r2 (15), T10 soak with all four quest types completing+paying + decline-window proof + leak check (11), zombie-open-quest + idle-raider-repin fixes (05 r2). PM authored wk133 capture patch/scenario; verified '!' on/off live.",
+          "evidence": {
+            "soak": "tests/test_wk126_quest_soak.py 5 PASS (organic accepts, 15-min decline proof, 4/4 types complete+pay, overlay leak check)",
+            "digest": "b73961 byte-identical at every round",
+            "captures": "docs/screenshots/wk133_quest_giver/ (fix1 on/off + crop_marker PM-verified), docs/screenshots/wk133_quest_ui/ (dialog/board)",
+            "quest_tests": "9 wk126 test files, ~90 tests"
+          },
+          "decisions_of_record": [
+            "rewards gold-only",
+            "escrow consumed on failure incl. giver_destroyed; giver re-armable",
+            "LLM carrier: explore=accept / retreat=decline (ToolAction allowlist constraint), literal accept_quest/decline_quest also honored",
+            "accepted quests survive giver destruction"
+          ],
+          "known_deferred": [
+            "sub-60%-HP idle raider waits to heal before re-engaging (self-resolves)",
+            "quest-create modal stray placeholder swatches (cosmetic)",
+            "no quest stinger audio (Agent 14, later)",
+            "bare background pytest gets killed ~10min by task cap — use qa_smoke wrapper for full-suite background runs (ops note)"
+          ],
+          "pm_next_actions_by_agent": {}
+        }
+      }
     }
   }
 }

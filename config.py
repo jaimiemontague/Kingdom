@@ -328,6 +328,25 @@ BOUNTY_REWARD_LOW = 25
 BOUNTY_REWARD_MED = 60
 BOUNTY_REWARD_HIGH = 150
 
+# ---------------------------------------------------------------------------
+# WK126 — Player-placed quest-giving NPCs (Herald's Post). Agent 05 owns ALL of
+# these this sprint; Agents 06/07/08/09 READ them. Cooldowns/commit windows are
+# SIM-TIME ms (game.sim.timebase.now_ms): they freeze on pause + scale with FAST.
+# ---------------------------------------------------------------------------
+HERALD_POST_COST = 150            # gold to place the building (Agent 07 building def consumes)
+HERALD_POST_HOTKEY = "9"          # free build hotkey (1-8/T/U taken; see game/content/buildings.py)
+QUEST_REWARD_LOW = 60
+QUEST_REWARD_MED = 140
+QUEST_REWARD_HIGH = 280
+QUEST_DECLINE_COOLDOWN_MS = 900_000   # 15 SIM-minutes; per hero, per giver
+QUEST_APPROACH_COOLDOWN_MS = 25_000   # min sim-time between a hero's approach attempts
+QUEST_APPROACH_CHANCE = 0.15          # "occasionally" — only rolled when a candidate exists (digest rule)
+QUEST_OFFER_COMMIT_MS = 12_000        # anti-thrash commit while walking to the NPC
+QUEST_MIN_ACCEPT_HEALTH_PCT = 0.65    # don't go quest-shopping while hurt (matches bounty)
+QUEST_GIVER_INTERACT_PX = TILE_SIZE * 2  # arrival radius at the NPC (2 tiles)
+QUEST_SLAY_DEFAULT_COUNT = 5          # default N for slay_enemy_type
+QUEST_EXPLORE_REVEAL_RADIUS_TILES = 3  # explore_far completion radius
+
 # Economy settings
 STARTING_GOLD = 2100   # wk15: +40% from 1500 for pacing
 TAX_RATE = 0.25      # 25% (hero/lair gold uses this; monster gold increased separately for pacing)

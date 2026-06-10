@@ -30,6 +30,11 @@ class GameEventType(str, Enum):
     QUEST_STARTED = "quest_started"
     QUEST_COMPLETED = "quest_completed"
     QUEST_HERO_RETURNED = "quest_hero_returned"
+    # WK126: Herald's Post on-map quests. QUEST_STARTED is reused for acceptance
+    # (hero takes the offer); QUEST_COMPLETED for detect->pay. New lifecycle events:
+    QUEST_OFFERED = "quest_offered"    # player funds + arms a quest on a giver
+    QUEST_DECLINED = "quest_declined"  # LLM/hero declines at the NPC (15-min cooldown)
+    QUEST_FAILED = "quest_failed"      # target gone / accepting hero died (escrow consumed)
     # wk18: AI/LLM monitoring dev tools — capture prompts and responses for Dev Overlay
     LLM_PROMPT_SENT = "llm_prompt_sent"
     LLM_RESPONSE_RECEIVED = "llm_response_received"

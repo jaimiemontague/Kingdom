@@ -227,6 +227,27 @@ def handle_visit_poi_arrival(ai: Any, hero: Any, task: HeroTask, view: Any) -> b
     return True
 
 
+def handle_quest_offer_arrival(ai: Any, hero: Any, task: HeroTask, view: Any) -> bool:
+    """WK126-T6: arrived at a quest-giver NPC — start the LLM accept/decline.
+
+    Modeled on :func:`handle_visit_poi_arrival` (clear the walk target, go
+    IDLE) plus the decision kick-off: ``begin_quest_offer_decision`` stages the
+    offer on the hero and requests the async QUEST_OFFER consult (or resolves
+    the deterministic-accept fallback immediately when no LLM brain is wired).
+    The verdict is routed back through ``apply_llm_decision`` →
+    ``quest_offer.maybe_apply_quest_offer_decision``.
+    """
+    giver_id = str(task.payload.get("giver_id") or "")
+    hero.target = None
+    hero.target_position = None
+    hero.state = HeroState.IDLE
+    if giver_id:
+        from ai.behaviors import quest_offer
+
+        quest_offer.begin_quest_offer_decision(ai, hero, giver_id, view)
+    return True
+
+
 def handle_going_home_arrival(ai: Any, hero: Any, task: HeroTask, view: Any) -> bool:
     """Arrived home: transfer taxes, start resting, clear target.
 
@@ -321,6 +342,7 @@ ARRIVAL_HANDLERS: dict[TargetType, Callable[[Any, Any, HeroTask, Any], bool]] = 
     TargetType.REST_INN: handle_rest_inn_arrival,
     TargetType.BUY_MEAL: handle_buy_meal_arrival,
     TargetType.GET_DRINK: handle_get_drink_arrival,
+    TargetType.QUEST_OFFER: handle_quest_offer_arrival,  # WK126-T6
 }
 
 

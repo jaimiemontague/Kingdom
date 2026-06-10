@@ -1008,6 +1008,64 @@
      }
     }
    }
+  },
+  "wk133_quests_vertical_slice": {
+   "sprint_meta": {
+    "created_utc": "2026-06-10T00:00:00Z",
+    "plan_ref": ".cursor/plans/wk126_quest_giving_npcs.plan.md",
+    "notes": "WK133 quests vertical slice: Agent 15 owns the Herald's Post prefab (herald_post_v1.json)."
+   },
+   "rounds": {
+    "r1_herald_post_prefab": {
+     "round_id": "r1_herald_post_prefab",
+     "round_meta": {
+      "build_target": "WK133 Herald's Post (notice board) prefab — assets/prefabs/buildings/herald_post_v1.json",
+      "completed_at_local": "2026-06-10T03:20:00"
+     },
+     "status": "complete_prefab_authored_capture_verified",
+     "what_i_changed": [
+      "assets/prefabs/buildings/herald_post_v1.json — NEW, 7 pieces, footprint [2,2] matching BUILDING_DEFS herald_post (2,2); building_type herald_post resolves via the default {bts}_v1.json rule in game/graphics/ursina_prefabs.py (no renderer edits needed)."
+     ],
+     "pieces": {
+      "stall-green-fantasy-town.glb": "herald's booth, back-center [1.0,0,1.5] rot 180 (awning faces front)",
+      "signpost.glb (Survival, double)": "primary 'notices posted here' read, front-left [0.4,0,0.25] scale 1.8",
+      "signpost-single.glb (Survival)": "front-right [1.55,0,0.55] scale 1.4",
+      "lantern-fantasy-town.glb": "right side [1.8,0,1.2] scale 0.45 (FT pack multiplier makes 1.0 a giant lamppost — see lessons)",
+      "barrel.glb (Survival)": "left dressing [0.25,0,1.1]",
+      "detail-crate.glb (Retro)": "back-left dressing [0.3,0,1.45]",
+      "banner-red-fantasy-town.glb": "hung on booth's left flank [0.55,0,1.2] rot 90 scale 0.8 — identity pop; Kenney ships no blue banner, royal-blue identity stays in map-icon/UI color"
+     },
+     "lessons": [
+      "lantern-fantasy-town.glb at scale 1.0 renders as a full-height street lamppost taller than the stall (FT extent multiplier); 0.45 reads as a small lamp.",
+      "banner-red-fantasy-town.glb origin is at its base and the cloth hangs UP from y — placing it at y 0.6 floats it; place at y 0.0 against a tall piece and rotate 90 so the cloth faces the RTS camera (rot 0 is edge-on = thin red pole).",
+      "Brown-on-brown: a signpost in front of the stall body disappears; keep wood signs over open grass, offset from the booth silhouette.",
+      "Renderer recentres pieces by min/max centroid (_load_prefab_instance), so warrior_guild-style tile-centre coords (0.5/1.5 for 2x2) are fine as long as XZ spread stays within ~2 tiles."
+     ],
+     "evidence": {
+      "capture": {
+       "command": "python tools/run_ursina_capture_once.py --scenario ursina_wk133_quest_giver --stem prefab5",
+       "final_png": "docs/screenshots/wk133_quest_giver/prefab5_20260610_031719_255.png",
+       "iterations": [
+        "prefab1 (lantern giant, banner floating, signs edge-on)",
+        "prefab2 (lantern fixed, banner edge-on)",
+        "prefab3 (banner reads, double signpost lost in barrel cluster)",
+        "prefab4 (signpost brown-on-brown vs booth)",
+        "prefab5 (final, reads well)"
+       ],
+       "verdict": "PASS — blue fallback box replaced; booth+signs+banner+lantern read as 'quests posted here' at RTS zoom; all pieces seated on ground. Quest-Giver NPC + '!' visible in capture (Agent 09 lane, not judged here)."
+      },
+      "validate_assets": {
+       "command": "python tools/validate_assets.py --report",
+       "exit_code": 0,
+       "status": "PASS errors=0 warns=46 pre-existing (none for herald_post_v1)"
+      }
+     },
+     "blockers": [],
+     "next_actions": [
+      "Optional: build_20/build_50 staged prefabs for herald_post if construction staging is wanted (currently falls back to plot_2x2_v1)."
+     ]
+    }
+   }
   }
  }
 }

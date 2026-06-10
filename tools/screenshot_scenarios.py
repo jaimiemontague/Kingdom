@@ -1534,6 +1534,20 @@ URSINA_CAPTURE_SCENARIOS: dict[str, dict[str, object]] = {
             "KINGDOM_URSINA_DISABLE_NEUTRAL_SPAWN": "1",
         },
     },
+    # WK133: Herald's Post + Quest-Giver NPC + yellow "!" capture. Places a constructed
+    # post, the sim spawns the giver, a quest is armed via the real engine action so
+    # is_open flips and the "!" shows. KINGDOM_WK133_ARM_QUEST=0 captures the off state.
+    "ursina_wk133_quest_giver": {
+        "patch_path": "tools/wk133_quest_giver_capture_patch.py",
+        "default_ticks": 600,
+        "default_out_subdir": "wk133_quest_giver",
+        "stem": "quest_giver",
+        "env": {
+            "KINGDOM_URSINA_REVEAL_ON_START": "1",
+            "KINGDOM_URSINA_EDITORCAMERA": "0",
+            "KINGDOM_URSINA_DISABLE_NEUTRAL_SPAWN": "1",
+        },
+    },
 }
 
 
@@ -1790,6 +1804,102 @@ def scenario_ursina_melee_combat(engine, *, seed: int) -> list[Shot]:
     ]
 
 
+def scenario_wk133_quest_ui(engine, *, seed: int) -> list[Shot]:
+    """WK133 (WK126-T9): Herald's Post quest UI — selected-post card with the
+    'Create Quest' button, the quest-create modal mid-flow, and the modal's
+    active-quest board with an open quest listed."""
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    _reveal_all(engine.world)
+
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        gx = MAP_WIDTH // 2 - 1
+        gy = MAP_HEIGHT // 2 - 1
+        castle = _place_building(engine, "castle", gx, gy)
+
+    cgx = int(getattr(castle, "grid_x", MAP_WIDTH // 2))
+    cgy = int(getattr(castle, "grid_y", MAP_HEIGHT // 2))
+
+    # Constructed Herald's Post + a discovered lair to target (world is revealed).
+    from game.entities.lair import GoblinCamp
+
+    post = _place_building(engine, "herald_post", cgx + 5, cgy + 1)
+    engine.buildings.append(GoblinCamp(cgx + 14, cgy + 6))
+    hx, hy = _tile_center_px(cgx + 3, cgy + 2)
+    _place_hero(engine, "warrior", hx, hy)
+
+    def _base(eng: Any) -> None:
+        eng.screenshot_hide_ui = False
+        eng.selected_hero = None
+        eng.selected_peasant = None
+        if hasattr(eng, "debug_panel"):
+            eng.debug_panel.visible = False
+        eng.economy.player_gold = 500
+        eng.selected_building = post
+        eng.building_panel.select_building(post, eng.heroes)
+        qcp = eng.building_panel.quest_create_panel
+        if qcp.visible:
+            qcp.close()
+
+    def _apply_post_selected(eng: Any) -> None:
+        _base(eng)
+
+    def _apply_create_panel(eng: Any) -> None:
+        _base(eng)
+        qcp = eng.building_panel.quest_create_panel
+        qcp.open(post, eng.get_game_state())
+        # Mid-flow state: raid type chosen, first discovered lair targeted, Med reward.
+        qcp.selected_type = "raid_lair"
+        qcp.target_index = 0
+        qcp.reward_key = "med"
+
+    def _apply_active_quest(eng: Any) -> None:
+        _base(eng)
+        qs = eng.sim.quest_system
+        if not qs.get_active_quests():
+            eng.sim.create_quest(
+                getattr(post, "entity_id", None), "slay_enemy_type", "goblin", 140, count=5
+            )
+        qcp = eng.building_panel.quest_create_panel
+        qcp.open(post, eng.get_game_state())
+
+    px = float(getattr(post, "center_x", getattr(post, "x", 0.0)))
+    py = float(getattr(post, "center_y", getattr(post, "y", 0.0)))
+    return [
+        Shot(
+            filename="wk133_herald_post_selected.png",
+            label="WK133: Herald's Post selected (Create Quest button)",
+            center_x=px,
+            center_y=py,
+            zoom=1.4,
+            ticks=0,
+            apply=_apply_post_selected,
+            meta={"scenario": "wk133_quest_ui", "seed": int(seed), "shot": "post_selected"},
+        ),
+        Shot(
+            filename="wk133_quest_create_panel.png",
+            label="WK133: Quest-create modal (raid_lair mid-flow)",
+            center_x=px,
+            center_y=py,
+            zoom=1.4,
+            ticks=0,
+            apply=_apply_create_panel,
+            meta={"scenario": "wk133_quest_ui", "seed": int(seed), "shot": "create_panel"},
+        ),
+        Shot(
+            filename="wk133_quest_board_active.png",
+            label="WK133: Active-quest board with an open quest",
+            center_x=px,
+            center_y=py,
+            zoom=1.4,
+            ticks=0,
+            apply=_apply_active_quest,
+            meta={"scenario": "wk133_quest_ui", "seed": int(seed), "shot": "active_quest_board"},
+        ),
+    ]
+
+
 def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
     scenario_name = str(scenario_name).strip()
     if scenario_name == "building_catalog":
@@ -1830,6 +1940,8 @@ def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
         return scenario_wk61_hero_menu_chat(engine, seed=int(seed))
     if scenario_name == "ursina_melee_combat":
         return scenario_ursina_melee_combat(engine, seed=int(seed))
+    if scenario_name == "wk133_quest_ui":
+        return scenario_wk133_quest_ui(engine, seed=int(seed))
     raise ValueError(f"Unknown scenario: {scenario_name}")
 
 

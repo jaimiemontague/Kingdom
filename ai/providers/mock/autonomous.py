@@ -48,6 +48,33 @@ def mock_autonomous_decision(provider: "MockProvider", user_prompt: str) -> str:
 
     action = "explore"
     target = ""
+    if mtype == "quest_offer":
+        # WK126-T6 quest-offer responder: deterministic, seeded-RNG-free rule so
+        # headless tests can force both verdicts by crafting the reward. The
+        # carriers come from the quest_offer.decision_rule contract
+        # (ai.decision_moments): 'explore' = accept_quest, 'retreat' =
+        # decline_quest. Rule: a mock hero takes any decently funded quest
+        # (reward >= 50g) and turns its nose up at miserly offers below that.
+        qoffer = ctx.get("quest_offer") or {}
+        try:
+            reward = int(qoffer.get("reward_gold", 0) or 0)
+        except (TypeError, ValueError):
+            reward = 0
+        if reward >= 50:
+            action = pick("explore", "fight")
+            reasoning_tag = "accept_quest"
+        else:
+            action = pick("retreat", "leave_building")
+            reasoning_tag = "decline_quest"
+        out = {
+            "action": action,
+            "target": "",
+            "reasoning": f"mock quest_offer ({reasoning_tag}, reward={reward})",
+            "confidence": 0.8,
+            "memory_used": [],
+            "personality_influence": "mock",
+        }
+        return json.dumps(out)
     if mtype == "low_health_combat":
         action = pick("use_potion", "retreat", "fight")
         if action == "retreat":

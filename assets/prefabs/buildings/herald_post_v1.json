@@ -1,0 +1,144 @@
+{
+  "prefab_id": "herald_post_v1",
+  "building_type": "herald_post",
+  "footprint_tiles": [
+    2,
+    2
+  ],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_survival-kit",
+    "kenney_fantasy-town-kit_2.0",
+    "kenney_retro-fantasy-kit"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/stall-green-fantasy-town.glb",
+      "pos": [
+        1.0,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/signpost.glb",
+      "pos": [
+        0.4,
+        0.0,
+        0.25
+      ],
+      "rot": [
+        0.0,
+        10.0,
+        0.0
+      ],
+      "scale": [
+        1.8,
+        1.8,
+        1.8
+      ]
+    },
+    {
+      "model": "Models/GLB format/signpost-single.glb",
+      "pos": [
+        1.55,
+        0.0,
+        0.55
+      ],
+      "rot": [
+        0.0,
+        -10.0,
+        0.0
+      ],
+      "scale": [
+        1.4,
+        1.4,
+        1.4
+      ]
+    },
+    {
+      "model": "Models/GLB format/lantern-fantasy-town.glb",
+      "pos": [
+        1.8,
+        0.0,
+        1.2
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.45,
+        0.45,
+        0.45
+      ]
+    },
+    {
+      "model": "Models/GLB format/barrel.glb",
+      "pos": [
+        0.25,
+        0.0,
+        1.1
+      ],
+      "rot": [
+        0.0,
+        25.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/detail-crate.glb",
+      "pos": [
+        0.3,
+        0.0,
+        1.45
+      ],
+      "rot": [
+        0.0,
+        -15.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/banner-red-fantasy-town.glb",
+      "pos": [
+        0.55,
+        0.0,
+        1.2
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        0.8,
+        0.8,
+        0.8
+      ]
+    }
+  ],
+  "notes": "WK133 Herald's Post (notice board) where the Quest-Giver NPC stands: green awning stall at the back as the herald's booth, oversized double signpost + single signpost out front as the posted-notices read, lantern, barrel and crate dressing, red FT banner hung on the stall (Kenney ships no blue banner; royal-blue identity comes from the map-icon/UI color, not the kit)."
+}

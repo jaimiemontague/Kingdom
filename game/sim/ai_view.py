@@ -84,6 +84,11 @@ class AiGameView:
     lists stay live (AI-side DTOs are deferred, exactly like the render live
     tuples); the AI reads them, never writes. ``world`` is the read-only
     ``WorldView``, not the live ``World``.
+
+    WK126: ``quests`` / ``quest_givers`` are plain-data tuples (primitives only,
+    no live object refs) — see the inline field docs below for the exact
+    per-entry shape. They default to ``()`` so a no-quest engine yields empty
+    tuples and the AI quest behavior no-ops (digest safety).
     """
 
     world: WorldView
@@ -95,6 +100,27 @@ class AiGameView:
     player_gold: int           # immutable fact (was the live economy)
     castle: Any                # read-only building reference
     wave: int
+    # WK126 T4 (quests vertical slice): read-only quest surface for the AI,
+    # mirroring ``bounties``/``pois`` above. BOUNDARY CONTRACT: both tuples carry
+    # PLAIN DATA ONLY (tuples/namedtuples of primitives — str/int/float/bool) —
+    # NO live Quest/QuestGiver/Building object refs the AI could mutate.
+    # ``SimEngine.build_ai_view`` populates them (Agent 05); they default empty so
+    # a no-quest engine produces empty tuples and the AI no-ops (digest guard #1).
+    #
+    # Per-entry shape:
+    #   quests[i]       -> (id: str, quest_type: str, target: str, reward: int,
+    #                       is_open: bool, accepted_by: str | None)
+    #     * quest_type is the locked vocab: "raid_lair" | "slay_enemy_type" |
+    #       "find_poi" | "explore_far"
+    #     * target is a plain-data target summary (e.g. lair/poi id, enemy type,
+    #       or "gx,gy" tile for explore_far) — an identifier, never an object
+    #     * accepted_by is the accepting hero_id, or None while unaccepted
+    #   quest_givers[i] -> (giver_id: str, x: float, y: float, is_open: bool)
+    #     * giver_id == the owning Herald's Post building id (decline-tracking key)
+    #     * x, y are world coordinates of the NPC; is_open mirrors whether the
+    #       giver's post currently has an open quest
+    quests: tuple = ()
+    quest_givers: tuple = ()
     # WK67 Move 6 (L3b write side): the AI proposes hero writes (the shopping
     # purchase) through this sim-owned, synchronous CommandSink instead of
     # mutating economy/hero directly. NO economy, NO sim, NO engine on the view.

@@ -93,7 +93,8 @@ def sync_ks_facing_overlay(child, facing: float) -> None:
 # ``.children`` (Ursina's destroy.py has the child-recursion commented out), so on
 # removal these orphan into ``scene.entities`` forever unless freed explicitly.
 # Sources: ursina_unit_overlays (_ks_hp_bg/_ks_hp_fg/_ks_name_label/_ks_gold_label/
-# _ks_rest_label), ursina_unit_sync (_ks_tc_gold), ursina_building_ui
+# _ks_rest_label, plus the WK126 quest-giver _ks_quest_marker "!"), ursina_unit_sync
+# (_ks_tc_gold), ursina_building_ui
 # (_ks_hp_bar/_ks_label, plus _ks_gold_label which is parent=SCENE — so it is NOT
 # in ent.children and MUST be caught by this named-attr loop, not the child sweep).
 _OVERLAY_CHILD_ATTRS = (
@@ -105,6 +106,7 @@ _OVERLAY_CHILD_ATTRS = (
     "_ks_tc_gold",
     "_ks_hp_bar",
     "_ks_label",
+    "_ks_quest_marker",
 )
 
 
@@ -293,6 +295,43 @@ def sync_hero_rest_label(ent, is_resting: bool) -> None:
             configure_ks_overlay(rest_ent)
     elif rest_ent is not None:
         rest_ent.enabled = False
+
+
+# -----------------------------------------------------------------------
+# Quest-giver "!" offer marker (WK126 T8)
+# -----------------------------------------------------------------------
+
+def sync_quest_giver_marker(ent, is_open: bool) -> None:
+    """Show / hide the yellow ``!`` marker when the quest giver has an open offer.
+
+    Modeled EXACTLY on :func:`sync_hero_rest_label` (the hero ``Zzz`` billboard):
+    the ``Text("!")`` child is lazily created ONCE, configured through
+    ``configure_ks_overlay`` (WK124 bin-order fix — final ``set_bin("fixed", 110)``
+    so it draws on top of buildings AND instanced units), then only its
+    ``.enabled`` flag is toggled per frame. The text is the constant ``"!"`` and
+    the transform is set only at creation, so there is NO per-frame re-raster and
+    no per-frame Panda3D transform write (FPS guardrails / `_ks_last_*` spirit —
+    nothing mutable exists to dirty-gate after creation).
+
+    Registered in ``_OVERLAY_CHILD_ATTRS`` (WK123 C1 leak fix) so
+    ``free_entity_overlays`` destroys it when the giver entity is removed. NOT in
+    ``_HERO_OVERLAY_ATTRS``: the quest giver is stationary (no facing mirror, the
+    parent billboard never gets a negative scale_x), so no un-mirror pass applies.
+    """
+    mark = getattr(ent, "_ks_quest_marker", None)
+    if is_open:
+        if mark is None:
+            mark = Text(
+                text="!", parent=ent, origin=(0, 0), scale=14,
+                color=color.rgb(1.0, 0.85, 0.15), billboard=True, y=0.8,
+            )
+            configure_ks_overlay(mark)
+            ent._ks_quest_marker = mark
+        else:
+            mark.enabled = True
+            configure_ks_overlay(mark)
+    elif mark is not None:
+        mark.enabled = False
 
 
 # -----------------------------------------------------------------------

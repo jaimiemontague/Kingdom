@@ -116,6 +116,17 @@ class PygameRenderer:
         if snapshot.tax_collector_dto is not None:
             ctx.renderer_registry.render_tax_collector(target, snapshot.tax_collector_dto, camera_offset)
 
+        # WK126 T8 (Agent 09): quest-giver NPCs + yellow "!" offer marker.
+        # ``quest_giver_dtos`` is tolerated-absent on the snapshot (the wave-1 sim
+        # does not export givers to the render snapshot yet) — absent/empty is a
+        # zero-cost no-op, so pre-quest games and the digest path are untouched.
+        for qg in (
+            getattr(snapshot, "quest_giver_dtos", None)
+            or getattr(snapshot, "quest_givers", None)
+            or ()
+        ):
+            ctx.renderer_registry.render_quest_giver(target, qg, camera_offset)
+
         if place_building_ui:
             ctx.building_menu.render(target, camera_offset)
 

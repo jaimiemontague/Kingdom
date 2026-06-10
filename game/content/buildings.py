@@ -80,6 +80,38 @@ def _b(
     )
 
 
+def _herald_post_cost() -> int:
+    """WK133/WK126-T2: herald_post cost, consumed from ``config.HERALD_POST_COST``.
+
+    ``config`` imports THIS module while it initializes (config -> buildings), so a
+    plain module-level ``from config import HERALD_POST_COST`` would cycle. Instead we
+    read the (possibly still-initializing) config module lazily with a 150 fallback:
+
+      * Normal runtime order (config imported first): config is in ``sys.modules``
+        mid-init when BUILDING_DEFS is built — ``HERALD_POST_COST`` is picked up ONLY
+        if Agent 05 defines it ABOVE config's
+        ``from game.content.buildings import BUILDING_DEFS`` line; otherwise the 150
+        fallback applies.
+      * ``import game.content.buildings`` first: importing config here would re-enter
+        this half-initialized module and fail, which the except absorbs -> 150.
+
+    The 150 fallback also keeps imports green until Agent 05 lands the constant
+    (in flight in parallel as of WK133 r1).
+    """
+    import sys
+
+    cfg = sys.modules.get("config")
+    if cfg is None:
+        try:
+            import config as cfg  # may fail mid-cycle when this module loads first
+        except Exception:
+            return 150
+    try:
+        return int(getattr(cfg, "HERALD_POST_COST", 150))
+    except Exception:
+        return 150
+
+
 BUILDING_DEFS: dict[str, BuildingDef] = {
     # ── Core / player buildings ──────────────────────────────────────────────
     "castle": _b("castle", (3, 3), (139, 69, 19), 0, 0),
@@ -133,6 +165,16 @@ BUILDING_DEFS: dict[str, BuildingDef] = {
         "guardhouse", (2, 2), (128, 128, 128), 300, 0,
         hotkey="U", placeable=True, placeable_order=9,
     ),
+    # WK133 (WK126-T2, Agent 07): Herald's Post (a.k.a. Notice Board) — quest-giver NPC
+    # spawns beside it (Agent 05's spawn hook). Cost consumed from config.HERALD_POST_COST
+    # (150 fallback; see _herald_post_cost). Hotkey "9" extends the free 1-8 build row.
+    # Size (2,2) is load-bearing: the renderer fits prefabs/sprites to the BUILDING_DEFS
+    # footprint (WK132 lesson). No herald_post prefab JSON yet -> renderer billboard
+    # fallback uses this color. Royal-blue banner = herald.
+    "herald_post": _b(
+        "herald_post", (2, 2), (65, 105, 225), _herald_post_cost(), 0,
+        hotkey="9", placeable=True, placeable_order=10,
+    ),
     # Phase 6: Palace
     "palace": _b("palace", (3, 3), (184, 134, 11), 0, 0),
     # Neutral auto-spawn buildings (not player-placeable)
@@ -172,7 +214,7 @@ BUILDING_DEFS: dict[str, BuildingDef] = {
 
 
 # Lazy class-name map for resolving BuildingDef.cls without an import cycle (see docstring).
-# Keys here mirror the current BuildingFactory.BUILDING_REGISTRY (19 player/neutral classes).
+# Keys here mirror the current BuildingFactory.BUILDING_REGISTRY (20 player/neutral classes).
 # castle/house/farm and the POIs are intentionally absent (cls=None for them). Lairs are
 # constructed via the lair-spawn path, not the building factory, so they are absent too.
 _CLASS_NAMES: dict[str, str] = {
@@ -194,6 +236,8 @@ _CLASS_NAMES: dict[str, str] = {
     "temple_helia": "TempleHelia",
     "temple_lunord": "TempleLunord",
     "guardhouse": "Guardhouse",
+    # WK133: Herald's Post placement class (quest-giver NPC building; see special.py).
+    "herald_post": "HeraldPost",
     "palace": "Palace",
 }
 

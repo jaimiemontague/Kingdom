@@ -123,6 +123,18 @@ def apply_llm_decision(
     if hunger.maybe_apply_meal_before_llm_action(ai, hero, view, action):
         return
 
+    # WK126-T6: a staged quest offer (hero standing at a quest-giver) consumes
+    # this decision as the accept/decline verdict — the REAL wiring the
+    # accept_bounty no-op below never got. Inert unless hero._pending_quest_offer
+    # is set (impossible in the WK67 digest scenario — no givers exist). Lazy
+    # import: quest_offer imports decision_moments, which this module also
+    # imports; keeping it out of the top-level imports avoids any load-order
+    # surprise for the direct-prompt chat path.
+    from ai.behaviors import quest_offer as _quest_offer
+
+    if _quest_offer.maybe_apply_quest_offer_decision(ai, hero, decision, view, source=source):
+        return
+
     if action == "retreat":
         ai.set_intent(hero, "returning_to_safety")
         ai.record_decision(

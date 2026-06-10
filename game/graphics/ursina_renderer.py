@@ -627,6 +627,10 @@ class UrsinaRenderer:
             # Bounty markers + rubble piles are Entity-based and independent of the
             # unit-draw path, so sync them here too (same calls/order as the legacy
             # path below) — otherwise they'd vanish under instancing.
+            # WK126 T8 (Agent 09): quest-giver NPC + "!" marker render via the
+            # classic Entity path (WK133 PM decision of record), so — like
+            # bounties — they must sync in BOTH branches.
+            self._sync_snapshot_quest_givers(snapshot, active_ids)
             self._sync_snapshot_bounties(snapshot, active_ids)
             self._sync_snapshot_rubble(snapshot)
             self._update_debug_status_text(snapshot)
@@ -646,6 +650,8 @@ class UrsinaRenderer:
         if _stage_profile: _rec("15_sync_snapshot_guards", _t0); _t0 = time.perf_counter()
         self._sync_snapshot_tax_collector(snapshot, active_ids)
         if _stage_profile: _rec("16_sync_snapshot_tax_collector", _t0); _t0 = time.perf_counter()
+        self._sync_snapshot_quest_givers(snapshot, active_ids)
+        if _stage_profile: _rec("16b_sync_snapshot_quest_givers", _t0); _t0 = time.perf_counter()
         self._sync_snapshot_projectiles(snapshot, active_ids)
         if _stage_profile: _rec("17_sync_snapshot_projectiles", _t0); _t0 = time.perf_counter()
         self._sync_snapshot_bounties(snapshot, active_ids)
@@ -739,6 +745,12 @@ class UrsinaRenderer:
         # WK92 (Agent 09): pure-moved to ursina_unit_sync.sync_snapshot_guards.
         from game.graphics import ursina_unit_sync
         return ursina_unit_sync.sync_snapshot_guards(self, snapshot, active_ids)
+
+    def _sync_snapshot_quest_givers(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
+        # WK126 T8 (Agent 09): quest-giver NPC billboard + yellow "!" offer marker.
+        # Classic Entity path (PM decision) — called from BOTH update branches.
+        from game.graphics import ursina_unit_sync
+        return ursina_unit_sync.sync_snapshot_quest_givers(self, snapshot, active_ids)
 
     def _sync_snapshot_tax_collector(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
         # WK92 (Agent 09): pure-moved to ursina_unit_sync.sync_snapshot_tax_collector.

@@ -60,6 +60,13 @@ def handle_keydown(ih: "InputHandler", event):
 
     # ESC menu takes priority
     if event.key == 'esc':
+        # WK126-T9: the quest-create modal (Herald's Post) closes first.
+        _bp = getattr(c, "building_panel", None)
+        _qcp = getattr(_bp, "quest_create_panel", None) if _bp is not None else None
+        if _qcp is not None and getattr(_qcp, "visible", False):
+            _qcp.close()
+            return
+
         from game.ui.micro_view_manager import ViewMode
         micro_view = getattr(c, "micro_view", None)
         mode = getattr(micro_view, "mode", None) if micro_view else None

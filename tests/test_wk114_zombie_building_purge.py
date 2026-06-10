@@ -109,9 +109,17 @@ def test_factory_registry_excludes_zombies_and_records_length() -> None:
         assert class_name not in class_names, (
             f"{class_name} must not be a factory-registered class"
         )
-    # Record the live post-purge length (was 27 pre-purge, 19 after).
-    assert len(registry) == 19, (
-        f"factory BUILDING_REGISTRY length must be 19 post-purge, got {len(registry)}"
+    # Record the live registry length. History: 27 pre-purge, 19 post-purge
+    # (WK114), 20 after WK126 legitimately added the Herald's Post (quest-giving
+    # NPC building). This pin guards against zombie types sneaking BACK in —
+    # bump it (with a comment) when a sprint legitimately registers a new type.
+    assert "herald_post" in registry, (
+        "herald_post (WK126) should be factory-registered; if it was removed "
+        "on purpose, drop this assert and re-pin the length below"
+    )
+    assert len(registry) == 20, (
+        f"factory BUILDING_REGISTRY length must be 20 (19 post-WK114-purge + "
+        f"herald_post from WK126), got {len(registry)}: {sorted(registry)}"
     )
 
 

@@ -10,6 +10,7 @@ from .bounty_renderer import BountyRenderer
 from .building_renderer import BuildingRenderer
 from .enemy_renderer import EnemyRenderer
 from .hero_renderer import HeroRenderer
+from .quest_giver_renderer import QuestGiverRenderer
 from .worker_renderer import GuardRenderer, PeasantRenderer, TaxCollectorRenderer
 
 
@@ -24,6 +25,8 @@ class RendererRegistry:
         self._guard_renderer = GuardRenderer(size_px=UNIT_SPRITE_PIXELS)
         self._building_renderer = BuildingRenderer()
         self._bounty_renderer = BountyRenderer()
+        # WK126 T8: stateless (no anim) — one shared instance, like the guard renderer.
+        self._quest_giver_renderer = QuestGiverRenderer()
 
     @staticmethod
     def _key(entity: object) -> str:
@@ -149,6 +152,19 @@ class RendererRegistry:
         self._collector_renderer_for(tax_collector).render(
             surface,
             getattr(tax_collector, "render_state", tax_collector),
+            camera_offset,
+        )
+
+    def render_quest_giver(
+        self,
+        surface: pygame.Surface,
+        quest_giver: object,
+        camera_offset: tuple[float, float],
+    ) -> None:
+        # WK126 T8: herald NPC + yellow "!" offer marker (shows when is_open).
+        self._quest_giver_renderer.render(
+            surface,
+            getattr(quest_giver, "render_state", quest_giver),
             camera_offset,
         )
 

@@ -8,6 +8,7 @@ from .buildings import (
     Temple,
     TempleAgrela, TempleDauros, TempleFervus, TempleKrypta, TempleKrolm, TempleHelia, TempleLunord,
     Guardhouse,
+    HeraldPost,
     Palace
 )
 from .hero import Hero, HeroState

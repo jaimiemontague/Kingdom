@@ -149,6 +149,14 @@ class Hero(HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin):
         # target-type,gold).
         self._heal_cooldown_until_ms = 0
 
+        # WK126: quest-giver interaction cooldowns (sim-ms; NOT hashed by the WK67
+        # digest). Keys of the decline map are giver_ids (the Herald's Post
+        # Building.entity_id strings); a future timestamp means "don't return to
+        # that NPC" (15 sim-min decline cooldown, set by Agent 06's T6 handler).
+        self._quest_decline_until_ms: dict[str, int] = {}
+        self._quest_approach_cooldown_until_ms = 0
+        self._quest_offer_commit_until_ms = 0
+
         # LLM decision tracking
         self.last_llm_decision_time = 0
         self.pending_llm_decision = False

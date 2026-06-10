@@ -6,6 +6,19 @@ from .base import Building
 from .types import BuildingType
 
 
+class HeraldPost(Building):
+    """WK133 (WK126-T2): Herald's Post — quest-giver NPC spawns beside it.
+
+    Minimal placeable: all metadata (size/cost/color) comes from BUILDING_DEFS via the
+    base class. The building_type is the plain string "herald_post" (the base accepts
+    ``BuildingType | str``) so the sim spawn hook's exact-string key matches; the WK126
+    spawn gate (tests/test_wk126_quest_giver_spawn.py) constructs it the same way.
+    """
+
+    def __init__(self, grid_x: int, grid_y: int):
+        super().__init__(grid_x, grid_y, "herald_post")
+
+
 class Palace(Building):
     """Upgradeable Palace - the player's main building."""
 

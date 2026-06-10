@@ -10,7 +10,7 @@ from .defensive import Guardhouse
 from .economic import Blacksmith, Inn, Marketplace, TradingPost
 from .guilds import RangerGuild, RogueGuild, WarriorGuild, WizardGuild
 from .hiring_mixin import HiringBuilding, TaxStashMixin
-from .special import Palace
+from .special import HeraldPost, Palace
 from .temples import (
     Temple,
     TempleAgrela,
@@ -49,5 +49,6 @@ __all__ = [
     "TempleHelia",
     "TempleLunord",
     "Guardhouse",
+    "HeraldPost",
     "Palace",
 ]

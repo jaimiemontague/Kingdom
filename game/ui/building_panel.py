@@ -16,6 +16,7 @@ from config import (
 )
 from game.ui.building_renderers import get_panel_renderer, normalize_building_type_key
 from game.ui.hud import HERO_LEFT_MIN_H, LEFT_COL_W, RADAR_MINIMAP_H
+from game.ui.quest_create_panel import QuestCreatePanel
 from game.ui.widgets import Button, NineSlice
 
 # WK68 G2: buildings that can hire a hero from their own panel.
@@ -76,6 +77,15 @@ class BuildingPanel:
         self.build_catalog_button_hovered = False
         self.blacksmith_research_rects: dict[str, pygame.Rect] = {}
         self.blacksmith_research_hovered: str | None = None
+        # WK126-T9: Herald's Post → "Create Quest" affordance + the modal it opens.
+        # The modal is owned/rendered/click-routed here because the building panel
+        # is the selection surface AND its handle_click is the first input hook in
+        # game/input/mouse.py that can consume every click while a building is
+        # selected (mirrors the build-catalog modal semantics; ESC handled in
+        # game/input/keyboard.py).
+        self.quest_create_panel = QuestCreatePanel(self.screen_width, self.screen_height)
+        self.create_quest_button_rect: pygame.Rect | None = None
+        self.create_quest_button_hovered = False
 
         self.portrait_colors = [
             (70, 130, 180),
@@ -106,6 +116,9 @@ class BuildingPanel:
         self.visible = False
         self.menu_scroll_px = 0
         self._scroll_anchor_id = None
+        # WK126-T9: the quest-create modal cannot outlive its post's selection.
+        if self.quest_create_panel.visible:
+            self.quest_create_panel.close()
 
     def apply_menu_scroll(self, wheel_y: int) -> bool:
         if wheel_y == 0 or self._menu_max_scroll <= 0:
@@ -162,6 +175,12 @@ class BuildingPanel:
 
     def handle_click(self, mouse_pos: tuple[int, int], economy, game_state: dict) -> bool | dict:
         """Handle panel clicks. Returns True or action dict when handled."""
+        # WK126-T9: while the quest-create modal is open it is MODAL — it gets
+        # every click (anywhere on screen) before the panel's own bounds check,
+        # and always consumes (click outside the modal cancels, like the catalog).
+        if self.quest_create_panel.visible:
+            self.quest_create_panel.handle_click(mouse_pos, economy)
+            return True
         if not self.visible or not self.selected_building:
             return False
         if not (
@@ -187,6 +206,20 @@ class BuildingPanel:
                 (not hasattr(building, "can_hire")) or building.can_hire()
             ):
                 return {"type": "hire_hero", "building": building}
+
+        if (
+            self.create_quest_button_rect
+            and self._rect_in_viewport(self.create_quest_button_rect)
+            and self.create_quest_button_rect.collidepoint(mouse_pos)
+        ):
+            building = self.selected_building
+            if (
+                building is not None
+                and building_type == "herald_post"
+                and getattr(building, "is_constructed", True)
+            ):
+                self.quest_create_panel.open(building, game_state)
+            return True
 
         if self._rect_in_viewport(self.demolish_button_rect) and self.demolish_button_rect.collidepoint(mouse_pos):
             building = self.selected_building
@@ -232,6 +265,12 @@ class BuildingPanel:
 
     def update_hover(self, mouse_pos: tuple[int, int]) -> None:
         """Update button hover state from screen-space mouse coordinates."""
+        if self.quest_create_panel.visible:
+            self.quest_create_panel.update_hover(mouse_pos)
+        if self.create_quest_button_rect:
+            self.create_quest_button_hovered = self._rect_in_viewport(self.create_quest_button_rect) and self.create_quest_button_rect.collidepoint(mouse_pos)
+        else:
+            self.create_quest_button_hovered = False
         if self.close_button_rect:
             self.close_button_hovered = self.close_button_rect.collidepoint(mouse_pos)
         else:
@@ -301,6 +340,7 @@ class BuildingPanel:
         self.demolish_button_rect = None
         self.enter_building_button_rect = None
         self.hire_hero_button_rect = None
+        self.create_quest_button_rect = None
 
         viewport_h = min(self._panel_height_max, max(120, int(lr.height)))
         # WK68 G1: pre-clamp the scroll against the prior frame's max so the interactive rects
@@ -331,6 +371,7 @@ class BuildingPanel:
 
         renderer = get_panel_renderer(getattr(building, "building_type", ""))
         y = renderer.render(self, panel_surf, building, heroes, y, economy)
+        y = self._render_create_quest_button(panel_surf, building, y)
         y = self._render_demolish_button(panel_surf, building, y)
         y = self._render_enter_building_button(panel_surf, building, y)
         y = self._render_hire_hero_button(panel_surf, building, y, economy)
@@ -377,6 +418,11 @@ class BuildingPanel:
         )
         surface.set_clip(prev_clip)
         self.panel_height = viewport_h
+
+        # WK126-T9: the quest-create modal draws last (on top of the panel/HUD;
+        # this render call runs after HUD render in the render coordinator).
+        if self.quest_create_panel.visible:
+            self.quest_create_panel.render(surface, economy)
 
     def render_hero_row(self, surface: pygame.Surface, hero, y: int, index: int) -> int:
         """Render one hero row (portrait + status + vitals)."""
@@ -542,6 +588,60 @@ class BuildingPanel:
             local_rect.height,
         )
         y += local_rect.height + 10
+        return y
+
+    def _render_create_quest_button(self, surface: pygame.Surface, building, y: int) -> int:
+        """Render 'Create Quest' on the Herald's Post card (WK126-T9).
+
+        Mirrors the Enter/Hire buttons + the G1 scroll-aware rect convention.
+        Disabled (greyed, no live hit-rect) while the post is under construction;
+        reward affordability is gated inside the quest-create dialog itself.
+        """
+        self.create_quest_button_rect = None
+        if self._building_type_key(building) != "herald_post":
+            return y
+
+        enabled = bool(getattr(building, "is_constructed", True))
+
+        pygame.draw.line(surface, COLOR_UI_BORDER, (10, y), (self.panel_width - 10, y))
+        y += 10
+
+        bw = max(60, self.panel_width - 20)
+        local_rect = pygame.Rect(10, y, bw, 30)
+        button = Button(
+            rect=local_rect,
+            text="Create Quest" if enabled else "Create Quest (Under Construction)",
+            font=self.font_small,
+            enabled=enabled,
+        )
+        button.render(
+            surface,
+            mouse_pos=pygame.mouse.get_pos() if (enabled and self.create_quest_button_hovered) else None,
+            enabled=enabled,
+            bg_normal=(60, 80, 150),
+            bg_hover=(80, 105, 190),
+            bg_pressed=(70, 95, 170),
+            bg_disabled=(80, 80, 80),
+            border_outer=(20, 20, 25),
+            border_inner=(80, 80, 100),
+            border_highlight=(107, 107, 132),
+            text_color=COLOR_WHITE,
+            text_disabled_color=(120, 120, 120),
+        )
+
+        sub_color = (180, 180, 180) if enabled else (120, 120, 120)
+        sub = self.font_small.render("Fund a quest for heroes to take", True, sub_color)
+        sub_y = local_rect.bottom + 2
+        surface.blit(sub, (12, sub_y))
+
+        if enabled:
+            self.create_quest_button_rect = pygame.Rect(
+                self.panel_x + local_rect.x,
+                self.panel_y + local_rect.y - self.menu_scroll_px,
+                local_rect.width,
+                local_rect.height,
+            )
+        y = sub_y + sub.get_height() + 10
         return y
 
     def _render_hire_hero_button(self, surface: pygame.Surface, building, y: int, economy) -> int:

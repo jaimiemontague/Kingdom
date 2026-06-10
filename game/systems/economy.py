@@ -72,6 +72,23 @@ class EconomySystem:
             return True
         return False
     
+    def fund_quest(self, amount: int) -> bool:
+        """WK126: escrow a quest reward at creation (mirrors add_bounty).
+
+        Debits the treasury up-front; payout on completion reuses
+        ``hero.add_gold(reward)`` (25% tax applies, identical to bounty claims).
+        On failure the escrow stays consumed (PM decision of record).
+        """
+        amount = int(amount)
+        if amount > 0 and self.player_gold >= amount:
+            self.player_gold -= amount
+            self.transaction_log.append({
+                "type": "quest_funded",
+                "amount": amount,
+            })
+            return True
+        return False
+
     def claim_bounty(self, hero_name: str, amount: int):
         """Hero claims a bounty reward."""
         self.transaction_log.append({

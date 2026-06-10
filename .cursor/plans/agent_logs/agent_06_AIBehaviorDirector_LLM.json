@@ -2193,6 +2193,75 @@
      "did_not_commit": true
     }
    }
+  },
+  "wk133_quests_vertical_slice": {
+   "sprint_meta": {
+    "created_utc": "2026-06-10T00:00:00Z",
+    "plan_ref": ".cursor/plans/wk126_quest_giving_npcs.plan.md (executed as WK133; tickets T5 + T6)",
+    "role": "Agent 06 AIBehaviorDirector_LLM",
+    "sprint_id": "wk133_quests_vertical_slice",
+    "title": "WK133 (wk126 plan) - T5 occasional quest-giver approach (RNG-LAST digest guard) + T6 LLM accept/decline at the NPC with 15-sim-min per-giver decline cooldown"
+   },
+   "rounds": {
+    "r1_kickoff": {
+     "round_id": "r1_kickoff",
+     "sprint_id": "wk133_quests_vertical_slice",
+     "status": "done",
+     "round_meta": {
+      "role": "Agent 06 AIBehaviorDirector_LLM",
+      "reports_to": "Agent 01 (PM)",
+      "launched_by": "Claude Code subagent (parent orchestrator), WK133 r1 kickoff Wave-2 dispatch",
+      "completed_utc": "2026-06-10T00:00:00Z",
+      "phase": "Wave 2 - consumes Agent 05/03 Wave-1 contracts (QuestSystem, QuestGiver, ai_view quests/quest_givers tuples, QUEST_* config). config.py READ-ONLY; no commits, no git."
+     },
+     "what_i_changed": {
+      "ai/behaviors/quest_offer.py (NEW)": [
+       "maybe_approach_quest_giver(ai,hero,view) with the plan's EXACT guard order: (a) 'if not quest_givers: return False' FIRST - before any RNG, sim-time read, or hero mutation (digest guard #1); (b) health >= QUEST_MIN_ACCEPT_HEALTH_PCT; (c) preemptible (IDLE or MOVING+patrol-wander only; not inside building, no pending LLM/offer) + quest-offer commit + approach cooldown elapsed; (d) candidates = open givers NOT on this hero's decline cooldown within 30 tiles; (e) empty -> False (still no draw); (f) the single ai._ai_rng.random() < QUEST_APPROACH_CHANCE roll LAST. Failed roll arms the approach cooldown (re-roll at most once per 25 sim-s, otherwise the 0.15 gate is meaningless at tick rate). Commit: target {'type':'quest_offer','giver_id':gid,'started_ms':now}, MOVING, set_target_position(giver), _quest_offer_commit_until_ms=now+QUEST_OFFER_COMMIT_MS, approach cooldown.",
+       "begin_quest_offer_decision (arrival): re-validates giver open + not on decline cooldown, stages plain-data offer on hero._pending_quest_offer (type/target/reward/count/x/y/expires_ms now+30s TTL), drains any stale in-flight decision, then requests the async QUEST_OFFER consult; llm_brain=None -> immediate DETERMINISTIC ACCEPT (decision of record, documented).",
+       "maybe_apply_quest_offer_decision (verdict): 'retreat' or literal 'decline_quest' -> decline (hero._quest_decline_until_ms[giver_id]=now+QUEST_DECLINE_COOLDOWN_MS (900_000 sim-ms), QUEST_DECLINED, clear staged offer+commit); anything else -> accept (deterministic-accept on ambiguity, consistent with the None-brain choice). Accept: quest_system.open_quest_for(giver_id) -> quest.accept(hero), QUEST_STARTED, objective per type: raid_lair -> live lair target + best_adjacent_tile waypoint + MOVING; find_poi -> {'type':'visit_poi','poi':...} + goal pos; explore_far -> {'type':'explore_frontier'} + tile center + RANGER_REROAM_COMMIT_MS travel commit; slay_enemy_type -> resume roaming via exploration.explore (kills counted by QuestSystem.on_enemy_killed). Offer gone/taken -> clean no-op (no decline cooldown).",
+       "LIVE-OBJECT ACCESS (documented scoped exception): the AI view carries only plain-data quest tuples, and apply_hero_command/CommandSink (game/sim, out of lane) has no quest op - the accept path reaches the live sim via getattr(view.commands,'_sim') (the sim-owned SimCommandSink) for quest_system + event_bus. Flagged for Agent 03's Wave-3 boundary review (could be formalized as a QuestAcceptCommand)."
+      ],
+      "ai/decision_moments.py": [
+       "DecisionMomentType.QUEST_OFFER='quest_offer'; moment_quest_offer fires only while hero._pending_quest_offer is staged+unexpired and hero not FIGHTING (plain attribute read - digest-inert; the attribute never exists in the WK67 scenario); inserted in determine_decision_moment after low_health_combat, before post_combat_injured.",
+       "ACTION-CARRIER DECISION OF RECORD: allowed_actions=(QUEST_OFFER_ACCEPT_ACTION='explore', QUEST_OFFER_DECLINE_ACTION='retreat'), NOT the literal accept_quest/decline_quest verbs. Reason: llm_brain._parse_response hard-rejects any action outside the seven ai.vocab.ToolAction strings AND decision_output_validator forces obey_defy back to 'Obey' - both files are OUTSIDE the WK133 lane, so neither the new verbs nor the plan's obey_defy alternative can transit the pipeline. The carrier verbs survive parse+validate end-to-end so the model's real decline is preserved; the prompt's quest_offer.decision_rule spells the mapping out for the model ('explore' = accept_quest, 'retreat' = decline_quest). The bridge also maps literal decline_quest/accept_quest if a future pipeline admits them."
+      ],
+      "ai/task_router.py": "quest_offer.maybe_approach_quest_giver wired AFTER the state-machine dispatch (LOWEST tier - below survival/defense/hunger/rest and below the in-idle bounty/shopping/engage/drink/POI tiers; may only preempt the terminal patrol/idle wander; ranger explore_frontier commits are NOT preemptible).",
+      "ai/basic_ai.py": "'quest_offer' added to _COMMITTED_DESTINATION_TYPES (WK17 intent conviction while walking to the NPC).",
+      "ai/contracts.py": "TargetType.QUEST_OFFER='quest_offer'.",
+      "ai/arrival_handlers.py": "handle_quest_offer_arrival (modeled on handle_visit_poi_arrival: clear walk target, IDLE, then begin_quest_offer_decision); registered ARRIVAL_HANDLERS[TargetType.QUEST_OFFER].",
+      "ai/behaviors/llm_bridge.py": "apply_llm_decision routes an arriving decision through quest_offer.maybe_apply_quest_offer_decision right after the hunger redirect and BEFORE generic action dispatch - the REAL wiring (the accept_bounty no-op at ~L180 was the shape precedent only). Inert unless an offer is staged.",
+      "ai/profile_context_adapter.py": "build_llm_context_for_moment adds a 'quest_offer' block (quest_type, target, reward_gold, objective_distance_tiles, kill_count_required when >1, decision_rule) ONLY for QUEST_OFFER moments - key omitted otherwise, all other prompts byte-unchanged (same pattern as WK132 nearby_pois).",
+      "ai/providers/mock/autonomous.py": "quest_offer responder: deterministic, RNG-free - reward_gold >= 50 -> accept carrier ('explore'), else decline carrier ('retreat'); reasoning tagged accept_quest/decline_quest for assertions.",
+      "ai/prompt_packs.py": "NO change needed - the quest_offer block flows through build_autonomous_user_prompt's JSON dump automatically; left untouched to keep the WK50/WK132 prompt surfaces byte-identical.",
+      "tests/test_wk126_quest_approach.py (NEW, 13 tests)": "THE digest proof: no givers -> False with the REAL seeded ai._ai_rng getstate() byte-identical before/after + zero hero mutation; guard-order proofs (health/committed/cooldown/declined/closed/out-of-range all return False with a counting-RNG showing ZERO draws); forced roll -> exact commit shape with EXACTLY ONE draw; failed roll -> cooldown armed, no commit; nearest-candidate tie-break; patrol preemptible but explore_frontier not; registry assertions (committed types, TargetType, arrival handler).",
+      "tests/test_wk126_quest_llm_decision.py (NEW, 15 tests)": "no-LLM arrival = deterministic accept (raid_lair: live-lair target + QUEST_STARTED); dispatch_arrival wiring; forced decline -> _quest_decline_until_ms[giver] == now+900_000 + QUEST_DECLINED + quest stays open for others; approach selector skips the declined giver at cooldown-1ms and re-considers at cooldown (sim clock advanced); literal decline_quest mapping; accept objective per type (find_poi/explore_far/slay); offer-already-taken clean no-op; bridge inert without staged offer; QUEST_OFFER moment fires only while staged (expiry + FIGHTING suppression); prompt block injected only for the quest moment; MockProvider responder accept/decline by reward; verdict survives LLMBrain._process_request parse+validate end-to-end; apply_llm_decision routes to the quest branch (decline does NOT execute a literal retreat)."
+     },
+     "decisions": [
+      "Approach tier placement: AFTER the task_router state dispatch (not inside handle_idle/exploration.py, which is outside the lane) - structurally below every existing tier; may only preempt the terminal patrol/idle wander.",
+      "Failed occasionally-roll arms the approach cooldown (roll cadence = once per QUEST_APPROACH_COOLDOWN_MS per hero, not per tick).",
+      "Action carriers 'explore'/'retreat' for accept_quest/decline_quest (see decision_moments note) - the only in-lane design where the LLM's decline genuinely survives _parse_response + validate_autonomous_decision; obey_defy is destroyed by the validator ('Obey' forced) so the plan's alternative carrier was not viable either.",
+      "llm_brain=None => deterministic ACCEPT at arrival (synchronous); unparseable/fallback-munged responses while an offer is staged also resolve to accept (deterministic-accept bias on ambiguity, same policy).",
+      "Pending offer TTL 30_000 sim-ms (module const QUEST_OFFER_DECISION_TTL_MS in quest_offer.py - config.py is read-only for Agent 06); expiry clears silently with no decline cooldown (approach cooldown alone prevents instant re-pathing).",
+      "Live-sim access for quest.accept/event emission via the sim-owned view.commands (SimCommandSink._sim) - scoped T6 exception, flagged to Agent 03 for the Wave-3 boundary review.",
+      "QUEST_OFFER moment priority: after low_health_combat, before post_combat_injured; suppressed while FIGHTING; the bridge also refuses to consume combat-time decisions so a mid-fight verdict never resolves the offer."
+     ],
+     "gates": {
+      "tests_test_wk126_quest_approach": "PASS (13) - includes the RNG-position digest proof",
+      "tests_test_wk126_quest_llm_decision": "PASS (15)",
+      "tests_test_wk67_ai_boundary": "PASS (10) - digest b73961... byte-identical (subprocess keystone + reproducibility)",
+      "wk132_wk50_direct_prompt_gates": "PASS (72) - test_wk132_poi_prompts + test_wk50_phase2a_decision_contracts + test_wk50_phase2b_direct_prompt_contracts + test_wk50_direct_prompt_engine_resolve + test_direct_prompt_integration",
+      "import_smoke": "PASS (ai.behaviors.quest_offer + all edited modules)",
+      "full_pytest_suite": "1752 passed, 5 skipped, 1 failed OUT-OF-LANE + 1 crash OUT-OF-LANE (see handoffs); zero failures in ai/ or my test files",
+      "qa_smoke": "NOT RUN per dispatch (PM runs it at close)"
+     },
+     "handoffs": [
+      "PM/Agent 09: tests/test_wk126_quest_marker_overlay.py::test_pygame_quest_giver_marker_blit_toggles hard-crashes the suite (Windows access violation in font_cache.render_text_cached via game/graphics/renderers/quest_giver_renderer.py render) - Agent 09 mid-edit lane; I excluded that file for my full-suite read.",
+      "PM/Agent 07/11: tests/test_wk114_zombie_building_purge.py::test_factory_registry_excludes_zombies_and_records_length pins BUILDING_REGISTRY length == 19; Agent 07's herald_post (HeraldPost) makes it 20 - the pin needs a one-line bump by its owner.",
+      "Agent 03 (Wave-3 boundary review): quest_offer._live_sim_from_view reads SimCommandSink._sim for the accept/emit path - sanctioned-by-plan live-object access but worth formalizing (QuestAcceptCommand) if you want the sink protocol airtight.",
+      "Agent 11 (T10 soak): hero approach cadence = 15% roll at most once per 25 sim-s per hero when an eligible giver is within 30 tiles; decline cooldown keys are giver_id STRINGS; mock responder rule: reward >= 50g accepts, below declines (craft rewards accordingly)."
+     ]
+    }
+   }
   }
  }
 }

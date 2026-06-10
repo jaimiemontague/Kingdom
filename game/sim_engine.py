@@ -38,6 +38,7 @@ from game.systems import (
 )
 from game.systems.buffs import BuffSystem
 from game.systems.cleric_heal import ClericHealSystem
+from game.systems.quest import QuestSystem
 from game.systems.difficulty import DifficultySystem, DifficultyLevel
 from game.systems.wave_events import WaveEventSystem
 from game.building_factory import BuildingFactory
@@ -59,6 +60,7 @@ from config import (
 
 from game.entities import Castle, Hero, TaxCollector, Peasant, Guard
 from game.entities.builder_peasant import BuilderPeasant
+from game.entities.quest_giver import QuestGiver
 from game.entities.nature import LogStack, Tree
 from game.systems.nature import NatureSystem
 from game.systems.poi_interaction import POIInteractionSystem
@@ -168,6 +170,12 @@ class SimEngine:
         self.building_factory = BuildingFactory()
         self.bounty_system = BountySystem()
         self.poi_interaction_system = POIInteractionSystem()
+        # WK126: player-funded quests (Herald's Post). Mirrors bounty_system; the
+        # system tick EARLY-RETURNS when there are no quests and givers spawn only
+        # from a constructed Herald's Post, so the WK67 digest scenario (no posts,
+        # no quests) never executes any quest path.
+        self.quest_system = QuestSystem()
+        self.quest_givers: list[QuestGiver] = []
         # WK131: seeded item drops on ENEMY_KILLED (constructing draws no RNG;
         # rolls happen only when a kill event routes through _route_combat_events,
         # so the WK67 digest scenario — which has no enemies — never draws).
@@ -272,6 +280,9 @@ class SimEngine:
         _peasant._next_peasant_id = 0
         _rubble._next_rubble_id = 0
         _buildings_base._next_building_id = 0
+        # WK126: quest-ID counter (class-global on Quest, same family as above).
+        from game.systems.quest import Quest as _Quest
+        _Quest._NEXT_ID = 1
 
         # 3. Kingdom-wide research-unlock dict (module-global, mutated in place).
         for _research_key in _buildings_base.RESEARCH_UNLOCKS:
@@ -602,6 +613,20 @@ class SimEngine:
             (b for b in self.buildings if getattr(b, "building_type", None) == "castle"),
             None,
         )
+        # WK126-T4 (populate): plain-data quest/giver snapshots for the AI (no live
+        # object refs the AI could mutate — namedtuples from game.systems.quest).
+        # Both are EMPTY tuples when no quests/givers exist, which is what the AI's
+        # quest branch early-returns on (digest guard #1). Passed conditionally so
+        # this populate code lands cleanly even if Agent 03's ai_view dataclass
+        # fields (quests / quest_givers, WK126-T4) ship in a parallel wave.
+        _quest_kwargs = {}
+        _view_fields = getattr(AiGameView, "__dataclass_fields__", {})
+        if "quests" in _view_fields:
+            _quest_kwargs["quests"] = tuple(
+                q.to_ai_info() for q in self.quest_system.get_active_quests()
+            )
+        if "quest_givers" in _view_fields:
+            _quest_kwargs["quest_givers"] = tuple(g.to_ai_info() for g in self.quest_givers)
         return AiGameView(
             world=WorldView(self.world),
             heroes=tuple(self.heroes),
@@ -615,6 +640,7 @@ class SimEngine:
             # WK67 Move 6 (L3b): the AI proposes the shopping purchase through this
             # sim-owned synchronous sink; the sim applies it immediately.
             commands=SimCommandSink(self),
+            **_quest_kwargs,
         )
 
     @property
@@ -628,6 +654,37 @@ class SimEngine:
         of the UI ``game_state`` dict.
         """
         return self
+
+    def create_quest(self, giver_id, quest_type, target, reward, *, count=1):
+        """WK126: fund (escrow) + arm a quest on a Herald's Post giver.
+
+        THE engine action the quest-create UI (T9) calls on confirm: debits the
+        treasury via ``economy.fund_quest`` (returns ``None`` if the player cannot
+        afford it — no quest is created), creates the ``Quest``, emits
+        ``QUEST_OFFERED``, and flips the giver's ``is_open`` immediately so the
+        "!" marker shows without waiting a tick. Never called in the WK67 digest
+        scenario (player-UI only).
+        """
+        reward = int(reward)
+        if not self.economy.fund_quest(reward):
+            return None
+        quest = self.quest_system.create_quest(
+            giver_id, quest_type, target, reward, count=count
+        )
+        self.event_bus.emit(
+            {
+                "type": GameEventType.QUEST_OFFERED.value,
+                "quest_id": int(quest.quest_id),
+                "quest_type": str(quest.quest_type),
+                "giver_id": str(quest.giver_id),
+                "reward": reward,
+            }
+        )
+        gid = str(giver_id)
+        for giver in self.quest_givers:
+            if giver.giver_id == gid:
+                giver.is_open = True
+        return quest
 
     def find_hero_by_id(self, hero_id: str):
         """Resolve a live hero by its stable ``hero_id`` (WK67 Move 6).
@@ -1014,6 +1071,29 @@ class SimEngine:
             self.event_bus.emit_batch(bounty_claimed_events)
         self.bounty_system.cleanup()
 
+        # WK126: quests. QuestSystem.update EARLY-RETURNS (no events, no RNG, no
+        # mutation) when there are no quests — digest guard #2. The giver-lifecycle
+        # block below is gated on quest_givers existing at all; the WK67 digest
+        # scenario has no Herald's Post, so neither branch ever runs there.
+        self.quest_system.update(system_ctx, dt)
+        if self.quest_givers:
+            # Cull NPCs whose post was destroyed (mirrors guard cleanup — the
+            # destroyed post has already been removed from self.buildings).
+            # WK133 QA fix: a destroyed post also FAILS its OPEN (unaccepted)
+            # offer — the NPC is gone, so the offer is unreachable and would
+            # otherwise leak as a zombie open quest in view.quests. Accepted
+            # quests survive (the hook skips them; it also early-returns when
+            # there are no quests, preserving digest guard #2).
+            dead_givers = [g for g in self.quest_givers if g.post not in self.buildings]
+            if dead_givers:
+                self.quest_givers = [g for g in self.quest_givers if g.post in self.buildings]
+                for dead_giver in dead_givers:
+                    self.quest_system.on_giver_destroyed(dead_giver.giver_id, self.event_bus)
+            # Mirror the open-offer state onto each NPC (drives the "!" marker
+            # and the AI candidate list).
+            for giver in self.quest_givers:
+                giver.is_open = self.quest_system.has_open_quest_for(giver.giver_id)
+
         # Neutral systems
         self.neutral_building_system.tick(dt, self.buildings, self.heroes, self.peasants, castle)
         if self.tax_collector:
@@ -1073,6 +1153,16 @@ class SimEngine:
                     self.guards.append(g)
                     if hasattr(building, "guards_spawned"):
                         building.guards_spawned += 1
+            elif building.building_type == "herald_post":
+                # WK126: spawn exactly ONE Quest-Giver NPC beside a CONSTRUCTED
+                # Herald's Post (guardhouse→guard pattern). Cap 1 per post; the
+                # NPC is culled in the quest block of update() when the post is
+                # destroyed. The WK67 digest scenario has no herald_post, so this
+                # branch is structurally unreachable there.
+                if getattr(building, "is_constructed", False) and not any(
+                    g.post is building for g in self.quest_givers
+                ):
+                    self.quest_givers.append(QuestGiver(building))
             elif building.building_type == "palace":
                 max_guards = getattr(building, "max_palace_guards", 0)
                 if max_guards > 0 and getattr(building, "is_constructed", True):
@@ -1133,6 +1223,20 @@ class SimEngine:
                                 )
                 except Exception:
                     pass
+                # WK126-T7 (slay_enemy_type): kill-counter progress for the
+                # ACCEPTING hero. Gated on quests existing — a complete no-op in
+                # the WK67 digest scenario (no quests, and no enemies anyway).
+                # getattr: this method is also driven unbound against duck-typed
+                # stubs without a quest_system (tests/test_wk131_items.py).
+                _quest_system = getattr(self, "quest_system", None)
+                if _quest_system is not None and _quest_system.quests:
+                    killer = next(
+                        (h for h in self.heroes if getattr(h, "name", None) == event.get("hero")),
+                        None,
+                    )
+                    _quest_system.on_enemy_killed(
+                        str(event.get("enemy", "")), killer, self.event_bus
+                    )
             elif event.get("type") == GameEventType.CASTLE_DESTROYED.value:
                 self._emit_hud_message("GAME OVER - Castle Destroyed!", (255, 0, 0))
             elif event.get("type") == GameEventType.LAIR_CLEARED.value:
@@ -1168,6 +1272,14 @@ class SimEngine:
 
                 if bounty_claimed_events:
                     self.event_bus.emit_batch(bounty_claimed_events)
+
+                # WK126-T7 (raid_lair): complete accepted quests targeting this
+                # lair (mirrors the attack_lair bounty match above). Gated on
+                # quests existing — a complete no-op in the WK67 digest scenario.
+                # getattr mirrors the ENEMY_KILLED hook (unbound stub callers).
+                _quest_system = getattr(self, "quest_system", None)
+                if _quest_system is not None and _quest_system.quests:
+                    _quest_system.on_lair_cleared(lair_obj, self.heroes, self.event_bus)
 
                 if lair_obj in self.buildings:
                     self.buildings.remove(lair_obj)

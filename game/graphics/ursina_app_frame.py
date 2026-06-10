@@ -237,6 +237,14 @@ def run_frame(owner: "UrsinaApp", dt) -> None:
 
     _stage_t0 = pytime.perf_counter()
     snapshot = owner.engine.build_snapshot()
+    # WK133 fix (Agent 09): the sim's build_snapshot does not export quest
+    # givers (RenderSnapshot has no field for them), so the Ursina quest-giver
+    # sync — wired in BOTH renderer branches since WK126 T8 — always iterated
+    # an empty tuple and the NPC + "!" marker never rendered. Attach frozen
+    # value-copies render-side (sim lane untouched / digest-safe); no-op when
+    # no givers exist. See ursina_unit_sync.attach_quest_giver_states.
+    from game.graphics.ursina_unit_sync import attach_quest_giver_states
+    attach_quest_giver_states(snapshot, owner.engine)
     # WK67 Move 4 / L6: presentation timing/camera/selection are no longer on
     # the sim snapshot — build the per-frame presentation state and pass both.
     frame = owner.engine.build_presentation_frame()

@@ -34,6 +34,21 @@ class DecisionMomentType(str, Enum):
     RESTED_AND_READY = "rested_and_ready"
     SHOPPING_OPPORTUNITY = "shopping_opportunity"
     IDLE_SEEKING_ACTIVITY = "idle_seeking_activity"
+    QUEST_OFFER = "quest_offer"  # WK126-T6: standing at a quest-giver NPC
+
+
+# WK126-T6 action carriers for the QUEST_OFFER moment. The semantic verbs
+# accept_quest/decline_quest cannot transit ai.llm_brain._parse_response (it
+# hard-rejects any action outside the seven ai.vocab.ToolAction strings) nor
+# decision_output_validator.validate_autonomous_decision (which also forces
+# obey_defy to "Obey") — both are outside Agent 06's WK133 lane. The moment
+# therefore carries the decision on two EXISTING tool-action verbs the prompt
+# explains to the model (quest_offer.decision_rule in the autonomous context):
+#   explore  = accept_quest  (set out on the quest)
+#   retreat  = decline_quest (beg off and withdraw)
+# ai/behaviors/quest_offer.py maps them back to the real accept/decline.
+QUEST_OFFER_ACCEPT_ACTION = "explore"
+QUEST_OFFER_DECLINE_ACTION = "retreat"
 
 
 @dataclass(frozen=True, slots=True)
@@ -163,6 +178,32 @@ def moment_low_health_combat(hero: Any) -> DecisionMoment | None:
     )
 
 
+def moment_quest_offer(hero: Any, *, now_ms: int) -> DecisionMoment | None:
+    """WK126-T6: the hero is standing at a quest-giver with a staged open offer.
+
+    Fires only while ``hero._pending_quest_offer`` is set (staged by the
+    ``quest_offer`` arrival handler) and unexpired, and never during combat.
+    DIGEST-INERT: the attribute is absent/None unless a hero actually reached a
+    quest-giver, which is structurally impossible in the WK67 digest scenario
+    (no givers exist), so this is a pure-read no-op there.
+    """
+    offer = getattr(hero, "_pending_quest_offer", None)
+    if not isinstance(offer, dict):
+        return None
+    if _hero_state(hero) == HeroState.FIGHTING:
+        return None
+    if int(now_ms) >= int(offer.get("expires_ms", 0) or 0):
+        return None
+    return DecisionMoment(
+        moment_type=DecisionMomentType.QUEST_OFFER,
+        urgency=1,
+        reason="standing at a quest-giver; decide whether to accept the offered quest",
+        allowed_actions=(QUEST_OFFER_ACCEPT_ACTION, QUEST_OFFER_DECLINE_ACTION),
+        context_focus=("quest_offer", "personality", "health", "distances"),
+        cooldown_ms=2_000,
+    )
+
+
 def moment_post_combat_injured(hero: Any, game_state: dict, now_ms: int) -> DecisionMoment | None:
     if _hero_state(hero) == HeroState.FIGHTING:
         return None
@@ -284,9 +325,16 @@ def determine_decision_moment(hero: Any, game_state: dict, *, now_ms: int) -> De
     """
     Return the highest-priority decision moment for this hero, or None.
 
-    Ordering: low-health combat > post-combat injured > rested-and-ready > shopping > idle activity.
+    Ordering: low-health combat > quest offer (WK126) > post-combat injured >
+    rested-and-ready > shopping > idle activity.
     """
     m = moment_low_health_combat(hero)
+    if m is not None:
+        return m
+    # WK126-T6: a staged quest offer outranks the non-combat moments — the hero
+    # deliberately walked to the NPC and the offer is short-lived. Inert when no
+    # offer is staged (plain attribute read; see moment_quest_offer).
+    m = moment_quest_offer(hero, now_ms=now_ms)
     if m is not None:
         return m
     m = moment_post_combat_injured(hero, game_state, now_ms)

@@ -42,6 +42,7 @@ _COMMITTED_DESTINATION_TYPES = frozenset({
     "direct_prompt",
     "visit_poi",  # WK55: personality-driven POI visit
     "buy_meal",  # WK61-R10: hunger meal at food stand
+    "quest_offer",  # WK126-T5: walking to a quest-giver NPC (commit window)
 })
 
 # Debug logging (set to True to see AI decision logs).

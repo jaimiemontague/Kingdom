@@ -41,7 +41,7 @@ Leaf deps only.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import config
 from ursina import color
@@ -59,6 +59,7 @@ from game.graphics.ursina_unit_overlays import (
     sync_hero_gold_label,
     sync_hero_rest_label,
     sync_hero_overlays_facing,
+    sync_quest_giver_marker,
     sync_unit_overlays_facing,
 )
 from game.world import Visibility
@@ -458,3 +459,135 @@ def sync_snapshot_tax_collector(r: "UrsinaRenderer", snapshot: "SimStateSnapshot
                 tc_gold_ent.enabled = False
 
             active_ids.add(obj_id)
+
+
+class QuestGiverRenderState(NamedTuple):
+    """Frozen plain-data quest-giver render state (WK133 fix, Agent 09).
+
+    Value-copied off the live ``QuestGiver`` at the render boundary
+    (``attach_quest_giver_states``) so the renderer never holds a live, mutable
+    sim object — same L1 boundary rule as the WK66/WK68 ``*_dtos``.
+    """
+
+    giver_id: str
+    x: float
+    y: float
+    is_open: bool
+    is_alive: bool
+
+
+def attach_quest_giver_states(snapshot, engine) -> None:
+    """WK133 fix (Agent 09): export quest givers across the render boundary.
+
+    ROOT CAUSE of the WK133 T8 FAIL capture: ``RenderSnapshot`` has no
+    quest-giver field and ``SimEngine.build_snapshot`` never exports
+    ``self.quest_givers`` — so ``snapshot_quest_giver_states`` (tolerated-absent
+    by design) ALWAYS returned ``()`` and neither the NPC billboard nor the "!"
+    marker could ever render, even though the sim-side giver existed and
+    ``is_open`` was True.
+
+    The sim lane is frozen for this round (digest safety), so the export lives
+    HERE, render-side: called by ``ursina_app_frame.run_frame`` immediately
+    after ``engine.build_snapshot()``. It value-copies each live giver into a
+    frozen :class:`QuestGiverRenderState` and attaches the tuple as
+    ``snapshot.quest_givers`` (the exact fallback field
+    ``snapshot_quest_giver_states`` already reads; ``object.__setattr__``
+    because ``RenderSnapshot`` is a frozen dataclass). No-op — zero per-frame
+    cost beyond one getattr — when no givers exist (pre-quest games, the WK67
+    digest scenario), and the sim's own ``quest_giver_dtos`` field still wins
+    if/when a later wave adds it to ``build_snapshot``.
+    """
+    sim = getattr(engine, "sim", engine)
+    givers = getattr(sim, "quest_givers", None)
+    if not givers:
+        return
+    try:
+        states = tuple(
+            QuestGiverRenderState(
+                giver_id=str(getattr(g, "giver_id", "") or ""),
+                x=float(getattr(g, "x", 0.0)),
+                y=float(getattr(g, "y", 0.0)),
+                is_open=bool(getattr(g, "is_open", False)),
+                is_alive=bool(getattr(g, "is_alive", True)),
+            )
+            for g in givers
+        )
+        object.__setattr__(snapshot, "quest_givers", states)
+    except Exception:
+        # Never let a render-boundary nicety kill the frame loop.
+        return
+
+
+def snapshot_quest_giver_states(snapshot) -> tuple:
+    """Plain-data quest-giver render states off the snapshot (WK126 T8).
+
+    Reads ``snapshot.quest_giver_dtos`` first (the proper frozen-DTO field once
+    the sim exposes it), falling back to ``snapshot.quest_givers``. Both are
+    tolerated-absent (``()``), so pre-quest snapshots and the WK67 digest path
+    are untouched. Each state needs only: giver_id, x, y, is_open.
+    """
+    states = getattr(snapshot, "quest_giver_dtos", None)
+    if states is None:
+        states = getattr(snapshot, "quest_givers", None)
+    return tuple(states) if states else ()
+
+
+def sync_snapshot_quest_givers(r: "UrsinaRenderer", snapshot: "SimStateSnapshot", active_ids: set) -> None:
+    # Quest Giver (WK126 T8 + WK133 fix, Agent 09) — classic (non-instanced)
+    # Entity billboard per the WK133 PM decision of record, exactly like bounty
+    # flags: called from BOTH renderer branches (instanced + legacy). Stationary
+    # NPC beside its Herald's Post, rendered via the SAME atlas-UV path as the
+    # tax collector (the PM-designated humanoid stand-in sprite — no herald
+    # atlas entry yet) + "Herald" name label + the yellow "!" overhead marker
+    # that shows only while the giver has an open offer (giver.is_open). Keyed
+    # on the stable giver_id (the owning post's entity_id) — never id() of a
+    # per-frame state object.
+    for qg in snapshot_quest_giver_states(snapshot):
+        gid = str(getattr(qg, "giver_id", "") or getattr(qg, "entity_id", "") or "")
+        if not gid or not getattr(qg, "is_alive", True):
+            continue
+        obj_id = f"quest_giver:{gid}"
+        # WK57 Wave 3: quest givers are always surface — hide when camera underground.
+        if r._camera_active_layer != 0:
+            existing = r._entities.get(obj_id)
+            if existing is not None:
+                existing.enabled = False
+                active_ids.add(obj_id)
+            continue
+
+        # Tax-collector scale so the stand-in atlas frame keeps its aspect
+        # (exactly the sync_snapshot_tax_collector dimensions).
+        sx = PEASANT_SCALE_XZ
+        sy = PEASANT_SCALE_Y
+        ent, obj_id = r._entity_render.get_or_create_entity(
+            qg,
+            model="quad",
+            col=color.white,
+            scale=(sx, sy, 1),
+            texture=None,
+            billboard=True,
+            key=obj_id,
+        )
+        if not getattr(ent, "enabled", True):
+            ent.enabled = True
+        wx, wz = sim_px_to_world_xz(float(getattr(qg, "x", 0.0)), float(getattr(qg, "y", 0.0)))
+        terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
+        # Atlas-UV billboard — identical call shape to the tax collector. The
+        # QuestGiverRenderState carries no state/anim fields, so
+        # base_clip_from_dto resolves to the looping "idle" clip; the giver is
+        # stationary, so after the first frame this is dirty-gated
+        # attribute-compare-only work (FPS guardrails).
+        r._sync_unit_atlas_billboard(
+            ent, obj_id, qg, "worker", "tax_collector", None,
+            color.white, (sx, sy, 1), (wx, terrain_y + sy * 0.5, wz), sprite_unlit_shader,
+        )
+
+        _ensure_ks_name_label(
+            ent, "_ks_name_label", "Herald",
+            y=TAX_COLLECTOR_SPEC.label_y, scale=TAX_COLLECTOR_SPEC.label_scale,
+        )
+        # Yellow "!" — lazily created once, .enabled-toggled per frame, freed by
+        # free_entity_overlays via _OVERLAY_CHILD_ATTRS on giver removal.
+        sync_quest_giver_marker(ent, bool(getattr(qg, "is_open", False)))
+
+        active_ids.add(obj_id)

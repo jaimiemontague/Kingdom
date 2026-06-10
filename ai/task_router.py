@@ -8,6 +8,7 @@ behavior-affecting enhancement (it would shift the WK67 digest) and is intention
 done here — see the WK120 plan §0."""
 from __future__ import annotations
 
+from ai.behaviors import quest_offer
 from ai.behaviors.view_compat import as_ai_view, view_to_legacy_context
 from ai.context_builder import ContextBuilder
 from ai.prompt_templates import get_fallback_decision
@@ -174,3 +175,13 @@ def update_hero(ai, hero, dt: float, view) -> None:
         ai.handle_retreating(hero, view)
     elif hero.state == HeroState.SHOPPING:
         ai.handle_shopping(hero, view)
+
+    # WK126-T5: LOWEST-priority tier — occasional walk to an open quest-giver.
+    # Runs AFTER the state dispatch so every higher tier (survival, defense,
+    # hunger, rest, bounty, shopping, enemy engage, drink, POI) has already
+    # claimed the hero if it wanted to; it may only preempt the terminal
+    # patrol/idle wander (enforced inside via the preemptible-target guard).
+    # DIGEST RAIL: the function's FIRST guard is `if not view.quest_givers:
+    # return False` — no RNG draw, no sim-time read, no hero mutation when no
+    # givers exist, so the WK67 digest scenario is byte-identical.
+    quest_offer.maybe_approach_quest_giver(ai, hero, view)
