@@ -49,9 +49,18 @@ void main() {
         + camUp * p3d_Vertex.y * scaleY;
 
     gl_Position = p3d_ModelViewProjectionMatrix * vec4(worldPos, 1.0);
-    float _v0 = 1.0 - uvRegion.y - uvRegion.w;   // V-flip: pygame top-down -> GL bottom-up (matches legacy texture_offset)
+    /* WK128 V-orientation parity with the legacy texture_offset path: the
+       instanced quad's texcoords are authored TOP-DOWN (tc.y = 0 at the top
+       vertex, 1 at the bottom — see _create_instanced_quad), so the sprite's
+       top row must sample v = 1 - uvRegion.y and the bottom row
+       v = 1 - uvRegion.y - uvRegion.w (Ursina uploads pygame surfaces
+       FLIP_TOP_BOTTOM, putting the atlas' pygame-top at high GL v). The old
+       mapping `(1 - y - w) + tc.y * w` applied the legacy bottom-up offset on
+       top of the already-flipped tcoords — a double flip that rendered EVERY
+       atlas sprite upside-down. */
+    float _vTop = 1.0 - uvRegion.y;
     uvs = vec2(uvRegion.x + p3d_MultiTexCoord0.x * uvRegion.z,
-               _v0 + p3d_MultiTexCoord0.y * uvRegion.w);
+               _vTop - p3d_MultiTexCoord0.y * uvRegion.w);
 }
 """,
     fragment="""#version 330

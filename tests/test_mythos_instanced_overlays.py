@@ -223,9 +223,18 @@ def test_instanced_update_packs_hp_bars_and_parity(ursina_app):
         # NO projectile bar).
         assert r._hp_bar_geom_node.get_instance_count() == 5
 
+        # WK128: blob shadows OFF by default — the shadow geom must not even
+        # be created unless KINGDOM_UNIT_SHADOWS=1 (legacy drew no unit shadows).
+        if not iur_mod.unit_shadows_env_enabled():
+            assert r._shadow_geom_node is None, (
+                "blob-shadow geom must not exist with KINGDOM_UNIT_SHADOWS off"
+            )
+
         # C7 invariant: every instanced geom is two-sided (incl. the new bars).
         for np_ in (r._geom_node_outside, r._geom_node_inside,
                     r._shadow_geom_node, r._hp_bar_geom_node):
+            if np_ is None:
+                continue
             assert np_.get_two_sided(), f"{np_.name} lost set_two_sided (C7 regression)"
         # WK124 overlay contract: bars draw in the fixed,110 overlay bin.
         assert r._hp_bar_geom_node.get_bin_name() == "fixed"

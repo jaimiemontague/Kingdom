@@ -22,6 +22,13 @@ per-Entity billboard fallback). Full feature parity shipped with the flip:
 * name/gold labels render via the pooled zoom-LOD Text labels in
   ``instanced_unit_labels.py`` fed from ``label_sources`` (built here from the
   same blended positions so labels never desync from sprites).
+
+WK128: blob shadows are OFF by default (legacy drew no unit shadows; the
+owner dislikes the dark ellipses) — the shadow geom is only created when
+``KINGDOM_UNIT_SHADOWS=1`` (see ``unit_shadows_env_enabled``). The same round
+fixed the upside-down sprites: the instanced shader double-V-flipped (legacy
+bottom-up texture_offset math on top of the quad's top-down texcoords); see
+``instanced_unit_shader.py`` and tests/test_wk128_instanced_v_orientation.py.
 """
 from __future__ import annotations
 
@@ -136,6 +143,18 @@ def instanced_units_env_enabled() -> bool:
     """
     raw = os.environ.get("KINGDOM_URSINA_INSTANCING", "1")
     return str(raw).strip().lower() not in ("0", "false", "no", "off")
+
+
+def unit_shadows_env_enabled() -> bool:
+    """Return True iff ``KINGDOM_UNIT_SHADOWS`` enables the instanced blob shadows.
+
+    WK128: default is "0" (OFF). The legacy per-Entity unit path drew NO unit
+    shadows, and the owner dislikes the instanced dark-ellipse blobs — so the
+    shadow geom is not even created by default. Set "1" to re-enable for
+    future taste-testing.
+    """
+    raw = os.environ.get("KINGDOM_UNIT_SHADOWS", "0")
+    return str(raw).strip().lower() in ("1", "true", "yes", "on")
 
 
 def _flip_uv_horizontal(uv: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
@@ -318,18 +337,23 @@ class InstancedUnitRenderer:
         np_inside, _ = self._create_instanced_quad("instanced_units_inside")
         self._geom_node_inside = np_inside
 
-        np_shadow, _ = self._create_instanced_quad("instanced_units_shadow")
-        self._shadow_geom_node = np_shadow
-        ssh = shadow_instanced_shader._shader
-        self._shadow_geom_node.set_shader(ssh)
-        self._shadow_geom_node.set_shader_input("instanceData", self._instance_buffer)
-        self._shadow_geom_node.set_transparency(TransparencyAttrib.M_alpha)
-        self._shadow_geom_node.set_depth_write(False)
-        self._shadow_geom_node.set_bin("transparent", 0)
-        # Ground plane + scatter sit near y≈-0.05 .. 0; flat blob must not be backface-culled and
-        # needs a slight depth bias or it loses every depth test vs terrain/grass from tilted RTS cam.
-        self._shadow_geom_node.set_two_sided(True)
-        self._shadow_geom_node.set_depth_offset(10, 0)
+        # WK128: blob shadows are OFF by default (legacy drew no unit shadows;
+        # owner dislikes the dark ellipses). The geom is only created when
+        # KINGDOM_UNIT_SHADOWS=1 — nothing else (picking/bounds/buffers)
+        # depends on it; all consumers None-guard.
+        if unit_shadows_env_enabled():
+            np_shadow, _ = self._create_instanced_quad("instanced_units_shadow")
+            self._shadow_geom_node = np_shadow
+            ssh = shadow_instanced_shader._shader
+            self._shadow_geom_node.set_shader(ssh)
+            self._shadow_geom_node.set_shader_input("instanceData", self._instance_buffer)
+            self._shadow_geom_node.set_transparency(TransparencyAttrib.M_alpha)
+            self._shadow_geom_node.set_depth_write(False)
+            self._shadow_geom_node.set_bin("transparent", 0)
+            # Ground plane + scatter sit near y≈-0.05 .. 0; flat blob must not be backface-culled and
+            # needs a slight depth bias or it loses every depth test vs terrain/grass from tilted RTS cam.
+            self._shadow_geom_node.set_two_sided(True)
+            self._shadow_geom_node.set_depth_offset(10, 0)
 
         sh = instanced_unit_shader._shader
         self._geom_node_outside.set_shader(sh)
@@ -872,11 +896,12 @@ class InstancedUnitRenderer:
 
         assert self._geom_node_outside is not None
         assert self._geom_node_inside is not None
-        assert self._shadow_geom_node is not None
         assert self._hp_bar_geom_node is not None
         self._geom_node_outside.set_instance_count(count_outside)
         self._geom_node_inside.set_instance_count(count_inside)
-        self._shadow_geom_node.set_instance_count(count_outside)
+        # WK128: shadow geom only exists when KINGDOM_UNIT_SHADOWS=1.
+        if self._shadow_geom_node is not None:
+            self._shadow_geom_node.set_instance_count(count_outside)
         self._hp_bar_geom_node.set_instance_count(count_bars)
         self._instance_buffer.reload()
         self._instance_buffer_inside.reload()
@@ -939,11 +964,12 @@ class InstancedUnitRenderer:
 
         assert self._geom_node_outside is not None
         assert self._geom_node_inside is not None
-        assert self._shadow_geom_node is not None
         assert self._hp_bar_geom_node is not None
         self._geom_node_outside.set_instance_count(n)
         self._geom_node_inside.set_instance_count(0)
-        self._shadow_geom_node.set_instance_count(n)
+        # WK128: shadow geom only exists when KINGDOM_UNIT_SHADOWS=1.
+        if self._shadow_geom_node is not None:
+            self._shadow_geom_node.set_instance_count(n)
         self._hp_bar_geom_node.set_instance_count(0)
         self._instance_buffer.reload()
         self._instance_buffer_inside.reload()

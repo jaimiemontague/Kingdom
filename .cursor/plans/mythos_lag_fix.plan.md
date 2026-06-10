@@ -170,6 +170,18 @@ BYTE-IDENTICAL with all defaults on; fast-dt-scaling built but default OFF pendi
 soak). Baseline → R2: windowed 15.4→48.6 (3.2×), maximized 13.1→44.4 (3.4×). Remaining
 stages: igloop ~10 ms, rend ~6, hudR ~3, tick ~2. Next: definitive 20.5-min soaks.
 
+| 06-09 | **R2 definitive d1** | out/fast/windowed | **20.5-min soak** | 49.2* | 40.5 | 36.8 | 24.6 | 5.6 | 2.0 | 2.8 | 0.65 | 149/150 window rows >30; ONE dip (screenshot+wave burst @t=916) |
+| 06-09 | **R2 definitive d1** | out/fast/maximized | **20.5-min soak** | 44.4* | 36.4 | 31.9 | 28.9 | — | — | — | — | 147/150 rows >30; 3 dips 28.9-29.4 during background-agent CPU contention |
+
+\* whole-run probe avg; p50/p10/min are the minute-15–20 window stats. 100 screenshots
+captured per definitive run (minutes 15–20, every 3 s). **FPS is time-FLAT across all 20.5
+minutes** (e.g. d1 windowed: probe avg 49.2 over 56k frames; window avg 40.6 at minute 15–20
+with measurement overhead) — the original "gets worse after 10+ minutes" report is RESOLVED.
+R3 (spawn stagger) then removed the wave-burst dip class. Runs d2/d3 ended early with rc=0
+and no crash — the Sovereign was live-watching and closed the windows; he declared the result
+**"FPS is very smooth now and I'm happy with it"** (2026-06-09) and redirected remaining work
+to two instancing visual bugs: upside-down creature sprites + unwanted blob shadows (R4).
+
 **R1 outcome (committed):** vsync=off verified engaged; zero-copy verified (`BGRA layout
 verified` + hudU max 6.5 ms — the 47–76 ms hitch class is GONE); font patch + prewarm
 (509 ms startup) + orphan-free swaps in. New `igloop` stage attribution shows the remaining
