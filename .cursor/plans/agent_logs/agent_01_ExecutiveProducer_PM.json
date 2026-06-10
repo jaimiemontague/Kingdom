@@ -7284,6 +7284,10 @@
           "pm_next_actions_by_agent": {
             "01": "orchestrate discovery -> candidates -> iterative loop -> definitive 20-min soaks; commit/push milestones on branch mythos-lag-fix"
           }
+        },
+        "round_2_closeout": {
+          "pm_status_summary": "SPRINT GOAL MET + Sovereign-accepted. Gate scenario 15.4->48.6 fps windowed / 13.1->44.4 maximized, time-flat over 20.5-min soak (d1: 100 shots min15-20, 149/150 rows >30). 5 rounds committed+pushed on mythos-lag-fix (R1 vsync/spawn-hitch/HUD-zerocopy, R2 instancing-default+sim-stack, R3 wave stagger, R4 upside-down-sprite fix + shadows off, guardrails addendum). qa_smoke PASS throughout; WK67 digest byte-identical. Awaiting Sovereign playtest before merge to main.",
+          "evidence": "tmp/mythos/*.csv + docs/screenshots/mythos_soak/* + .cursor/plans/mythos_lag_fix.plan.md results log"
         }
       }
     }
