@@ -133,7 +133,9 @@ def test_hud_renders_hero_menu_chat_split_without_pin(_pygame_font_ready: None) 
     hud = HUD(1024, 576)
     hero = Hero(0.0, 0.0, hero_id="popup_hero", name="PopupHero")
     hud._chat_panel.start_conversation(hero)
-    left = pygame.Rect(0, 48, 224, 348)
+    from game.ui.hud_layout import LEFT_COL_W
+
+    left = pygame.Rect(0, 48, LEFT_COL_W, 348)
 
     game_state = {
         "selected_hero": hero,
@@ -142,12 +144,14 @@ def test_hud_renders_hero_menu_chat_split_without_pin(_pygame_font_ready: None) 
         "hero_profiles_by_id": {},
     }
 
+    from game.ui.hud_layout import HERO_MENU_CHAT_MIN_H, HERO_MENU_HERO_MIN_H
+
     assert hud._should_render_hero_menu_chat_popup(game_state) is True
     split = hud._hero_menu_chat_split_rects(left)
     assert split is not None
     hero_rect, chat_rect = split
-    assert hero_rect.height >= 120
-    assert chat_rect.height >= 152
+    assert hero_rect.height >= HERO_MENU_HERO_MIN_H
+    assert chat_rect.height >= HERO_MENU_CHAT_MIN_H
     assert hero_rect.bottom + 4 <= chat_rect.top
     assert chat_rect.bottom <= left.bottom
     assert chat_rect.width > 0

@@ -84,14 +84,14 @@ WATCH_CARD_HEADER_H = 18
 WATCH_CARD_MAP_H = 160
 WATCH_CARD_STATS_H = 78
 WATCH_CARD_STATS_COMPACT_H = 58
-WATCH_CARD_CHAT_H = 150
+WATCH_CARD_CHAT_H = 190  # WK130: 150 -> 190
 WATCH_CARD_FULL_H_WITH_CHAT = (
     WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H + WATCH_CARD_CHAT_H
-)  # 406
+)  # 446
 WATCH_CARD_FULL_H_NO_CHAT = (
     WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_COMPACT_H
 )  # 236
-WATCH_CARD_FULL_H = WATCH_CARD_FULL_H_WITH_CHAT  # 406
+WATCH_CARD_FULL_H = WATCH_CARD_FULL_H_WITH_CHAT  # 446
 
 EXPECTED_CONSTANTS = {
     "WATCH_CARD_HEADER_H": WATCH_CARD_HEADER_H,
@@ -145,7 +145,7 @@ def test_watch_card_derived_sums_are_internally_consistent() -> None:
         + hud_watch_card.WATCH_CARD_STATS_H
         + hud_watch_card.WATCH_CARD_CHAT_H
     )
-    assert hud_watch_card.WATCH_CARD_FULL_H_WITH_CHAT == 406
+    assert hud_watch_card.WATCH_CARD_FULL_H_WITH_CHAT == 446  # WK130: was 406
     assert (
         hud_watch_card.WATCH_CARD_FULL_H_NO_CHAT
         == hud_watch_card.WATCH_CARD_HEADER_H
@@ -154,7 +154,7 @@ def test_watch_card_derived_sums_are_internally_consistent() -> None:
     )
     assert hud_watch_card.WATCH_CARD_FULL_H_NO_CHAT == 236
     assert hud_watch_card.WATCH_CARD_FULL_H == hud_watch_card.WATCH_CARD_FULL_H_WITH_CHAT
-    assert hud_watch_card.WATCH_CARD_FULL_H == 406
+    assert hud_watch_card.WATCH_CARD_FULL_H == 446  # WK130: was 406
 
 
 # ------------------------------------------------------------------
@@ -313,7 +313,7 @@ def test_test_wk52_style_from_import_resolves() -> None:
     )
 
     assert WATCH_CARD_HEADER_H == 18
-    assert WATCH_CARD_FULL_H == 406
+    assert WATCH_CARD_FULL_H == 446  # WK130: was 406
 
 
 # ------------------------------------------------------------------

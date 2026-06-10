@@ -16,7 +16,7 @@ import pygame
 # Re-export the layout constants so both hud.py and external callers can use them.
 # These are authoritative; hud.py should import from here.
 
-LEFT_COL_W = 224
+LEFT_COL_W = 246  # WK130: 224 -> 246 (+10% sidebar width; minimap follows via RADAR_MINIMAP_W)
 RADAR_MINIMAP_H = 180
 RADAR_MINIMAP_W = LEFT_COL_W
 RECALL_BTN_W = 180
@@ -36,8 +36,10 @@ LEFT_SPLIT_DEFAULT_FRAC_WATCH = 0.45
 LEFT_SPLIT_DEFAULT_FRAC_MAIN_SOLO = 0.72
 # Hero-menu in-column chat split sizing (relocated from hud.py in WK101; hud re-imports+re-exports HERO_MENU_CHAT_MIN_H + HERO_MENU_HERO_MIN_H for test_wk61_r9).
 HERO_MENU_CHAT_GAP = 4
-HERO_MENU_CHAT_MIN_H = 152
-HERO_MENU_CHAT_PREFERRED_H = 220
+HERO_MENU_CHAT_MIN_H = 190  # WK130: 152 -> 190 (bigger usable chat)
+HERO_MENU_CHAT_PREFERRED_H = 280  # WK130: 220 -> 280
+# WK130: fraction of the left column the in-column chat band may claim (was inline 0.38).
+HERO_MENU_CHAT_MAX_FRAC = 0.45
 HERO_MENU_HERO_MIN_H = 120
 
 

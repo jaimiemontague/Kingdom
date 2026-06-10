@@ -66,10 +66,11 @@ WRAPPER_TO_FN = {
 }
 
 # The 4 HERO_MENU_* layout constants relocated to hud_layout.py, with expected int values.
+# WK130: chat MIN 152 -> 190, PREFERRED 220 -> 280.
 EXPECTED_CONSTANTS = {
     "HERO_MENU_CHAT_GAP": 4,
-    "HERO_MENU_CHAT_MIN_H": 152,
-    "HERO_MENU_CHAT_PREFERRED_H": 220,
+    "HERO_MENU_CHAT_MIN_H": 190,
+    "HERO_MENU_CHAT_PREFERRED_H": 280,
     "HERO_MENU_HERO_MIN_H": 120,
 }
 
@@ -125,8 +126,8 @@ def test_test_wk61_r9_style_from_import_resolves() -> None:
         HERO_MENU_HERO_MIN_H,
     )
 
-    assert HERO_MENU_CHAT_MIN_H == 152
-    assert HERO_MENU_HERO_MIN_H == 120
+    assert HERO_MENU_CHAT_MIN_H == EXPECTED_CONSTANTS["HERO_MENU_CHAT_MIN_H"]
+    assert HERO_MENU_HERO_MIN_H == EXPECTED_CONSTANTS["HERO_MENU_HERO_MIN_H"]
 
 
 @pytest.mark.parametrize("const_name", sorted(EXPECTED_CONSTANTS))
@@ -311,7 +312,7 @@ def test_hero_menu_chat_split_rects_shape_and_minimums(headless_hud: HUD) -> Non
     from game.ui.hud import HERO_MENU_CHAT_MIN_H, HERO_MENU_HERO_MIN_H
 
     hud = headless_hud
-    r = hud._hero_menu_chat_split_rects(pygame.Rect(0, 48, 224, 700))
+    r = hud._hero_menu_chat_split_rects(pygame.Rect(0, 48, hud_layout.LEFT_COL_W, 700))
     assert r is None or (
         len(r) == 2 and all(isinstance(x, pygame.Rect) for x in r)
     )
@@ -329,7 +330,7 @@ def test_split_rects_does_not_mutate_render_state(headless_hud: HUD) -> None:
     before_chat = getattr(hud, "_hero_menu_chat_rect", None)
     before_hero = getattr(hud, "_hero_menu_hero_rect", None)
 
-    hud._hero_menu_chat_split_rects(pygame.Rect(0, 48, 224, 700))
+    hud._hero_menu_chat_split_rects(pygame.Rect(0, 48, hud_layout.LEFT_COL_W, 700))
 
     assert getattr(hud, "_hero_menu_chat_rect", None) is before_chat, (
         "split_rects must not mutate _hero_menu_chat_rect (assignment belongs to render())"

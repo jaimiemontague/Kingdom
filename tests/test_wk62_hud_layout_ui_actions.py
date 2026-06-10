@@ -111,14 +111,16 @@ class TestHUDLayoutManager:
         mgr = HUDLayoutManager()
         layout = mgr.compute(1920, 1080)
 
+        from game.ui.hud_layout import LEFT_COL_W, RADAR_MINIMAP_W
+
         assert layout.top_bar == pygame.Rect(0, 0, 1920, 48)
         assert layout.bottom_bar == pygame.Rect(0, 1080 - 96, 1920, 96)
         assert layout.minimap.x == 0
         assert layout.minimap.y == 1080 - 180
-        assert layout.minimap.width == 224
+        assert layout.minimap.width == RADAR_MINIMAP_W
         assert layout.minimap.height == 180
         assert layout.right_panel.width == 0  # retired WK52 R4
-        assert layout.left_panel.width == 224
+        assert layout.left_panel.width == LEFT_COL_W
         assert layout.left_panel.y == 48
         assert layout.left_panel.height == layout.minimap.y - 48
 
@@ -183,7 +185,7 @@ class TestBackwardCompatImports:
     def test_constants_from_hud(self):
         from game.ui.hud import LEFT_COL_W, RADAR_MINIMAP_H, RECALL_BTN_W, MEMORIAL_BTN_W
 
-        assert LEFT_COL_W == 224
+        assert LEFT_COL_W == 246  # WK130: 224 -> 246
         assert RADAR_MINIMAP_H == 180
         assert RECALL_BTN_W == 180
         assert MEMORIAL_BTN_W == 90
@@ -191,7 +193,7 @@ class TestBackwardCompatImports:
     def test_constants_from_hud_layout(self):
         from game.ui.hud_layout import LEFT_COL_W, RADAR_MINIMAP_H, RECALL_BTN_W, MEMORIAL_BTN_W
 
-        assert LEFT_COL_W == 224
+        assert LEFT_COL_W == 246  # WK130: 224 -> 246
         assert RADAR_MINIMAP_H == 180
         assert RECALL_BTN_W == 180
         assert MEMORIAL_BTN_W == 90

@@ -10,6 +10,7 @@ from game.ui.hud import (
     HERO_MENU_CHAT_MIN_H,
     HERO_MENU_HERO_MIN_H,
     HUD,
+    LEFT_COL_W,
 )
 
 
@@ -31,7 +32,7 @@ def test_hero_menu_chat_split_reserves_readable_space(
     from game.ui.hud import RADAR_MINIMAP_H
 
     left_h = (h - RADAR_MINIMAP_H) - top_h
-    left = pygame.Rect(0, top_h, 224, left_h)
+    left = pygame.Rect(0, top_h, LEFT_COL_W, left_h)
 
     split = hud._hero_menu_chat_split_rects(left)
     assert split is not None

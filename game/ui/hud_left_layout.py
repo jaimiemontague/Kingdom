@@ -11,18 +11,33 @@ from game.ui.micro_view_manager import ViewMode
 from game.ui.hud_layout import (
     HERO_LEFT_MIN_H,
     HERO_MENU_CHAT_GAP,
+    HERO_MENU_CHAT_MAX_FRAC,
     HERO_MENU_CHAT_MIN_H,
     HERO_MENU_CHAT_PREFERRED_H,
     HERO_MENU_HERO_MIN_H,
     LEFT_COL_W,
     LEFT_SPLIT_DEFAULT_FRAC_MAIN_SOLO,
     LEFT_SPLIT_HANDLE_H,
+    LEFT_SPLIT_HANDLE_HIT_H,
     MAIN_MENU_MIN_PRESENT_H,
     RADAR_MINIMAP_H,
 )
 from game.ui.hud_watch_card import WATCH_CARD_HEADER_H
 if TYPE_CHECKING:
     from game.ui.hud import HUD
+
+
+def split_handle_hit_rect(rect: pygame.Rect) -> pygame.Rect:
+    """The pointer hit band for a split handle: the visual bar (LEFT_SPLIT_HANDLE_H px)
+    expanded vertically to the standard LEFT_SPLIT_HANDLE_HIT_H grab band (WK130 — all
+    pointer-down / chrome hit tests must use this, never the bare visual rect)."""
+    extra = max(0, LEFT_SPLIT_HANDLE_HIT_H - rect.height)
+    return pygame.Rect(
+        rect.x,
+        rect.y - (extra + 1) // 2,
+        rect.width,
+        rect.height + extra,
+    )
 
 
 def left_column_segments_open(hud, game_state: dict | None) -> tuple[bool, bool]:
@@ -118,6 +133,10 @@ def layout_left_column_segments(
         if main_h < HERO_LEFT_MIN_H:
             main_h = HERO_LEFT_MIN_H
             watch_h = max(WATCH_CARD_HEADER_H, available - main_h)
+        # WK130 invariant: the two stacked segments may NEVER overflow the column
+        # (overlap the minimap) at any drag position / on genuinely too-short columns.
+        main_h = min(main_h, available)
+        watch_h = max(0, min(watch_h, available - main_h))
     elif main_open:
         if hud._should_render_hero_menu_chat_popup(game_state or {}):
             main_h = available
@@ -192,7 +211,8 @@ def handle_sidebar_split_pointer_down(hud, pos: tuple[int, int], game_state: dic
         return True
     x, y = int(pos[0]), int(pos[1])
     for key, rect in hud._left_split_handle_rects.items():
-        if rect.collidepoint(x, y):
+        # WK130: hit-test the standard 8px grab band, not the 4px visual bar.
+        if split_handle_hit_rect(rect).collidepoint(x, y):
             hud._left_split_drag_kind = key
             hud._left_split_drag_start_y = y
             hud._left_split_drag_main_h0 = int(hud._left_main_rect.height) if hud._left_main_rect else 0
@@ -358,28 +378,16 @@ def virtual_pointer_in_hud_chrome(
     if dco is not None and getattr(dco, "visible", False):
         return True
     if pin.hero_id is not None:
-        ch = hud._effective_watch_card_h(h)
-        if ch > 0:
-            if hud._left_watch_rect is not None:
-                regions.append(pygame.Rect(hud._left_watch_rect))
-            else:
+        # WK130: single source of geometry — the watch segment rect was just computed by
+        # the SAME layout call the render path uses (hud._layout_rects_for_screen above
+        # sets hud._left_watch_rect via layout_left_column_segments). The chat band is
+        # always contained within that rect, so no independently rebuilt chat/card rects.
+        if hud._left_watch_rect is not None:
+            regions.append(pygame.Rect(hud._left_watch_rect))
+        else:
+            ch = hud._effective_watch_card_h(h)
+            if ch > 0:
                 regions.append(pygame.Rect(minimap.x, minimap.y - ch, minimap.width, ch))
-        map_h, stats_h, chat_h = hud._watch_card_body_split(ch)
-        if chat_h > 0 and hud._chat_visible:
-            cx, cy = minimap.x, minimap.y - ch
-            cbr = hud._watch_chat_band_rect(
-                cx,
-                cy,
-                minimap.width,
-                ch,
-                map_h,
-                stats_h,
-                chat_h,
-                profiles,
-                str(pin.hero_id),
-            )
-            if cbr is not None:
-                regions.append(cbr)
     if (
         game_state.get("selected_hero") is not None
         or game_state.get("selected_peasant") is not None
@@ -391,7 +399,8 @@ def virtual_pointer_in_hud_chrome(
         if r.collidepoint(x, y):
             return True
     for handle in hud._left_split_handle_rects.values():
-        if handle.collidepoint(x, y):
+        # WK130: same 8px grab band as handle_sidebar_split_pointer_down.
+        if split_handle_hit_rect(handle).collidepoint(x, y):
             return True
     if hud.show_help:
         help_r = pygame.Rect(max(0, w - 320), 0, min(320, w), min(520, h))
@@ -420,7 +429,7 @@ def hero_menu_chat_desired_h(hud, left_h: int) -> int:
         return 0
     pref = min(
         HERO_MENU_CHAT_PREFERRED_H,
-        max(HERO_MENU_CHAT_MIN_H, int(left_h * 0.38)),
+        max(HERO_MENU_CHAT_MIN_H, int(left_h * HERO_MENU_CHAT_MAX_FRAC)),
     )
     max_chat = max(HERO_MENU_CHAT_MIN_H, left_h - HERO_MENU_HERO_MIN_H - HERO_MENU_CHAT_GAP)
     return max(HERO_MENU_CHAT_MIN_H, min(pref, max_chat))

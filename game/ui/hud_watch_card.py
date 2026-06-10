@@ -38,7 +38,7 @@ WATCH_CARD_MAP_H = 160
 WATCH_CARD_STATS_H = 78
 # Snug vitals block when chat band is collapsed (no dead padding under stats rows).
 WATCH_CARD_STATS_COMPACT_H = 58
-WATCH_CARD_CHAT_H = 150
+WATCH_CARD_CHAT_H = 190  # WK130: 150 -> 190 (bigger usable chat band)
 WATCH_CARD_FULL_H_WITH_CHAT = (
     WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H + WATCH_CARD_CHAT_H
 )

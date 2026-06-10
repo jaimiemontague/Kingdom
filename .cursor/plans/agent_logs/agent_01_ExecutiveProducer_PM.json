@@ -7305,6 +7305,118 @@
           }
         }
       }
+    },
+    "wk130_sidebar_chat_ux": {
+      "sprint_meta": {
+        "created_utc": "2026-06-09T00:00:00Z",
+        "plan": ".cursor/plans/wk130_hero_world_roadmap.plan.md",
+        "roadmap": "WK130-WK134 Hero World"
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "pm_status_summary": "WK130 kickoff. Roadmap .cursor/plans/wk130_hero_world_roadmap.plan.md created (5 sprints WK130-WK134: sidebar/chat UX, items, POIs round-out, quests vertical slice per wk126 plan, LLM verification). WK130 = left sidebar + chat UX overhaul, UI-only, no sim/ai edits.",
+          "pm_next_actions_by_agent": {
+            "08_UXUIDirector": "Implement the full WK130 scope per roadmap section 'WK130' (authoritative). Summary: LEFT_COL_W 224->246 in game/ui/hud_layout.py + audit all consumers; chat heights HERO_MENU_CHAT_MIN_H->190 PREFERRED->280 cap 38%->45%, WATCH_CARD_CHAT_H->190; drag hit-tests use LEFT_SPLIT_HANDLE_HIT_H (8px); unify virtual_pointer_in_hud_chrome geometry with the render-path layout functions; clamp invariants under drag (no overlap, WK121 no-evict preserved); update layout tests pinned to old constants preserving contracts; add tests/test_wk130_sidebar_overhaul.py; capture headless screenshots for ALL visual paths.",
+            "11_QA": "After 08 lands: full pytest sweep + qa_smoke --quick + review the WK130 test for contract coverage; report any layout test that was weakened rather than re-derived."
+          },
+          "pm_agent_prompts": {
+            "08": "You are Agent 08 (UX/UI Director). Onboard via .cursor/rules/agent-08-ux-ui-onboarding.mdc and 01-studio-onboarding.mdc. Read .cursor/plans/wk130_hero_world_roadmap.plan.md section WK130 end-to-end - it is your full spec with current-state file/line pointers. You may edit: game/ui/* and tests/. You must NOT edit: game/sim*, ai/*, game/graphics/*, config.py. Verify: pytest the layout test families (wk130/wk115/wk121/wk99/wk100/wk101/wk103/wk61/wk96/wk97/wk98), then python tools/qa_smoke.py --quick (must PASS), then python tools/capture_screenshots.py --scenario ui_panels --out docs/screenshots/wk130 --seed 3 plus the pinned-chat and hero-menu-chat scenarios. Update your agent log (.cursor/plans/agent_logs/agent_08_*.json). DO NOT COMMIT. DO NOT run git. Report evidence: test counts, screenshot paths, exact constants changed."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "08"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "intelligence_by_agent": {
+              "08": "high",
+              "11": "low"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "UI-only sprint, single implementer to avoid file collisions; 08 high (cross-cutting layout invariants), 11 low (gate run + review)."
+          }
+        },
+        "r2_close": {
+          "pm_status_summary": "WK130 CLOSED. Agent 08 delivered: LEFT_COL_W 224->246, chat heights 190/280/45% + watch chat 190, 8px split-handle hit band, hit-test geometry unified with render path (ghost chrome area removed), no-overlap clamp + drag-sweep test, WK115 stale-height pop fixed for pinned heroes. Full suite 1614 passed/5 skipped, qa_smoke PASS, PM visually reviewed docs/screenshots/wk130 crops (pinned chat, hero menu chat 1920, sidebar split): edges flush, no overlap, chat larger.",
+          "evidence": {
+            "tests": "1614 passed, 5 skipped",
+            "qa_smoke": "PASS",
+            "screenshots": "docs/screenshots/wk130/ (+crops)",
+            "new_test": "tests/test_wk130_sidebar_overhaul.py (15 tests)"
+          },
+          "known_deferred": [
+            "headless perf-overlay artifact in captures (pre-existing harness)",
+            "chat popup translucent dim ghosting (pre-existing WK61-R9 design)",
+            "WK121 shrink cascade hardened but not re-architected"
+          ],
+          "pm_next_actions_by_agent": {}
+        }
+      }
+    },
+    "wk131_items_inventory": {
+      "sprint_meta": {
+        "created_utc": "2026-06-09T00:00:00Z",
+        "plan": ".cursor/plans/wk130_hero_world_roadmap.plan.md",
+        "roadmap_section": "WK131 — Items & Inventory Core"
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "pm_status_summary": "WK131 kickoff: items & inventory core per roadmap. Item registry (game/content/items.py), hero equip slots (weapon/armor/accessory) + bag, seeded loot drops (POIs/bosses/enemies), shops sourced from registry + hero selling, hero panel + watch card item UI, LLM snapshot extension. WK67 digest must stay byte-identical (loot/equip code unreachable in digest scenario; no RNG draws outside kill/interaction events).",
+          "pm_next_actions_by_agent": {
+            "05_GameplaySystems": "Items core: registry, hero inventory/equip, loot system, shop sourcing, economy selling, LLM snapshot fields. See roadmap WK131 scope items 1-4 and 6. Owns game/content/items.py (new), game/systems/loot.py (new), game/entities/hero.py, game/entities/hero_economy.py, game/entities/buildings/economic.py, game/systems/poi_interaction.py (loot handler item roll), ai/behaviors/shopping.py (sell flow), game/sim/hero_profile.py (snapshot), tests/test_wk131_items.py.",
+            "08_UXUIDirector": "After 05 lands: hero panel Gear section shows 3 equip slots + bag contents; watch-card stats band shows weapon/armor names. Dirty-gated. Owns game/ui/hero_panel.py, game/ui/hud_watch_card.py, tests/test_wk131_items_ui.py. Screenshot-verify.",
+            "11_QA": "After both: 10-sim-min seeded headless soak proving heroes loot+equip+sell at least once (enemies + loot POI present); full suite + qa_smoke + digest."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "05"
+              ],
+              [
+                "08"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "intelligence_by_agent": {
+              "05": "high",
+              "08": "medium",
+              "11": "medium"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "06",
+              "07",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "05 high (new cross-system design + digest reasoning), 08 medium (panel rows per existing pattern), 11 medium (new soak authorship)."
+          }
+        }
+      }
     }
   }
 }

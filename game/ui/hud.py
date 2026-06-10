@@ -819,16 +819,19 @@ class HUD:
             surface, game_state
         )
 
-        # WK115 BUG 1: for a solo (unpinned, non-chat) selected hero, learn the hero
-        # card's natural content height up front so the panel background + layout size
-        # to the content on THIS frame (no blank padded panel, no first-frame flash).
+        # WK115 BUG 1: for a (non-chat) selected hero, learn the hero card's natural
+        # content height up front so the panel background + layout size to the content
+        # on THIS frame (no blank padded panel, no first-frame flash). WK130: this now
+        # ALSO runs when a hero is pinned (main+watch split) — previously the pinned
+        # case laid out the first frame from a STALE last_content_height (whatever the
+        # panel rendered last), squeezing the main menu and letting its unclipped
+        # content bleed under the watch card for one frame.
         # The building panel already content-sizes its own blit; enemy/peasant fall
         # back to the legacy fraction (still no floating bar — the solo handle is gone).
         _sel_hero = game_state.get("selected_hero")
         if (
             _sel_hero is not None
             and game_state.get("selected_building") is None
-            and self._pin_slot.hero_id is None
             and not self._should_render_hero_menu_chat_popup(game_state)
         ):
             _main = self._left_main_rect
@@ -1104,8 +1107,11 @@ class HUD:
                 dco.hide()
             return None
 
+        from game.ui import hud_left_layout
         for _key, handle_rect in self._left_split_handle_rects.items():
-            if handle_rect.collidepoint((x, y)):
+            # WK130: hit-test the standard 8px grab band (LEFT_SPLIT_HANDLE_HIT_H),
+            # matching handle_sidebar_split_pointer_down / virtual_pointer_in_hud_chrome.
+            if hud_left_layout.split_handle_hit_rect(handle_rect).collidepoint((x, y)):
                 if self.handle_sidebar_split_pointer_down((x, y), game_state):
                     return "sidebar_split_drag"
                 return "sidebar_split_drag"
