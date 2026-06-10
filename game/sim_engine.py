@@ -37,6 +37,7 @@ from game.systems import (
     NeutralBuildingSystem,
 )
 from game.systems.buffs import BuffSystem
+from game.systems.cleric_heal import ClericHealSystem
 from game.systems.difficulty import DifficultySystem, DifficultyLevel
 from game.systems.wave_events import WaveEventSystem
 from game.building_factory import BuildingFactory
@@ -61,6 +62,33 @@ from game.entities.builder_peasant import BuilderPeasant
 from game.entities.nature import LogStack, Tree
 from game.systems.nature import NatureSystem
 from game.systems.poi_interaction import POIInteractionSystem
+
+
+# WK123 C2: how long (sim-ms) a dead hero is retained in ``self.heroes`` after death.
+# Within this grace window the hero keeps building a ``HeroProfileSnapshot`` (so the
+# watch card, recall button, pin-name capture, low-health-alert cooldown and the
+# memorial/pin-liveness reads at hud.py:776/783 see exactly what they see today for a
+# freshly-dead pinned hero); past it, the hero is culled in the dead-entity cleanup
+# block so per-frame profile cost is bounded by O(alive + recently-dead) instead of
+# O(all-time hires). 30 s comfortably exceeds the pin's 10 s fallen-display window
+# (PIN_FALLEN_DISPLAY_MS) so nothing the player can interact with changes inside it.
+DEAD_HERO_RETENTION_MS = 30_000
+
+# ---------------------------------------------------------------------------
+# Mythos S5 (sim-tick) env gates — read once at import. Each defaults to the
+# OPTIMIZED path; the hatch restores pre-change behavior for A/B measurement
+# (tools/mythos_tick_bench.py) and debugging. All optimized paths are
+# value-equivalent to the originals (parity-pinned in tests/test_mythos_sim_tick.py;
+# the WK67 AI-decision digest stays byte-identical).
+# ---------------------------------------------------------------------------
+import os as _os
+
+# tree-growth-incremental: "1" restores the per-tick full dict rebuild.
+_TREE_DICT_FULL_REBUILD = _os.environ.get("KINGDOM_TREE_DICT_FULL_REBUILD", "0") == "1"
+# tree-blocking-set-walkability: "0" detaches the set from World (fallback chain).
+_TREE_BLOCK_SET_ENABLED = _os.environ.get("KINGDOM_TREE_BLOCK_SET", "1") != "0"
+# lazy-hero-profiles: "0" restores eager per-call profile builds.
+_LAZY_HERO_PROFILES = _os.environ.get("KINGDOM_LAZY_HERO_PROFILES", "1") != "0"
 
 
 class SimEngine:
@@ -112,8 +140,16 @@ class SimEngine:
         # WK44 Stage 2: nature growth system.
         self.nature_system = NatureSystem()
         self._tree_growth_by_tile: dict[tuple[int, int], float] = {}
+        # Mythos S5 (tree-blocking-set-walkability): tiles whose tree growth is
+        # >= 0.75 (the blocking threshold, world.py is_walkable/is_buildable).
+        # Maintained in lockstep with _tree_growth_by_tile via _set_tree_growth /
+        # _remove_tree_growth / _rebuild_tree_blocking_set so World's TREE branch
+        # is one set lookup instead of the 5-call growth-lookup chain.
+        self._blocked_tree_tiles: set[tuple[int, int]] = set()
         self._init_trees_from_world()
         self.world.tree_growth_lookup = self._tree_growth_lookup
+        if _TREE_BLOCK_SET_ENABLED:
+            self.world.blocked_tree_tiles = self._blocked_tree_tiles
 
         # WK60: Difficulty system (shared by spawner, lair system, wave events)
         self.difficulty_system = DifficultySystem()
@@ -126,6 +162,9 @@ class SimEngine:
         self.wave_event_system = WaveEventSystem(difficulty=self.difficulty_system)
         self.neutral_building_system = NeutralBuildingSystem(self.world)
         self.buff_system = BuffSystem()
+        # WK124-T4a: clerics heal wounded allied heroes (deterministic, no RNG).
+        # Inert when no ally is wounded -> keeps the WK67 AI-decision digest green.
+        self.cleric_heal_system = ClericHealSystem()
         self.building_factory = BuildingFactory()
         self.bounty_system = BountySystem()
         self.poi_interaction_system = POIInteractionSystem()
@@ -150,6 +189,14 @@ class SimEngine:
         # Fog-of-war dirty check state (Ursina consumes via snapshot.fog_revision)
         self._fog_revision = 0
         self._fog_revealers_snapshot = None
+
+        # WK125-T2: publish the pause-frozen sim clock NOW (= 0) so entities
+        # constructed before the first update() (e.g. starter heroes/buildings)
+        # stamp their timestamps from sim-time, not the wall clock. Without this
+        # now_ms() would still fall back to pygame.time.get_ticks() during the
+        # construction window, giving a huge first-stamp (negative stuck-delta /
+        # delayed first meal) on the very first tick.
+        set_sim_now_ms(self._sim_now_ms)
 
     def _reset_global_sim_state(self) -> None:
         """WK68 R0: reset every module/class-global piece of sim state per build.
@@ -236,6 +283,33 @@ class SimEngine:
     def _init_trees_from_world(self) -> None:
         from game.sim import lumber
         lumber.init_trees_from_world(self)
+
+    # ------------------------------------------------------------------
+    # Mythos S5: tree growth index maintenance (dict + blocking-tile set)
+    # ------------------------------------------------------------------
+    # The blocking set mirrors {k for k, g in _tree_growth_by_tile.items() if
+    # g >= 0.75} (the world.py walkability threshold). ALL growth-dict writes
+    # must go through these helpers (or _rebuild_tree_blocking_set after a bulk
+    # replace) so the two can never desync — pinned by tests/test_mythos_sim_tick.py.
+
+    def _set_tree_growth(self, key: tuple[int, int], growth: float) -> None:
+        self._tree_growth_by_tile[key] = growth
+        if growth >= 0.75:
+            self._blocked_tree_tiles.add(key)
+        else:
+            self._blocked_tree_tiles.discard(key)
+
+    def _remove_tree_growth(self, key: tuple[int, int]) -> None:
+        self._tree_growth_by_tile.pop(key, None)
+        self._blocked_tree_tiles.discard(key)
+
+    def _rebuild_tree_blocking_set(self) -> None:
+        """Recompute the blocking set from the growth dict (bulk-replace sites)."""
+        blocked = self._blocked_tree_tiles
+        blocked.clear()
+        for k, g in self._tree_growth_by_tile.items():
+            if g >= 0.75:
+                blocked.add(k)
 
     def _tree_growth_lookup(self, tx: int, ty: int) -> float:
         from game.sim import lumber
@@ -423,16 +497,42 @@ class SimEngine:
         llm_available: bool,
         ui_cursor_pos,
     ) -> dict:
-        from game.sim.hero_profile import build_hero_profile_snapshot
+        from game.sim.hero_profile import LazyHeroProfiles, build_hero_profile_snapshot
         from game.sim.timebase import now_ms as sim_now_ms
 
         _ms = int(sim_now_ms())
-        hero_profiles_by_id: dict[str, object] = {}
+        # WK123 C2: profiles cover alive heroes plus dead heroes still inside
+        # the retention window. ``build_hero_profile_snapshot`` is the heaviest
+        # per-hero per-frame work (it sorts known_places + profile_memory), so
+        # skipping long-dead heroes bounds this O(all-time hires) cost to
+        # O(alive + recently-dead). The window is enforced here AND by the cull in
+        # ``tick`` — heroes past it are removed from self.heroes entirely. Within the
+        # window the profile is identical to today's, preserving the watch-card /
+        # recall / memorial reads for a freshly-dead pinned hero.
+        #
+        # Mythos S5 (lazy-hero-profiles): the eligible-id set is resolved HERE
+        # (same as the old eager loop), but each snapshot is built only on first
+        # HUD access (LazyHeroProfiles) — repo-wide the mapping is read via
+        # .get()/`in` for at most the pinned/selected hero per frame, so the
+        # ~26-hero x 20Hz eager build was almost entirely waste.
+        # KINGDOM_LAZY_HERO_PROFILES=0 restores the eager build (A/B hatch).
+        _eligible: dict[str, object] = {}
         for _h in self.heroes:
             _hid = getattr(_h, "hero_id", None)
             if _hid is None:
                 continue
-            hero_profiles_by_id[str(_hid)] = build_hero_profile_snapshot(_h, self, now_ms=_ms)
+            if not getattr(_h, "is_alive", True):
+                _dead_since = getattr(_h, "_dead_since_ms", None)
+                if _dead_since is not None and (_ms - int(_dead_since)) > DEAD_HERO_RETENTION_MS:
+                    continue
+            _eligible[str(_hid)] = _h
+        if _LAZY_HERO_PROFILES:
+            hero_profiles_by_id: dict[str, object] = LazyHeroProfiles(_eligible, self, _ms)
+        else:
+            hero_profiles_by_id = {
+                _hid: build_hero_profile_snapshot(_h, self, now_ms=_ms)
+                for _hid, _h in _eligible.items()
+            }
         # WK67 Move 5: dead sim-side selection reads removed. Selection is
         # presentation-owned; the GameEngine wrapper overrides these keys from
         # SelectionState and recomputes selected_hero_profile (engine.py:1475-1486).
@@ -605,10 +705,19 @@ class SimEngine:
             underground_areas=getattr(self, 'underground_areas', None),
             rubble_records=tuple(getattr(self, 'rubble_records', ())),
             # WK66 Round A-1: frozen render DTOs (additive; consumers flip in W2).
-            hero_dtos=tuple(unit_dto_from(h, "hero") for h in self.heroes),
+            # WK123 C2: skip dead heroes/peasants/guards at build time. Every render
+            # consumer of these DTO tuples already early-outs on ``not is_alive``
+            # (ursina_unit_sync :117/:289/:350, instanced_unit_renderer :466/:517/:537/:580,
+            # and the pygame registry render_hero/peasant/guard via hero_renderer:130 /
+            # worker_renderer:148,234 / registry:100) — so a dead unit's DTO is built every
+            # frame only to be discarded. Skipping it removes the all-time accumulation that
+            # made per-frame DTO cost scale with total hires instead of with the living set.
+            # Enemies/guards are already culled when dead (cleanup block below), but the
+            # guard filter is a cheap belt-and-suspenders guard against a mid-tick death.
+            hero_dtos=tuple(unit_dto_from(h, "hero") for h in self.heroes if getattr(h, "is_alive", True)),
             enemy_dtos=tuple(unit_dto_from(e, "enemy") for e in self.enemies),
-            peasant_dtos=tuple(unit_dto_from(p, "peasant") for p in self.peasants),
-            guard_dtos=tuple(unit_dto_from(g, "guard") for g in self.guards),
+            peasant_dtos=tuple(unit_dto_from(p, "peasant") for p in self.peasants if getattr(p, "is_alive", True)),
+            guard_dtos=tuple(unit_dto_from(g, "guard") for g in self.guards if getattr(g, "is_alive", True)),
             tax_collector_dto=(
                 unit_dto_from(_tax, "tax_collector") if _tax is not None else None
             ),
@@ -650,12 +759,15 @@ class SimEngine:
         from game.systems.navigation import get_pathfinding_budget
         get_pathfinding_budget().begin_frame()
 
-        # Deterministic sim-time accounting
-        if DETERMINISTIC_SIM:
-            self._sim_now_ms += int(round(float(dt) * 1000.0))
-            set_sim_now_ms(self._sim_now_ms)
-        else:
-            set_sim_now_ms(None)
+        # Sim-time accounting: ALWAYS drive a monotonic, pause-frozen sim clock so
+        # now_ms() never falls back to the real wall clock (pygame.time.get_ticks()).
+        # update() is the ONLY set_sim_now_ms caller and is skipped while paused
+        # (lifecycle._prepare_sim_and_camera returns False), so this clock freezes on
+        # pause and never jumps on resume / with app uptime. DETERMINISTIC_SIM now
+        # governs ONLY RNG/order determinism, not the clock — DET=1 already used this
+        # exact accumulator, so the WK67 digest stays byte-identical.
+        self._sim_now_ms += int(round(float(dt) * 1000.0))
+        set_sim_now_ms(self._sim_now_ms)
 
         # Ensure all buildings have event bus for interior enter/exit events.
         for building in self.buildings:
@@ -665,21 +777,50 @@ class SimEngine:
         system_ctx = self._build_system_context()
 
         # WK44 Stage 2: tree growth (affects world blocking + renderer scale).
-        pre_keys = set(self._tree_growth_by_tile.keys())
+        # Mythos S5 (tree-growth-incremental): NatureSystem.tick now reports the
+        # trees whose growth actually changed (growth is discrete — 2-minute stage
+        # boundaries — so most ticks change nothing). We update only those keys
+        # instead of rebuilding the whole ~2k-entry dict + key-tuple churn every
+        # tick. Removal paths (chop / building footprint) already pop their keys
+        # in game/sim/lumber.py, so the incremental mapping is value-identical to
+        # the old full rebuild (pinned by tests/test_mythos_sim_tick.py parity).
+        # KINGDOM_TREE_DICT_FULL_REBUILD=1 restores the pre-change rebuild (A/B hatch).
+        pre_keys = set(self._tree_growth_by_tile.keys()) if _TREE_DICT_FULL_REBUILD else ()
         try:
             # WK45: NatureSystem may spawn new saplings and may need world context.
-            self.nature_system.tick(dt, self.trees, world=self.world, buildings=self.buildings)  # type: ignore[call-arg]
+            changed_trees = self.nature_system.tick(dt, self.trees, world=self.world, buildings=self.buildings)  # type: ignore[call-arg]
         except TypeError:
-            self.nature_system.tick(dt, self.trees)
+            changed_trees = self.nature_system.tick(dt, self.trees)
 
         # Ensure world tiles reflect newly spawned saplings (TileType.TREE immediately),
         # and keep growth lookup consistent for buildability/blocking rules.
-        if self.trees:
-            # First refresh growth lookup so newly spawned saplings don't default to 1.0.
-            self._tree_growth_by_tile = {
-                t.key: float(getattr(t, "growth_percentage", 0.25)) for t in self.trees
-            }
-            new_keys = set(self._tree_growth_by_tile.keys()) - pre_keys
+        if _TREE_DICT_FULL_REBUILD or changed_trees is None:
+            # Pre-change path (env hatch, or a legacy/stubbed NatureSystem.tick that
+            # returns None — fall back to the full rebuild so the dict can't go stale).
+            if self.trees:
+                # First refresh growth lookup so newly spawned saplings don't default to 1.0.
+                self._tree_growth_by_tile = {
+                    t.key: float(getattr(t, "growth_percentage", 0.25)) for t in self.trees
+                }
+                self._rebuild_tree_blocking_set()
+                new_keys = set(self._tree_growth_by_tile.keys()) - set(pre_keys)
+                if new_keys:
+                    try:
+                        from game.world import TileType
+
+                        for tx, ty in sorted(new_keys):
+                            if int(self.world.get_tile(int(tx), int(ty))) != int(TileType.TREE):
+                                self.world.set_tile(int(tx), int(ty), int(TileType.TREE))
+                    except Exception:
+                        pass
+        elif changed_trees:
+            growth_map = self._tree_growth_by_tile
+            new_keys: list[tuple[int, int]] = []
+            for t in changed_trees:
+                k = t.key
+                if k not in growth_map:
+                    new_keys.append(k)
+                self._set_tree_growth(k, float(getattr(t, "growth_percentage", 0.25)))
             if new_keys:
                 try:
                     from game.world import TileType
@@ -719,6 +860,9 @@ class SimEngine:
         # Fog + buffs + early pacing (castle from game_state)
         self._update_fog_of_war()
         self.buff_system.update(system_ctx, dt)
+        # WK124-T4a: cleric heals (mirrors the buff_system tick; no-op when no
+        # ally is wounded, so the WK67 digest scenario stays byte-identical).
+        self.cleric_heal_system.update(system_ctx, dt)
         castle = game_state.get("castle")
         self._maybe_apply_early_pacing_nudge(dt, castle)
 
@@ -796,15 +940,50 @@ class SimEngine:
         cleanup_tick = getattr(self, '_cleanup_tick', 0)
         self._cleanup_tick = cleanup_tick + 1
         if getattr(self, '_dead_entity_dirty', False) or cleanup_tick % 60 == 0:
+            # WK125-T1: read death time through timebase.now_ms() — the SAME single
+            # clock the get_game_state profile-build retention window reads (hero_profile.py).
+            # update() now ALWAYS publishes self._sim_now_ms via set_sim_now_ms in BOTH
+            # modes, so now_ms() == self._sim_now_ms here in real play; the pre-WK125
+            # wall-clock divergence (now_ms() on pygame ticks while self._sim_now_ms
+            # stayed 0 in the non-deterministic path) is gone. We deliberately keep the
+            # timebase read (not self._sim_now_ms) so the death-stamp and the profile
+            # build remain a SINGLE clock even if a caller drives time via timebase
+            # directly — the WK123-C2 contract the dead-hero TTL test pins.
+            from game.sim.timebase import now_ms as _sim_now_ms
+            _now_ms = int(_sim_now_ms())
             # WK60 Feature 3: decrement guild hero count for newly dead heroes
             for hero in self.heroes:
                 if not getattr(hero, "is_alive", True) and not getattr(hero, "_guild_death_processed", False):
                     hero._guild_death_processed = True
+                    # WK123 C2: stamp the moment of death (sim-ms) so the profile-build
+                    # retention window in get_game_state and the hero cull below share a
+                    # single death time. Stamped exactly once, alongside the existing
+                    # one-shot guild-death bookkeeping.
+                    hero._dead_since_ms = _now_ms
                     home = getattr(hero, "home_building", None)
                     if home is not None and hasattr(home, "on_hero_death"):
                         home.on_hero_death()
             self.enemies = [e for e in self.enemies if getattr(e, "is_alive", False)]
             self.guards = [g for g in self.guards if getattr(g, "is_alive", False)]
+            # WK123 C2: cull dead PEASANTS immediately (they have no memorial / pin /
+            # profile UX — nothing reads a dead peasant — so this mirrors the
+            # enemy/guard cull and bounds self.peasants by the living set).
+            self.peasants = [p for p in self.peasants if getattr(p, "is_alive", False)]
+            # WK123 C2: TTL-cull dead HEROES. A dead hero is kept (and keeps building a
+            # profile) until DEAD_HERO_RETENTION_MS after death, preserving the memorial /
+            # pin-liveness / watch-card reads for a freshly-dead pinned hero; past the
+            # window it is removed so per-frame hero work is bounded by O(alive +
+            # recently-dead) instead of O(all-time hires). A hero that died this tick may
+            # not yet carry a stamp (defensive ``is None`` keeps it until next pass).
+            self.heroes = [
+                h
+                for h in self.heroes
+                if getattr(h, "is_alive", True)
+                or (
+                    getattr(h, "_dead_since_ms", None) is None
+                    or (_now_ms - int(getattr(h, "_dead_since_ms"))) <= DEAD_HERO_RETENTION_MS
+                )
+            ]
             self._dead_entity_dirty = False
 
         # WK61-FIX: Destroyed-building cleanup (was missing from SimEngine — only ran

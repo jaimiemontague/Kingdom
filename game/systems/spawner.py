@@ -3,6 +3,7 @@ Enemy spawning system.
 """
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 from config import (
@@ -47,6 +48,27 @@ _ENEMY_POOL_LATE = [
 ]
 
 
+# WK128: stagger multi-enemy spawn bursts across consecutive sim ticks so a wave
+# does not pay all entity-construction + first-scan cost in one tick (FPS spike).
+# KINGDOM_SPAWN_STAGGER=0 restores the legacy single-tick burst; unset/other values
+# enable staggering; an integer >= 2 overrides the per-tick creation cap.
+_DEFAULT_STAGGER_CAP = 4
+
+
+def spawn_stagger_cap() -> int:
+    """Per-tick enemy creation cap. 0 = staggering disabled (burst mode)."""
+    raw = os.environ.get("KINGDOM_SPAWN_STAGGER", "1").strip()
+    try:
+        val = int(raw)
+    except ValueError:
+        return _DEFAULT_STAGGER_CAP
+    if val == 0:
+        return 0
+    if val >= 2:
+        return val
+    return _DEFAULT_STAGGER_CAP
+
+
 class EnemySpawner(GameSystem):
     """Manages enemy wave spawning."""
 
@@ -70,7 +92,10 @@ class EnemySpawner(GameSystem):
         self.enemies_per_wave = 1
         self.total_spawned = 0
         self.enabled = True
-        
+        # WK128: queued (enemy_cls, x, y) plans released a few per tick (0 = burst).
+        self.stagger_cap = spawn_stagger_cap()
+        self._pending_spawns: list[tuple] = []
+
     def get_spawn_position(self) -> tuple:
         """Get a random spawn position at the edge of the map."""
         rng = getattr(self, "rng", get_rng("enemy_spawner"))
@@ -161,7 +186,6 @@ class EnemySpawner(GameSystem):
             interval_mult = self.difficulty.get_multiplier("spawn_interval")
 
         self.spawn_timer += dt * 1000
-        new_enemies = []
 
         current_interval = self.first_wave_interval_ms if self.total_spawned == 0 else self.spawn_interval
         effective_interval = current_interval * interval_mult
@@ -174,24 +198,19 @@ class EnemySpawner(GameSystem):
             if self.difficulty is not None:
                 epw = max(1, int(round(epw * self.difficulty.get_multiplier("enemies_per_wave"))))
 
-            # Spawn enemies for this wave
+            # Plan enemies for this wave (positions/types drawn now so RNG order and
+            # wave composition are identical to the legacy single-tick burst).
             for _ in range(epw):
                 if not self._spawned_first_wave_archer:
                     x, y = self._get_first_wave_spawn_position()
-                    enemy = SkeletonArcher(x, y)
+                    enemy_cls = SkeletonArcher
                     self._spawned_first_wave_archer = True
                 else:
                     x, y = self.get_spawn_position()
                     # WK60: mixed enemy types instead of Goblins-only
                     enemy_cls = self._pick_enemy_class()
-                    enemy = enemy_cls(x, y)
 
-                # WK60: apply difficulty multipliers to enemy stats on spawn
-                # WK72: scaling consolidated into DifficultySystem.apply_to_enemy
-                if self.difficulty is not None:
-                    self.difficulty.apply_to_enemy(enemy)
-
-                new_enemies.append(enemy)
+                self._pending_spawns.append((enemy_cls, x, y))
                 self.total_spawned += 1
 
             # Increase difficulty every few waves
@@ -201,6 +220,23 @@ class EnemySpawner(GameSystem):
                 self.enemies_per_wave = min(6, 1 + (self.wave_number // 3))
                 # WK60: faster interval reduction (-500 from -250), lower floor (15000 from 21000)
                 self.spawn_interval = max(15000, self.spawn_interval - 500)
+
+        # WK128: release queued spawns, at most ``stagger_cap`` constructions per tick
+        # (cap 0 = burst mode: construct everything queued this tick).
+        if not self._pending_spawns:
+            return []
+        cap = self.stagger_cap
+        batch = self._pending_spawns if cap <= 0 else self._pending_spawns[:cap]
+        self._pending_spawns = [] if cap <= 0 else self._pending_spawns[cap:]
+
+        new_enemies = []
+        for enemy_cls, x, y in batch:
+            enemy = enemy_cls(x, y)
+            # WK60: apply difficulty multipliers to enemy stats on spawn
+            # WK72: scaling consolidated into DifficultySystem.apply_to_enemy
+            if self.difficulty is not None:
+                self.difficulty.apply_to_enemy(enemy)
+            new_enemies.append(enemy)
 
         return new_enemies
     
@@ -216,6 +252,7 @@ class EnemySpawner(GameSystem):
         self.enemies_per_wave = 1
         self.total_spawned = 0
         self._spawned_first_wave_archer = False
+        self._pending_spawns = []
         self.spawn_interval = (
             GOBLIN_SPAWN_INTERVAL * SPAWNER_GOBLIN_INTERVAL_MULT + SPAWNER_EXTRA_SPAWN_DELAY_MS
         )

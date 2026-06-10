@@ -17,6 +17,60 @@ if TYPE_CHECKING:  # one-way edge: ursina_app imports THIS module (lazily in the
     from game.graphics.ursina_app import UrsinaApp  # noqa: F401
 
 
+def _ensure_igloop_bracket(owner) -> None:
+    """Mythos S0 (`gate-measurement-harness`): bracket Panda's ``igLoop`` task with two
+    tiny taskMgr tasks at sort 49/51. ``igLoop`` (stock ShowBase sort 50) is the C++
+    cull + draw + buffer-swap + vsync/present wait — the whole "dt minus run_frame CPU"
+    block the slowlog could never attribute. The post task (sort 51) stores the elapsed
+    ms on ``owner._igloop_last_ms`` (read by run_frame's [frameavg]/[slowframe2] lines —
+    one frame stale there, since this frame's igLoop runs AFTER run_frame returns) and
+    appends an ``igloop`` stage sample for the KINGDOM_URSINA_FPS_PROBE summary/soak CSV.
+
+    Installed lazily on the first instrumented frame; dead-by-default — run_frame only
+    calls this when KINGDOM_FPS_SLOWLOG or KINGDOM_URSINA_FPS_PROBE is set. One-time
+    sanity check: if igLoop is not found at sort 50 (non-stock taskMgr), the bracket is
+    NOT installed (a misplaced bracket would attribute the wrong tasks).
+    """
+    if getattr(owner, "_igloop_bracket_installed", False):
+        return
+    owner._igloop_bracket_installed = True
+    owner._igloop_last_ms = 0.0
+    try:
+        from direct.task.TaskManagerGlobal import taskMgr
+        from direct.task import Task
+
+        ig_tasks = taskMgr.getTasksNamed("igLoop")
+        ig_sort = ig_tasks[0].getSort() if ig_tasks else None
+        if ig_sort != 50:
+            print(
+                f"[mythos] igloop bracket NOT installed (igLoop sort={ig_sort!r}, expected 50)",
+                flush=True,
+            )
+            return
+
+        state = {"t0": 0.0}
+
+        def _igloop_pre(task):
+            state["t0"] = pytime.perf_counter()
+            return Task.cont
+
+        def _igloop_post(task):
+            t0 = state["t0"]
+            if t0 > 0.0:
+                owner._igloop_last_ms = (pytime.perf_counter() - t0) * 1000.0
+                try:
+                    owner._record_fps_probe_stage_ms("igloop", t0)
+                except Exception:
+                    pass
+            return Task.cont
+
+        taskMgr.add(_igloop_pre, "kingdom-igloop-pre", sort=49)
+        taskMgr.add(_igloop_post, "kingdom-igloop-post", sort=51)
+        print("[mythos] igloop bracket installed (sorts 49/51 around igLoop@50)", flush=True)
+    except Exception as exc:
+        print(f"[mythos] igloop bracket install failed: {exc}", flush=True)
+
+
 def run_frame(owner: "UrsinaApp", dt) -> None:
     pan_speed = 55.0
 
@@ -42,6 +96,17 @@ def run_frame(owner: "UrsinaApp", dt) -> None:
     _d_renderer = 0.0
     _d_hudrender = 0.0
     _d_hudupload = 0.0
+    # Mythos S0 (`gate-measurement-harness`): time the previously-untracked blocks.
+    # ``_d_cam`` sums the three camera/fog/pointer CPU sub-blocks inside run_frame
+    # (canvas-sync + pointer-motion pre-tick; zoom/FOV mid-block; pan/terrain-clamp/
+    # auto-follow/zone-fog post-HUD) and the igLoop bracket (installed below) covers
+    # the Panda cull/draw/swap/present wait OUTSIDE run_frame. Both are dead-by-default
+    # behind the SAME existing env flags (KINGDOM_FPS_SLOWLOG / KINGDOM_URSINA_FPS_PROBE).
+    _timing = _slowlog or bool(getattr(owner, "_fps_probe_enabled", False))
+    _d_cam = 0.0
+    if _timing and not getattr(owner, "_igloop_bracket_installed", False):
+        _ensure_igloop_bracket(owner)
+    _cam_t0 = pytime.perf_counter() if _timing else 0.0
 
     eng = owner.engine
 
@@ -88,6 +153,9 @@ def run_frame(owner: "UrsinaApp", dt) -> None:
                 world_xz=hit,
                 tile=tile,
             )
+
+    if _timing:  # close cam sub-block 1 (canvas sync + pointer motion + pending click)
+        _d_cam += (pytime.perf_counter() - _cam_t0) * 1000.0
 
     _stage_t0 = pytime.perf_counter()
     owner.engine.tick_simulation(dt)
@@ -138,6 +206,9 @@ def run_frame(owner: "UrsinaApp", dt) -> None:
             owner._maybe_auto_screenshot_then_quit()
             return
 
+    if _timing:  # open cam sub-block 2 (zoom keys + FOV sync + dolly align)
+        _cam_t0 = pytime.perf_counter()
+
     # WK22 R3: Wheel / +/- already adjust engine.zoom in InputHandler — drive 3D FOV from that.
     # Held Q/E apply the same multiplicative zoom (cursor-anchored via zoom_by) so coords stay consistent.
     hk = held_keys
@@ -160,6 +231,9 @@ def run_frame(owner: "UrsinaApp", dt) -> None:
     ecam = getattr(owner, "_editor_camera", None)
     if ecam is not None:
         ecam.target_z = camera.z
+
+    if _timing:  # close cam sub-block 2
+        _d_cam += (pytime.perf_counter() - _cam_t0) * 1000.0
 
     _stage_t0 = pytime.perf_counter()
     snapshot = owner.engine.build_snapshot()
@@ -192,6 +266,9 @@ def run_frame(owner: "UrsinaApp", dt) -> None:
         _d_hudupload = (pytime.perf_counter() - _stage_t0) * 1000.0
     # Fullscreen ↔ windowed toggles with a static HUD skip texture upload; still resync filter.
     owner._sync_hud_texture_filter_mode(owner._hud_composite_texture)
+
+    if _timing:  # open cam sub-block 3 (pan + layer lerp + terrain clamp + follow + zone fog)
+        _cam_t0 = pytime.perf_counter()
 
     # Pan parallel to X/Z floor (world units / sec). Skip while typing in hero chat.
     if not _chat_captures_keyboard():
@@ -295,12 +372,24 @@ def run_frame(owner: "UrsinaApp", dt) -> None:
     except Exception:
         pass
 
+    if _timing:
+        # Close cam sub-block 3 and record the per-frame ``cam`` stage sample for the
+        # FPS probe (synthetic started_at because the stage is the SUM of three
+        # non-contiguous sub-blocks; the recorder computes now - started_at).
+        _d_cam += (pytime.perf_counter() - _cam_t0) * 1000.0
+        owner._record_fps_probe_stage_ms("cam", pytime.perf_counter() - _d_cam / 1000.0)
+
     # WK122 (diagnostic, env-gated, dead-by-default): per-frame timing summary.
     if _slowlog:
         _total_ms = (pytime.perf_counter() - _slow_t0) * 1000.0
         _dt_ms = float(dt or 0.0) * 1000.0
         _cpu_sum = _d_tick + _d_renderer + _d_hudrender + _d_hudupload
         _untracked = _total_ms - _cpu_sum
+        # Mythos S0: igLoop time is measured by the sort-49/51 bracket AROUND the base
+        # frame step, so the freshest completed value is the PREVIOUS frame's (this
+        # frame's igLoop runs after run_frame returns). Negligible drift over the
+        # 120-frame [frameavg] window.
+        _igl_prev = float(getattr(owner, "_igloop_last_ms", 0.0) or 0.0)
         eng = owner.engine
         try:
             _ne = len([e for e in getattr(eng, "enemies", []) if getattr(e, "is_alive", True)])
@@ -310,16 +399,17 @@ def run_frame(owner: "UrsinaApp", dt) -> None:
         _nh = len(getattr(eng, "heroes", []) or [])
         # rolling accumulators for a periodic summary
         owner._slowlog_frames = getattr(owner, "_slowlog_frames", 0) + 1
-        owner._slowlog_accum = getattr(owner, "_slowlog_accum", None) or {"dt":0.0,"tick":0.0,"rend":0.0,"hudr":0.0,"hudu":0.0,"untr":0.0}
+        owner._slowlog_accum = getattr(owner, "_slowlog_accum", None) or {"dt":0.0,"tick":0.0,"rend":0.0,"hudr":0.0,"hudu":0.0,"untr":0.0,"cam":0.0,"igl":0.0}
         a = owner._slowlog_accum
         a["dt"] += _dt_ms; a["tick"] += _d_tick; a["rend"] += _d_renderer
         a["hudr"] += _d_hudrender; a["hudu"] += _d_hudupload; a["untr"] += _untracked
+        a["cam"] = a.get("cam", 0.0) + _d_cam; a["igl"] = a.get("igl", 0.0) + _igl_prev
         # Per-slow-frame line (frames slower than ~40ms = sub-25fps)
         if _dt_ms > 40.0:
-            print(f"[slowframe] dt={_dt_ms:.1f}ms run_frame_cpu={_total_ms:.1f} tick={_d_tick:.1f} rend={_d_renderer:.1f} hudR={_d_hudrender:.1f} hudU={_d_hudupload:.1f} untracked={_untracked:.1f} | enemies={_ne} buildings={_nb} heroes={_nh}", flush=True)
-            print(f"[slowframe2] gpu_or_ursina={_dt_ms - _total_ms:.1f}ms (dt - run_frame_cpu)", flush=True)
+            print(f"[slowframe] dt={_dt_ms:.1f}ms run_frame_cpu={_total_ms:.1f} tick={_d_tick:.1f} rend={_d_renderer:.1f} hudR={_d_hudrender:.1f} hudU={_d_hudupload:.1f} cam={_d_cam:.1f} untracked={_untracked:.1f} | enemies={_ne} buildings={_nb} heroes={_nh}", flush=True)
+            print(f"[slowframe2] gpu_or_ursina={_dt_ms - _total_ms:.1f}ms (dt - run_frame_cpu) igl_prev={_igl_prev:.1f}ms", flush=True)
         # Periodic rolling summary every 120 frames
         if owner._slowlog_frames % 120 == 0:
             n = 120.0
-            print(f"[frameavg] over {int(n)}f: dt={a['dt']/n:.1f}ms (=~{1000.0*n/max(a['dt'],1e-6):.1f}fps) | tick={a['tick']/n:.1f} rend={a['rend']/n:.1f} hudR={a['hudr']/n:.1f} hudU={a['hudu']/n:.1f} untracked={a['untr']/n:.1f} | E={_ne} B={_nb}", flush=True)
+            print(f"[frameavg] over {int(n)}f: dt={a['dt']/n:.1f}ms (=~{1000.0*n/max(a['dt'],1e-6):.1f}fps) | tick={a['tick']/n:.1f} rend={a['rend']/n:.1f} hudR={a['hudr']/n:.1f} hudU={a['hudu']/n:.1f} cam={a.get('cam',0.0)/n:.1f} igl={a.get('igl',0.0)/n:.1f} untracked={a['untr']/n:.1f} | E={_ne} B={_nb}", flush=True)
             for k in a: a[k] = 0.0

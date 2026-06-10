@@ -2289,6 +2289,146 @@
           "notes": "Instancing reverted to opt-in; default legacy renders units; instanced texture bug deferred to interactive debugging. Did NOT commit/add/push."
         }
       }
+    },
+    "wk124_hero_kit_ai_and_ui_fixes": {
+      "sprint_meta": {
+        "created_utc": "2026-06-03T00:00:00Z",
+        "plan_ref": ".cursor/plans/wk124_hero_kit_ai_and_ui_fixes.plan.md",
+        "notes": "WK124 Wave 1 (Agent 09): T1 tax-gold $N draw-on-top fix + T5 builder-peasant P-circle fix. Render-only/sprite-build edits in game/graphics/ursina_unit_overlays.py and game/graphics/worker_sprites.py + 2 headless tests. VFX wave-2 (T3c/T4c in vfx.py / ursina_misc_props_sync.py) intentionally NOT touched -- later message after Agent 05 lands kind:'magic' + HERO_HEAL."
+      },
+      "rounds": {
+        "r1": {
+          "sprint_id": "wk124_hero_kit_ai_and_ui_fixes",
+          "round_id": "r1",
+          "status": "done",
+          "role": "Agent 09 ArtDirector (Wave 1). Two precise, behavior-preserving fixes from the PM-diagnosed tickets: T1 (overlay render-bin ordering) and T5 (worker-sprite missing-action fallback). No VFX/vfx.py work this round.",
+          "what_i_changed": {
+            "game/graphics/ursina_unit_overlays.py": [
+              "configure_ks_overlay: fixed the SELF-CANCELLING bin. OLD order: set_bin('fixed',60) THEN always_on_top=True -- Ursina's always_on_top setter internally calls set_bin('fixed',0)+depth-off, clobbering the high bin back to sort 0, so labels ended at fixed,0 and drew UNDER buildings (fixed,1). NEW order: billboard=True; always_on_top=True FIRST (let its setter reset bin->0 + depth off); then re-assert set_depth_test(False)+set_depth_write(False); then set_bin('fixed',110) LAST so nothing clobbers it. 110 > buildings(fixed,1) AND instanced units(fixed,100).",
+              "Removed the dead `ent.render_queue = 2` line (no-op for Text -- Text has no .model; setter only acts on self.model).",
+              "Kept unchanged: the early-return _ks_overlay_cfg guard, the z>=0 -> z=-0.02 nudge, the trailing ent._ks_overlay_cfg=True. Updated the docstring to record the root cause + ordering rule. Shared helper -> HP bars, name labels, hero $N/Zzz, tax-collector gold, building tax-gold $N all now correctly draw on top (net-positive)."
+            ],
+            "game/graphics/worker_sprites.py": [
+              "clips_for: two-pass build. Pass 1 builds clips ONLY from actions with real PNG frames; actions with no art are collected into missing_actions (was: immediately filled from _procedural_frames -> the letter-on-circle 'P' placeholder). Pass 2: if missing_actions, pick base_clip = clips['idle'] (or first available clip); if base_clip is None (unit has NO real art at all) keep the legacy procedural fallback; else fill each missing action by reusing list(base_clip.frames) (this unit's real idle frames). Clips are cached -> static, not per-frame. Fixes peasant_builder hurt/dead (idle/walk/work exist, no hurt/dead folders) to show the real green builder art instead of the P-circle. Regular peasant has its own hurt/dead PNGs so it loads them in pass 1 and is unaffected."
+            ],
+            "tests/test_wk124_overlay_bin.py": [
+              "NEW. Layer 1 (no GPU, never skips): a _FakeAlwaysOnTopNode whose always_on_top setter clobbers the bin to ('fixed',0) like Ursina's; asserts configure_ks_overlay leaves the FINAL set_bin == ('fixed',110), plus depth off and idempotent-guard no-op on 2nd call. Layer 2 (real offscreen Ursina, skips cleanly if Panda3D/Ursina can't init): builds a real Text, asserts getBinName()=='fixed' and getBinDrawOrder()==110."
+            ],
+            "tests/test_wk124_peasant_builder_clips.py": [
+              "NEW. Asserts clips_for('peasant_builder')['hurt'].frames and ['dead'].frames are byte-identical to ['idle'].frames (real fallback, not the P-circle); a direct guard that the builder hurt frames are NOT equal to _procedural_frames('peasant_builder','hurt',...); and that regular clips_for('peasant')['hurt'].frames != ['idle'].frames (keeps its own hurt art). Clears WorkerSpriteLibrary._cache before/after each test; inits headless pygame."
+            ]
+          },
+          "why": "T1: tax-gold $N (and other world overlays) were occluded by tall/near buildings because the high render bin was being reset to 0 by always_on_top -- a self-cancelling sequence (continuation of WK122-BUG-A2). T5: builder peasants flashed the 'circle-with-a-P' placeholder when hit/killed because peasant_builder ships no hurt/dead PNGs and the old code synthesized those from the procedural placeholder.",
+          "how_to_test": [
+            "python -m pytest tests/test_wk124_overlay_bin.py tests/test_wk124_peasant_builder_clips.py -q",
+            "python tools/qa_smoke.py --quick",
+            "python -c \"import game.graphics.ursina_unit_overlays, game.graphics.worker_sprites\"",
+            "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json > NUL"
+          ],
+          "evidence": {
+            "wk124_tests": {
+              "command": "python -m pytest tests/test_wk124_overlay_bin.py tests/test_wk124_peasant_builder_clips.py -q",
+              "exit_code": 0,
+              "status": "PASS",
+              "tail": "6 passed, 1 warning in 2.17s (incl. the real offscreen-Ursina getBinDrawOrder()==110 assertion -- NOT skipped on this GPU box)"
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "tail": "[qa_smoke] exit_code=0 ; [qa_smoke] DONE: PASS"
+            },
+            "import_smoke": {
+              "command": "python -c \"import game.graphics.ursina_unit_overlays, game.graphics.worker_sprites\"",
+              "exit_code": 0,
+              "status": "PASS",
+              "tail": "IMPORT_SMOKE_OK"
+            },
+            "wk67_digest_confidence": {
+              "command": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "status": "PASS",
+              "tail": "10 passed -- render-only edits are inert; AI-decision digest byte-identical (not a required gate for T1/T5 but verified for confidence)"
+            },
+            "manual_probe": "Confirmed offscreen Ursina on this box: buggy order (set_bin then always_on_top) -> getBinDrawOrder()==0 (the occlusion bug); fixed order -> ==110. Confirmed on disk: peasant_builder has only idle/walk/work folders (no hurt/dead); peasant has hurt(4)/dead(1)."
+          },
+          "blockers": [],
+          "assumptions": [
+            "T5 base-clip choice is idle when present (per ticket); if idle were absent it uses the first available real clip, and only true zero-art units keep the procedural placeholder. peasant_builder has idle, so hurt/dead reuse idle.",
+            "peasant_builder idle ships a single PNG frame, so the builder's hurt/dead are 1-frame loops of that idle -- correct per the ticket (use the real idle art, not the P-circle)."
+          ],
+          "follow_ups": [
+            "Wave 2 (later message): T3c/T4c VFX in game/graphics/vfx.py + game/graphics/ursina_misc_props_sync.py (magic projectile kind:'magic'; cleric heal burst) -- depends on Agent 05 landing kind:'magic' + HERO_HEAL. NOT started this round.",
+            "PM (Agent 01) live screenshot-verify on GPU box: tax $N never occluded by tall/near buildings; HP bars / name labels still correct (not doubled / no z-fighting); builder peasant taking a hit shows green builder art, never the P-circle. (Headless agent cannot GPU-verify ursina_* render output.)"
+          ],
+          "constraints_met": "Edited ONLY game/graphics/ursina_unit_overlays.py, game/graphics/worker_sprites.py, the 2 new tests, and this log. Did NOT touch vfx.py / ursina_misc_props_sync.py (Wave 2). Did NOT run git / commit / add / push. Stayed in lane (Agent 09 owns game/graphics + tests for own tickets).",
+          "wave2": {
+            "sub_round": "r1_wave2",
+            "status": "done",
+            "role": "Agent 09 ArtDirector (Wave 2). T3c (wizard magic projectile billboard) + T4c (cleric heal VFX, visible in pygame + Ursina), consuming Agent 05's landed contracts (kind:'magic' on RANGED_PROJECTILE + new HERO_HEAL event).",
+            "contracts_verified_from_code": {
+              "projectile_kind_field": "game/systems/combat.py:199 emits event field 'projectile_kind' (value from (spec or {}).get('kind','arrow')); color via 'color' (spec 'color'); size via 'size_px'. vfx.py:_emit_event already reads event.get('projectile_kind','arrow') + 'color' + 'size_px' and passes them to _spawn_projectile. Wizard: Hero.get_ranged_spec() (game/entities/hero.py:575-580) returns {'kind':'magic','color':WIZARD_SPELL_COLOR=(170,90,230),'size_px':WIZARD_SPELL_SIZE_PX=4}; every non-wizard returns None (ranger arrow unchanged).",
+              "hero_heal_event": "game/systems/cleric_heal.py:88-95 emits {'type':GameEventType.HERO_HEAL.value=='hero_heal','x':target_x,'y':target_y,'from_x':cleric_x,'from_y':cleric_y,'amount':N}. game/events.py:24 HERO_HEAL='hero_heal'."
+            },
+            "what_i_changed": {
+              "game/graphics/vfx.py": [
+                "ProjectileVFX dataclass: added field `kind: str = 'arrow'` (additive default; 'arrow'|'magic'|'heal'). Picks the 3D billboard in the Ursina sync.",
+                "_emit_event: added a `et == 'hero_heal'` case BEFORE the hero_attack branch (after the x/y None-guard): calls _spawn_heal(x,y) for the pygame green/gold particle burst AND, when from_x/from_y present, _spawn_projectile(from_x,from_y,x,y,'heal',None,3) so a green heal bolt is also visible via the Ursina billboard path. Returns after.",
+                "_spawn_projectile: made kind-aware. For kind=='magic' honors the spec color (default (170,90,230) WIZARD_SPELL_COLOR) + lilac highlight, size clamped 2..4 (default 4). For kind=='heal' green core (default (90,220,120)) + pale-gold highlight, size 2..4 (default 3). For arrow (default/unknown) keeps the EXACT prior behavior: forced SaddleBrown (139,69,19) + near-white tip + 1->2 px upgrade clamp. Stores kind on the ProjectileVFX. Updated docstring.",
+                "_spawn_heal(x,y): NEW. Green/gold particle burst modeled on _spawn_big but lighter + biased upward (vy-45 to rise). Deterministic position-seeded random.Random((int(x)<<16)^int(y)^0x4EA1) -- no wall-clock/global randomness. 14 motes, ~70% soft green / ~30% gold, 2-3px, life 0.40-0.65s.",
+                "Added cached billboard surfaces: _make_orb_surface(core_rgb,halo_rgb) builds a 32x32 RGBA glowing orb (3 translucent halo rings -> solid core -> bright highlight). get_magic_billboard_surface() (purple core 170,90,230 / halo 200,150,255) and get_heal_billboard_surface() (green core 90,220,120 / halo 170,255,190), each module-cached in _MAGIC_BILLBOARD_CACHE / _HEAL_BILLBOARD_CACHE -> generated ONCE (FPS guardrail: no per-frame surface regeneration). Mirrors existing get_projectile_billboard_surface()."
+              ],
+              "game/graphics/ursina_misc_props_sync.py": [
+                "Import: added get_magic_billboard_surface + get_heal_billboard_surface alongside get_projectile_billboard_surface.",
+                "sync_snapshot_projectiles: cache the magic + heal textures ONCE on the renderer via getattr(r,'_magic_tex',None)/getattr(r,'_heal_tex',None) (renderer __init__ only declares _projectile_tex; getattr fallback safe since I cannot edit ursina_renderer.py this lane) using TerrainTextureBridge.surface_to_texture with cache_keys ('ursina','projectile_magic_billboard_v1') / ('ursina','projectile_heal_billboard_v1').",
+                "Per projectile: pick tex by getattr(proj,'kind','arrow') -> magic=_magic_tex, heal=_heal_tex, else arrow _projectile_tex. Threaded the chosen `tex` into BOTH get_or_create_entity(texture=tex) and sync_billboard_entity(tex=tex) (was hardcoded ptex). Arrow path is byte-identical for kind=='arrow'. No per-frame surface/texture regeneration (FPS guardrail)."
+              ]
+            },
+            "snapshot_contract_test": "NOT touched. tests/test_renderer_snapshot_contract.py does NOT pin the ProjectileVFX field shape -- it only asserts vfx_projectiles is plumbed via VFXSystem.get_active_projectiles() (line 84-96). Adding `kind` with a default is a purely additive extension; the test passed unchanged (in the 52-test subset). The other vfx_projectiles consumer, game/graphics/instanced_unit_renderer.py:575, reads only proj.x/proj.y -- not affected by the new field.",
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python -c \"import game.graphics.vfx, game.graphics.ursina_misc_props_sync\"",
+              "python -m pytest tests/ -q -k \"vfx or projectile or renderer_snapshot or combat\"",
+              "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json > NUL"
+            ],
+            "evidence": {
+              "import_smoke": {
+                "command": "python -c \"import game.graphics.vfx, game.graphics.ursina_misc_props_sync\"",
+                "exit_code": 0,
+                "status": "PASS",
+                "tail": "IMPORT_SMOKE_OK"
+              },
+              "pytest_subset": {
+                "command": "python -m pytest tests/ -q -k \"vfx or projectile or renderer_snapshot or combat\"",
+                "exit_code": 0,
+                "status": "PASS",
+                "tail": "52 passed, 1489 deselected, 1 warning in 10.07s (incl. tests/test_renderer_snapshot_contract.py 6 passed unchanged)"
+              },
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS",
+                "tail": "[qa_smoke] DONE: PASS ; QA_EXIT=0 (determinism_guard PASS; embedded pytest 1536 passed, 5 skipped)"
+              },
+              "json_validate": {
+                "command": "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json > NUL",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "behavior_sanity": "Standalone probe: ranged_projectile kind:'magic' color:(170,90,230) size:4 -> ProjectileVFX.kind=='magic', color preserved (170,90,230); kind:'arrow' -> color forced (139,69,19) (brown preserved); hero_heal event -> 1 heal-bolt projectile (kind=='heal', color (90,220,120)) + 14 deterministic particles; two identical heal events produce identical particle layouts (deterministic). get_magic/heal_billboard_surface() are cached (same object on 2nd call), 32x32."
+            },
+            "blockers": [],
+            "assumptions": [
+              "Renderer __init__ does not pre-declare _magic_tex/_heal_tex (only _projectile_tex at ursina_renderer.py:334). I cannot edit ursina_renderer.py this lane, so I used getattr(r,'_magic_tex',None)/getattr(r,'_heal_tex',None) lazy-init on first projectile sync -- consistent with the existing _projectile_tex None-guard pattern, zero per-frame cost after first use.",
+              "Magic/heal billboards are MVP procedural glowing orbs (purple/green) per the ticket -- the Wizard-Attack01_Effect / Priest-Heal_Effect sprite-sheet slicing is an explicit STRETCH and was NOT done (no asset files added; tools/assets_manifest.json + validate_assets NOT touched).",
+              "STRETCH '+N green flash on the healed HP bar' was SKIPPED per the ticket's 'skip if it risks the HP-bar code' guidance (HP-bar code is outside this lane).",
+              "_spawn_projectile applies particle gravity in update() (vy*0.90 + 35*dt); heal motes use vy-45 so they net-rise briefly then settle -- intended."
+            ],
+            "live_verification": "DEFERRED to PM (Agent 01) on the GPU box per feedback_ursina_deferred_screenshots: the magic-orb + heal-orb billboards and the green particle burst are ursina_*/pygame render output a headless agent cannot screenshot-verify. Shipped behind import/pytest/qa_smoke + the behavior_sanity probe + verbatim diff.",
+            "constraints_met": "Edited ONLY game/graphics/vfx.py, game/graphics/ursina_misc_props_sync.py, and this log. Did NOT touch Wave-1 files / ui / ai / sim / config / assets / manifest. No per-frame allocation (all surfaces + textures cached). Did NOT run git / commit / add / push. Did NOT iterate after reporting done."
+          }
+        }
+      }
     }
   }
 }

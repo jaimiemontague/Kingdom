@@ -9,6 +9,67 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk124_hero_kit_ai_and_ui_fixes": {
+      "sprint_meta": {
+        "sprint_id": "wk124_hero_kit_ai_and_ui_fixes",
+        "created_utc": "2026-06-03T00:00:00Z",
+        "plan_ref": ".cursor/plans/wk124_hero_kit_ai_and_ui_fixes.plan.md",
+        "goal": "WAVE 3 verification. Prove the WK124-T6 ranger late-game roam fix (Agent 06 added a coarse whole-map distant-frontier scan + a lair-roam fallback in ai/behaviors/exploration.py so rangers stop seizing up near the castle once the local fog bubble is exhausted) with a deterministic headless soak test, then run the full regression sweep. The WK67 AI-decision digest must stay byte-identical (no re-baseline)."
+      },
+      "rounds": {
+        "r1": {
+          "sprint_id": "wk124_hero_kit_ai_and_ui_fixes",
+          "round_id": "r1",
+          "status": "done",
+          "round_meta": {
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "wave": "WAVE 3 (verification): author tests/test_wk124_ranger_idle_soak.py + run the full WK124 regression sweep",
+            "model": "claude-opus-4-8[1m]",
+            "depends_on": "Wave 1+2 (Agent 06 ranger late-game roam fix in ai/behaviors/exploration.py: _find_distant_frontier_tile + _roam_toward_distant_objective, fired only when the LOCAL frontier scan is empty; Agent 05 added RANGER_GLOBAL_FRONTIER_STRIDE_TILES + RANGER_REROAM_COMMIT_MS to config.py)",
+            "production_code_edited": false,
+            "committed": false,
+            "ran_git": false
+          },
+          "prompt_summary": "PM/plan-assigned (WK124-T6 verification, PM prompt 11): create tests/test_wk124_ranger_idle_soak.py (headless engine, ~6 rangers, ~10 sim-min @ DETERMINISTIC_SIM=1 + dummy SDL + fixed seed); assert over the last 3 sim-min: ranger idle-ish fraction <0.4 AND mean max distance-from-castle >15 tiles. MUST pass on the post-fix tree, would fail pre-fix. Then run the full regression sweep (qa_smoke --quick, WK67 digest, WK124 cluster, full pytest tests/). Stay in QA lane, do not edit production code, DO NOT COMMIT, DO NOT run git.",
+          "what_i_changed": "CREATED tests/test_wk124_ranger_idle_soak.py (1 test, green). Builds a deterministic GameEngine(headless=True): SDL_VIDEODRIVER/SDL_AUDIODRIVER=dummy + DETERMINISTIC_SIM=1 set in os.environ BEFORE config/engine import (so config.DETERMINISTIC_SIM is read True and engine.update auto-advances _sim_now_ms -> commit windows tick); set_sim_seed(20240603); engine.ai_controller = BasicAI(llm_brain=None) so idle rangers go through the no-LLM fallback into explore() (the WK124-T6 path). Spawns 6 rangers (hero_class='ranger') out of a constructed RangerGuild (mirrors tools/wk123_scenario.py guild+hero spawn pattern, ranger class), gold=0 so they aren't diverted to shopping. Neutralizes enemy/lair SPAWNING via a test-only instance monkeypatch (engine.sim.spawner.spawn / lair_system.spawn_enemies -> []) and clears engine.enemies each tick, so the soak isolates exploration (no combat pull). Runs 10 sim-min @ SIM_TICK_HZ (60Hz -> 36000 ticks); over the LAST 3 sim-min samples per-tick per-ranger 'idle-ish' (state==IDLE OR (target.type=='patrol' AND dist-to-patrol-zone <4 tiles)) and tracks each ranger's MAX distance-from-castle. Asserts idle-ish fraction <0.40 AND mean(per-ranger max dist) >15 tiles. NO production code edited; only the new test file + this log.",
+          "thresholds_rationale": "Thresholds chosen to meaningfully distinguish fixed-vs-broken, measured 2026-06-03 on the dev box: idle-ish fraction post-fix ~0.027 vs pre-fix (simulated by stubbing exploration._find_distant_frontier_tile->None and _roam_toward_distant_objective->False, i.e. the old empty/None behavior) ~0.80 -> 0.40 sits squarely between with wide margin. The idle-ish fraction is the LOAD-BEARING assertion (catches the late-game seize-up). mean max-dist post-fix ~76 tiles vs pre-fix ~41 (>15 either way, because the local scan still pushes rangers out in the FIRST minutes before the bubble exhausts) -> mean max-dist is the secondary corroborating proof that rangers leave the 6-10-tile near-castle bubble at all. Both thresholds documented in the test module docstring.",
+          "test_counts": {
+            "new_test_file": "tests/test_wk124_ranger_idle_soak.py",
+            "new_tests": 1,
+            "new_tests_passed": 1,
+            "new_tests_skipped": 0,
+            "runtime_sec": 63
+          },
+          "commands_run": [
+            { "cmd": "python -m pytest tests/test_wk124_ranger_idle_soak.py -q -s", "exit_code": 0, "result": "1 passed in ~63s; WK124_RANGER_SOAK idleish_fraction=0.0347 mean_max_dist_tiles=76.34 per_ranger_max=[86.5, 14.1, 91.1, 80.0, 105.5, 80.9] samples=64800" },
+            { "cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "result": "[qa_smoke] DONE: PASS (determinism_guard PASS + all observe_sync profiles exit_code=0: base/bounty, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling 0.1/0.25/0.5/1.0x, interior_view, quest_panel, conversation, direct_prompt_integration)" },
+            { "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q", "exit_code": 0, "result": "10 passed in 16.33s -- AI-decision digest BYTE-IDENTICAL b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (not re-baselined)" },
+            { "cmd": "python -m pytest tests/test_wk124_overlay_bin.py tests/test_wk124_peasant_builder_clips.py tests/test_wk124_building_hp_panels.py tests/test_wk124_cleric_heal.py tests/test_wk124_ranger_idle_soak.py -q", "exit_code": 0, "result": "15 passed in 62.83s (all five WK124 new-test files green)" },
+            { "cmd": "python -m pytest tests/ -q", "exit_code": 0, "result": "1537 passed, 5 skipped, 1 warning in 308.12s -- 0 failed" }
+          ],
+          "evidence": {
+            "soak_idleish_fraction": 0.0347,
+            "soak_idleish_threshold": "<0.40 (pre-fix simulated ~0.80)",
+            "soak_mean_max_dist_tiles": 76.34,
+            "soak_mean_max_dist_threshold": ">15 (pre-fix simulated ~41)",
+            "soak_per_ranger_max_dist_tiles": [86.5, 14.1, 91.1, 80.0, 105.5, 80.9],
+            "soak_samples": 64800,
+            "wk67_digest_line": "_AI_DECISION_DIGEST = \"b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded\"",
+            "wk67_digest_status": "byte-identical (10 passed) -- not re-baselined",
+            "full_suite_summary_line": "1537 passed, 5 skipped, 1 warning in 308.12s (0:05:08)",
+            "qa_smoke_quick": "PASS"
+          },
+          "preexisting_unrelated_findings": [
+            "1 warning in every pytest run: pygame pkgdata.py:25 'pkg_resources is deprecated' UserWarning -- third-party (pygame 2.6.1 / SDL 2.28.4), pre-existing, not WK124-related.",
+            "5 skipped tests in the full suite -- pre-existing display/GPU-gated skips (Ursina capture / live-display paths that cannot run headless). Not introduced by WK124."
+          ],
+          "blockers": [],
+          "follow_ups": [
+            "Consider registering a 'slow' pytest marker (pytest.ini markers) if the team wants to opt long soaks out of the default run; the soak adds ~60s to the suite. Left unmarked for now to match the codebase (no markers registered, no other test uses one)."
+          ]
+        }
+      }
+    },
     "wk120_round_b_task_router_extract": {
       "sprint_meta": {
         "sprint_id": "wk120_round_b_task_router_extract",

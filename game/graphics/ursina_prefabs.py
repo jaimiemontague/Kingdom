@@ -270,6 +270,11 @@ def _load_prefab_instance(prefab_path: Path, world_pos: Vec3) -> Entity:
     spread_z = max_z - min_z
 
     root = Entity(position=wp, collider=None)
+    # Mythos S1 (`scene-entities-ignore`): prefab root + pieces are renderer-managed
+    # (no update/input) — skip them in ursina's per-frame entity walk. A prefab pile of
+    # 50-100 buildings x ~5-26 pieces dominates scene.entities otherwise.
+    from game.graphics.ursina_scene_ignore import mark_scene_ignore as _mark_scene_ignore
+    _mark_scene_ignore(root)
     root._ks_prefab_container = True
     root._ks_ground_anchor_y = ga
     root._ks_prefab_source = str(prefab_path)
@@ -308,6 +313,7 @@ def _load_prefab_instance(prefab_path: Path, world_pos: Vec3) -> Entity:
         )
         child.collision = False
         child.render_queue = 1
+        _mark_scene_ignore(child)  # Mythos S1: piece children — no update/input
         try:
             child.set_depth_test(True)
             child.set_depth_write(True)

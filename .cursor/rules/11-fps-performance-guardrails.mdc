@@ -71,7 +71,9 @@ All are behavior-preserving (no sim/gameplay/visual change). Committed on `perf/
 - **DON'T add per-frame work that scales with entity count without measuring at the 80-monster swarm at fast speed.** Things that look free at 20 normal-speed entities are not free at 80 fast-speed monsters.
 - **DON'T name a custom GLSL shader sampler `p3d_*`** — those are reserved Panda auto-inputs (bound from the node's texture stage, NOT from `set_shader_input`). Use a custom name + `set_shader_input("yourName", tex)`.
 
-## The instanced unit renderer (`KINGDOM_URSINA_INSTANCING`) — OPT-IN, currently BROKEN
+## ⚠️ SUPERSEDED by Mythos (2026-06-09, branch mythos-lag-fix): instancing is now the DEFAULT and WORKING — see the Mythos addendum at the bottom. Historical record below.
+
+## The instanced unit renderer (`KINGDOM_URSINA_INSTANCING`) — (HISTORICAL) OPT-IN, was BROKEN
 
 - Default is **OFF** (`game/graphics/ursina_renderer.py` ~L591, `== "1"` opt-in). The default **legacy per-Entity billboard** path renders units correctly.
 - Instancing is the **only path to p10 ≥ 30 at the swarm** (legacy ~35fps / p10 21 vs instanced ~51fps / p10 29 at the same load) — but it renders units **invisible/transparent** and draws a wrong dark shadow blob. Five blind capture-diff fix attempts (frustum-cull via OmniBoundingVolume; sampler rename; stage bind; UV V-flip; atlas source) got it from fully-invisible to only partially-rendering.
@@ -88,3 +90,37 @@ The `min < 20` dips are a rare (~1 frame per 2-min run) **stochastic GPU/shader-
 ## If you must push the swarm floor higher
 
 The remaining big levers all need a decision (none is a free behavior-preserving win): **(a)** finish the instanced renderer (interactive GPU debug; +15fps), **(b)** batch the buildings (like the trees) to cut swarm GPU draw, or **(c)** the balance/pacing knobs Jaimie has set aside (lower `MAX_ALIVE_ENEMIES` / neutral-building cap). Ask before doing (b) or (c) — they change game feel/scope. See [[fps-floor-recovery-conditions]] in project memory for the full diagnosis.
+
+## MYTHOS LAG FIX ADDENDUM (2026-06-09, branch mythos-lag-fix) — CURRENT STATE
+
+The Mythos sprint (plan: `.cursor/plans/mythos_lag_fix.plan.md`, candidates JSON alongside)
+took the gate scenario (24 heroes / 24+ buildings / 80 enemies, FAST speed, zoomed out)
+from ~15 fps to **44-49 fps sustained over 20.5-minute soaks** (time-FLAT; Sovereign
+accepted "very smooth"). What changed — DO NOT undo any of these:
+
+1. **vsync OFF by default** (`sync-video false` prc in ursina_app.py before Ursina();
+   `KINGDOM_VSYNC=1` restores; sleep-based 60fps cap via clock-mode limited,
+   `KINGDOM_FPS_CAP` overrides). Ursina's vsync kwarg is dead code — only the prc works.
+2. **HUD BGRA zero-copy upload** (`KINGDOM_HUD_ZEROCOPY`, default on, runtime layout
+   self-check + legacy fallback) — hudU 10-17ms -> ~1ms; the 50ms full-upload hitch class
+   is gone. Radar dots ~10Hz (`KINGDOM_RADAR_HZ`), watch-card minimap ~10Hz.
+3. **Instancing is the DEFAULT** (`KINGDOM_URSINA_INSTANCING` unset/1; =0 = legacy
+   fallback): instanced HP bars (one draw), terrain-Y, non-uniform scales, per-kind
+   projectile UVs, legacy sim_blend linear interp, pooled zoom-LOD name/gold labels
+   (`KINGDOM_LABEL_ZOOM_LOD_ON/OFF`, selected-hero bypass). Unit blob shadows OFF
+   (`KINGDOM_UNIT_SHADOWS=1` to re-enable). The shader V-flip lesson: geom texcoords are
+   top-down; uvs.y = (1 - uvRegion.y) - tc.y*uvRegion.w (test_wk128 pins parity for every
+   atlas kind — keep it green).
+4. **Spawn-hitch fixes**: ursina Text font-cache patch (FontPool re-load + model-path
+   growth killed; 5.5 -> 0.23ms/Text), startup unit/VFX/font prewarm (~0.5s), construction
+   stage swaps orphan-free (C1-class leak), wave spawns staggered
+   (`KINGDOM_SPAWN_STAGGER`).
+5. **Sim tick stack** (all WK67-digest-byte-identical, env hatches in
+   mythos_lag_fix_candidates.json): lazy hero profiles, incremental tree dict, tree
+   blocking-set walkability, POI scan throttle, adaptive fog cadence, AI threat memo,
+   tile-keyed A* goals + budget caps. Tick bench: mean 4.7 -> 2.3ms, p99 15 -> 9.
+   `KINGDOM_FAST_DT_SCALING=1` exists but is default-OFF pending a balance soak.
+6. **Measurement**: `tools/mythos_fps_soak.py` (20.5-min soaks, minute-15-20 verdict,
+   100-screenshot bursts, --spawn-hitch-test) + `tools/mythos_tick_bench.py` (headless
+   gate-scenario tick bench) + igloop/cam slowlog stages + `[fps-probe-window]`.
+   Use these for ANY future perf claim.

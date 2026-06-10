@@ -4,37 +4,21 @@ from __future__ import annotations
 
 import pygame
 
-from config import COLOR_GREEN, COLOR_RED, COLOR_WHITE
-from game.ui.widgets import HPBar
+from config import COLOR_WHITE
+
+from game.ui.building_renderers import render_hp_block
 
 
 class DefensivePanelRenderer:
     """Renderer for the guardhouse."""
 
     def _render_hp_block(self, panel, surface: pygame.Surface, building, y: int) -> int:
-        """Render current/max HP above type-specific stats (WK61-R5-BUG-001)."""
-        hp = int(getattr(building, "hp", 0) or 0)
-        max_hp = int(getattr(building, "max_hp", 0) or 0)
-        hp_text = panel.font_normal.render(f"HP: {hp}/{max_hp}", True, COLOR_WHITE)
-        surface.blit(hp_text, (10, y))
-        y += 25
+        """Render current/max HP above type-specific stats (WK61-R5-BUG-001).
 
-        bar_rect = pygame.Rect(10, y, panel.panel_width - 20, 12)
-        HPBar.render(
-            surface,
-            bar_rect,
-            hp,
-            max(1, max_hp),
-            color_scheme={
-                "bg": (60, 60, 60),
-                "good": COLOR_GREEN,
-                "warn": (220, 180, 90),
-                "bad": COLOR_RED,
-                "border": COLOR_WHITE,
-            },
-        )
-        y += 20
-        return y
+        WK124-T2: now delegates to the shared ``render_hp_block`` helper so all
+        building families render HP identically.
+        """
+        return render_hp_block(panel, surface, building, y)
 
     def _render_guardhouse(self, panel, surface: pygame.Surface, building, y: int) -> int:
         guards = panel.font_normal.render(

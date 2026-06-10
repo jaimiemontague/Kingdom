@@ -5,11 +5,45 @@ from __future__ import annotations
 from typing import Any
 
 from game.entities.hero import HeroState
+from game.sim.timebase import now_ms as sim_now_ms
 
 from ai.behaviors.movement import route_to_building
 from ai.behaviors.view_compat import as_ai_view, view_to_legacy_context
 from ai.contracts import HeroTask, TargetType, assign_hero_task
 from game.sim.hero_commands import HeroPurchaseCommand
+
+# WK127-T2: sim-time lockout stamped by a completed shopping trip that bought
+# NOTHING — breaks the zero-purchase marketplace orbit (want predicates firing
+# below the buy rules). Respected by go_shopping, _idle_shopping, and
+# moment_shopping_opportunity.
+ZERO_PURCHASE_SHOP_COOLDOWN_MS = 60_000
+
+
+def shop_cooldown_active(hero: Any) -> bool:
+    """True while the hero's zero-purchase shopping cooldown (sim-time) is live."""
+    try:
+        until = int(getattr(hero, "_shop_cooldown_until_ms", 0) or 0)
+    except (TypeError, ValueError):
+        until = 0
+    return int(sim_now_ms()) < until
+
+
+def blacksmith_has_affordable_upgrade(hero: Any, building: Any) -> bool:
+    """True iff ``building`` sells a strict weapon/armor upgrade ``hero`` can
+    afford right now — mirrors do_shopping's priority-3/4 buy rules so idle
+    heroes only walk to the blacksmith when a purchase can actually happen."""
+    if not hasattr(building, "get_available_items"):
+        return False
+    current_attack = hero.weapon.get("attack", 0) if hero.weapon else 0
+    current_defense = hero.armor.get("defense", 0) if hero.armor else 0
+    for item in building.get_available_items():
+        if hero.gold < item.get("price", 0):
+            continue
+        if item.get("type") == "weapon" and item.get("attack", 0) > current_attack:
+            return True
+        if item.get("type") == "armor" and item.get("defense", 0) > current_defense:
+            return True
+    return False
 
 
 def find_marketplace_with_potions(buildings: list[Any]) -> Any | None:
@@ -33,6 +67,11 @@ def find_blacksmith(buildings: list[Any], hero: Any = None) -> object | None:
 
 def go_shopping(ai: Any, hero: Any, item_name: str, view: Any) -> None:
     """Send hero to marketplace or blacksmith to buy an item."""
+    # WK127-T2: the LLM/fallback buy_item path respects the zero-purchase
+    # cooldown — the last trip proved nothing is buyable; stay in the idle
+    # pipeline instead of re-orbiting the shop.
+    if shop_cooldown_active(hero):
+        return
     view = as_ai_view(view)
     buildings = view.buildings
     world = view.world
@@ -129,6 +168,12 @@ def do_shopping(ai: Any, hero: Any, building: Any, view: Any) -> bool:
                 if sink.propose(HeroPurchaseCommand(hero.hero_id, item)):
                     purchased_types.add("armor")
                     break
+
+    # WK127-T2: a trip that bought nothing means the want/buy predicates are
+    # unsatisfiable right now — stamp the sim-time cooldown so the idle/LLM
+    # pipelines don't immediately re-fire shopping (zero-purchase orbit).
+    if not purchased_types:
+        hero._shop_cooldown_until_ms = int(sim_now_ms()) + ZERO_PURCHASE_SHOP_COOLDOWN_MS
 
     # Post-shopping journey trigger (full health + recent purchase).
     return ai.journey_behavior._maybe_start_journey(

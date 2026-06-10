@@ -9,6 +9,7 @@ then stepping entities along those waypoints.
 from __future__ import annotations
 
 import math
+import os
 from typing import Iterable, Optional, Tuple, List
 import time
 import time as _time
@@ -16,6 +17,21 @@ import time as _time
 from config import TILE_SIZE
 from game.systems.pathfinding import find_path, grid_to_world_path, _rebuild_blocked_cache
 from game.systems import perf_stats
+
+# Mythos S5 (astar-burst-cap-tile-goals): chase goals key on the goal TILE so a
+# target moving within one tile no longer invalidates the path every tick, and
+# far-target replans commit longer. "0" restores pixel-keyed goals (A/B hatch).
+_ASTAR_TILE_GOALS = os.environ.get("KINGDOM_ASTAR_TILE_GOALS", "1") != "0"
+# Commit window for far chase targets (> _FAR_GOAL_TILES tiles away).
+_FAR_GOAL_TILES = 6
+_FAR_GOAL_COMMIT_MS = 1000
+
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, str(default)))
+    except ValueError:
+        return default
 
 
 class PathfindingBudget:
@@ -25,10 +41,17 @@ class PathfindingBudget:
     This ensures identical gameplay regardless of hardware speed.
     Wall-clock timing is still collected for perf metrics but does
     not gate whether a path request is served.
+
+    Mythos S5 (astar-burst-cap-tile-goals): caps lowered 24->8 plans and
+    24k->8k expansions per tick. The old budget legally allowed aligned replan
+    bursts to pack 6-7.5ms of A* into ONE tick (the measured sim-side hitch
+    signature); the deferred-return contract (compute_path_worldpoints -> None,
+    callers keep their old path / direct-steer) amortizes the overflow across
+    ticks. Env-overridable for A/B: KINGDOM_ASTAR_MAX_PLANS / _MAX_EXPANSIONS.
     """
 
-    MAX_PLANS_PER_FRAME: int = 24          # was 12 (WK64 Phase A latency tweak)
-    MAX_EXPANSIONS_PER_FRAME: int = 24_000  # unchanged
+    MAX_PLANS_PER_FRAME: int = _env_int("KINGDOM_ASTAR_MAX_PLANS", 8)           # was 24
+    MAX_EXPANSIONS_PER_FRAME: int = _env_int("KINGDOM_ASTAR_MAX_EXPANSIONS", 8_000)  # was 24_000
 
     def __init__(self) -> None:
         self._frame_plans: int = 0
@@ -247,7 +270,15 @@ def advance_along_path_to(
     if not hasattr(entity, "path"):
         entity.path = []
         entity._path_goal = None
-    goal_key = (int(goal_x), int(goal_y))
+    if _ASTAR_TILE_GOALS:
+        # Mythos S5: key the goal on its TILE (the same quantization Hero.update
+        # already uses, hero.py:501) so a chase target moving within one tile
+        # never invalidates the committed path. Pixel-keyed goals made every
+        # chasing enemy replan each 500ms commit expiry (~4.3 plans/tick at the
+        # swarm, aligning into 6-7.5ms single-tick A* bursts).
+        goal_key = world.world_to_grid(goal_x, goal_y)
+    else:
+        goal_key = (int(goal_x), int(goal_y))
     path_commit = int(getattr(entity, "_path_commit_until_ms", 0) or 0)
     has_path = bool(getattr(entity, "path", None))
     # Commitment: when chasing moving targets, stick to current path to avoid jitter.
@@ -260,7 +291,16 @@ def advance_along_path_to(
         if _new_path is not None:
             entity.path = _new_path
             entity._path_goal = goal_key
-            entity._path_commit_until_ms = now_ms_val + getattr(entity, "_path_commit_duration_ms", 500)
+            commit_ms = getattr(entity, "_path_commit_duration_ms", 500)
+            if _ASTAR_TILE_GOALS:
+                # Far targets (> ~6 tiles) commit longer — precision cornering
+                # is irrelevant until the chaser closes in, and the longer
+                # window halves steady-state replan demand at the swarm.
+                _dx = float(goal_x) - float(entity.x)
+                _dy = float(goal_y) - float(entity.y)
+                if (_dx * _dx + _dy * _dy) > float(TILE_SIZE * _FAR_GOAL_TILES) ** 2:
+                    commit_ms = max(int(commit_ms), _FAR_GOAL_COMMIT_MS)
+            entity._path_commit_until_ms = now_ms_val + commit_ms
             if not entity.path:
                 entity._next_replan_ms = now_ms_val + 800
             else:

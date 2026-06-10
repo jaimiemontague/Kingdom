@@ -9,6 +9,8 @@ from config import (
     RANGER_EXPLORE_BLACK_FOG_BIAS,
     RANGER_FRONTIER_COMMIT_MS,
     RANGER_FRONTIER_SCAN_RADIUS_TILES,
+    RANGER_GLOBAL_FRONTIER_STRIDE_TILES,
+    RANGER_REROAM_COMMIT_MS,
     TILE_SIZE,
 )
 from game.entities.buildings.types import BuildingType
@@ -18,6 +20,7 @@ from game.sim.timebase import now_ms as sim_now_ms
 from game.world import Visibility
 
 from ai.behaviors.movement import route_to_building
+from ai.behaviors.shopping import blacksmith_has_affordable_upgrade, shop_cooldown_active
 from ai.behaviors.view_compat import as_ai_view
 
 # WK84 Round D-4: patrol-zone assignment now lives in ``ai.behaviors.zones``
@@ -106,6 +109,126 @@ def _find_black_fog_frontier_tiles(
     return candidates[:max_candidates]
 
 
+def _find_distant_frontier_tile(
+    world: Any,
+    hero: Any,
+    rng: Any,
+    *,
+    stride: int = RANGER_GLOBAL_FRONTIER_STRIDE_TILES,
+    max_candidates: int = 5,
+) -> tuple[int, int] | None:
+    """COARSE whole-map frontier scan for late-game ranger re-roam (WK124-T6).
+
+    The local :func:`_find_black_fog_frontier_tiles` only scans a 10-tile bubble.
+    Once the near-castle fog is fully revealed it returns ``[]`` and the ranger
+    pins near base. This helper steps the WHOLE map by ``stride`` tiles looking
+    for the nearest UNSEEN tile that is adjacent (within ``stride``) to a
+    SEEN/VISIBLE tile — i.e. the edge of the explored region anywhere on the map.
+
+    Returns the chosen ``(grid_x, grid_y)`` (with an RNG tie-break among the
+    closest few candidates) or ``None`` when the reachable map appears fully
+    revealed (no distant frontier found). Deterministic: uses only ``rng``
+    (the AI RNG) — no ``random.*``/``time.*``.
+    """
+    if not world or not hasattr(world, "visibility"):
+        return None
+
+    stride = max(1, int(stride))
+    width = int(world.width)
+    height = int(world.height)
+    visibility = world.visibility
+
+    hero_gx = int(hero.x // TILE_SIZE)
+    hero_gy = int(hero.y // TILE_SIZE)
+
+    def _is_seen(gx: int, gy: int) -> bool:
+        if gx < 0 or gx >= width or gy < 0 or gy >= height:
+            return False
+        v = visibility[gy][gx]
+        return v == Visibility.SEEN or v == Visibility.VISIBLE
+
+    candidates: list[tuple[int, int, int]] = []  # (dist_sq, gy, gx)
+    # Coarse grid walk: step by ``stride`` so the whole 250x250 map is bounded.
+    for gy in range(0, height, stride):
+        for gx in range(0, width, stride):
+            # Only UNSEEN sample points are frontier candidates.
+            if visibility[gy][gx] != Visibility.UNSEEN:
+                continue
+            # Frontier = within ``stride`` of a SEEN/VISIBLE tile (4-neighbour
+            # probe at the coarse step distance keeps this O(map/stride^2)).
+            is_frontier = (
+                _is_seen(gx - stride, gy)
+                or _is_seen(gx + stride, gy)
+                or _is_seen(gx, gy - stride)
+                or _is_seen(gx, gy + stride)
+            )
+            if not is_frontier:
+                continue
+            dx = gx - hero_gx
+            dy = gy - hero_gy
+            dist_sq = dx * dx + dy * dy
+            candidates.append((dist_sq, gy, gx))
+
+    if not candidates:
+        return None
+
+    # Deterministic order: (dist_sq, gy, gx); RNG tie-break among the closest few.
+    candidates.sort(key=lambda c: (c[0], c[1], c[2]))
+    pool = candidates[: max(1, int(max_candidates))]
+    pick = pool[rng.randrange(len(pool))] if len(pool) > 1 else pool[0]
+    _, gy, gx = pick
+    return (gx, gy)
+
+
+def _roam_toward_distant_objective(ai: Any, hero: Any, view: Any, now_ms: int) -> bool:
+    """Productive roam when the whole reachable map is revealed (WK124-T6).
+
+    No distant fog remains, so instead of oscillating near the castle the ranger
+    heads toward the farthest known live lair (a meaningful destination far from
+    base). Returns True and sets a patrol-style target on success; False when no
+    such objective exists (caller then falls through to the existing wander).
+
+    Deterministic: pure distance math, no RNG / wall-clock.
+    """
+    buildings = view.buildings or []
+
+    best = None
+    best_d2 = -1.0
+    for building in buildings:
+        if not getattr(building, "is_lair", False):
+            continue
+        if getattr(building, "hp", 0) <= 0:
+            continue
+        bx = float(getattr(building, "center_x", getattr(building, "x", 0.0)))
+        by = float(getattr(building, "center_y", getattr(building, "y", 0.0)))
+        dx = bx - float(hero.x)
+        dy = by - float(hero.y)
+        d2 = dx * dx + dy * dy
+        # Farthest live lair (gives the longest productive travel); deterministic
+        # tie-break on building position keeps the choice stable.
+        key = (d2, bx, by)
+        if best is None or key > best:
+            best = key
+            best_d2 = d2
+
+    if best is None:
+        return False
+
+    # Don't churn if we're already essentially on top of it.
+    if best_d2 <= (TILE_SIZE * 2) ** 2:
+        return False
+
+    _, goal_x, goal_y = best
+    # Patrol-style roam target (a destination, NOT a combat lock): the ranger
+    # travels toward the distant lair; normal combat/engage logic still applies
+    # if it meets enemies en route.
+    hero.set_target_position(goal_x, goal_y)
+    hero.target = {"type": "explore_frontier"}
+    hero._frontier_commit_until_ms = int(now_ms + RANGER_REROAM_COMMIT_MS)
+    ai._debug_log(f"{hero.name} -> map revealed; roaming toward distant lair")
+    return True
+
+
 def explore(ai: Any, hero: Any, view: Any) -> None:
     """Send hero to explore within their zone. Rangers prefer black-fog frontiers."""
     view = as_ai_view(view)
@@ -151,6 +274,32 @@ def explore(ai: Any, hero: Any, view: Any) -> None:
                         hero._frontier_commit_until_ms = int(now_ms + RANGER_FRONTIER_COMMIT_MS)
                         ai._debug_log(f"{hero.name} -> exploring black fog frontier at ({gx}, {gy})")
                         return
+
+            # WK124-T6: late-game re-roam. ONLY when the LOCAL frontier scan is
+            # empty (the near-castle fog bubble is fully revealed) do a COARSE
+            # whole-map scan for the nearest distant frontier and travel there.
+            # DIGEST SAFETY: this fires only when ``frontier_candidates`` is empty,
+            # which never happens in the 300-tick WK67 digest window, so the
+            # digest stays byte-identical.
+            if not frontier_candidates:
+                distant = _find_distant_frontier_tile(world, hero, ai._ai_rng)
+                if distant is not None:
+                    gx, gy = distant
+                    target_x = gx * TILE_SIZE + TILE_SIZE / 2
+                    target_y = gy * TILE_SIZE + TILE_SIZE / 2
+                    hero.set_target_position(target_x, target_y)
+                    hero.target = {"type": "explore_frontier"}
+                    # Longer commit so the ranger actually travels the distance
+                    # instead of re-deciding every tick mid-journey.
+                    hero._frontier_commit_until_ms = int(now_ms + RANGER_REROAM_COMMIT_MS)
+                    ai._debug_log(
+                        f"{hero.name} -> re-roaming to distant fog frontier at ({gx}, {gy})"
+                    )
+                    return
+                # Whole reachable map appears revealed: productive roam toward a
+                # known lair/distant waypoint rather than near-castle wander.
+                if _roam_toward_distant_objective(ai, hero, view, now_ms):
+                    return
 
     # Fallback: random wander (original behavior, or if no frontier found).
     angle = ai._ai_rng.uniform(0, 2 * math.pi)
@@ -211,6 +360,10 @@ def _idle_seek_meal(ai: Any, hero: Any, view: Any) -> bool:
 def _idle_shopping(ai: Any, hero: Any, view: Any) -> bool:
     """Check if hero wants to go shopping (full health, has gold, needs potions)."""
     buildings = view.buildings
+    # WK127-T2: the last completed trip bought nothing — don't re-orbit the
+    # shops until the zero-purchase cooldown (sim-time) expires.
+    if shop_cooldown_active(hero):
+        return False
     if hero.hp >= hero.max_hp:
         # V1.3 extension: check marketplace first, then blacksmith.
         marketplace = ai.shopping_behavior.find_marketplace_with_potions(buildings)
@@ -225,8 +378,14 @@ def _idle_shopping(ai: Any, hero: Any, view: Any) -> bool:
             return True
 
         # WK15: Base shopping on available items
+        # WK127-T2: require a buyable upgrade — the naked `gold >= 50` check
+        # sent maxed-out heroes on endless zero-purchase blacksmith trips.
         blacksmith = ai.shopping_behavior.find_blacksmith(buildings, hero)
-        if blacksmith and hero.gold >= 50:  # Assume upgrades cost at least 50 gold.
+        if (
+            blacksmith
+            and hero.gold >= 50
+            and blacksmith_has_affordable_upgrade(hero, blacksmith)
+        ):
             ai._debug_log(f"{hero.name} -> going to Blacksmith for upgrades")
             route_to_building(hero, view.world, buildings, blacksmith)
             hero.state = HeroState.MOVING

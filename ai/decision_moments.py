@@ -13,6 +13,10 @@ from typing import Any
 from config import TILE_SIZE
 from game.entities.hero import HeroState
 
+# WK127-T9: shared cooldown predicate (no import cycle: ai.behaviors.shopping
+# pulls in movement/view_compat/contracts only, none of which import this module).
+from ai.behaviors.shopping import shop_cooldown_active
+
 # HP band aliases (fractions of max)
 _MOMENT_LOW_HP = 0.50
 _MOMENT_CRITICAL_HP = 0.25
@@ -131,6 +135,11 @@ def _shopping_need(hero: Any) -> bool:
         max_p = int(getattr(hero, "max_potions", 0) or 0)
     except (TypeError, ValueError):
         pots, max_p = 0, 0
+    # WK127-T8 NOTE: deliberately NOT aligned to the do_shopping buy rule
+    # (potions < 2): the WK50 Phase-2A decision contract (characterized by
+    # tests/test_wk50_phase2a_decision_contracts.py) fires the shopping moment
+    # for any non-full potion belt, and the moment only OFFERS buy_item to the
+    # LLM — the WK127-T2 zero-purchase cooldown above is the orbit backstop.
     if max_p > 0 and pots < max_p:
         return True
     return _health_fraction(hero) < 0.99
@@ -245,6 +254,10 @@ def moment_idle_seeking_activity(hero: Any, game_state: dict) -> DecisionMoment 
 
 def moment_shopping_opportunity(hero: Any, game_state: dict) -> DecisionMoment | None:
     if _hero_state(hero) == HeroState.FIGHTING:
+        return None
+    # WK127-T2: the last completed trip bought nothing — no shopping moment
+    # until the zero-purchase cooldown (sim-time) expires.
+    if shop_cooldown_active(hero):
         return None
     try:
         gold = int(getattr(hero, "gold", 0) or 0)

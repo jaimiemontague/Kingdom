@@ -342,10 +342,35 @@ def discover_known_buildings_after_fog(
 
     ms = int(now_ms)
 
+    # Mythos S5 (fog-cadence-discovery-prefilter): precompute each candidate's
+    # grid bounding box ONCE so the per-(hero, building) pair below can be
+    # distance-prerejected without walking the footprint-tile generator. The
+    # prereject is exact: a footprint tile can satisfy dx^2+dy^2 <= r^2 only if
+    # the hero's clamped distance to the bbox is <= r, so skipped pairs are
+    # precisely the pairs the original loop fell through with no effect.
+    cand_bboxes: list[tuple[int, int, int, int]] = []
+    for building in cand:
+        bgx = int(getattr(building, "grid_x", 0))
+        bgy = int(getattr(building, "grid_y", 0))
+        sz = getattr(building, "size", (1, 1))
+        try:
+            bw, bh = int(sz[0]), int(sz[1])
+        except (TypeError, ValueError, IndexError):
+            bw, bh = 1, 1
+        cand_bboxes.append((bgx, bgy, max(1, bw), max(1, bh)))
+
     for hero, hgx, hgy, r in heroes_world_vision:
         r_sq = int(r) * int(r)
+        hgx_i = int(hgx)
+        hgy_i = int(hgy)
 
-        for building in cand:
+        for building, (bgx, bgy, bw, bh) in zip(cand, cand_bboxes):
+            # Clamped squared distance from hero grid pos to the footprint bbox.
+            cdx = hgx_i - (bgx if hgx_i < bgx else (bgx + bw - 1 if hgx_i > bgx + bw - 1 else hgx_i))
+            cdy = hgy_i - (bgy if hgy_i < bgy else (bgy + bh - 1 if hgy_i > bgy + bh - 1 else hgy_i))
+            if (cdx * cdx + cdy * cdy) > r_sq:
+                continue
+
             kp = getattr(hero, "known_places", None)
             pk_live: dict[Any, Any] = kp if isinstance(kp, dict) else {}
 
@@ -517,12 +542,31 @@ def build_hero_profile_snapshot(
         else:
             last_dec = ld0 if isinstance(ld0, dict) else None
 
-    kp = getattr(hero, "known_places", None)
-    kp_vals = tuple(kp.values()) if isinstance(kp, dict) else ()
-    sorted_places = sort_known_places(kp_vals)
+    # WK123 perf: the two sorts below (over <=100 known_places + <=30 profile_memory) are
+    # ~half the per-hero build cost and run for EVERY hero EVERY frame via get_game_state.
+    # Cache the sorted tuples keyed on the hero's memory version (bumped only when memory
+    # actually mutates — see Hero._profile_memory_version + the add/update/evict paths in
+    # game/entities/hero_memory.py). On a version hit we reuse the prior tuples verbatim, so
+    # the emitted snapshot is byte-identical to the uncached path; only the volatile fields
+    # above (hp/xp/state/intent/...) are rebuilt every frame. The cache lives on the hero so
+    # it is naturally dropped when the hero is reclaimed (dead-hero TTL cull).
+    ver = getattr(hero, "_profile_memory_version", None)
+    cache = getattr(hero, "_profile_sorted_cache", None)
+    if ver is not None and cache is not None and cache[0] == ver:
+        sorted_places, sorted_mem = cache[1], cache[2]
+    else:
+        kp = getattr(hero, "known_places", None)
+        kp_vals = tuple(kp.values()) if isinstance(kp, dict) else ()
+        sorted_places = sort_known_places(kp_vals)
 
-    mem = getattr(hero, "profile_memory", None) or ()
-    sorted_mem = sort_memory_entries(mem)
+        mem = getattr(hero, "profile_memory", None) or ()
+        sorted_mem = sort_memory_entries(mem)
+
+        if ver is not None:
+            try:
+                hero._profile_sorted_cache = (ver, sorted_places, sorted_mem)
+            except Exception:
+                pass
 
     return HeroProfileSnapshot(
         identity=identity,
@@ -539,3 +583,84 @@ def build_hero_profile_snapshot(
         known_places=sorted_places,
         recent_memory=sorted_mem,
     )
+
+
+class LazyHeroProfiles(dict):
+    """Lazily-built ``hero_profiles_by_id`` mapping (Mythos S5: lazy-hero-profiles).
+
+    ``SimEngine.get_game_state`` used to eagerly build a ``HeroProfileSnapshot``
+    (~8 frozen dataclasses) for EVERY eligible hero on EVERY call — and it is
+    called once per sim tick (lifecycle.update), once per render frame
+    (FrameContext) and once per pointer-path recompute. Repo-wide, the mapping
+    is consumed ONLY by HUD code via ``.get(hero_id)`` / ``hero_id in profiles``
+    (hud.py, hud_left_layout.py, hud_panel_buttons.py, hud_watch_card.py,
+    engine.py selected-hero resolve), so at most 1-2 profiles per frame are ever
+    READ. This subclass keeps the dict contract (isinstance, ``in``, ``len``,
+    truthiness, iteration) over the SAME eligible-hero id set the eager loop
+    produced, but builds each snapshot on first access and memoizes it.
+
+    Snapshot contents are identical to the eager path: ``now_ms`` is captured at
+    construction (get_game_state time) and ``build_hero_profile_snapshot`` is
+    read-only on the hero/sim. Eligibility (alive + dead-within-TTL) is resolved
+    at construction, exactly like the eager loop.
+    """
+
+    def __init__(self, heroes_by_id: dict, sim, now_ms: int):
+        # The real dict storage stays EMPTY until a profile is built; membership
+        # and iteration are answered from the eligible-id map. (No consumer uses
+        # dict(...) copy semantics on this mapping — verified by repo grep.)
+        super().__init__()
+        self._heroes_by_id = heroes_by_id
+        self._sim = sim
+        self._now_ms = int(now_ms)
+
+    # -- lazy build core ----------------------------------------------------
+    def _build(self, key):
+        hero = self._heroes_by_id.get(key)
+        if hero is None:
+            raise KeyError(key)
+        snap = build_hero_profile_snapshot(hero, self._sim, now_ms=self._now_ms)
+        super().__setitem__(key, snap)
+        return snap
+
+    def __getitem__(self, key):
+        try:
+            return super().__getitem__(key)
+        except KeyError:
+            return self._build(key)
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    # -- membership / size / iteration from the id set (no builds) ----------
+    def __contains__(self, key) -> bool:
+        return key in self._heroes_by_id
+
+    def __len__(self) -> int:
+        return len(self._heroes_by_id)
+
+    def __bool__(self) -> bool:
+        return bool(self._heroes_by_id)
+
+    def __iter__(self):
+        return iter(self._heroes_by_id)
+
+    def keys(self):
+        return self._heroes_by_id.keys()
+
+    # -- full materialization (rare: nothing in the repo iterates values) ---
+    def _materialize_all(self) -> None:
+        for key in self._heroes_by_id:
+            if not super().__contains__(key):
+                self._build(key)
+
+    def values(self):
+        self._materialize_all()
+        return super().values()
+
+    def items(self):
+        self._materialize_all()
+        return super().items()

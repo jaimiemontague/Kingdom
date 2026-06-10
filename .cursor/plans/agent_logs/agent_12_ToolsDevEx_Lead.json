@@ -801,6 +801,66 @@
      "completion_receipt": "WK67 W5 (item 5c) COMPLETE. Registered Ursina melee-combat capture scenario 'ursina_melee_combat' (scenario builder + URSINA_CAPTURE_SCENARIOS entry + get_scenario dispatch + NEW tools/wk67_combat_capture_patch.py). Hero strikes adjacent goblin (verified strike+hurt pose); perf/FPS debug overlay disabled + fixed camera; two DETERMINISTIC_SIM runs BYTE-IDENTICAL (SHA256 2DE5D5...312D92). Full suite 598 passed / 4 skipped; qa_smoke --quick PASS. tools-only; no commit/push."
     }
    }
+  },
+  "wk124_hero_kit_ai_and_ui_fixes": {
+   "sprint_meta": {
+    "plan_ref": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
+    "created_utc": "2026-06-03T00:00:00Z",
+    "notes": "WK124 hero kit: wizard spell (T3) + cleric heal (T4) VFX capture scenarios so the PM can screenshot-verify the new combat VFX on the GPU box (Agent 12 Wave 3)."
+   },
+   "rounds": {
+    "r1": {
+     "round_id": "r1",
+     "status": "done",
+     "pm_ref": "Agent 12 (ToolsDevEx_Lead) Wave 3 prompt — WK124-T3 wizard spell + WK124-T4 cleric heal Ursina capture scenarios.",
+     "what_i_changed": {
+      "files": [
+       "tools/wk124_wizard_cleric_capture_patch.py (NEW)",
+       "tools/screenshot_scenarios.py (registered ursina_wizard_cast + ursina_cleric_heal in URSINA_CAPTURE_SCENARIOS)"
+      ],
+      "summary": "Authored a new Ursina capture patch (modeled closely on tools/wk122_guardhouse_arrows_capture_patch.py + tools/wk67_combat_capture_patch.py) building TWO deterministic scenes selected by the KINGDOM_WK124_SCENE env var. WIZARD scene (KINGDOM_WK124_SCENE=wizard): reveals map, disables wave+neutral spawns, places ONE real Hero(hero_class='wizard', is_ranged_attacker=True, attack_range=TILE_SIZE*4.5) FIGHTING ONE goblin ~3 tiles apart (inside the 4.5-tile spell range), holds the goblin alive/in-range and resets the wizard attack_cooldown each tick so the live CombatSystem genuinely emits ranged_projectile{projectile_kind:'magic'} (faithfulness), re-stamps the wizard 'attack' (staff cast) one-shot trigger AND locks that clip to a mid-cast frame via a _compute_anim_frame wrapper (mirrors wk67), then re-pins ONE mid-flight ProjectileVFX(kind='magic') into engine.vfx_system._projectiles AFTER the tick so the captured frame always shows the purple orb (visibility). CLERIC scene (KINGDOM_WK124_SCENE=cleric): reveals map, disables spawns, places ONE real Hero(hero_class='cleric') + ONE wounded Hero(hero_class='warrior') ally ~2 tiles apart (inside CLERIC_HEAL_RADIUS_TILES=4), re-wounds the ally to ~40% HP (below CLERIC_HEAL_MIN_TARGET_PCT=0.85) and resets cleric._heal_cooldown_until_ms=0 each tick so the live ClericHealSystem genuinely emits hero_heal (faithfulness), then re-pins ONE mid-flight ProjectileVFX(kind='heal') so the captured frame always shows the GREEN heal bolt (the green particle burst is pygame-only; the heal billboard is what reads in the Ursina 3D path). Both scenes use a FIXED (non-EditorCamera) oblique camera re-aimed each tick at the held projectile's true 3D Y (terrain_height + PROJECTILE_BILLBOARD_Y) so the orb/bolt sits dead-center; FPS overlay disabled; no import-time os.environ mutation. PM framing knobs: KINGDOM_WK124_SEP_TILES / _CAM_SPAN / _CAM_ELEV / _PROGRESS. Registered both scenarios in URSINA_CAPTURE_SCENARIOS following the exact shape of ursina_guardhouse_arrows (patch_path, default_ticks=480, default_out_subdir, stem, env block with reveal-on-start + EditorCamera off + disable-neutral-spawn + the scene selector)."
+     },
+     "how_to_test": [
+      "python -c \"import tools.screenshot_scenarios; from tools.screenshot_scenarios import get_ursina_capture_scenario; print(get_ursina_capture_scenario('ursina_wizard_cast')); print(get_ursina_capture_scenario('ursina_cleric_heal'))\"",
+      "python -c \"import importlib.util,sys; spec=importlib.util.spec_from_file_location('p','tools/wk124_wizard_cleric_capture_patch.py'); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m); print('patch import OK')\"",
+      "python tools/qa_smoke.py --quick",
+      "python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json > NUL",
+      "PM (GPU box) live capture: python tools/run_ursina_capture_once.py --scenario ursina_wizard_cast --out docs/screenshots/wk124_wizard_cast",
+      "PM (GPU box) live capture: python tools/run_ursina_capture_once.py --scenario ursina_cleric_heal --out docs/screenshots/wk124_cleric_heal"
+     ],
+     "evidence": {
+      "scenario_registration": {
+       "command": "python -c \"... get_ursina_capture_scenario('ursina_wizard_cast'); ... ('ursina_cleric_heal')\"",
+       "exit_code": 0,
+       "status": "PASS",
+       "note": "Both scenarios resolve; patch_path=tools/wk124_wizard_cleric_capture_patch.py; default_ticks=480; env carries KINGDOM_WK124_SCENE (wizard/cleric), reveal-on-start, EditorCamera off, disable-neutral-spawn."
+      },
+      "patch_import": {
+       "command": "python -c \"importlib.util ... exec_module ...; print('patch import OK')\"",
+       "exit_code": 0,
+       "status": "PASS",
+       "note": "patch import OK (apply_patch ran; only monkeypatches UrsinaApp.__init__ — no Ursina window opened)."
+      },
+      "qa_smoke": {
+       "command": "python tools/qa_smoke.py --quick",
+       "exit_code": 0,
+       "status": "PASS",
+       "note": "DONE: PASS — determinism guard + all headless sim/speed-scaling/scenario profiles exit_code=0."
+      },
+      "log_json_valid": {
+       "command": "python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json > NUL",
+       "exit_code": 0,
+       "status": "PASS"
+      }
+     },
+     "headless_gpu_caveat": "Cannot screenshot-verify Ursina headlessly (scoped exception per MEMORY: game/graphics/ursina_* render slices ship with import/registration gates + PM live capture). Both gates above prove imports + scenario registration succeed; the PM runs the live capture on Jaimie's GPU box and gives the visual verdict.",
+     "constraints_respected": "Edited ONLY tools/wk124_wizard_cleric_capture_patch.py (new) + tools/screenshot_scenarios.py + this log. No edits to game/**, ai/**, config.py. No import-time os.environ mutation. DID NOT COMMIT, DID NOT run git (other modified files in the tree are concurrent WK124 sessions).",
+     "blockers": [],
+     "follow_ups": [
+      "PM: run the two live captures on the GPU box (commands above) and confirm (1) wizard scene shows a purple magic orb mid-flight wizard->goblin + the wizard staff cast pose; (2) cleric scene shows a GREEN heal bolt mid-flight cleric->ally. If framing needs nudging, iterate via KINGDOM_WK124_CAM_SPAN / _CAM_ELEV / _PROGRESS / _SEP_TILES (no code edits)."
+     ]
+    }
+   }
   }
  },
  "wk18-llm-merger-and-mechanics": {

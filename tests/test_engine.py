@@ -68,17 +68,21 @@ def test_engine_headless_ui_init_creates_ui_and_systems():
 
 
 def test_engine_headless_tick_simulation_advances_sim_time():
+    # WK125: SimEngine.update() now ALWAYS advances the monotonic, pause-frozen sim
+    # clock in BOTH modes (deterministic AND shipped non-deterministic). Pre-WK125 the
+    # non-deterministic path called set_sim_now_ms(None) and left _sim_now_ms at 0, so
+    # now_ms() fell back to pygame.time.get_ticks() (a real wall clock that advanced
+    # while paused / with app uptime) — the WK125 all-heroes-freeze bug. The clock now
+    # advances by ~elapsed dt regardless of DETERMINISTIC_SIM, so this test asserts the
+    # SAME behavior in both branches.
     engine = GameEngine(headless=True)
     try:
-        from config import DETERMINISTIC_SIM
         initial_sim_ms = engine._sim_now_ms
         # Run 60 ticks (1 second at 60 Hz)
         for _ in range(60):
             engine.update(1 / 60)
-        if DETERMINISTIC_SIM:
-            assert engine._sim_now_ms > initial_sim_ms
-        else:
-            assert engine._sim_now_ms == initial_sim_ms
+        # Advances in both modes now (WK125); ~1000ms after 60 ticks of dt=1/60.
+        assert engine._sim_now_ms > initial_sim_ms
     finally:
         pygame.quit()
 

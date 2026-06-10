@@ -1257,6 +1257,74 @@
           ]
         }
       }
+    },
+    "wk125_paused_walltime_hero_freeze": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk125_paused_walltime_hero_freeze.plan.md",
+        "owner_agent": "10_PerformanceStability_Lead",
+        "consult": "03_TechnicalDirector (sim contract)",
+        "version_target": "patch (stability bugfix)",
+        "notes": "Wall-clock timebase bug: shipped DETERMINISTIC_SIM=0 made SimEngine.update() call set_sim_now_ms(None) every tick, so now_ms() fell back to pygame.time.get_ticks() (real wall clock that advances while paused + grows with app uptime) while hero AI timestamps only refresh on a sim tick -> after long uptime/pause EVERY staleness gate trips for ALL heroes. Same class as WK123 FPS time-degradation."
+      },
+      "rounds": {
+        "r1": {
+          "sprint_id": "wk125_paused_walltime_hero_freeze",
+          "round_id": "r1",
+          "status": "done",
+          "round_meta": {
+            "role": "Agent 10 PerformanceStability_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": "production sim-clock semantics changed by design (now pause-frozen monotonic in ALL modes); WK67 digest byte-identical (DET=1 path unchanged); no gameplay/visual change",
+            "production_code_edited": true,
+            "committed": false,
+            "pushed": false,
+            "lane": "game/sim_engine.py, game/sim/timebase.py, tests/test_wk125_walltime_freeze.py (+ 2 cross-domain test-contract updates: tests/test_engine.py, and a comment-only behavior in tests/test_wk123_dead_hero_ttl.py left untouched -- see follow_ups)"
+          },
+          "what_i_changed": {
+            "WK125-T1": "game/sim_engine.py SimEngine.update() (was lines 689-694): REPLACED the `if DETERMINISTIC_SIM: advance+publish else set_sim_now_ms(None)` with ALWAYS advancing + publishing the monotonic accumulator (`self._sim_now_ms += int(round(dt*1000)); set_sim_now_ms(self._sim_now_ms)`) in both modes. update() is the sole set_sim_now_ms caller and is skipped while paused (lifecycle._prepare_sim_and_camera returns False), so the clock freezes on pause and never jumps with uptime/resume. Also refreshed the stale WK123-C2 dead-hero-cleanup comment (~L848-857): it now states now_ms()==self._sim_now_ms in all modes; the death-stamp DELIBERATELY still reads through timebase.now_ms() (NOT self._sim_now_ms) so the death-stamp and the get_game_state profile-build retention window stay a SINGLE clock even when a caller drives time via timebase directly (the WK123-C2 contract the dead-hero TTL test pins).",
+            "WK125-T2": "game/sim_engine.py SimEngine.__init__: confirmed self._sim_now_ms = 0 at L97; ADDED set_sim_now_ms(self._sim_now_ms) at the END of __init__ (after the fog-revision state) so entities constructed before the first update() stamp timestamps from sim-time (0), not the wall clock.",
+            "WK125-T3": "game/sim/timebase.py: rewrote the module docstring + set_sim_now_ms()/now_ms() docstrings to state now_ms() is the pause-frozen sim clock in ALL modes; the get_ticks fallback only covers the pre-first-update construction window (now closed by T2); UI wanting real wall time that advances while paused must call pygame.time.get_ticks() directly (as game/engine.py send_player_message already does). NO call-site conversions were needed (audit below).",
+            "WK125-T4": "NEW tests/test_wk125_walltime_freeze.py (headless, ~3s). Monkeypatches game.sim_engine.DETERMINISTIC_SIM=False to exercise the SHIPPED non-deterministic path; builds headless GameEngine + BasicAI(llm_brain=None), set_sim_seed(1), neutralizes spawner/lair, spawns 6 warriors; warms up ~0.5 sim-s; monkeypatches pygame.time.get_ticks -> +3_600_000 (== paused 1hr); runs 1 tick. LOAD-BEARING assert: timebase.now_ms() < 60_000 (pre-fix ~3.6M FAILS; post-fix sim-time PASSES). Secondary: 8 sim-s after the jump, asserts >half the heroes net-move >50px and not all-IDLE-with-null-target.",
+            "cross_domain_test_update": "tests/test_engine.py::test_engine_headless_tick_simulation_advances_sim_time asserted the OLD buggy contract (`_sim_now_ms == initial` i.e. clock does NOT advance when DETERMINISTIC_SIM=0). That assertion directly contradicts the WK125 fix, so I updated it to assert the clock advances in BOTH modes (with a WK125 comment explaining the contract change). File owned by Agent 03/11 -- minimal, scope-coupled to the contract change I was assigned; flagged for owner review."
+          },
+          "wk125_t3_audit": {
+            "method": "grep now_ms( across the repo; classified every NON-sim caller (UI/HUD/audio/cosmetic) by whether it uses now_ms() as a delta-vs-another-now_ms()-stamp (safe to pause-freeze) or genuinely needs real wall-clock that advances WHILE PAUSED (would need get_ticks conversion).",
+            "verdict": "NO conversions needed. Every non-sim caller is a consistent delta vs another sim_now_ms()-stamped value; pause-freezing those cosmetic timers is correct (pause should freeze UI timers).",
+            "callers": [
+              "game/ui/hud_panel_buttons.py trigger_recall_flash (set _recall_flash_end_ms = sim_now_ms()+750) + render_recall_button (compares now < _recall_flash_end_ms) -> DELTA, safe.",
+              "game/ui/hud_panel_buttons.py / hud.py / hud_left_layout.py pin.update_liveness(now_ms=sim_now_ms()) -> compares now_ms vs pinned_at_ms (both sim-stamped) -> DELTA, safe.",
+              "game/ui/hud.py _session_start_ms = sim_now_ms() (session-elapsed display) + _alert_watcher.check_low_health(now_ms) -> DELTA, safe.",
+              "game/ui/hero_panel.py last-decision age = sim_now_ms() - last_llm_decision_time (both sim-stamped) + get_intent_snapshot(now_ms) -> DELTA, safe.",
+              "game/audio/audio_system.py on_event/_emit_single_event cooldowns (next_play stamped from sim_now_ms, compared vs sim_now_ms) and game/audio/ambient.py update_ambient enemy ambient cooldowns -> DELTA, safe. NOTE: the audio paths also only fire during sim ticks (event-bus emits / ambient called from the update path), so they are frozen during pause regardless of this change.",
+              "PRE-EXISTING precedent (already correct, untouched): game/engine.py send_player_message uses pygame.time.get_ticks() directly for the conversation cooldown -- exactly the pattern T3 prescribes for UI that must elapse while paused."
+            ]
+          },
+          "commands_run": [
+            {"cmd": "python -m pytest tests/test_wk125_walltime_freeze.py -q -s", "exit_code": 0, "result": "1 passed. now_before_jump=510 now_after_jump=527 (NOT 3.6M); net_disp all 6 heroes 171-408px; moved_gt_50px=6/6; all_idle_no_target=False; hunger_urgent all False."},
+            {"cmd": "python -m pytest tests/test_wk125_walltime_freeze.py -q -s  (after TEMPORARY local revert of T1+T2 to confirm it catches the bug)", "exit_code": 1, "result": "FAILED as designed: now_after_jump=3601383 -> assert 3601383 < 60000 FAILS. Restored the fix immediately after."},
+            {"cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q", "exit_code": 0, "result": "10 passed -- WK67 AI-decision digest BYTE-IDENTICAL (the test pins _AI_DECISION_DIGEST internally; not re-baselined). DET=1 already used this accumulator clock, so unchanged."},
+            {"cmd": "python -m pytest tests/test_wk124_ranger_idle_soak.py -q", "exit_code": 0, "result": "1 passed -- ranger fog/idle soak still green."},
+            {"cmd": "python -m pytest tests/test_wk123_dead_hero_ttl.py -q", "exit_code": 0, "result": "3 passed -- after fixing the death-stamp to read through timebase.now_ms() (single-clock contract) the WK123-C2 TTL test is green."},
+            {"cmd": "python -m pytest tests/test_engine.py -q", "exit_code": 0, "result": "10 passed -- after updating test_engine_headless_tick_simulation_advances_sim_time to the new WK125 contract (clock advances in both modes)."},
+            {"cmd": "python tools/determinism_guard.py", "exit_code": 0, "result": "[determinism_guard] PASS: no violations found"},
+            {"cmd": "python -m pytest tests/ -q", "exit_code": 0, "result": "1538 passed, 5 skipped, 0 failed in 335.34s"},
+            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "result": "determinism_guard PASS + full pytest green (see evidence)."},
+            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json > NUL", "exit_code": 0, "result": "valid JSON"}
+          ],
+          "evidence": {
+            "now_ms_before_after_jump": "Test (shipped DET=0 path): now_before_jump=510 ms; after a +3_600_000 ms pygame.time.get_ticks jump + 1 tick, now_after_jump=527 ms (sim-time, NOT the wall jump). PRE-FIX (local revert) the same point read now_after_jump=3601383 ms -> the load-bearing assert (< 60_000) FAILS. This is the exact wall-clock-leak the bug depends on.",
+            "wk67_digest_line": "tests/test_wk67_ai_boundary.py 10 passed -> _AI_DECISION_DIGEST byte-identical (b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded; pinned in-test, NOT re-baselined).",
+            "full_suite_summary": "1538 passed, 5 skipped, 1 warning in 335.34s (0:05:35) -- 0 failed.",
+            "hero_movement_after_jump": "All 6 heroes net-displaced 171-408 px in 8 sim-s after the +1hr jump; none IDLE-with-null-target; hunger_urgent all False -> the all-heroes-freeze symptom is gone on the shipped path."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Cross-domain: tests/test_engine.py (Agent 03/11) updated to the new WK125 clock contract -- please review the one-line assertion change in test_engine_headless_tick_simulation_advances_sim_time.",
+            "PM/live: ask Jaimie to run the exact repro -- `python main.py` -> pause a few min (or leave open ~1hr) -> hit play -> heroes should resume moving normally. The deterministic test is the authoritative gate; this is the human confirmation.",
+            "Honest residual (from plan): if heroes STILL freeze under the live repro after this lands, a residual geometric/deadlock vector (a hero that cannot displace enough to self-heal) would be next, chased with per-hero live logging. The timebase fix removes the divergence that made ALL heroes trip staleness gates at once (matches the paused-counts / all-heroes / ~1hr-onset clues)."
+          ]
+        }
+      }
     }
   }
 }

@@ -8,6 +8,7 @@ from . import journey
 from . import llm_bridge
 from . import shopping
 from . import stuck_recovery
+from . import support
 from . import view_compat
 from . import zones
 
@@ -20,6 +21,7 @@ __all__ = [
     "llm_bridge",
     "shopping",
     "stuck_recovery",
+    "support",
     "view_compat",
     "zones",
 ]

@@ -59,6 +59,9 @@ class HeroMemoryMixin:
         self.profile_memory.append(entry)
         while len(self.profile_memory) > hero_memory.PROFILE_MEMORY_MAX_ENTRIES:
             self.profile_memory.pop(0)
+        # WK123 perf: invalidate the cached sorted-memory tuple used by
+        # build_hero_profile_snapshot (see Hero._profile_memory_version).
+        self._profile_memory_version += 1
         return entry
 
     def remember_known_place(
@@ -106,6 +109,9 @@ class HeroMemoryMixin:
             is_destroyed=bool(is_destroyed),
         )
         self.known_places[str(pid)] = snap
+        # WK123 perf: the upsert (new place OR updated visits/last_seen) changes the sorted
+        # known-places tuple, so bump the cache version (see Hero._profile_memory_version).
+        self._profile_memory_version += 1
         self._trim_known_places_if_needed()
         return snap
 
@@ -116,6 +122,9 @@ class HeroMemoryMixin:
                 key=lambda k: (self.known_places[k].first_seen_ms, self.known_places[k].place_id),
             )
             del self.known_places[drop_key]
+            # WK123 perf: eviction changes the sorted known-places tuple (see
+            # Hero._profile_memory_version).
+            self._profile_memory_version += 1
 
     def record_decision(self, action: str, reason: str, now_ms: int | None = None, context: dict | None = None):
         if now_ms is None:

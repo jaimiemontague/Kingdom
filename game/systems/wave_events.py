@@ -36,6 +36,7 @@ from game.entities.enemy import (
 )
 from game.sim.determinism import get_rng
 from game.systems.protocol import GameSystem, SystemContext
+from game.systems.spawner import spawn_stagger_cap
 
 if TYPE_CHECKING:
     from game.systems.difficulty import DifficultySystem
@@ -109,6 +110,10 @@ class WaveEventSystem(GameSystem):
         self._active_wave_def: WaveEventDef | None = None
         self._active_wave_reward: int = 0
         self._wave_clear_checked: bool = False
+        # WK128: stagger wave bursts — queued (enemy_cls, wx, wy) plans released a
+        # few constructions per tick (cap 0 = legacy single-tick burst).
+        self.stagger_cap: int = spawn_stagger_cap()
+        self._pending_spawns: list[tuple] = []
 
     # ------------------------------------------------------------------
     # Protocol
@@ -117,6 +122,10 @@ class WaveEventSystem(GameSystem):
     def update(self, ctx: SystemContext, dt: float) -> None:
         self.elapsed_sec += dt
         elapsed_min = self.elapsed_sec / 60.0
+
+        # WK128: release queued wave spawns a few per tick.
+        if self._pending_spawns:
+            self._drain_pending_spawns(ctx)
 
         event_def = self._current_event_def()
         if event_def is None:
@@ -139,8 +148,8 @@ class WaveEventSystem(GameSystem):
         if elapsed_min >= target_minute and self._active_wave_def is None:
             self._spawn_wave(event_def, ctx)
 
-        # Check for wave clear
-        if self._active_wave_def is not None and not self._wave_clear_checked:
+        # Check for wave clear (not while staggered spawns are still queued)
+        if self._active_wave_def is not None and not self._wave_clear_checked and not self._pending_spawns:
             alive = [e for e in self._active_wave_enemies if getattr(e, "is_alive", False)]
             if len(alive) == 0:
                 self._wave_clear_checked = True
@@ -216,11 +225,24 @@ class WaveEventSystem(GameSystem):
             trimmed.append(enemy)
         ctx.enemies[:] = trimmed
 
+    def _drain_pending_spawns(self, ctx: SystemContext) -> None:
+        """WK128: construct and register at most ``stagger_cap`` queued enemies."""
+        cap = self.stagger_cap
+        batch = self._pending_spawns if cap <= 0 else self._pending_spawns[:cap]
+        self._pending_spawns = [] if cap <= 0 else self._pending_spawns[cap:]
+        for enemy_cls, wx, wy in batch:
+            enemy = enemy_cls(wx, wy)
+            # Apply difficulty HP/damage multipliers to newly spawned wave enemies
+            # WK72: scaling consolidated into DifficultySystem.apply_to_enemy
+            if self.difficulty is not None:
+                self.difficulty.apply_to_enemy(enemy)
+            ctx.enemies.append(enemy)
+            self._active_wave_enemies.append(enemy)
+
     def _spawn_wave(self, event_def: WaveEventDef, ctx: SystemContext) -> None:
-        """Instantiate and register enemies for a wave event."""
+        """Plan and register enemies for a wave event (construction staggered)."""
         self._active_wave_def = event_def
         self._wave_clear_checked = False
-        spawned: list = []
 
         # Difficulty multiplier on enemy counts
         count_mult = 1.0
@@ -238,30 +260,31 @@ class WaveEventSystem(GameSystem):
             # nearest_lair fallback to random_edge
             spawn_edges = [self.rng.choice(edges)]
 
+        # WK128: plan the full wave now (RNG draws in legacy order so positions and
+        # composition are identical to the single-tick burst); construct staggered.
+        plan: list[tuple] = []
         for enemy_cls, base_count in event_def.composition:
             adjusted_count = max(1, int(round(base_count * count_mult)))
             for i in range(adjusted_count):
                 edge = spawn_edges[i % len(spawn_edges)]
                 wx, wy = _edge_position(self.rng, edge)
-                enemy = enemy_cls(wx, wy)
-                # Apply difficulty HP/damage multipliers to newly spawned wave enemies
-                # WK72: scaling consolidated into DifficultySystem.apply_to_enemy
-                if self.difficulty is not None:
-                    self.difficulty.apply_to_enemy(enemy)
-                spawned.append(enemy)
+                plan.append((enemy_cls, wx, wy))
 
         # Add to shared enemy list (wave events can exceed normal cap by overflow factor).
         # WK61-R11: reserve slots so themed compositions (e.g. Wolf Pack) are not dropped.
         wave_cap = int(MAX_ALIVE_ENEMIES * _wave_cfg.max_enemy_cap_overflow)
-        needed = len(spawned)
+        needed = len(plan)
         self._reserve_wave_spawn_slots(ctx, needed, wave_cap)
         alive_count = len([e for e in ctx.enemies if getattr(e, "is_alive", False)])
         remaining = max(0, wave_cap - alive_count)
-        added = spawned[:remaining] if remaining < len(spawned) else spawned
-        ctx.enemies.extend(added)
+        if remaining < len(plan):
+            plan = plan[:remaining]
 
-        self._active_wave_enemies = list(added)
+        self._active_wave_enemies = []
         self._active_wave_reward = event_def.reward_gold
+        self._pending_spawns.extend(plan)
+        # Release the first batch on the fire tick (all of it in burst mode).
+        self._drain_pending_spawns(ctx)
 
         # Advance index for next wave
         self._next_table_index += 1

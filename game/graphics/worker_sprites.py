@@ -87,12 +87,40 @@ class WorkerSpriteLibrary:
                 "dead": dict(frame_time=0.10, loop=False),
             }
 
+        # First pass: build clips from actions that have REAL PNG frames. Collect the
+        # actions with no art so we can fall back to this unit's own idle clip below
+        # (WK124-T5) instead of the letter-on-circle procedural placeholder.
         clips: Dict[str, AnimationClip] = {}
+        missing_actions: list[str] = []
         for action, meta in actions.items():
             frames = cls._try_load_asset_frames(wt, action, size=int(size))
             if not frames:
-                frames = cls._procedural_frames(wt, action, base_color, spec)
+                missing_actions.append(action)
+                continue
             clips[action] = AnimationClip(frames=frames, frame_time_sec=meta["frame_time"], loop=meta["loop"])
+
+        # Second pass: fill in the missing actions.
+        # WK124-T5: when a unit has SOME real art (e.g. peasant_builder has idle/walk/work
+        # but no hurt/dead), reuse this same unit's real ``idle`` clip frames for the
+        # missing actions instead of the procedural "letter-on-circle" placeholder -- so a
+        # builder peasant shows its real green art when hit, never the "P-circle". Keep the
+        # procedural placeholder ONLY when the unit has NO real art at all.
+        if missing_actions:
+            base_clip = clips.get("idle") or (next(iter(clips.values())) if clips else None)
+            if base_clip is None:
+                # Truly no art for this worker type -> keep the legacy procedural fallback.
+                for action in missing_actions:
+                    meta = actions[action]
+                    frames = cls._procedural_frames(wt, action, base_color, spec)
+                    clips[action] = AnimationClip(frames=frames, frame_time_sec=meta["frame_time"], loop=meta["loop"])
+            else:
+                for action in missing_actions:
+                    meta = actions[action]
+                    clips[action] = AnimationClip(
+                        frames=list(base_clip.frames),
+                        frame_time_sec=meta["frame_time"],
+                        loop=meta["loop"],
+                    )
 
         cls._cache[key] = clips
         return clips

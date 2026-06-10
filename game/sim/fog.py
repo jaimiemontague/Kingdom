@@ -10,6 +10,7 @@ the original method used.
 """
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 from game.world import Visibility
@@ -21,6 +22,25 @@ from config import (
 
 if TYPE_CHECKING:  # type-only; avoids a runtime import cycle with game.sim_engine
     from game.sim_engine import SimEngine
+
+# Mythos S5 (fog-cadence-discovery-prefilter): the fog rebuild cost scales with
+# the revealer count (demote-all + one reveal circle per revealer + the per-hero
+# building-discovery scan), so the rebuild cadence ADAPTS to it: small kingdoms
+# keep the WK59 3-tick cadence; once the revealer count exceeds the threshold
+# (late-game swarm: 24 heroes + buildings + guards + peasants ~ 50+) the cadence
+# stretches to KINGDOM_FOG_MAX_CADENCE (default 6 ticks = 300ms at FAST —
+# invisible zoomed out). The WK67 digest scenario peaks at 9 revealers (measured)
+# so it always stays on the 3-tick cadence => digest byte-identical.
+# KINGDOM_FOG_ADAPTIVE_CADENCE=0 restores the fixed 3-tick cadence everywhere.
+_ADAPTIVE_CADENCE = os.environ.get("KINGDOM_FOG_ADAPTIVE_CADENCE", "1") != "0"
+try:
+    _REVEALER_THRESHOLD = int(os.environ.get("KINGDOM_FOG_REVEALER_THRESHOLD", "20"))
+except ValueError:
+    _REVEALER_THRESHOLD = 20
+try:
+    _MAX_CADENCE = max(3, int(os.environ.get("KINGDOM_FOG_MAX_CADENCE", "6")))
+except ValueError:
+    _MAX_CADENCE = 6
 
 
 def update_fog_of_war(sim: "SimEngine") -> None:
@@ -39,7 +59,15 @@ def update_fog_of_war(sim: "SimEngine") -> None:
     sim._fog_tick_counter = tick_counter
     if getattr(sim.world, 'fog_disabled', False):
         return
-    if tick_counter % 3 != 0 and getattr(sim, "_fog_revealers_snapshot", None) is not None:
+    prev_snapshot = getattr(sim, "_fog_revealers_snapshot", None)
+    cadence = 3
+    if (
+        _ADAPTIVE_CADENCE
+        and prev_snapshot is not None
+        and len(prev_snapshot) > _REVEALER_THRESHOLD
+    ):
+        cadence = _MAX_CADENCE
+    if tick_counter % cadence != 0 and prev_snapshot is not None:
         return
 
     # Tunables (tile radius). Kept local to avoid cross-agent config conflicts.

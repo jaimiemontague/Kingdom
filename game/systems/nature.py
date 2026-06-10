@@ -32,10 +32,20 @@ class NatureSystem:
         self._sapling_spawn_ms_accum = 0
         self.rng = get_rng("nature")
 
-    def tick(self, dt: float, trees: list[Tree], *, world: Any | None = None, buildings: list | None = None) -> None:
+    def tick(self, dt: float, trees: list[Tree], *, world: Any | None = None, buildings: list | None = None) -> list[Tree]:
+        """Advance sapling spawning + growth. Returns the trees whose growth value
+        CHANGED this tick (including freshly spawned saplings).
+
+        Mythos S5 (tree-growth-incremental): growth is discrete (2-minute stage
+        boundaries), so >99.9% of ticks change nothing — the returned list lets
+        SimEngine update its ``_tree_growth_by_tile`` dict incrementally instead
+        of rebuilding all ~2k entries every tick. The growth math below is
+        byte-identical to the pre-change loop; only the change tracking is new.
+        """
+        changed: list[Tree] = []
         add_ms = int(round(float(dt) * 1000.0))
         if add_ms <= 0:
-            return
+            return changed
 
         # WK45: spawn saplings first so they can start growing immediately this tick.
         self._sapling_spawn_ms_accum += add_ms
@@ -43,22 +53,33 @@ class NatureSystem:
             self._sapling_spawn_ms_accum -= int(self.sapling_interval_ms)
             if world is None:
                 break
-            if self._try_spawn_sapling(world=world, buildings=buildings, trees=trees) is None:
+            spawned = self._try_spawn_sapling(world=world, buildings=buildings, trees=trees)
+            if spawned is None:
                 # If no valid spot, stop spending accumulated time this tick.
                 break
+            # _try_spawn_sapling appends the new Tree last — record it as changed.
+            changed.append(trees[-1])
 
         if not trees:
-            return
+            return changed
 
+        stage_ms = int(self.stage_duration_ms)
         for t in trees:
             if t.growth_percentage >= 1.0:
-                t.growth_percentage = 1.0
+                if t.growth_percentage != 1.0:
+                    t.growth_percentage = 1.0
+                    changed.append(t)
                 continue
 
             t.growth_ms_accum = int(t.growth_ms_accum) + add_ms
-            stage = int(t.growth_ms_accum // int(self.stage_duration_ms))
+            stage = int(t.growth_ms_accum // stage_ms)
             stage = max(0, min(3, stage))  # 0..3 corresponds to 0.25..1.0
-            t.growth_percentage = (stage + 1) * 0.25
+            new_growth = (stage + 1) * 0.25
+            if new_growth != t.growth_percentage:
+                t.growth_percentage = new_growth
+                changed.append(t)
+
+        return changed
 
     def _try_spawn_sapling(self, *, world: Any, buildings: list | None, trees: list[Tree]) -> tuple[int, int] | None:
         # Import locally to avoid pulling pygame-heavy world module into pure-sim contexts unexpectedly.

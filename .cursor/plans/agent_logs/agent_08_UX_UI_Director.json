@@ -9,6 +9,52 @@
   "Structure nests rounds inside sprints to keep history organized."
  ],
  "sprints": {
+  "wk124_hero_kit_ai_and_ui_fixes": {
+   "sprint_meta": {
+    "plan_ref": ".cursor/plans/wk124_hero_kit_ai_and_ui_fixes.plan.md",
+    "created_utc": "2026-06-03T00:00:00Z",
+    "notes": "WK124-T2: Guild / Inn / Market (and blacksmith / trading-post) selected-building MENU panels must show HP like the guardhouse does. Root cause (PM-diagnosed): not a data bug (all buildings get hp=max_hp=200 from base.py:79-80); the selected-building menu renderers GuildPanelRenderer (guild_panel.py) and EconomicPanelRenderer (economic_panel.py) simply omit the HP row, while DefensivePanelRenderer (guardhouse) draws it via _render_hp_block. The damage-gated world-space floating bar in ursina_building_ui.py is a SEPARATE element -- left untouched."
+   },
+   "rounds": {
+    "r1": {
+     "sprint_id": "wk124_hero_kit_ai_and_ui_fixes",
+     "round_id": "r1",
+     "status": "done",
+     "task": "WK124-T2 (Wave 1): add an unconditional HP row+bar to the guild and economic selected-building menu panels so guild/inn/market/blacksmith/trading-post match the guardhouse menu. Promote a shared render_hp_block helper into building_renderers/__init__.py and reuse it everywhere. Add tests/test_wk124_building_hp_panels.py.",
+     "what_i_changed": {
+      "game/ui/building_renderers/__init__.py": "Added shared render_hp_block(panel, surface, building, y) -> int (mirrors render_occupants placement: defined BEFORE the sub-module imports at lines 34-39 so the name is bound when those modules import it -- same proven pattern render_occupants already uses, no circular import). It renders 'HP: {hp}/{max_hp}' in COLOR_WHITE then a full-width HPBar with good=COLOR_GREEN, identical to DefensivePanelRenderer._render_hp_block. Added imports: COLOR_GREEN (to existing COLOR_GOLD/COLOR_RED/COLOR_WHITE line) and HPBar (from game.ui.widgets).",
+      "game/ui/building_renderers/defensive_panel.py": "Refactored DefensivePanelRenderer._render_hp_block to delegate to the shared render_hp_block helper (one-line return) so all four building families render HP identically. Trimmed now-unused imports (COLOR_GREEN, COLOR_RED, HPBar removed; kept COLOR_WHITE for the guardhouse stats text); added 'from game.ui.building_renderers import render_hp_block'. Behavior byte-identical -> WK61 guardhouse regression still green.",
+      "game/ui/building_renderers/guild_panel.py": "Imported render_hp_block; call it at the TOP of GuildPanelRenderer.render (before render_occupants). Shows HP unconditionally for warrior/ranger/rogue/wizard guilds.",
+      "game/ui/building_renderers/economic_panel.py": "Imported render_hp_block; call it inside each sub-renderer AFTER the construction-notice early-return -> _render_marketplace, _render_blacksmith, _render_inn (after the 'if not is_constructed: return notice' guard, before render_occupants) and at the top of _render_trading_post (no construction notice). Placed inside the sub-renderers (not at the top of render()) so the existing dispatch-routing test test_ui_building_renderers.py::test_economic_renderer_dispatches_enum_building_types -- which passes a bare SimpleNamespace panel + surface=None and monkeypatches the sub-renderers -- stays green. This matches the plan's 'only after any construction-notice early-returns' guidance.",
+      "tests/test_wk124_building_hp_panels.py": "NEW. Mirrors tests/test_wk61_r5_guardhouse_hp_panel.py panel-construction + clipped-region color-assertion pattern. test_guild_panel_shows_hp (WarriorGuild), test_inn_panel_shows_hp (Inn), test_marketplace_panel_shows_hp (Marketplace): construct building, mark is_constructed=True, select on a BuildingPanel(1920,1080), render to a 1920x1080 surface, clip to panel rect, assert COLOR_WHITE (HP text) and COLOR_GREEN (full HP bar) both present."
+     },
+     "approach_note": "Used the PREFERRED shared-helper refactor (promote render_hp_block into __init__.py + delegate defensive_panel to it) rather than copy-pasting the block, so HP renders identically across all building families and there is one source of truth. First attempted placing the economic HP block at the top of EconomicPanelRenderer.render(), but that broke the pre-existing dispatch test (bare SimpleNamespace panel has no font_normal); moved it inside each sub-renderer after the construction-notice early-return, which both keeps that test green and satisfies the plan's after-construction-notice requirement.",
+     "commands_run": [
+      {"cmd": "python -c \"import game.ui.building_renderers; from game.ui.building_renderers import render_hp_block, render_occupants; from game.ui.building_renderers.defensive_panel import DefensivePanelRenderer; from game.ui.building_renderers.guild_panel import GuildPanelRenderer; from game.ui.building_renderers.economic_panel import EconomicPanelRenderer\"", "exit_code": 0, "result": "IMPORT OK (no circular import)"},
+      {"cmd": "python -m pytest tests/test_wk124_building_hp_panels.py -q", "exit_code": 0, "result": "3 passed"},
+      {"cmd": "python -m pytest tests/test_wk61_r5_guardhouse_hp_panel.py -q", "exit_code": 0, "result": "2 passed (guardhouse regression intact after defensive_panel refactor)"},
+      {"cmd": "python -m pytest tests/test_ui_building_renderers.py -q", "exit_code": 0, "result": "7 passed (dispatch-routing test stayed green after moving HP block into sub-renderers)"},
+      {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "result": "DONE: PASS -- determinism_guard PASS; pytest 1536 passed / 5 skipped / 0 failed (282.04s); all headless sim profiles exit 0"},
+      {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json > NUL", "exit_code": 0, "result": "valid JSON"}
+     ],
+     "evidence": {
+      "new_tests": "tests/test_wk124_building_hp_panels.py -- 3 passed (guild/inn/market each assert COLOR_WHITE HP text + COLOR_GREEN HP bar present in the clipped BuildingPanel region)",
+      "regression": "tests/test_wk61_r5_guardhouse_hp_panel.py 2 passed; tests/test_ui_building_renderers.py 7 passed; full suite 1536 passed / 5 skipped / 0 failed",
+      "qa_smoke_quick": "DONE: PASS",
+      "screenshot_verdict": "DEFERRED to PM (Agent 01) per ticket -- panels render into a pygame surface; PM screenshot-verifies the in-game look separately. Headless color-assertion tests prove the HP text+bar are drawn into the panel region."
+     },
+     "blockers": [],
+     "assumptions": [
+      "Buildings default is_constructed=True (base.py:86), so guild/inn/market render the real panel (not the construction notice) -> tests set is_constructed=True explicitly to be safe.",
+      "Placing the economic HP block inside the sub-renderers (after construction-notice early-return) rather than at the top of render() is the correct reading of the plan's 'only after any construction-notice early-returns' clause and avoids breaking the existing dispatch-routing test (outside my edit scope)."
+     ],
+     "follow_ups": [
+      "PM (Agent 01): capture a guild/inn/market selected-building menu in-game (pygame and/or Ursina HUD) to visually confirm the HP row+bar appears, per WK124-T2 acceptance."
+     ],
+     "no_commit_confirmed": "No git operations performed. No commit. Stayed strictly within game/ui/building_renderers/{__init__,defensive_panel,guild_panel,economic_panel}.py + tests/test_wk124_building_hp_panels.py + this log."
+    }
+   }
+  },
   "wk103_round_b_hud_menu_scroll": {
    "sprint_meta": {
     "plan_ref": ".cursor/plans/wk103_round_b_hud_menu_scroll.plan.md",

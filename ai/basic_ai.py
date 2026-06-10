@@ -14,6 +14,7 @@ from ai.behaviors import (
     llm_bridge,
     shopping,
     stuck_recovery,
+    support,
 )
 from ai.behaviors.movement import route_to_building
 from config import TILE_SIZE
@@ -93,6 +94,7 @@ class BasicAI:
         self.shopping_behavior = shopping
         self.hunger_behavior = hunger
         self.llm_bridge_behavior = llm_bridge
+        self.support_behavior = support
         self._hunger_no_stand_logged_heroes: set[str] = set()
 
     # -----------------------

@@ -7,7 +7,11 @@ from typing import Dict, Tuple
 import config
 from game.graphics.hero_sprites import HeroSpriteLibrary
 from game.graphics.enemy_sprites import EnemySpriteLibrary
-from game.graphics.vfx import get_projectile_billboard_surface
+from game.graphics.vfx import (
+    get_heal_billboard_surface,
+    get_magic_billboard_surface,
+    get_projectile_billboard_surface,
+)
 from game.graphics.worker_sprites import WorkerSpriteLibrary
 
 # Normalized UV region on the atlas: (u_start, v_start, u_width, v_height)
@@ -96,9 +100,14 @@ class UnitAtlasBuilder:
                 for fi, surf in enumerate(clip.frames):
                     self._pack_frame(surf, ("worker", wt, action, fi), cursor)
 
-        # Ranged VFX — shared billboard texture with pygame/Ursina legacy path (wk48 instancing).
+        # Ranged VFX — shared billboard textures with pygame/Ursina legacy path (wk48 instancing).
+        # Mythos S6 (`inst-parity-gap-fixes`): also pack the WK124 wizard "magic"
+        # and cleric "heal" orbs so instanced volleys render per-kind like the
+        # legacy per-Entity path (ursina_misc_props_sync.py) instead of as arrows.
         proj_surf = get_projectile_billboard_surface()
         self._pack_frame(proj_surf, ("vfx", "projectile", "arrow", 0), cursor)
+        self._pack_frame(get_magic_billboard_surface(), ("vfx", "projectile", "magic", 0), cursor)
+        self._pack_frame(get_heal_billboard_surface(), ("vfx", "projectile", "heal", 0), cursor)
 
     def get_ursina_texture(self):
         """Return the single GPU-resident atlas Texture (lazy-created, cached)."""

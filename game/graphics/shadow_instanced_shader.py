@@ -21,8 +21,11 @@ out vec2 uvs;
 uniform samplerBuffer instanceData;
 
 void main() {
-    int base = gl_InstanceID * 2;
+    /* Mythos S6: 3 texels per instance (matches instanced_unit_shader) —
+       texel0 = pos + signed x-scale, texel1 = uv region, texel2.x = y-scale. */
+    int base = gl_InstanceID * 3;
     vec4 posScale = texelFetch(instanceData, base);
+    vec4 extra = texelFetch(instanceData, base + 2);
 
     float scaleSigned = posScale.w;
     /* Negative w: projectile / discard blob shadow (shared buffer with units). */
@@ -33,14 +36,20 @@ void main() {
     }
 
     float scale = scaleSigned;
+    float scaleY = (extra.x > 0.0) ? extra.x : scale;
     vec3 instancePos = posScale.xyz;
 
-    /* Sit just above ``ursina_terrain_fog_collab`` base quad (y≈-0.05); old y=0.01 floated far above floor. */
-    const float SHADOW_FLOOR_Y = -0.048;
+    /* Mythos S6 (`inst-parity-gap-fixes`): terrain-following blob. The instance
+       Y now includes get_terrain_height (units sit ON hills), so derive the
+       floor from the unit's feet (center - half height) instead of the old
+       global SHADOW_FLOOR_Y=-0.048 plane, which was wrong on any elevation.
+       The small -0.002 bias + the node's set_depth_offset(10) keep it from
+       depth-fighting the terrain. */
+    float floorY = instancePos.y - scaleY * 0.5 - 0.002;
 
     vec3 worldPos = vec3(
         instancePos.x + p3d_Vertex.x * scale * 1.2,
-        SHADOW_FLOOR_Y,
+        floorY,
         instancePos.z + p3d_Vertex.y * scale * 0.8
     );
 

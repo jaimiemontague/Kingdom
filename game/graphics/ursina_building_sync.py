@@ -53,6 +53,7 @@ from game.graphics.ursina_building_ui import (
     _sync_building_worldspace_ui,
     _maybe_log_tax_overlay_debug,
 )
+from game.graphics.ursina_unit_overlays import free_entity_overlays as _free_entity_overlays
 from game.world import Visibility
 
 if TYPE_CHECKING:
@@ -97,6 +98,11 @@ def sync_snapshot_buildings(r: "UrsinaRenderer", snapshot: "SimStateSnapshot", w
             if _dead_ent is not None:
                 import ursina as _u
                 r._unit_anim_state.pop(obj_id, None)
+                # WK123 C1 leak fix: free the building's overlay child nodes
+                # (HP bar / label / gold) BEFORE destroying it. Its _ks_gold_label
+                # is parent=scene (not a child of ent), so even a cascading destroy
+                # would miss it — the named-attr sweep in free_entity_overlays catches it.
+                _free_entity_overlays(_dead_ent)
                 _u.destroy(r._entities.pop(obj_id))
             continue
         # WK57 Wave 3: Buildings are always surface (layer 0) — hide when camera underground

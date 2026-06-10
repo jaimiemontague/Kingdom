@@ -12,6 +12,7 @@ from game.sim.hero_profile import HeroMemoryEntry, KnownPlaceSnapshot  # type hi
 from config import (
     TILE_SIZE, HERO_BASE_HP, HERO_BASE_ATTACK, HERO_BASE_DEFENSE,
     HERO_SPEED, COLOR_BLUE, HUNGER_INTERVAL_MS,
+    WIZARD_ATTACK_RANGE_TILES, WIZARD_SPELL_COLOR, WIZARD_SPELL_SIZE_PX,
 )
 from game.sim.hero_guardrails_tunables import PATH_REPLAN_MIN_INTERVAL_MS
 
@@ -130,8 +131,17 @@ class Hero(HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin):
         # WK5 Hotfix: Rangers have proper ranged attack range (5-7 tiles, using 6 tiles)
         if self.hero_class == "ranger":
             self.attack_range = TILE_SIZE * 6  # 6 tiles = 192 pixels at 32px/tile
+        elif self.hero_class == "wizard":
+            # WK124-T3a: wizard casts spells at stand-off range (wizard-gated;
+            # ranger/cleric/warrior values unchanged).
+            self.attack_range = TILE_SIZE * WIZARD_ATTACK_RANGE_TILES
         else:
             self.attack_range = TILE_SIZE * 1.5  # Melee range for other classes
+
+        # WK124-T4a: per-cleric heal cooldown (sim-ms). Inert for non-clerics; not
+        # part of the WK67 AI-decision digest (which hashes only x,y,state,intent,
+        # target-type,gold).
+        self._heal_cooldown_until_ms = 0
 
         # LLM decision tracking
         self.last_llm_decision_time = 0
@@ -198,8 +208,10 @@ class Hero(HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin):
         self._unstuck_attempts_for_target: int = 0
         self._unstuck_target_key: tuple | None = None
 
-        # WK5: Ranged attacker interface
-        self.is_ranged_attacker = (self.hero_class == "ranger")
+        # WK5: Ranged attacker interface.
+        # WK124-T3a: wizard is also a ranged attacker (casts a magic projectile);
+        # ranger keeps its existing arrow visuals (see get_ranged_spec).
+        self.is_ranged_attacker = self.hero_class in ("ranger", "wizard")
         
         # WK6: Per-hero revealed tile tracking (for XP awards)
         # Only used for Rangers; other classes can ignore this
@@ -213,6 +225,13 @@ class Hero(HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin):
         self._next_profile_memory_entry_id: int = 1
         self.profile_memory: list[HeroMemoryEntry] = []
         self.known_places: dict[str, KnownPlaceSnapshot] = {}
+        # WK123 perf: monotonically bumped whenever profile_memory / known_places mutate
+        # (add / update / evict). build_hero_profile_snapshot caches the sorted-tuple work
+        # (the per-frame sort over <=100 places + <=30 memories) keyed on this version, so a
+        # hero whose memory hasn't changed this frame reuses the prior sorted tuples instead
+        # of re-sorting. Volatile fields (hp/xp/state/intent/location) still rebuild every
+        # frame, so the emitted HeroProfileSnapshot is byte-identical to the uncached path.
+        self._profile_memory_version: int = 0
         self.profile_career: dict[str, int] = {
             "tiles_revealed": 0,
             "places_discovered": 0,
@@ -541,3 +560,22 @@ class Hero(HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin):
             self.increment_career_stat("enemies_defeated", 1)
         _ = damage
         self._queue_render_animation("attack")
+
+    def get_ranged_spec(self):
+        """Projectile metadata for ranged attackers (consumed by CombatSystem).
+
+        WK124-T3a: the WIZARD gets a ``kind: "magic"`` arcane projectile spec.
+        Every OTHER class returns ``None`` — combat.py reads this only when
+        ``is_ranged_attacker`` and treats ``None`` as "use the default arrow
+        spec" (``(spec or {}).get(...)`` → kind "arrow"). The real ``Hero`` had
+        no ``get_ranged_spec`` before this sprint, so for the ranger this is
+        byte-identical to its prior behavior (the same arrow defaults). Do NOT
+        return a non-None spec for non-wizards — that would change the ranger.
+        """
+        if self.hero_class == "wizard":
+            return {
+                "kind": "magic",
+                "color": WIZARD_SPELL_COLOR,
+                "size_px": WIZARD_SPELL_SIZE_PX,
+            }
+        return None

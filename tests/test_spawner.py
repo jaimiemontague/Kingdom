@@ -64,11 +64,45 @@ def test_wave_counter_increments_each_ten_spawns(make_world) -> None:
     spawner.spawn_interval = 1
     spawner._spawned_first_wave_archer = True
     spawner.enemies_per_wave = 10
+    spawner.stagger_cap = 0  # WK128: burst mode (legacy single-tick wave)
 
     spawned = spawner.spawn(0.002)
 
     assert len(spawned) == 10
     assert spawner.total_spawned == 10
+    assert spawner.wave_number == 2
+
+
+def test_stagger_spreads_wave_over_ticks_same_total(make_world) -> None:
+    """WK128: with staggering on, a 10-enemy wave is released <= cap per tick."""
+    class DummySkeletonArcher:
+        def __init__(self, x: float, y: float) -> None:
+            self.x = float(x)
+            self.y = float(y)
+
+    class DummyGoblin:
+        def __init__(self, x: float, y: float) -> None:
+            self.x = float(x)
+            self.y = float(y)
+
+    set_sim_seed(3)
+    spawner = EnemySpawner(make_world())
+    import game.systems.spawner as spawner_module
+    spawner_module.SkeletonArcher = DummySkeletonArcher
+    spawner_module.Goblin = DummyGoblin
+    spawner.initial_no_spawn_ms = 0
+    spawner.first_wave_interval_ms = 1
+    spawner.spawn_interval = 1_000_000  # only one wave fires
+    spawner._spawned_first_wave_archer = True
+    spawner.enemies_per_wave = 10
+    spawner.stagger_cap = 4
+
+    batches = [spawner.spawn(0.002)]  # fires the wave, releases first batch
+    while spawner._pending_spawns:
+        batches.append(spawner.spawn(0.0001))
+
+    assert [len(b) for b in batches] == [4, 4, 2]
+    assert spawner.total_spawned == 10  # escalation bookkeeping at fire time
     assert spawner.wave_number == 2
 
 

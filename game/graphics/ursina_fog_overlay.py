@@ -25,6 +25,7 @@ from ursina.shaders import unlit_shader
 
 from game.graphics.terrain_texture_bridge import TerrainTextureBridge
 from game.graphics.ursina_coords import SCALE, sim_px_to_world_xz
+from game.graphics.ursina_scene_ignore import mark_scene_ignore
 from game.world import Visibility
 
 if TYPE_CHECKING:
@@ -249,6 +250,8 @@ def ensure_fog_overlay(owner, world, fog_revision: int) -> None:
         owner._r._fog_entity.hide(0b0001)
         # Ground fog must render before buildings/props; vertical objects are hidden by tile visibility.
         owner._r._fog_entity.render_queue = 0
+        # Mythos S1 (`scene-entities-ignore`): renderer-managed quad — no update/input.
+        mark_scene_ignore(owner._r._fog_entity)
     else:
         owner._r._fog_entity.texture = ftex
         owner._r._fog_entity.position = (wx, fog_y, wz)
@@ -350,3 +353,5 @@ def ensure_grid_debug_overlay(owner, world, buildings) -> None:
     owner._r._grid_debug_entity.set_depth_write(False)
     # Render above the terrain quad but below fog and billboards.
     owner._r._grid_debug_entity.render_queue = 3
+    # Mythos S1 (`scene-entities-ignore`): debug overlay — no update/input.
+    mark_scene_ignore(owner._r._grid_debug_entity)

@@ -269,6 +269,18 @@ class HUD:
         self._watch_card_chat_rect: pygame.Rect | None = None
         self._radar_terrain_cache_key: tuple[int, int, int, int] | None = None
         self._radar_terrain_surface: pygame.Surface | None = None
+        # Mythos S3 (hud-radar-throttle-10hz): cached dot-overlay surface + throttle
+        # state (composed at ~KINGDOM_RADAR_HZ sim-time; see game/ui/hud_radar.py).
+        self._radar_overlay_surface: pygame.Surface | None = None
+        self._radar_overlay_force_key: tuple | None = None
+        self._radar_overlay_next_ms: int = 0
+        # Mythos S3 (hud-compose-trims): command-mode bar font/bg/prompt caches —
+        # previously re-created via SysFont + full-width SRCALPHA fill every frame.
+        self._cmdmode_font: pygame.font.Font | None = None
+        self._cmdmode_hint_font: pygame.font.Font | None = None
+        self._cmdmode_bg: pygame.Surface | None = None
+        self._cmdmode_prompt_cache: tuple[str, pygame.Surface] | None = None
+        self._cmdmode_hint_surf: pygame.Surface | None = None
         self._recall_flash_end_ms: int = 0
         self.memorial_btn_rect: pygame.Rect | None = None
 
@@ -991,24 +1003,41 @@ class HUD:
             self._chat_panel.render(surface, self._hero_menu_chat_rect, game_state)
 
         # Command mode input display (universal Enter-key command bar)
+        # Mythos S3 (hud-compose-trims): the SysFonts, full-width SRCALPHA bg fill
+        # and the prompt/hint text renders were re-created EVERY frame while the
+        # bar was open (and the 500ms cursor blink dirtied a full-width HUD band).
+        # They are now cached and re-rendered only on buffer/blink/width change —
+        # identical pixels, but the band stays clean between blink toggles.
         eng = game_state.get('engine')
         if eng and getattr(eng, '_command_mode', False):
             cmd_text = getattr(eng, '_command_buffer', '')
             cursor = "|" if (pygame.time.get_ticks() // 500) % 2 == 0 else " "
-            font = pygame.font.SysFont(None, 28)
-            if cmd_text:
-                prompt_surf = font.render(f"> {cmd_text}{cursor}", True, (255, 255, 200))
-            else:
-                prompt_surf = font.render(f"> {cursor}", True, (255, 255, 200))
+            font = getattr(self, "_cmdmode_font", None)
+            if font is None:
+                font = self._cmdmode_font = pygame.font.SysFont(None, 28)
+            prompt_text = f"> {cmd_text}{cursor}"
+            cached = getattr(self, "_cmdmode_prompt_cache", None)
+            if cached is None or cached[0] != prompt_text:
+                cached = (prompt_text, font.render(prompt_text, True, (255, 255, 200)))
+                self._cmdmode_prompt_cache = cached
+            prompt_surf = cached[1]
             bar_h = 36
-            bg = pygame.Surface((surface.get_width(), bar_h), pygame.SRCALPHA)
-            bg.fill((20, 20, 40, 220))
+            bg = getattr(self, "_cmdmode_bg", None)
+            if bg is None or bg.get_width() != surface.get_width():
+                bg = pygame.Surface((surface.get_width(), bar_h), pygame.SRCALPHA)
+                bg.fill((20, 20, 40, 220))
+                self._cmdmode_bg = bg
             y = surface.get_height() - bar_h - 4
             surface.blit(bg, (0, y))
             surface.blit(prompt_surf, (10, y + 6))
             if not cmd_text:
-                hint_font = pygame.font.SysFont(None, 22)
-                hint_surf = hint_font.render("Type a command (/help) or message... ESC to close", True, (120, 120, 140))
+                hint_surf = getattr(self, "_cmdmode_hint_surf", None)
+                if hint_surf is None:
+                    hint_font = getattr(self, "_cmdmode_hint_font", None)
+                    if hint_font is None:
+                        hint_font = self._cmdmode_hint_font = pygame.font.SysFont(None, 22)
+                    hint_surf = hint_font.render("Type a command (/help) or message... ESC to close", True, (120, 120, 140))
+                    self._cmdmode_hint_surf = hint_surf
                 surface.blit(hint_surf, (30, y + 10))
 
     def is_mouse_over_menu(

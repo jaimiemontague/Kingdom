@@ -13,7 +13,9 @@ from game.graphics.ursina_prefabs import (
     _footprint_scale_3d,
     _load_prefab_instance,
 )
+from game.graphics.ursina_scene_ignore import mark_scene_ignore
 from game.graphics.ursina_sprite_unlit_shader import sprite_unlit_shader
+from game.graphics.ursina_unit_overlays import free_entity_overlays as _free_entity_overlays
 from ursina.shaders import lit_with_shadows_shader, unlit_shader
 
 class UrsinaEntityRenderCollab:
@@ -58,6 +60,9 @@ class UrsinaEntityRenderCollab:
             if billboard:
                 UrsinaEntityRenderCollab.apply_pixel_billboard_settings(ent)
                 ent._ks_billboard_configured = True
+            # Mythos S1 (`scene-entities-ignore`): renderer-managed — no update/input;
+            # skip it in ursina's per-frame entity walk (env: KINGDOM_SCENE_IGNORE).
+            mark_scene_ignore(ent)
             ents[obj_id] = ent
         return ents[obj_id], obj_id
 
@@ -71,9 +76,21 @@ class UrsinaEntityRenderCollab:
         if obj_id in ents:
             ent = ents[obj_id]
             if getattr(ent, "_ks_building_mode", None) != "mesh_3d":
+                # Mythos S2 (prefab-swap-orphan-free): the replaced entity may be a
+                # prefab root with up to ~26 piece child Entities. ursina.destroy()
+                # does NOT cascade to .children (its recursion is commented out), so
+                # without this sweep every mode swap orphans the pieces into
+                # scene.entities forever — the same C1-class leak WK123 fixed on the
+                # unit/dead-building removal paths (ursina_renderer.py:736,
+                # ursina_building_sync.py:105). free_entity_overlays destroys all
+                # children/loose_children plus any named overlay attrs.
+                _free_entity_overlays(ent)
                 u.destroy(ent)
                 del ents[obj_id]
             elif getattr(ent, "_ks_mesh_model_path", None) != model_path:
+                # Same orphan-free sweep on the model-path swap branch (the entity
+                # may carry overlay children, e.g. building HP bar / labels).
+                _free_entity_overlays(ent)
                 u.destroy(ent)
                 del ents[obj_id]
 
@@ -88,6 +105,8 @@ class UrsinaEntityRenderCollab:
             ent._ks_mesh_model_path = model_path
             ent._ks_billboard_configured = False
             UrsinaEntityRenderCollab.apply_lit_3d_building_settings(ent)
+            # Mythos S1 (`scene-entities-ignore`): renderer-managed — no update/input.
+            mark_scene_ignore(ent)
             ents[obj_id] = ent
         return ents[obj_id], obj_id
 
@@ -103,6 +122,14 @@ class UrsinaEntityRenderCollab:
             if getattr(ent, "_ks_building_mode", None) != "prefab" or getattr(
                 ent, "_ks_prefab_path", None
             ) != str(prefab_path):
+                # Mythos S2 (prefab-swap-orphan-free): construction-stage swaps
+                # (plot -> build_20 -> build_50 -> final) and prefab-path changes
+                # come through here every few seconds in real play. ursina.destroy()
+                # frees only the prefab ROOT; its ~26 piece child Entities would
+                # orphan into scene.entities forever (measured +84 over 5 swap
+                # cycles), re-introducing the WK123 C1 time-degradation in
+                # construction-heavy sessions. Sweep the children first.
+                _free_entity_overlays(ent)
                 u.destroy(ent)
                 del ents[obj_id]
 
