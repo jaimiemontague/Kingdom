@@ -188,6 +188,13 @@ verified` + hudU max 6.5 ms — the 47–76 ms hitch class is GONE); font patch 
 wall: **igloop ~20.5 ms (GPU cull/draw of ~300-400 legacy entities) + rend ~18-19 ms (legacy
 per-Entity sync)** → S6 instancing-default is the next lever, then S5 (tick 7.7 avg, max 135).
 
+## 7a. CLOSEOUT — 2026-06-09
+
+Sovereign playtest verdict: **"playtest went great"** (after earlier "FPS is very smooth
+now and I'm happy with it"). R4 visual fixes (upright sprites, shadows off) confirmed in
+play. qa_smoke --quick green at every round. Branch `mythos-lag-fix` merged to `main`.
+Sprint CLOSED.
+
 ## 7. Definition of Done
 
 - §1 bar met: >30 fps sustained min 15–20, gate combo, 2+ repeats, 100+ screenshots reviewed.
