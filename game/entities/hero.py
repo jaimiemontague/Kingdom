@@ -112,6 +112,12 @@ class Hero(HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin):
         self.potions = 0
         self.max_potions = 5  # Can carry up to 5 potions
         self.potion_heal_amount = 50
+        # WK131: accessory slot + small backpack of carried loot (ItemDef refs).
+        # Defaults (None / empty) keep attack/defense byte-identical, so the
+        # WK67 digest is unaffected (loot is unreachable in the digest scenario).
+        self.accessory = None  # {"name","attack","defense","speed","max_hp","id"}
+        self.backpack: list = []  # list[game.content.items.ItemDef] carried for selling
+        self.backpack_capacity = 5
         # Shopping / purchase tracking (sim-time)
         self.last_purchase_ms: int | None = None
         self.last_purchase_type: str = ""
@@ -269,22 +275,26 @@ class Hero(HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin):
         """Total attack including weapon bonus."""
         now_ms_val = sim_now_ms()
         weapon_bonus = self.weapon.get("attack", 0) if self.weapon else 0
+        # WK131: accessory attack mod (0 when no accessory — digest-identical).
+        accessory_bonus = self.accessory.get("attack", 0) if getattr(self, "accessory", None) else 0
         buff_bonus = 0
         for b in getattr(self, "buffs", []):
             if getattr(b, "expires_at_ms", 0) > now_ms_val:
                 buff_bonus += int(getattr(b, "atk_delta", 0))
-        return self.base_attack + weapon_bonus + buff_bonus + (self.level - 1) * 2
+        return self.base_attack + weapon_bonus + accessory_bonus + buff_bonus + (self.level - 1) * 2
     
     @property
     def defense(self) -> int:
         """Total defense including armor bonus."""
         now_ms_val = sim_now_ms()
         armor_bonus = self.armor.get("defense", 0) if self.armor else 0
+        # WK131: accessory defense mod (0 when no accessory — digest-identical).
+        accessory_bonus = self.accessory.get("defense", 0) if getattr(self, "accessory", None) else 0
         buff_bonus = 0
         for b in getattr(self, "buffs", []):
             if getattr(b, "expires_at_ms", 0) > now_ms_val:
                 buff_bonus += int(getattr(b, "def_delta", 0))
-        return self.base_defense + armor_bonus + buff_bonus + (self.level - 1)
+        return self.base_defense + armor_bonus + accessory_bonus + buff_bonus + (self.level - 1)
 
     def apply_or_refresh_buff(
         self,
@@ -320,6 +330,133 @@ class Hero(HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin):
         if now_ms is None:
             now_ms = sim_now_ms()
         self.buffs = [b for b in self.buffs if not b.is_expired(now_ms)]
+
+    # ------------------------------------------------------------------
+    # WK131: item equip / backpack (registry ItemDef in, legacy dicts kept)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _accessory_score(attack: int, defense: int, speed: float, max_hp: int) -> float:
+        """Single comparable 'power' score for mixed-stat accessories."""
+        return float(attack) + float(defense) + float(max_hp) / 8.0 + float(speed) * 10.0
+
+    def equip(self, item) -> bool:
+        """Auto-equip-if-better. ``item`` is a ``game.content.items.ItemDef``.
+
+        - weapon/armor: equips iff strictly better than the current slot,
+          writing the SAME legacy dict shape ``buy_item`` writes (so all
+          existing ``hero.weapon["attack"]`` call sites and combat math are
+          unchanged for the same stats).
+        - accessory: equips iff its power score beats the current accessory;
+          applies/removes max_hp and speed deltas symmetrically.
+        - consumable: healing potions absorb into the potion counter when
+          there's room (mirrors ``buy_item``); other consumables return False
+          (caller stores them in the backpack for selling).
+        Returns True iff the item was equipped/absorbed.
+        """
+        slot = getattr(item, "slot", "")
+        if slot == "weapon":
+            current = self.weapon.get("attack", 0) if self.weapon else 0
+            if int(item.attack) > int(current):
+                self.weapon = {"name": item.name, "attack": int(item.attack), "id": item.item_id}
+                return True
+            return False
+        if slot == "armor":
+            current = self.armor.get("defense", 0) if self.armor else 0
+            if int(item.defense) > int(current):
+                self.armor = {"name": item.name, "defense": int(item.defense), "id": item.item_id}
+                return True
+            return False
+        if slot == "accessory":
+            new_score = self._accessory_score(item.attack, item.defense, item.speed, item.max_hp)
+            old = self.accessory
+            if old is not None:
+                old_score = self._accessory_score(
+                    old.get("attack", 0), old.get("defense", 0),
+                    old.get("speed", 0.0), old.get("max_hp", 0),
+                )
+                if new_score <= old_score:
+                    return False
+                # Remove the old accessory's max_hp/speed deltas.
+                self.max_hp = max(1, int(self.max_hp) - int(old.get("max_hp", 0)))
+                self.hp = min(self.hp, self.max_hp)
+                self.speed = float(self.speed) - float(old.get("speed", 0.0))
+            self.accessory = {
+                "name": item.name,
+                "attack": int(item.attack),
+                "defense": int(item.defense),
+                "speed": float(item.speed),
+                "max_hp": int(item.max_hp),
+                "id": item.item_id,
+            }
+            if item.max_hp:
+                self.max_hp = int(self.max_hp) + int(item.max_hp)
+                self.hp = int(self.hp) + int(item.max_hp)
+            if item.speed:
+                self.speed = float(self.speed) + float(item.speed)
+            return True
+        if slot == "consumable":
+            if int(getattr(item, "effect", 0)) > 0 and self.potions < self.max_potions:
+                self.potions += 1
+                self.potion_heal_amount = int(item.effect)
+                return True
+            return False
+        return False
+
+    def add_to_backpack(self, item) -> bool:
+        """Store an item in the backpack if there's room."""
+        if len(self.backpack) >= int(self.backpack_capacity):
+            return False
+        self.backpack.append(item)
+        return True
+
+    def receive_item(self, item) -> str:
+        """Loot delivery: auto-equip if better, else carry for selling.
+
+        Returns 'equipped' | 'stored' | 'dropped' (backpack full).
+        """
+        if self.equip(item):
+            return "equipped"
+        if self.add_to_backpack(item):
+            return "stored"
+        return "dropped"
+
+    def sell_backpack_items(self, shop_building=None) -> int:
+        """WK131: sell every carried backpack item at a shop.
+
+        Lives on Hero core (NOT HeroEconomyMixin: the WK71 mixin-roster lock in
+        tests/test_wk71_hero_mixin_split.py pins that mixin's exact method set).
+        Backpack items are by construction things the hero can't use (anything
+        usable was auto-equipped on receive), so they all go. Proceeds flow
+        through ``add_gold`` so the 25% tax reservation applies naturally.
+        Returns the GROSS gold received (0 when the backpack is empty — the
+        digest scenario never fills a backpack, so this is a no-op there).
+        """
+        backpack = getattr(self, "backpack", None)
+        if not backpack:
+            return 0
+        total = 0
+        sold_names: list[str] = []
+        for item in list(backpack):
+            price = int(getattr(item, "sell_price", 0))
+            if price > 0:
+                self.add_gold(price)
+                total += price
+            sold_names.append(str(getattr(item, "name", item)))
+            backpack.remove(item)
+        if total > 0 and self._event_bus is not None:
+            try:
+                self._event_bus.emit({
+                    "type": "hero_sold_items",
+                    "hero_id": str(self.hero_id),
+                    "hero_name": str(self.name),
+                    "items": sold_names,
+                    "gold": int(total),
+                    "shop_type": str(getattr(shop_building, "building_type", "") or ""),
+                })
+            except Exception:
+                pass
+        return total
     
     @property
     def is_alive(self) -> bool:

@@ -168,6 +168,11 @@ class SimEngine:
         self.building_factory = BuildingFactory()
         self.bounty_system = BountySystem()
         self.poi_interaction_system = POIInteractionSystem()
+        # WK131: seeded item drops on ENEMY_KILLED (constructing draws no RNG;
+        # rolls happen only when a kill event routes through _route_combat_events,
+        # so the WK67 digest scenario — which has no enemies — never draws).
+        from game.systems.loot import LootSystem
+        self.loot_system = LootSystem()
 
         # WK61-FEAT-004: Rubble records for destroyed buildings.
         self.rubble_records: list = []
@@ -1107,6 +1112,27 @@ class SimEngine:
                     f"{event['hero']} slew a {event['enemy']}! (+{event['gold']}g, +{event['xp']}xp)",
                     (255, 215, 0),
                 )
+                # WK131: seeded loot roll for the killer (bosses always drop
+                # rare+; regular enemies small common-drop chance). The drop
+                # goes straight to the killer's inventory: auto-equip if
+                # better, else backpack (carried for selling).
+                try:
+                    killer = next(
+                        (h for h in self.heroes if getattr(h, "name", None) == event.get("hero")),
+                        None,
+                    )
+                    if killer is not None:
+                        item = self.loot_system.roll_enemy_drop(str(event.get("enemy", "")))
+                        if item is not None:
+                            outcome = self.loot_system.grant_item(killer, item)
+                            if outcome != "dropped":
+                                verb = "equipped" if outcome == "equipped" else "picked up"
+                                self._emit_hud_message(
+                                    f"{event['hero']} {verb} {item.name}!",
+                                    (170, 220, 255),
+                                )
+                except Exception:
+                    pass
             elif event.get("type") == GameEventType.CASTLE_DESTROYED.value:
                 self._emit_hud_message("GAME OVER - Castle Destroyed!", (255, 0, 0))
             elif event.get("type") == GameEventType.LAIR_CLEARED.value:

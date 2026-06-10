@@ -135,6 +135,14 @@ def do_shopping(ai: Any, hero: Any, building: Any, view: Any) -> bool:
     items = building.get_available_items()
     purchased_types: set[str] = set()
 
+    # WK131: sell carried backpack loot FIRST (anything in the backpack is by
+    # construction unusable — usable loot was auto-equipped on receive). The
+    # proceeds (hero.add_gold, 25% tax reserved) fund the upgrade checks below.
+    # Empty backpack -> exact no-op, so the WK67 digest scenario (no loot
+    # sources) is byte-identical.
+    if getattr(hero, "backpack", None) and hasattr(hero, "sell_backpack_items"):
+        hero.sell_backpack_items(building)
+
     # Priority 1: Buy a potion if we have none.
     if hero.potions == 0 and hero.gold >= 20:
         for item in items:

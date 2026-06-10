@@ -7415,6 +7415,22 @@
             ],
             "rationale": "05 high (new cross-system design + digest reasoning), 08 medium (panel rows per existing pattern), 11 medium (new soak authorship)."
           }
+        },
+        "r2_close": {
+          "pm_status_summary": "WK131 CLOSED. 05: 22-item registry (byte-compat legacy shop dicts), accessory slot + 5-slot backpack + auto-equip, seeded LootSystem (bosses always rare+, enemies 7%, POIs 35%), heroes sell loot at shops (25% tax), LLM snapshot extended. 08: hero panel Gear block (W/A/Acc/Bag) + watch-card gear line with no card growth. 11: deterministic soak (43 drops, 4 sale events, byte-identical same-seed reruns, cap never exceeded).",
+          "evidence": {
+            "full_suite": "1656 passed, 5 skipped",
+            "qa_smoke": "DONE: PASS",
+            "digest": "10 passed (byte-identical)",
+            "soak": "tests/test_wk131_items_soak.py seed 20260609",
+            "screenshots": "docs/screenshots/wk131/ PM-reviewed"
+          },
+          "known_deferred": [
+            "Engine-construction reset hook: module singletons (navigation _pathfinding_budget) make in-process same-seed reruns diverge; fresh-process runs deterministic. Filed by 11 for 03/04 before any replay/multiplayer work.",
+            "Hero with full backpack and no buy-motivation drops further loot; consider 'go sell when full' want-predicate (Agent 05 backlog).",
+            "Boss-drop integration assert pinning real combat kill-event enemy_type strings (one-liner, future-proofing)."
+          ],
+          "pm_next_actions_by_agent": {}
         }
       }
     }

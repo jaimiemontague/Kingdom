@@ -41,18 +41,45 @@
             "runtime_sec": 63
           },
           "commands_run": [
-            { "cmd": "python -m pytest tests/test_wk124_ranger_idle_soak.py -q -s", "exit_code": 0, "result": "1 passed in ~63s; WK124_RANGER_SOAK idleish_fraction=0.0347 mean_max_dist_tiles=76.34 per_ranger_max=[86.5, 14.1, 91.1, 80.0, 105.5, 80.9] samples=64800" },
-            { "cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "result": "[qa_smoke] DONE: PASS (determinism_guard PASS + all observe_sync profiles exit_code=0: base/bounty, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling 0.1/0.25/0.5/1.0x, interior_view, quest_panel, conversation, direct_prompt_integration)" },
-            { "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q", "exit_code": 0, "result": "10 passed in 16.33s -- AI-decision digest BYTE-IDENTICAL b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (not re-baselined)" },
-            { "cmd": "python -m pytest tests/test_wk124_overlay_bin.py tests/test_wk124_peasant_builder_clips.py tests/test_wk124_building_hp_panels.py tests/test_wk124_cleric_heal.py tests/test_wk124_ranger_idle_soak.py -q", "exit_code": 0, "result": "15 passed in 62.83s (all five WK124 new-test files green)" },
-            { "cmd": "python -m pytest tests/ -q", "exit_code": 0, "result": "1537 passed, 5 skipped, 1 warning in 308.12s -- 0 failed" }
+            {
+              "cmd": "python -m pytest tests/test_wk124_ranger_idle_soak.py -q -s",
+              "exit_code": 0,
+              "result": "1 passed in ~63s; WK124_RANGER_SOAK idleish_fraction=0.0347 mean_max_dist_tiles=76.34 per_ranger_max=[86.5, 14.1, 91.1, 80.0, 105.5, 80.9] samples=64800"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "result": "[qa_smoke] DONE: PASS (determinism_guard PASS + all observe_sync profiles exit_code=0: base/bounty, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling 0.1/0.25/0.5/1.0x, interior_view, quest_panel, conversation, direct_prompt_integration)"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "result": "10 passed in 16.33s -- AI-decision digest BYTE-IDENTICAL b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (not re-baselined)"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk124_overlay_bin.py tests/test_wk124_peasant_builder_clips.py tests/test_wk124_building_hp_panels.py tests/test_wk124_cleric_heal.py tests/test_wk124_ranger_idle_soak.py -q",
+              "exit_code": 0,
+              "result": "15 passed in 62.83s (all five WK124 new-test files green)"
+            },
+            {
+              "cmd": "python -m pytest tests/ -q",
+              "exit_code": 0,
+              "result": "1537 passed, 5 skipped, 1 warning in 308.12s -- 0 failed"
+            }
           ],
           "evidence": {
             "soak_idleish_fraction": 0.0347,
             "soak_idleish_threshold": "<0.40 (pre-fix simulated ~0.80)",
             "soak_mean_max_dist_tiles": 76.34,
             "soak_mean_max_dist_threshold": ">15 (pre-fix simulated ~41)",
-            "soak_per_ranger_max_dist_tiles": [86.5, 14.1, 91.1, 80.0, 105.5, 80.9],
+            "soak_per_ranger_max_dist_tiles": [
+              86.5,
+              14.1,
+              91.1,
+              80.0,
+              105.5,
+              80.9
+            ],
             "soak_samples": 64800,
             "wk67_digest_line": "_AI_DECISION_DIGEST = \"b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded\"",
             "wk67_digest_status": "byte-identical (10 passed) -- not re-baselined",
@@ -5911,6 +5938,78 @@
           "regression_found": false,
           "verdict": "PASS - all 5 DoD gates green; 6/6 reviewed images PASS (incl. the 0.68 worst-case sidebar_split and the unaffected building control). The Sovereign-reported maximize-over-the-sidebar bug is fixed: the watch card is content-bounded and the main menu always coexists. WK67 digest byte-identical => presentation-only. No regression in the watch/left-layout suite, WK115 chat-grow, or WK115 solo content-sizing. Ready for PM commit. Screenshot PNGs (docs/screenshots/wk121_qa/*) stay gitignored.",
           "constraints_honored": "Did NOT modify production code or Wave-1 test files (verified via git status: only the 5 Wave-1 paths + 2 PM/agent logs modified, plus the NEW test + plan untracked - all from Wave 1, none from me). Did NOT commit/add/push. Only ran gates + captured/reviewed screenshots + updated this log."
+        }
+      }
+    },
+    "wk131_items_inventory": {
+      "sprint_meta": {
+        "created_utc": "2026-06-10T00:00:00Z"
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "sprint_id": "wk131_items_inventory",
+          "round_id": "r1_kickoff (11_QA)",
+          "status": "done",
+          "round_meta": {
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "wave": "post-build QA: WK131 items/loot deterministic headless soak + full gate stack + coverage review",
+            "model": "claude-fable-5[1m]",
+            "depends_on": "Agents 05+08 WK131 items core + UI (uncommitted working tree)",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "files_created": [
+              "tests/test_wk131_items_soak.py"
+            ],
+            "do_not_commit": "honored - no git commands run"
+          },
+          "prompt_summary": "Write tests/test_wk131_items_soak.py: deterministic headless 10-sim-min soak (DETERMINISTIC_SIM=1, dummy SDL) with several heroes, enemies enabled, loot POIs present. Assert (a) enemy-kill drop lands in backpack/equip, (b) hero sells backpack loot at a shop, (c) same-seed re-run is byte-identical, (d) backpack never exceeds capacity. Run full gates (pytest tests/, qa_smoke --quick, wk67 boundary). Review test_wk131_items.py / _items_ui.py coverage. Update log. DO NOT COMMIT.",
+          "soak_design": {
+            "file": "tests/test_wk131_items_soak.py (5 tests)",
+            "seed": 20260609,
+            "scenario": "GameEngine(headless=True) + BasicAI(llm_brain=None), 4 warriors + 2 rangers homed at starting guilds, 0 starting gold, enemies/lairs/POIs FULLY enabled (WK127 lesson: no sanitized harness), 10 sim-min at SIM_TICK_HZ; run B = 5 sim-min compared against run A's 5-min checkpoint fingerprint",
+            "subprocess_isolation": "LOAD-BEARING: each soak run executes in a fresh python subprocess (test file doubles as __main__ runner emitting JSON telemetry). In-process back-to-back engine runs are NOT reproducible: module-level singletons (game/systems/navigation.py global _pathfinding_budget pending replan queue, blocked-tile caches) survive across GameEngine constructions, so a 2nd same-seed run diverges after ~2-4 sim-min (verified: in-process A/B/C all differ; two fresh processes byte-identical, finals sha1 a77f0fa915f2 @4min). Subprocesses test the production-relevant property and shield the soak from full-suite global pollution.",
+            "measured": "enemy_rolls=777 kill-loot rolls, drops_landed=43 (equipped/stored), 4 hero_sold_items sales at marketplace, 0 backpack cap violations, run B == run A checkpoint byte-identical; module runtime ~80s",
+            "poi_substitution": "engine soak does not assert a hero physically reaches a loot POI (route-dependent); POI half covered by direct seeded POIInteractionSystem/roll_poi_drop determinism + receive_item delivery test, per the kickoff's explicit fallback clause"
+          },
+          "dod_gate_table": [
+            {
+              "gate": "python -m pytest tests/ -q (full suite)",
+              "result": "PASS",
+              "detail": "1656 passed, 5 skipped, 0 failed in 386.47s (includes the new tests/test_wk131_items_soak.py 5 tests and all WK131 core/UI tests). Log: tmp/wk131_full_pytest_agent11.log"
+            },
+            {
+              "gate": "python tools/qa_smoke.py --quick",
+              "result": "PASS",
+              "detail": "[qa_smoke] DONE: PASS - all headless profiles (determinism_guard/base/intent_bounty/hero_stuck/no-enemies/mock-LLM/speed-scaling 0.5x+1.0x/interior_view/quest_panel/conversation/direct_prompt_integration) exit_code=0. Log: tmp/wk131_qa_smoke_agent11.log"
+            },
+            {
+              "gate": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "result": "PASS",
+              "detail": "10 passed in 14.97s (digest scenario unaffected by WK131 - loot module draws zero RNG without kills/POIs)"
+            },
+            {
+              "gate": "tests/test_wk131_items_soak.py (NEW)",
+              "result": "PASS",
+              "detail": "5 passed in 79.81s"
+            }
+          ],
+          "findings_for_other_agents": [
+            {
+              "to": "03_Tech / 04_NetworkingDeterminism",
+              "severity": "medium",
+              "finding": "Cross-engine global-state residue: constructing a SECOND GameEngine in one process is not reproducible because module-level singletons persist (navigation.py _pathfinding_budget._pending_queue + blocked-tile caches at minimum). Fresh-process runs are byte-identical, so shipping determinism is fine TODAY, but an in-session 'new game'/restart reuses those singletons; any future replay/multiplayer rail needs an engine-construction reset hook. Repro: tests/test_wk131_items_soak.py module docstring (in-process A/B/C 4-min runs all diverge ~min 2-4)."
+            },
+            {
+              "to": "05_Gameplay",
+              "severity": "low",
+              "finding": "Heroes only sell backpack loot as a side-effect of a shopping trip (do_shopping sells first). A hero with a full backpack but no buy-motivation keeps 'dropped' (lost) further loot. Works in practice (kill gold funds trips - 4 sales in 10 min), but consider a 'go sell when backpack full' want-predicate later."
+            }
+          ],
+          "coverage_review": {
+            "tests/test_wk131_items.py": "Thorough: registry sanity, byte-compat legacy shop dicts, equip/auto-equip incl. accessory max_hp+speed delta symmetry, backpack cap, combat-math parity legacy-dict vs equip(), seeded loot determinism, boss/regular/POI drop paths, sim_engine ENEMY_KILLED routing, sell+25%-tax round trip, do_shopping sells-before-buying, LLM snapshot carry, digest no-RNG safety. Gap (low risk): boss-drop tests stub the event dict; nothing pins that the REAL combat-system kill event 'enemy' string matches BOSS_ENEMY_TYPES - verified manually that combat.py _normalize_enemy_type preserves snake_case ('bandit_lord'), so it works; a one-line integration assert would future-proof renames. hero_sold_items event payload untested there (now covered by the soak).",
+            "tests/test_wk131_items_ui.py": "Good: pure helpers, full/empty gear lines, profile-snapshot preference over raw hero attrs, 246px pixel-overflow guard with pathological names, watch-card gear line + dirty-gate caching + pinned layout constants. Headless TextLabel-spy pattern is appropriate; live screenshot verification deferred to the implementer/PM per the UI signoff SOP.",
+            "no_save_system": "Repo has no save/load (grep save_game/load_game empty), so no accessory/backpack persistence gap exists."
+          }
         }
       }
     }

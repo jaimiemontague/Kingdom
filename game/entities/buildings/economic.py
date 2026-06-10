@@ -15,6 +15,7 @@ from config import (
     RESEARCH_POTIONS_DURATION_MS,
     RESEARCH_DURATION_MS_PER_100_GOLD,
 )
+from game.content import items as items_registry
 from game.sim.determinism import get_rng
 from game.sim.timebase import now_ms as sim_now_ms
 
@@ -35,25 +36,17 @@ class Marketplace(TaxStashMixin, Building):
         self._passive_tax_next_ms = int(sim_now_ms()) + int(MARKETPLACE_PASSIVE_TAX_INTERVAL_MS)
         self.potions_researched = True
         self.potion_price = 15
-        self.items = [
-            {"name": "Dagger", "type": "weapon", "style": "melee", "price": 60, "attack": 4},
-            {"name": "Short Bow", "type": "weapon", "style": "ranged", "price": 70, "attack": 4},
-            {"name": "Apprentice Staff", "type": "weapon", "style": "magic", "price": 90, "attack": 6},
-            {"name": "Iron Sword", "type": "weapon", "price": 80, "attack": 5},
-            {"name": "Long Bow", "type": "weapon", "style": "ranged", "price": 140, "attack": 8},
-            {"name": "Poison Dagger", "type": "weapon", "style": "melee", "price": 120, "attack": 7},
-            {"name": "Steel Sword", "type": "weapon", "price": 150, "attack": 10},
-            {"name": "Wizard Staff", "type": "weapon", "style": "magic", "price": 180, "attack": 12},
-            {"name": "Leather Armor", "type": "armor", "price": 60, "defense": 3},
-            {"name": "Chain Mail", "type": "armor", "price": 120, "defense": 7},
-        ]
+        # WK131: stock sourced from the item registry. to_shop_dict reproduces
+        # the pre-WK131 hardcoded dicts exactly (same names/types/styles/prices/
+        # stats), so visible shop stock is unchanged for existing saves/tests.
+        self.items = [items_registry.to_shop_dict(item_id) for item_id in items_registry.MARKETPLACE_STOCK]
 
     def get_available_items(self) -> list:
         """Get list of items available for purchase."""
         items = self.items.copy()
         # Add potions if researched
         if self.potions_researched:
-            items.insert(0, {"name": "Healing Potion", "type": "potion", "price": self.potion_price, "effect": 50})
+            items.insert(0, items_registry.to_shop_dict("healing_potion", price=self.potion_price))
         return items
 
     def can_sell_potions(self) -> bool:
@@ -127,22 +120,21 @@ class Blacksmith(TaxStashMixin, Building):
             if item["researched"]:
                 self.researched_items.append(item["name"])
 
+        # WK131: stock sourced from the item registry at the blacksmith discount
+        # (40% below marketplace price — reproduces the pre-WK131 hardcoded
+        # prices exactly: Iron Sword 48, Leather 36, Steel 90, Mithril 150,
+        # Chain 72, Plate 120).
+        def _smith_dict(item_id: str) -> dict:
+            item = items_registry.get_item(item_id)
+            return items_registry.to_shop_dict(item_id, price=item.blacksmith_price)
+
         # Base items (always available) — prices 40% lower
-        self.base_items = [
-            {"name": "Iron Sword", "type": "weapon", "price": 48, "attack": 5},
-            {"name": "Leather Armor", "type": "armor", "price": 36, "defense": 3},
-        ]
+        self.base_items = [_smith_dict(i) for i in items_registry.BLACKSMITH_BASE_STOCK]
 
         # Upgraded items (gated by research) — prices 40% lower
-        self.upgraded_weapons = [
-            {"name": "Steel Sword", "type": "weapon", "price": 90, "attack": 10},
-            {"name": "Mithril Blade", "type": "weapon", "price": 150, "attack": 15},
-        ]
+        self.upgraded_weapons = [_smith_dict(i) for i in items_registry.BLACKSMITH_WEAPON_RESEARCH_STOCK]
 
-        self.upgraded_armor = [
-            {"name": "Chain Mail", "type": "armor", "price": 72, "defense": 7},
-            {"name": "Plate Armor", "type": "armor", "price": 120, "defense": 12},
-        ]
+        self.upgraded_armor = [_smith_dict(i) for i in items_registry.BLACKSMITH_ARMOR_RESEARCH_STOCK]
 
     def can_research(self, research_name: str) -> bool:
         """Check if a research can be performed."""

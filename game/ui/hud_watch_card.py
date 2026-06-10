@@ -182,6 +182,36 @@ def render_hero_watch_card_infocard(
             )
         pygame.draw.rect(surface, (20, 20, 30), pygame.Rect(left_x, bar_y2, bar_left_w, bar_h), 1)
         painted_stats_bottom_for_chat = bar_y2 + bar_h
+
+        # WK131: compact gear line (weapon / armor names) in the stats-band slack.
+        # Drawn ONLY when it fits inside the existing stats allotment (stats_h) —
+        # the card height and the WATCH_CARD_* constants are unchanged. The chat
+        # band already absorbs a variable painted-stats bottom via
+        # ``painted_stats_bottom_override``, so including the gear line there is
+        # not a layout change.
+        inv = getattr(prof, "inventory", None)
+        wpn_name = str(getattr(inv, "weapon_name", "") or "").strip() or "Fists"
+        arm_name = str(getattr(inv, "armor_name", "") or "").strip() or "No armor"
+        gear_text = f"{wpn_name} / {arm_name}"
+        gear_max_w = max(8, cw - 8)
+        gear_sig = (gear_text, gear_max_w)
+        if (
+            getattr(hud, "_watch_gear_sig", None) != gear_sig
+            or getattr(hud, "_watch_gear_label_surf", None) is None
+        ):
+            txt = gear_text
+            gear_surf = hud.font_tiny.render(txt, True, (175, 172, 195))
+            while gear_surf.get_width() > gear_max_w and len(txt) > 2:
+                txt = txt[:-1]
+                gear_surf = hud.font_tiny.render(txt + "…", True, (175, 172, 195))
+            hud._watch_gear_sig = gear_sig
+            hud._watch_gear_label_surf = gear_surf
+        gear_surf = hud._watch_gear_label_surf
+        gear_y = painted_stats_bottom_for_chat + 2
+        stats_band_bottom = cy + WATCH_CARD_HEADER_H + map_h + stats_h
+        if gear_y + gear_surf.get_height() <= stats_band_bottom:
+            surface.blit(gear_surf, (left_x, gear_y))
+            painted_stats_bottom_for_chat = gear_y + gear_surf.get_height()
     elif stats_h > 0:
         if hud._watch_mana_label_surf is None:
             hud._watch_mana_label_surf = hud.font_tiny.render("Mana —", True, (80, 78, 95))

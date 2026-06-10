@@ -14,6 +14,7 @@ import math
 from config import TILE_SIZE
 from game.sim.determinism import get_rng
 from game.sim.timebase import now_ms as _sim_now_ms
+from game.systems.loot import LootSystem
 
 
 # Interaction range: hero must be within this many tiles of the POI center.
@@ -41,6 +42,10 @@ class POIInteractionSystem:
         # Per-hero per-POI cooldown tracker: (hero_id, poi_id) -> remaining seconds.
         self._hero_poi_cooldowns: dict[tuple[int, int], float] = {}
         self._rng = get_rng("poi_interaction")
+        # WK131: item drops from loot caches. Separate "loot" stream — the gold
+        # roll above stays on the legacy "poi_interaction" stream, byte-identical.
+        # Constructing this draws no RNG (digest-safe).
+        self._loot_system = LootSystem()
         # WK57 Wave 5: underground areas reference (set by sim_engine after setup)
         self._underground_areas: dict = {}
         # WK57 Wave 5: sim engine reference for enemy spawning
@@ -197,10 +202,21 @@ class POIInteractionSystem:
         hero_name = getattr(hero, "name", "Unknown")
         poi_name = getattr(poi_def, "display_name", "Unknown POI")
 
+        # WK131: roll an item drop IN ADDITION to the gold (seeded "loot"
+        # stream; drawn only on this interaction event — digest scenario has
+        # no POIs so this is structurally unreachable there).
+        item = self._loot_system.roll_poi_drop(tier)
+        item_name = ""
+        item_outcome = ""
+        if item is not None:
+            item_outcome = LootSystem.grant_item(hero, item)
+            item_name = item.name
+
         self._emit_event(
             event_bus, "poi_interaction",
             hero=hero, poi=poi, interaction_type="loot",
             hero_name=hero_name, poi_name=poi_name, gold=gold,
+            item_name=item_name, item_outcome=item_outcome,
         )
 
     def _handle_combat(self, hero, poi, world, economy, event_bus, cooldown_key, pois=None) -> None:

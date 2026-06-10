@@ -482,6 +482,19 @@ def scenario_ui_panels(engine, *, seed: int) -> list[Shot]:
     hx, hy = _tile_center_px(cgx + 3, cgy + 1)
     hero = _place_hero(engine, "warrior", hx, hy)
 
+    # WK131: dress the scenario hero in full gear (weapon + armor + accessory +
+    # backpack loot) so the hero-panel Gear block and watch-card gear line are
+    # visible in the captures. Capture-only state — never runs in the game.
+    try:
+        from game.content.items import get_item
+
+        for item_id in ("steel_sword", "chain_mail", "hawk_signet"):
+            hero.equip(get_item(item_id))
+        hero.add_to_backpack(get_item("healing_potion"))
+        hero.add_to_backpack(get_item("swiftness_draught"))
+    except Exception:
+        pass
+
     def _apply_clear(engine2):
         engine2.selected_hero = None
         engine2.selected_building = None

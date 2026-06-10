@@ -2547,6 +2547,48 @@
           }
         }
       }
+    },
+    "wk131_items_inventory": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk130_hero_world_roadmap.plan.md (section WK131, scope item 5)",
+        "created_utc": "2026-06-09T00:00:00Z",
+        "notes": "WK131 Items & Inventory UI (Agent 08). UI-only on top of Agent 05 uncommitted items core. DO NOT COMMIT - PM owns commit."
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "sprint_id": "wk131_items_inventory",
+          "round_id": "r1_kickoff",
+          "status": "done",
+          "task": "Hero panel Gear section: Weapon/Armor/Accessory lines with key stat (e.g. 'W: Iron Sword (+5)') + 'Bag: n/5' with wrapped item names; watch-card stats band compact gear line (weapon/armor names) if it fits without growing the card; tests/test_wk131_items_ui.py; screenshots.",
+          "what_i_changed": [
+            "game/ui/hero_panel.py: NEW module helpers format_gear_line(prefix,name,bonus) -> 'W: Iron Sword (+5)', format_accessory_mods(dict) -> '+2 atk, +2 def' (non-zero atk/def/spd/hp only), wrap_bag_names(names, max_chars=38, max_lines=3) word-wrap with ellipsis cap, fit_panel_line(font,text,max_w) pixel-true ellipsize (char-count truncation alone can overflow the 246px column with wide glyphs). _render_standard_hero Gear block now renders W/A lines WITH key stat, NEW 'Acc: <name> (<mods>)' line (Acc: None when empty), NEW 'Bag: n/cap' line + wrapped backpack names in font_tiny, +3px pad before the next divider when bag names render. Data: live hero dicts (hero.weapon/armor/accessory legacy dicts, hero.backpack ItemDefs, backpack_capacity) with HeroInventorySnapshot overrides when a profile is supplied (weapon_attack/armor_defense/accessory_name/backpack WK131 fields). All new lines go through TextLabel.render -> global text-surface cache (same dirty-gate pattern as the rest of the panel); content height flows through the existing last_content_height measure pass.",
+            "game/ui/hud_watch_card.py: render_hero_watch_card_infocard draws a compact 'Weapon / Armor' gear line (font_tiny, ellipsized to card width) in the stats-band slack under the XP bar, ONLY when it fits inside the existing stats_h allotment (it fits exactly: painted stats bottom 45px + 2 + 11px line = 58 = WATCH_CARD_STATS_COMPACT_H). Card height and ALL WATCH_CARD_* constants unchanged; chat band already absorbs a variable painted bottom via painted_stats_bottom_override, so the chat band starts below the gear line with no layout-constant change. Cached via (text,width) sig in hud._watch_gear_sig/_watch_gear_label_surf (dirty-gated, set via setattr - no hud.py edit)."
+          ],
+          "watch_card_decision": "ADDED (not skipped): the gear line fits the existing compact stats band exactly (58px) and the chat-visible band (78px) with the existing slack-absorption hook; the watch card did NOT grow (FULL_H_NO_CHAT still 236, FULL_H_WITH_CHAT still 446, pinned by tests).",
+          "files_touched": [
+            "game/ui/hero_panel.py",
+            "game/ui/hud_watch_card.py",
+            "tests/test_wk131_items_ui.py (new, 10 tests)",
+            "tools/screenshot_scenarios.py (scenario_ui_panels hero gets steel_sword/chain_mail/hawk_signet equipped + 2 backpack items - capture-only)"
+          ],
+          "gates": {
+            "ui_gate": "python -m pytest tests/test_wk131_items_ui.py tests/test_hero_panel_profile_ui.py tests/test_wk130_sidebar_overhaul.py tests/test_wk96_hud_watch_card.py -q -> 62 passed",
+            "hero_panel_adjacent": "10-file hero-panel/watch-card set -> 117 passed",
+            "full_suite": "python -m pytest tests/ -q -> see final report (run includes Agent 05 uncommitted items core)"
+          },
+          "evidence": {
+            "capture_cmd": "python tools/capture_screenshots.py --scenario ui_panels --out docs/screenshots/wk131 --seed 3",
+            "screenshots": [
+              "docs/screenshots/wk131/ui_panels_hero.png (Gear: Potions / W: Steel Sword (+10) / A: Chain Mail (+7) / Acc: Hawk Signet (+2 atk, +2 def) / Bag: 2/5 + Healing Potion, Swiftness Draught - readable, nothing clipped at 246px)",
+              "docs/screenshots/wk131/ui_panels_sidebar_split.png (watch card stats band shows 'Steel Sword / Chain Mail' under XP bar, inside card frame)",
+              "docs/screenshots/wk131/ui_panels_pinned_chat.png (gear line + chat band coexist, chat starts below gear line, no overlap)",
+              "docs/screenshots/wk131/ui_panels_debug.png / ui_panels_hidden.png / ui_panels_tax_collector.png / ui_panels_building.png / ui_panels_marketplace_tax.png (no regressions)"
+            ],
+            "visual_verdict": "PASS - gear block aligned flush-left with existing Gear style (font_small white lines, font_tiny bag names), section divider spacing clean, watch card height unchanged"
+          },
+          "notes": "DID NOT COMMIT, DID NOT run git. hero.accessory is a legacy dict (not ItemDef as briefed) - panel tolerates both shapes."
+        }
+      }
     }
   }
 }

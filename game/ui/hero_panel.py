@@ -24,6 +24,70 @@ def truncate_panel_line(text: str, max_chars: int = MAX_PANEL_CHARS) -> str:
     return s[: max(0, max_chars - 1)].rstrip() + "…"
 
 
+def format_gear_line(prefix: str, name: str, bonus: int = 0) -> str:
+    """WK131: compact equip-slot line, e.g. ``"W: Iron Sword (+5)"``."""
+    label = str(name or "").strip() or "None"
+    if int(bonus or 0):
+        return f"{prefix}: {label} (+{int(bonus)})"
+    return f"{prefix}: {label}"
+
+
+def format_accessory_mods(mods: dict | None) -> str:
+    """WK131: short non-zero stat-mod summary for an accessory dict
+    (``{"attack","defense","speed","max_hp"}``), e.g. ``"+2 atk, +2 def"``."""
+    if not isinstance(mods, dict):
+        return ""
+    parts: list[str] = []
+    atk = int(mods.get("attack", 0) or 0)
+    dfs = int(mods.get("defense", 0) or 0)
+    spd = float(mods.get("speed", 0.0) or 0.0)
+    mhp = int(mods.get("max_hp", 0) or 0)
+    if atk:
+        parts.append(f"+{atk} atk")
+    if dfs:
+        parts.append(f"+{dfs} def")
+    if spd:
+        parts.append(f"+{spd:g} spd")
+    if mhp:
+        parts.append(f"+{mhp} hp")
+    return ", ".join(parts)
+
+
+def fit_panel_line(font: pygame.font.Font, text: str, max_width: int) -> str:
+    """WK131: pixel-true single-line fit — ellipsize ``text`` so its rendered
+    width with ``font`` stays within ``max_width`` (char-count truncation alone
+    can overflow the 246px hero-panel column with wide glyphs)."""
+    s = str(text or "")
+    if max_width <= 0 or font.size(s)[0] <= max_width:
+        return s
+    while len(s) > 1 and font.size(s + "…")[0] > max_width:
+        s = s[:-1]
+    return s.rstrip() + "…"
+
+
+def wrap_bag_names(names, max_chars: int = 38, max_lines: int = 3) -> list[str]:
+    """WK131: word-wrap backpack item names (comma-joined) into short lines that
+    fit the narrow hero-panel column. Caps at ``max_lines`` with an ellipsis."""
+    items = [str(n).strip() for n in (names or ()) if str(n).strip()]
+    if not items:
+        return []
+    lines: list[str] = []
+    cur = ""
+    for nm in items:
+        candidate = nm if not cur else f"{cur}, {nm}"
+        if not cur or len(candidate) <= max_chars:
+            cur = candidate
+        else:
+            lines.append(cur)
+            cur = nm
+    if cur:
+        lines.append(cur)
+    if len(lines) > max_lines:
+        lines = lines[:max_lines]
+        lines[-1] = lines[-1] + ", …"
+    return [truncate_panel_line(line, max_chars) for line in lines]
+
+
 def intent_label_from_slug(intent: str) -> str:
     """Readable intent sentence from snake_case profile intent slug."""
     raw = str(intent or "").strip()
@@ -480,6 +544,31 @@ class HeroPanel:
         potion_count = int(getattr(hero, "potions", 0))
         weapon_name = hero.weapon["name"] if getattr(hero, "weapon", None) else "Fists"
         armor_name = hero.armor["name"] if getattr(hero, "armor", None) else "None"
+        # WK131: equip-slot key stats + accessory + backpack.
+        wpn_raw = getattr(hero, "weapon", None)
+        weapon_bonus = int(wpn_raw.get("attack", 0) or 0) if isinstance(wpn_raw, dict) else 0
+        arm_raw = getattr(hero, "armor", None)
+        armor_bonus = int(arm_raw.get("defense", 0) or 0) if isinstance(arm_raw, dict) else 0
+        acc_raw = getattr(hero, "accessory", None)
+        if isinstance(acc_raw, dict):
+            accessory_name = str(acc_raw.get("name", "") or "")
+            accessory_mods = format_accessory_mods(acc_raw)
+        elif acc_raw is not None:  # tolerate an ItemDef-shaped accessory
+            accessory_name = str(getattr(acc_raw, "name", "") or "")
+            accessory_mods = format_accessory_mods(
+                {
+                    "attack": getattr(acc_raw, "attack", 0),
+                    "defense": getattr(acc_raw, "defense", 0),
+                    "speed": getattr(acc_raw, "speed", 0.0),
+                    "max_hp": getattr(acc_raw, "max_hp", 0),
+                }
+            )
+        else:
+            accessory_name = ""
+            accessory_mods = ""
+        bag_raw = getattr(hero, "backpack", None) or ()
+        bag_names = [str(getattr(it, "name", it)) for it in bag_raw]
+        bag_capacity = int(getattr(hero, "backpack_capacity", 5) or 5)
 
         intent_display = self._compute_hero_intent(hero)
         state_display = str(getattr(getattr(hero, "state", None), "name", "IDLE"))
@@ -531,8 +620,18 @@ class HeroPanel:
                     arm = getattr(inv, "armor_name", "")
                     if str(wpn or "").strip():
                         weapon_name = str(wpn)
+                        weapon_bonus = int(getattr(inv, "weapon_attack", weapon_bonus) or 0)
                     if str(arm or "").strip():
                         armor_name = str(arm)
+                        armor_bonus = int(getattr(inv, "armor_defense", armor_bonus) or 0)
+                    # WK131: accessory name + backpack names from the snapshot
+                    # (stat mods stay sourced from the live hero accessory dict).
+                    acc_n = str(getattr(inv, "accessory_name", "") or "").strip()
+                    if acc_n:
+                        accessory_name = acc_n
+                    bag_snap = getattr(inv, "backpack", None)
+                    if bag_snap is not None:
+                        bag_names = [str(n) for n in bag_snap]
             except Exception:
                 pass
 
@@ -777,7 +876,7 @@ class HeroPanel:
         TextLabel.render(
             surface,
             self.theme.font_small,
-            truncate_panel_line(f"W: {weapon_name}"),
+            fit_panel_line(self.theme.font_small, format_gear_line("W", weapon_name, weapon_bonus), bar_width),
             (panel_x + pad, y - scroll_off),
             COLOR_WHITE,
             shadow_color=(25, 25, 35),
@@ -786,12 +885,47 @@ class HeroPanel:
         TextLabel.render(
             surface,
             self.theme.font_small,
-            truncate_panel_line(f"A: {armor_name}"),
+            fit_panel_line(self.theme.font_small, format_gear_line("A", armor_name, armor_bonus), bar_width),
             (panel_x + pad, y - scroll_off),
             COLOR_WHITE,
             shadow_color=(25, 25, 35),
         )
         y += 14
+        # WK131: accessory slot (name + non-zero stat mods).
+        acc_line = f"Acc: {accessory_name}" if accessory_name else "Acc: None"
+        if accessory_name and accessory_mods:
+            acc_line = f"Acc: {accessory_name} ({accessory_mods})"
+        TextLabel.render(
+            surface,
+            self.theme.font_small,
+            fit_panel_line(self.theme.font_small, acc_line, bar_width),
+            (panel_x + pad, y - scroll_off),
+            COLOR_WHITE,
+            shadow_color=(25, 25, 35),
+        )
+        y += 14
+        # WK131: backpack ("Bag: n/cap" + wrapped item names underneath).
+        TextLabel.render(
+            surface,
+            self.theme.font_small,
+            f"Bag: {len(bag_names)}/{bag_capacity}",
+            (panel_x + pad, y - scroll_off),
+            (200, 200, 210),
+            shadow_color=(25, 25, 35),
+        )
+        y += 14
+        for bag_line in wrap_bag_names(bag_names):
+            TextLabel.render(
+                surface,
+                self.font_tiny,
+                " " + fit_panel_line(self.font_tiny, bag_line, max(0, bar_width - 6)),
+                (panel_x + pad, y - scroll_off),
+                (185, 190, 200),
+                shadow_color=(20, 20, 30),
+            )
+            y += line_skip_tiny + 1
+        if bag_names:
+            y += 3  # WK131: breathing room between bag names and the divider
 
         self._draw_section_divider(surface, panel_x + pad, y - scroll_off, bar_width)
         y += 6

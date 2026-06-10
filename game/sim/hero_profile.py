@@ -196,6 +196,10 @@ class HeroInventorySnapshot:
     weapon_attack: int
     armor_name: str
     armor_defense: int
+    # WK131: accessory slot + carried backpack (item display names). Defaults
+    # keep every pre-WK131 constructor call site valid.
+    accessory_name: str = ""
+    backpack: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -496,6 +500,8 @@ def build_hero_profile_snapshot(
 
     wpn = getattr(hero, "weapon", None)
     arm = getattr(hero, "armor", None)
+    acc = getattr(hero, "accessory", None)
+    pack = getattr(hero, "backpack", None) or ()
     inventory = HeroInventorySnapshot(
         gold=int(getattr(hero, "gold", 0) or 0),
         taxed_gold=int(getattr(hero, "taxed_gold", 0) or 0),
@@ -505,6 +511,8 @@ def build_hero_profile_snapshot(
         weapon_attack=int((wpn or {}).get("attack", 0) if isinstance(wpn, dict) else 0),
         armor_name=str((arm or {}).get("name", "") if isinstance(arm, dict) else ""),
         armor_defense=int((arm or {}).get("defense", 0) if isinstance(arm, dict) else 0),
+        accessory_name=str((acc or {}).get("name", "") if isinstance(acc, dict) else ""),
+        backpack=tuple(str(getattr(it, "name", it)) for it in pack),
     )
 
     pc_raw = getattr(hero, "profile_career", None) or {}
