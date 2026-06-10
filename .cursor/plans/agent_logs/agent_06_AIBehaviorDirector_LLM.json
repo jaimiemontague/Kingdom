@@ -2331,6 +2331,49 @@
      }
     }
    }
+  },
+  "wk136_chat_hang_gpt5": {
+   "sprint_meta": {
+    "created_utc": "2026-06-10T00:00:00Z",
+    "plan_ref": "Sovereign bug report: 'talking to heroes just hangs for me, I never get a response' (gpt-5-nano expected)",
+    "role": "Agent 06 AIBehaviorDirector_LLM",
+    "sprint_id": "wk136_chat_hang_gpt5",
+    "title": "WK136 - hero chat hang: paused-frame conversation pump + gpt-5 family provider support (reasoning_effort=minimal, 2000-token budget) + 30s CONVERSATION_TIMEOUT + named thinking indicator + .env gpt-5-nano"
+   },
+   "rounds": {
+    "r1_bugfix": {
+     "round_id": "r1_bugfix",
+     "sprint_id": "wk136_chat_hang_gpt5",
+     "status": "done",
+     "round_meta": {
+      "role": "Agent 06 AIBehaviorDirector_LLM",
+      "reports_to": "Agent 01 (PM)",
+      "launched_by": "Claude Code subagent, WK136 Sovereign bug dispatch",
+      "completed_utc": "2026-06-10T00:00:00Z",
+      "phase": "Single lane: ai/providers, config timeouts, engine delivery path, chat_panel indicator, .env model line, tests/test_wk136_chat_delivery.py. DID NOT COMMIT, no git."
+     },
+     "root_cause": {
+      "delivery_bug": "game/engine_facades/lifecycle.py: _poll_conversation_response() was called ONLY at the end of lifecycle.update() (per-sim-tick body). update() is gated by _prepare_sim_and_camera (lifecycle.py:79: multiplier==0.0 or engine.paused -> early return) AND only runs when tick_simulation drains a tick. While paused (engine.paused via open_building_interior/open_memorial in engine_facades/actions.py:192/205, or the PAUSE speed tier = multiplier 0.0 on the speed bar) ZERO ticks drain, so a finished LLM conversation response sat in llm.conversation_responses FOREVER. Chat input is deliberately allowed while paused (game/input/keyboard.py:121 'chat works even at low speed tiers') so this is reachable in normal play - the Sovereign's hang.",
+      "gpt5_bug": "ai/providers/openai_provider.py sent max_completion_tokens=600 with no reasoning_effort; gpt-5-nano's reasoning tokens ate the whole budget -> empty content -> canned 'I am thinking, Sovereign...' fallback every time; plus CONVERSATION_TIMEOUT was 8s (and autonomous LLM_TIMEOUT 5s) - too tight for reasoning latency."
+     },
+     "what_i_changed": {
+      "game/engine_facades/lifecycle.py": "tick_simulation now calls engine._poll_conversation_response() once per RENDER frame after the tick loop - both frontends (pygame run() and ursina_app_frame.run_frame) drive tick_simulation every frame regardless of pause. The per-tick poll in update() kept (harmless double-pop).",
+      "config.py": "CONVERSATION_TIMEOUT 8.0 -> 30.0 with rationale comment; LLM_TIMEOUT stays 5.0 (autonomous decisions snappy). llm_brain already routed conversations through CONVERSATION_TIMEOUT.",
+      "ai/providers/openai_provider.py": "gpt-5* models: attempts ladder {max_completion_tokens:2000, reasoning_effort:'minimal'} -> 'low' -> no reasoning_effort -> legacy max_tokens. SDK 1.86.0 verified to accept reasoning_effort named param. temperature never passed (gpt-5 rejects non-default). Non-gpt-5 request shape byte-identical (600/200).",
+      "game/ui/chat_panel.py": "_thinking_text(): pending indicator now '<HeroName> is thinking...' (was 'Thinking...') in both render() and render_watch_band(); driven by existing waiting_for_response flag.",
+      ".env": "OPENAI_MODEL=gpt-4o-mini -> gpt-5-nano (model line only).",
+      "tests/test_wk136_chat_delivery.py": "NEW - 13 tests driving the REAL engine loop headlessly (GameEngine(headless_ui=True) + tick_simulation, the exact method run_frame calls): delivery running/paused/speed-0, 0.1s forced-timeout canned fallback, empty-completion thinking fallback, pending-indicator lifecycle, timeout split, 5 gpt-5/legacy provider request-shape tests with fake client."
+     },
+     "proof": {
+      "pre_fix_failures": "tests/test_wk136_chat_delivery.py pre-fix: 6 failed / 7 passed - test_chat_response_delivered_while_engine_paused and test_chat_response_delivered_at_pause_speed_tier FAILED (the live bug, both directions proven), plus timeout-split + 3 gpt-5 provider tests failed (features absent). Post-fix: 13 passed.",
+      "real_e2e_gpt5_nano": "Real key, provider=openai, model=gpt-5-nano, REAL engine loop WITH engine.paused=True (the hang condition): run1 latency 2.41s, run2 2.52s, non-fallback in-character responses delivered to ChatPanel. Sample: 'Greetings, Sovereign. I stand vigilant and ready to serve the realm. I will report my status and heed your guidance.'"
+     },
+     "gates": {
+      "named_gates": "tests/test_wk136_chat_delivery.py + test_wk134_llm_e2e.py + test_chat_direct_feedback.py + test_direct_prompt_integration.py + test_wk112_direct_prompt_validator.py + test_wk67_ai_boundary.py -q: 109 passed.",
+      "full_suite": "python -m pytest tests/ -q: PENDING_AT_LOG_TIME (running; reported in final round report)"
+     }
+    }
+   }
   }
  }
 }

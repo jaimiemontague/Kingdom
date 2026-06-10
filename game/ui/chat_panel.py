@@ -207,6 +207,12 @@ class ChatPanel:
     def is_active(self) -> bool:
         return self.hero_target is not None
 
+    def _thinking_text(self, dots: str) -> str:
+        """WK136: named pending indicator — reasoning models (gpt-5 family) can
+        take many seconds, so the wait must read as the hero thinking, not a hang."""
+        name = getattr(self.hero_target, "name", "") or "Hero"
+        return f"{name} is thinking{dots}"
+
     def _hero_class_color(self) -> tuple[int, int, int]:
         hc = (getattr(self.hero_target, "hero_class", "warrior") or "warrior").lower()
         return _HERO_CLASS_COLORS.get(hc, _HERO_CLASS_COLORS["warrior"])
@@ -362,7 +368,7 @@ class ChatPanel:
                             content_y += line_h
             if self.waiting_for_response:
                 dots = "." * ((pygame.time.get_ticks() // 400) % 4)
-                thinking = font.render(f"Thinking{dots}", True, _COLOR_THINKING)
+                thinking = font.render(self._thinking_text(dots), True, _COLOR_THINKING)
                 if content_y + line_h > msg_rect.y and content_y < msg_rect.bottom:
                     surface.blit(thinking, (msg_rect.x + pad_lr, content_y))
             surface.set_clip(clip_prev)
@@ -508,7 +514,7 @@ class ChatPanel:
                         content_y += line_h
         if self.waiting_for_response:
             dots = "." * ((pygame.time.get_ticks() // 400) % 4)
-            thinking = font.render(f"Thinking{dots}", True, _COLOR_THINKING)
+            thinking = font.render(self._thinking_text(dots), True, _COLOR_THINKING)
             if content_y + line_h > msg_rect.y and content_y < msg_rect.bottom:
                 surface.blit(thinking, (msg_rect.x + pad, content_y))
         surface.set_clip(clip_prev)

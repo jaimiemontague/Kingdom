@@ -53,12 +53,31 @@ class OpenAIProvider(BaseLLMProvider):
                 ],
                 "timeout": timeout,
             }
-            # gpt-5 family expects max_completion_tokens, while older models
-            # may still accept max_tokens. Try modern first, then fallback.
-            attempts = (
-                {"max_completion_tokens": 600},
-                {"max_tokens": 200},
-            )
+            # WK136: gpt-5 family is a reasoning model line. Two consequences:
+            # 1. Reasoning tokens count against max_completion_tokens — a small
+            #    budget (600) gets entirely eaten by reasoning and the content
+            #    comes back EMPTY (finish_reason=length), which the brain maps
+            #    to the canned "I am thinking, Sovereign..." fallback. Give a
+            #    generous budget so real text survives.
+            # 2. reasoning_effort="minimal" (gpt-5+; SDK >= ~1.58 passes it
+            #    through) cuts reasoning latency dramatically — right for short
+            #    in-character chat. Ladder: minimal -> low -> none, in case the
+            #    deployed SDK/model rejects a value or the parameter itself.
+            # Note: temperature is deliberately never passed — gpt-5 models
+            # reject non-default values.
+            if self.model.lower().startswith("gpt-5"):
+                attempts = (
+                    {"max_completion_tokens": 2000, "reasoning_effort": "minimal"},
+                    {"max_completion_tokens": 2000, "reasoning_effort": "low"},
+                    {"max_completion_tokens": 2000},
+                    {"max_tokens": 200},
+                )
+            else:
+                # Older models: max_completion_tokens first, legacy max_tokens fallback.
+                attempts = (
+                    {"max_completion_tokens": 600},
+                    {"max_tokens": 200},
+                )
             last_error = None
             for token_kwargs in attempts:
                 try:
@@ -67,14 +86,26 @@ class OpenAIProvider(BaseLLMProvider):
                         **token_kwargs,
                     )
                     return (response.choices[0].message.content or "").strip()
+                except TypeError as e:
+                    # Very old SDK without the reasoning_effort named param.
+                    if "reasoning_effort" in str(e) and "reasoning_effort" in token_kwargs:
+                        last_error = e
+                        continue
+                    raise
                 except Exception as e:
                     msg = str(e)
-                    if "max_tokens" in msg or "max_completion_tokens" in msg or "unsupported_parameter" in msg:
+                    if (
+                        "max_tokens" in msg
+                        or "max_completion_tokens" in msg
+                        or "reasoning_effort" in msg
+                        or "unsupported_parameter" in msg
+                        or "unsupported_value" in msg
+                    ):
                         last_error = e
                         continue
                     raise
             raise RuntimeError(last_error or "Unknown OpenAI token parameter error")
-            
+
         except Exception as e:
             raise RuntimeError(f"OpenAI API error: {e}")
 

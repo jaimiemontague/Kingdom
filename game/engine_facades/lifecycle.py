@@ -205,6 +205,17 @@ def tick_simulation(engine: "GameEngine", dt: float) -> tuple[float, float]:
 
     engine._last_frame_sim_ticks = ticks_this_frame
 
+    # WK136 fix: pump hero-chat responses once per RENDER frame, independent of
+    # sim ticking. The poll at the end of update() only runs when a sim tick
+    # drains — while paused (engine.paused via building-interior/memorial
+    # overlays, or the PAUSE speed tier => multiplier 0.0) zero ticks drain and
+    # a finished LLM conversation response sat undelivered FOREVER ("talking to
+    # heroes just hangs"). Chat input is deliberately allowed while paused
+    # (game/input/keyboard.py), so delivery must work then too. Both frontends
+    # drive this method every frame (pygame run(); ursina_app_frame.run_frame),
+    # and the poll is an O(1) dict pop — safe to run unconditionally.
+    engine._poll_conversation_response()
+
     evt_ms = (t1 - t0) * 1000.0
     upd_ms = (t2 - t_update_start) * 1000.0
     return evt_ms, upd_ms

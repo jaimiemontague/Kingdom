@@ -398,7 +398,11 @@ HEALTH_THRESHOLD_FOR_DECISION = 0.5
 # wk14 Persona and Presence: conversation mode
 CONVERSATION_COOLDOWN_MS = 2000
 CONVERSATION_HISTORY_LIMIT = 20
-CONVERSATION_TIMEOUT = 8.0
+# WK136: conversations get generous reasoning-model headroom (gpt-5 family can
+# spend many seconds on reasoning tokens before emitting text). Autonomous hero
+# decisions keep the snappy LLM_TIMEOUT above — heroes must not stall — but a
+# player waiting in the chat panel sees a "thinking" indicator, so 30s is fine.
+CONVERSATION_TIMEOUT = 30.0
 
 # WK6: Ranger exploration bias toward black fog
 RANGER_EXPLORE_BLACK_FOG_BIAS = 0.7  # 0.0-1.0: probability of picking frontier vs random wander (default 0.7 = 70% frontier)

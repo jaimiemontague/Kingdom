@@ -7685,6 +7685,23 @@
           "pm_next_actions_by_agent": {}
         }
       }
+    },
+    "wk136_chat_hang_gpt5": {
+      "sprint_meta": {
+        "created_utc": "2026-06-10T00:00:00Z",
+        "plan": "Sovereign bug report: hero chat hangs, expects gpt-5-nano"
+      },
+      "rounds": {
+        "r1_close": {
+          "pm_status_summary": "WK136 CLOSED (pending final qa_smoke). Root cause 1 (the hang): _poll_conversation_response only ran inside the sim-tick body; chat is allowed while PAUSED (and pause is exactly when players chat), so responses queued forever. Fix: poll once per RENDER frame in lifecycle.tick_simulation (both frontends drive it every frame regardless of pause). Root cause 2 (gpt-5-nano): 600 max_completion_tokens with no reasoning_effort -> reasoning ate the budget -> empty content -> canned fallback every time; plus 5-8s timeouts too tight. Fix: gpt-5* ladder (2000 tokens + reasoning_effort minimal->low->none), no temperature, CONVERSATION_TIMEOUT=30s (autonomous stays 5s), '<Hero> is thinking...' pending indicator. .env OPENAI_MODEL -> gpt-5-nano. Pre-fix test failures proved both bugs; real-key E2E through a PAUSED engine: 2.4-2.5s, real in-character responses delivered to ChatPanel.",
+          "evidence": {
+            "targeted_gates": "109 passed incl. digest",
+            "new_tests": "tests/test_wk136_chat_delivery.py (13, real engine loop, 6 failed pre-fix)",
+            "real_e2e": "gpt-5-nano 2.41s/2.52s while paused"
+          },
+          "pm_next_actions_by_agent": {}
+        }
+      }
     }
   }
 }
