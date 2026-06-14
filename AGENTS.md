@@ -102,3 +102,6 @@ Report back with:
 - If you need another agent’s change first: mark yourself **blocked** and state exactly what you’re waiting on.
 - If you discover extra work: file it as a **new ticket**; do not “just do it” unless you are the owner and it is required to keep gates green.
 
+## Imported Claude Cowork project instructions
+
+Read .cursor/rules folder to onboard (typically as Agent 1) and then see tools/ai_studio_orchestrator to run the studio agents local to cloud.  The cursor api key is saved to windows variables locally and to cursor environment settings for the cloud agents.

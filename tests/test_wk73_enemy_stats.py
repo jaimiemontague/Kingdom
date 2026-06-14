@@ -42,6 +42,7 @@ from game.entities.enemy import (
     Enemy,
     ENEMY_STATS,
     Goblin,
+    GoblinWarchief,
     Wolf,
     Skeleton,
     Spider,
@@ -62,8 +63,10 @@ _VOLATILE_KEYS = ("entity_id", "x", "y")
 # The stat-block shims, paired with their ENEMY_STATS key. SkeletonArcher is
 # deliberately excluded — it is behavioral and not in the table.
 # WK132: Dragon (Dragon Cave boss) added as the 8th pure stat-block shim.
+# WK137: GoblinWarchief (initial-wave boss) added as the 9th pure stat-block shim.
 SHIMS = [
     (Goblin, "goblin"),
+    (GoblinWarchief, "goblin_warchief"),
     (Wolf, "wolf"),
     (Skeleton, "skeleton"),
     (Spider, "spider"),
@@ -78,6 +81,7 @@ ALL_TYPES = [(cls, key) for cls, key in SHIMS] + [(SkeletonArcher, "skeleton_arc
 
 CLASS_NAMES = {
     "goblin": "Goblin",
+    "goblin_warchief": "GoblinWarchief",
     "wolf": "Wolf",
     "skeleton": "Skeleton",
     "spider": "Spider",
@@ -126,6 +130,12 @@ EXPECTED_STATS = {
         hp=42, max_hp=42, attack_power=9, speed=102.0,
         xp_reward=32, gold_reward=18, color=(120, 80, 50), size=18,
         has_attackers=True, is_boss=False,
+    ),
+    # WK137: Goblin Warchief — initial-wave boss; 2x goblin HP / 1.5x goblin attack.
+    "goblin_warchief": dict(
+        hp=60, max_hp=60, attack_power=15, speed=90.0,
+        xp_reward=50, gold_reward=40, color=(96, 48, 12), size=24,
+        has_attackers=True, is_boss=True, name="The Goblin Warchief",
     ),
     "bandit_lord": dict(
         hp=300, max_hp=300, attack_power=20, speed=90.0,

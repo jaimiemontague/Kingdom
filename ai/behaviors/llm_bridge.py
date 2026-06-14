@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from config import LLM_DECISION_COOLDOWN, TILE_SIZE
+from config import LLM_DECISION_COOLDOWN, QUEST_DECLINE_COOLDOWN_MS, TILE_SIZE
 from ai.behaviors import hunger
 from ai.behaviors.view_compat import as_ai_view, view_to_legacy_context
 from ai.context_builder import ContextBuilder
@@ -12,6 +12,7 @@ from ai.decision_moments import (
     consult_suppressed_by_request_state,
     determine_decision_moment,
 )
+from ai.quest_chain_context import select_focus_quest_chain
 from ai.profile_context_adapter import build_llm_context_for_moment
 from game.entities.hero import HeroState
 from game.sim.timebase import now_ms as sim_now_ms
@@ -121,6 +122,82 @@ def _commit_accept_bounty(ai: Any, hero: Any, view: Any, target: str) -> bool:
     return True
 
 
+def _live_sim_from_view(view: Any) -> Any:
+    sink = getattr(view, "commands", None)
+    return getattr(sink, "_sim", None)
+
+
+def _quest_chain_focus_from_context(context: dict, hero: Any, target: str = "") -> dict | None:
+    chains = list(context.get("quest_chains") or [])
+    if not chains:
+        return None
+
+    want = str(target or "").strip().lower()
+    if want:
+        for chain in chains:
+            chain_values = {
+                str(chain.get("chain_id", "")).strip().lower(),
+                str(chain.get("chain_type", "")).strip().lower(),
+                str(chain.get("name", "")).strip().lower(),
+                str(chain.get("target_id", "")).strip().lower(),
+                str(chain.get("target_name", "")).strip().lower(),
+                str(chain.get("current_phase_id", "")).strip().lower(),
+                str(chain.get("current_phase_title", "")).strip().lower(),
+            }
+            if want in chain_values:
+                return chain
+
+    return select_focus_quest_chain(hero, chains)
+
+
+def _quest_chain_move_to_phase(ai: Any, hero: Any, focus: dict) -> bool:
+    target_position = focus.get("target_position")
+    if not isinstance(target_position, (list, tuple)) or len(target_position) != 2:
+        return False
+    try:
+        tx = float(target_position[0])
+        ty = float(target_position[1])
+    except (TypeError, ValueError):
+        return False
+
+    chain_id = str(focus.get("chain_id", "") or "")
+    phase_id = str(focus.get("current_phase_id", "") or "")
+    phase_title = str(focus.get("current_phase_title", "") or "")
+    target_id = str(focus.get("target_id", "") or "")
+    target_name = str(focus.get("target_name", "") or "")
+
+    hero.target = {
+        "type": "visit_poi",
+        "quest_chain_id": chain_id,
+        "quest_chain_phase_id": phase_id,
+        "quest_chain_phase_title": phase_title,
+        "target_id": target_id,
+        "target_name": target_name,
+        "started_ms": sim_now_ms(),
+    }
+    hero.set_target_position(tx, ty)
+    ai.set_intent(hero, "pursuing_quest_chain")
+    return True
+
+
+def _decline_quest_chain(ai: Any, hero: Any, focus: dict, *, source: str, reason: str, inputs_summary: dict) -> None:
+    chain_id = str(focus.get("chain_id", "") or "")
+    decline_map = getattr(hero, "_quest_chain_decline_until_ms", None)
+    if decline_map is None:
+        decline_map = {}
+        hero._quest_chain_decline_until_ms = decline_map
+    until = int(sim_now_ms()) + int(QUEST_DECLINE_COOLDOWN_MS)
+    decline_map[chain_id] = until
+    ai.record_decision(
+        hero,
+        action="decline_chain",
+        reason=reason or f"Declined quest chain {focus.get('name', chain_id)}",
+        intent=getattr(hero, "intent", "idle") or "idle",
+        inputs_summary=inputs_summary,
+        source=source,
+    )
+
+
 def should_consult_llm(ai: Any, hero: Any, view: Any) -> bool:
     """Determine if we should ask the LLM for a decision (WK50: named decision moments)."""
     view = as_ai_view(view)
@@ -208,6 +285,110 @@ def apply_llm_decision(
 
     if _quest_offer.maybe_apply_quest_offer_decision(ai, hero, decision, view, source=source):
         return
+
+    if action in {"accept_chain", "continue_phase", "decline_chain", "retreat_to_heal"}:
+        focus = _quest_chain_focus_from_context(context, hero, target)
+        if focus is None:
+            ai._debug_log(
+                f"{hero.name} received quest_chain action={action!r} without a focus chain",
+                throttle_key=f"{hero.name}_quest_chain_missing_focus",
+            )
+            return
+
+        status = str(focus.get("status", "") or "").lower()
+        chain_name = str(focus.get("name", "") or focus.get("chain_type", "") or "quest chain")
+        chain_id = str(focus.get("chain_id", "") or "")
+        if action == "retreat_to_heal":
+            ai.set_intent(hero, "returning_to_safety")
+            ai.record_decision(
+                hero,
+                action="retreat_to_heal",
+                reason=reason or f"Retreating from {chain_name}",
+                intent="returning_to_safety",
+                inputs_summary=inputs_summary,
+                source=source,
+            )
+            ai.defense_behavior.start_retreat(ai, hero, view)
+            return
+
+        if action == "decline_chain":
+            if status != "offered":
+                ai._debug_log(
+                    f"{hero.name} decline_chain ignored for non-offered chain {chain_id or chain_name}",
+                    throttle_key=f"{hero.name}_quest_chain_decline_non_offered",
+                )
+                return
+            _decline_quest_chain(ai, hero, focus, source=source, reason=reason, inputs_summary=inputs_summary)
+            return
+
+        if action == "accept_chain":
+            if status != "offered":
+                ai._debug_log(
+                    f"{hero.name} accept_chain ignored for non-offered chain {chain_id or chain_name}",
+                    throttle_key=f"{hero.name}_quest_chain_accept_non_offered",
+                )
+                return
+            sim = _live_sim_from_view(view)
+            quest_chain_system = getattr(sim, "quest_chain_system", None) if sim is not None else None
+            if quest_chain_system is None:
+                ai._debug_log(
+                    f"{hero.name} accept_chain: no quest_chain_system available",
+                    throttle_key=f"{hero.name}_quest_chain_accept_no_system",
+                )
+                return
+            accepted = quest_chain_system.accept_chain(
+                chain_id,
+                hero=hero,
+                event_bus=getattr(sim, "event_bus", None),
+                now_ms=sim_now_ms(),
+            )
+            if not accepted:
+                ai._debug_log(
+                    f"{hero.name} accept_chain: chain {chain_id or chain_name} no longer available",
+                    throttle_key=f"{hero.name}_quest_chain_accept_failed",
+                )
+                return
+            ai.record_decision(
+                hero,
+                action="accept_chain",
+                reason=reason or f"Accepting quest chain {chain_name}",
+                intent="pursuing_quest_chain",
+                inputs_summary=inputs_summary,
+                source=source,
+            )
+            _quest_chain_move_to_phase(
+                ai,
+                hero,
+                focus,
+            )
+            return
+
+        if action == "continue_phase":
+            if status != "active":
+                ai._debug_log(
+                    f"{hero.name} continue_phase ignored for non-active chain {chain_id or chain_name}",
+                    throttle_key=f"{hero.name}_quest_chain_continue_non_active",
+                )
+                return
+            ai.record_decision(
+                hero,
+                action="continue_phase",
+                reason=reason or f"Continuing quest chain {chain_name}",
+                intent="pursuing_quest_chain",
+                inputs_summary=inputs_summary,
+                source=source,
+            )
+            moved = _quest_chain_move_to_phase(
+                ai,
+                hero,
+                focus,
+            )
+            if not moved:
+                ai._debug_log(
+                    f"{hero.name} continue_phase: no usable target on chain {chain_id or chain_name}",
+                    throttle_key=f"{hero.name}_quest_chain_continue_no_target",
+                )
+            return
 
     if action == "retreat":
         ai.set_intent(hero, "returning_to_safety")

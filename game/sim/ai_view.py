@@ -121,6 +121,12 @@ class AiGameView:
     #       giver's post currently has an open quest
     quests: tuple = ()
     quest_givers: tuple = ()
+    # WK138 (adventure ledger foundation): read-only quest-chain timeline for the
+    # AI. Each entry is a frozen primitive-only snapshot (chain id/type/name,
+    # current phase id/title/objective, status, assigned hero, target summary,
+    # phase timeline, and small history summaries). Empty tuples are the no-chain
+    # default and must remain a fast no-op for the WK67 digest path.
+    quest_chains: tuple = ()
     # WK67 Move 6 (L3b write side): the AI proposes hero writes (the shopping
     # purchase) through this sim-owned, synchronous CommandSink instead of
     # mutating economy/hero directly. NO economy, NO sim, NO engine on the view.

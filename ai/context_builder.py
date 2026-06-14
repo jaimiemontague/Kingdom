@@ -4,6 +4,7 @@ Builds context dictionaries for LLM decision making.
 import math
 
 from config import FOOD_MEAL_COST_GOLD, TILE_SIZE
+from ai.quest_chain_context import summarize_quest_chains
 from game.sim.timebase import now_ms as sim_now_ms
 
 
@@ -123,6 +124,12 @@ class ContextBuilder:
             "market_catalog_items": [],
             "distances": {},
         }
+
+        quest_chains = game_state.get("quest_chains") or ()
+        if quest_chains:
+            summarized_chains = summarize_quest_chains(quest_chains)
+            if summarized_chains:
+                context["quest_chains"] = summarized_chains
         
         # Add nearby enemies with details
         for enemy in game_state.get("enemies", []):

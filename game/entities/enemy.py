@@ -106,6 +106,20 @@ ENEMY_STATS: dict[str, "EnemyStats"] = {
         size=18,
         has_attackers=True,
     ),
+    "goblin_warchief": EnemyStats(
+        # WK137: initial-wave boss — same chassis as goblin, 2x HP / 1.5x attack per spec.
+        # Goblin's effective attack is GOBLIN_ATTACK * 2 == 10, so 1.5x => GOBLIN_ATTACK * 3 == 15.
+        hp=GOBLIN_HP * 2,            # 60
+        attack_power=GOBLIN_ATTACK * 3,  # 15
+        speed=GOBLIN_SPEED,          # 90.0
+        xp_reward=50,
+        gold_reward=40,
+        color=(96, 48, 12),          # darker goblin brown — reads "elite" in 2D/procedural frames
+        size=24,                     # 18 * 1.33 — renderer scales billboards by size/18 (WK137 T2)
+        has_attackers=True,
+        is_boss=True,
+        name="The Goblin Warchief",
+    ),
     "bandit_lord": EnemyStats(
         hp=300,
         attack_power=20,
@@ -517,6 +531,13 @@ class Goblin(Enemy):
 
     def __init__(self, x: float, y: float):
         super().__init__(x, y, "goblin")
+
+
+class GoblinWarchief(Enemy):
+    """WK137 initial-wave boss. Stats: ENEMY_STATS["goblin_warchief"]."""
+
+    def __init__(self, x: float, y: float):
+        super().__init__(x, y, "goblin_warchief")
 
 
 class Wolf(Enemy):

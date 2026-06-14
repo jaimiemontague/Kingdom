@@ -87,6 +87,10 @@ class RenderSnapshot:
     tax_collector_dto: Any = None
     building_dtos: tuple = ()
     bounty_dtos: tuple = ()
+    # WK138 (adventure ledger foundation): read-only quest-chain snapshot tuples
+    # for render/UI consumers. Empty default keeps no-chain builds as a fast
+    # no-op and preserves the WK67 digest path.
+    quest_chains: tuple = ()
 
 
 @dataclass(frozen=True)

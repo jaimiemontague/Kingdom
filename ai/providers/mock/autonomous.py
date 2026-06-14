@@ -75,6 +75,49 @@ def mock_autonomous_decision(provider: "MockProvider", user_prompt: str) -> str:
             "personality_influence": "mock",
         }
         return json.dumps(out)
+    if mtype == "quest_chain":
+        qchain = ctx.get("quest_chain") or ((ctx.get("current_situation") or {}).get("quest_chains") or [{}])[0]
+        status = str(qchain.get("status") or "").lower()
+        try:
+            reward = int(qchain.get("reward_gold", 0) or 0)
+        except (TypeError, ValueError):
+            reward = 0
+        sit = (ctx.get("current_situation") or {}).get("situation") or ctx.get("situation") or {}
+        forced_retreat = bool(
+            sit.get("critical_health")
+            or (
+                sit.get("low_health")
+                and pots <= 0
+                and (sit.get("enemies_nearby") or not sit.get("near_safety"))
+            )
+        )
+        if forced_retreat:
+            action = pick("retreat_to_heal")
+            target = "castle"
+            reasoning_tag = "retreat_to_heal"
+        elif status == "active":
+            action = pick("continue_phase", "retreat_to_heal")
+            target = str(qchain.get("target_id") or qchain.get("chain_id") or "")
+            reasoning_tag = "continue_phase" if action == "continue_phase" else "retreat_to_heal"
+            if action == "retreat_to_heal":
+                target = "castle"
+        else:
+            if reward >= 50:
+                action = pick("accept_chain", "decline_chain")
+                reasoning_tag = "accept_chain"
+            else:
+                action = pick("decline_chain", "accept_chain")
+                reasoning_tag = "decline_chain"
+            target = str(qchain.get("chain_id") or "")
+        out = {
+            "action": action,
+            "target": target,
+            "reasoning": f"mock quest_chain ({reasoning_tag}, status={status or 'unknown'})",
+            "confidence": 0.8,
+            "memory_used": [],
+            "personality_influence": "mock",
+        }
+        return json.dumps(out)
     if mtype == "low_health_combat":
         action = pick("use_potion", "retreat", "fight")
         if action == "retreat":

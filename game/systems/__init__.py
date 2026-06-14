@@ -10,4 +10,4 @@ from .lairs import LairSystem
 from .neutral_buildings import NeutralBuildingSystem
 from .difficulty import DifficultySystem, DifficultyLevel
 from .wave_events import WaveEventSystem
-
+from .quest_chain import QuestChainSystem

@@ -79,6 +79,20 @@ _US = float(getattr(config, "UNIT_SPRITE_PIXELS", config.TILE_SIZE)) / float(con
 # Pixel billboard height in world units; scales with UNIT_SPRITE_PIXELS so larger raster reads larger on screen.
 UNIT_BILLBOARD_SCALE = 0.62 * _US
 ENEMY_SCALE = 0.5 * _US
+
+
+# WK137: per-instance enemy billboard scale — `size` stat / 18 (the basic-enemy
+# baseline), clamped so a bad stat can never explode an instance. 18->1.0x,
+# warchief 24->1.33x, bandit_lord 28->1.56x, demon 32->1.78x, dragon 36->2.0x.
+# Recomputed identically in instanced_unit_renderer.py (no cross-import between
+# renderer modules, matching this module's ENEMY_SCALE duplication convention).
+_ENEMY_BASE_SIZE = 18.0
+_ENEMY_SCALE_MAX_MULT = 2.0
+
+
+def enemy_billboard_scale(size: int) -> float:
+    mult = max(1.0, min(_ENEMY_SCALE_MAX_MULT, float(size or 18) / _ENEMY_BASE_SIZE))
+    return ENEMY_SCALE * mult
 _WB = float(getattr(config, "URSINA_WORKER_BILLBOARD_BASE", 0.42))
 _WYM = float(getattr(config, "URSINA_WORKER_BILLBOARD_Y_SCALE_MUL", 0.55))
 PEASANT_SCALE_XZ = _WB * _US
@@ -245,7 +259,11 @@ def sync_snapshot_enemies(r: "UrsinaRenderer", snapshot: "SimStateSnapshot", wor
         _e_reenable = r._entities.get(obj_id)
         if _e_reenable is not None and getattr(_e_reenable, "enabled", True) is False:
             _e_reenable.enabled = True
-        s = ENEMY_SCALE
+        # WK137: honor per-enemy `size` so bosses render larger. The scale tuple,
+        # sx_e, and terrain_y offset below all derive from `s`; entities created
+        # before this change still sync to the right size because
+        # _sync_unit_atlas_billboard receives the per-frame (sx_e, s, 1) tuple.
+        s = enemy_billboard_scale(int(getattr(e, "size", 18) or 18))
         col = COLOR_ENEMY
         et_key = str(getattr(e, "enemy_type", "goblin") or "goblin").lower()
         ent, obj_id = r._entity_render.get_or_create_entity(
@@ -273,7 +291,9 @@ def sync_snapshot_enemies(r: "UrsinaRenderer", snapshot: "SimStateSnapshot", wor
         _e_max_hp = int(getattr(e, 'max_hp', 1) or 1)
         sync_hp_bar(ent, _e_hp, _e_max_hp, ENEMY_SPEC)
 
-        enemy_label = str(getattr(e, "enemy_type", "enemy") or "enemy").replace("_", " ").title()
+        # WK137: prefer the instance name (boss "The Goblin Warchief") over the
+        # title-cased enemy_type key.
+        enemy_label = str(getattr(e, "name", "") or "") or str(getattr(e, "enemy_type", "enemy") or "enemy").replace("_", " ").title()
         _ensure_ks_name_label(ent, "_ks_name_label", enemy_label, y=ENEMY_SPEC.label_y, scale=ENEMY_SPEC.label_scale)
 
         # WK62: delegates to ursina_unit_overlays.sync_unit_overlays_facing

@@ -66,8 +66,51 @@ class WaveEventConfig:
     max_enemy_cap_overflow: float = 1.5  # wave events can temporarily exceed MAX_ALIVE_ENEMIES by this factor
 
 
+@dataclass(frozen=True)
+class InitialWaveConfig:
+    """WK137: scripted first assault — fires once at trigger_sec, independent of the WK60 table.
+
+    trigger_sec/goblin_count read env overrides so QA and the PM capture rig can
+    re-time / re-size the wave without code edits (KINGDOM_INITIAL_WAVE_SEC=3 for captures).
+    """
+    enabled: bool = True
+    trigger_sec: float = float(os.getenv("KINGDOM_INITIAL_WAVE_SEC", "30.0"))  # sim-seconds
+    goblin_count: int = int(os.getenv("KINGDOM_INITIAL_WAVE_GOBLINS", "10"))   # WK137 tuning lever
+    reward_gold: int = 60
+    name: str = "Goblin Warband"
+    # WK137 r2: clustered-spawn jitter half-width (tiles). 0 = all enemies on one
+    # tile (hardest focus-fire); larger = looser pack. The initial wave lands in a
+    # +/- cluster_jitter_tiles box around ONE edge anchor so it engages the hero
+    # line as a focus-firing pack instead of the r1 strung-out trickle (diagnosed
+    # at 222-tile initial spread -> heroes mopped up at full HP; clustered ~4 tiles).
+    # Env-tunable for the QA sweep (KINGDOM_INITIAL_WAVE_JITTER).
+    cluster_jitter_tiles: int = int(os.getenv("KINGDOM_INITIAL_WAVE_JITTER", "2"))
+    # WK137 r3: spawn DISTANCE (tiles) from the castle centre for the initial wave's
+    # "clustered_near" placement. r2 spawned at the map edge (~125 tiles away) so the
+    # wave needed ~30 s to cross the map; rangers leveled up off fog-reveal XP during
+    # that march (level_up = +20 max_hp + FULL HEAL) and met the wave at 140-160 hp,
+    # making the plan's level-1 (60 hp) balance math unreachable. Spawning the cluster
+    # a short bearing-and-distance from the castle makes the pack engage ~35-40 s while
+    # heroes are still level 1. Keep >= ENEMY_BUILDING_PRIORITY_RANGE_TILES (10) + a few
+    # tiles so the wave does not materialise inside the town. Env: KINGDOM_INITIAL_WAVE_DIST.
+    # r3 tuned to 29 (measured IN-PROCESS, the QA probe/pytest path). At
+    # goblin_count=10/jitter=2 this lands the engagement ~32-35 s while heroes are still
+    # ~level 1, and the 10-seed matrix passes BOTH the H=10 band (9/10 wins, 1.00 mean
+    # deaths <= 1.5) AND the H=8 band (10/10 wins, 1.30 in [1.0,4.5]) — the H=8 band that
+    # r2's edge-spawn (0.60 deaths) could NOT reach. It also keeps the QA pytest hard-gate
+    # green (3-seed [11,23,37] H=10 mean 1.00 <= 1.5). The H=6 "hard-matched" band stays
+    # unreachable with the dist/jitter/count levers: hero deaths scale TOGETHER across
+    # hero counts (dispersion-driven), so making the wave lethal to 6 clumped heroes
+    # over-kills the 10-hero line first — that needs a Sovereign lever (hero pre-wave
+    # leveling cap / +1 warchief / band revision). See the r3 log for the full sweep.
+    # Closer distances (<=25) over-kill the 10-line (H=10 > 1.5); farther (>=32) let
+    # rangers level up so H=8 falls below 1.0 — 29 is the narrow band that hits both.
+    spawn_dist_tiles: int = int(os.getenv("KINGDOM_INITIAL_WAVE_DIST", "29"))
+
+
 DIFFICULTY = DifficultyConfig()
 WAVE_EVENT = WaveEventConfig()
+INITIAL_WAVE = InitialWaveConfig()
 
 # WK61-R10: economy pacing (playtest polish)
 NEUTRAL_TAX_PER_MINUTE = {"house": 9.0, "farm": 12.0, "food_stand": 10.0}

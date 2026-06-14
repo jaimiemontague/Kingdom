@@ -3,6 +3,7 @@ Prompt templates for LLM decision making.
 """
 
 from ai.vocab import ToolAction
+from ai.quest_chain_context import quest_chain_status_allowed_actions
 
 # WK110: derived from the canonical ``ai.vocab.ToolAction`` enum. ``VALID_ACTIONS`` and
 # ``TOOL_ACTIONS`` are both sets of the same seven tool-action strings (byte-identical
@@ -19,7 +20,13 @@ OBEY_DEFY_VALUES = ("Obey", "Defy")
 # validator must keep rejecting them — the Sovereign cannot order a bounty
 # accept by chat — while ai.llm_brain._parse_response must let them through so
 # decision_output_validator can check them against the moment's allowlist.
-AUTONOMOUS_ONLY_ACTIONS = frozenset({"accept_bounty"})
+AUTONOMOUS_ONLY_ACTIONS = frozenset({
+    "accept_bounty",
+    "accept_chain",
+    "decline_chain",
+    "continue_phase",
+    "retreat_to_heal",
+})
 
 
 # Fallback decisions for when LLM is unavailable or times out
@@ -59,6 +66,26 @@ FALLBACK_DECISIONS = {
         "target": "food_stand",
         "reasoning": "Fallback: Hunger urgent, seeking meal at food stand",
     },
+    "quest_chain_continue_phase": {
+        "action": "continue_phase",
+        "target": "",
+        "reasoning": "Fallback: continue the current quest-chain phase",
+    },
+    "quest_chain_retreat_to_heal": {
+        "action": "retreat_to_heal",
+        "target": "castle",
+        "reasoning": "Fallback: quest chain is too risky right now, retreating to heal",
+    },
+    "quest_chain_accept": {
+        "action": "accept_chain",
+        "target": "",
+        "reasoning": "Fallback: accepting the offered quest chain",
+    },
+    "quest_chain_decline": {
+        "action": "decline_chain",
+        "target": "",
+        "reasoning": "Fallback: declining the offered quest chain",
+    },
 }
 
 
@@ -87,6 +114,44 @@ def get_fallback_decision(context: dict) -> dict:
     # WK61-R11: hungry heroes seek food before discretionary shop/explore.
     if sit.get("hunger_urgent") and sit.get("can_afford_meal") and not sit["critical_health"]:
         return FALLBACK_DECISIONS["hunger_seek_meal"]
+
+    quest_chains = list(context.get("quest_chains") or [])
+    if quest_chains:
+        focus = quest_chains[0]
+        status = str(focus.get("status", "") or "").lower()
+        chain_target = str(
+            focus.get("target_id")
+            or focus.get("target_name")
+            or focus.get("current_phase_id")
+            or ""
+        )
+        chain_id = str(focus.get("chain_id", "") or "")
+        forced_retreat = bool(
+            sit.get("critical_health")
+            or (
+                sit.get("low_health")
+                and int(inv.get("potions", 0) or 0) <= 0
+                and (sit.get("enemies_nearby") or not sit.get("near_safety"))
+            )
+        )
+        allowed = quest_chain_status_allowed_actions(focus, survival_forced=forced_retreat)
+        if "retreat_to_heal" in allowed and forced_retreat:
+            decision = dict(FALLBACK_DECISIONS["quest_chain_retreat_to_heal"])
+            decision["target"] = "castle"
+            return decision
+        if status == "active" and "continue_phase" in allowed:
+            decision = dict(FALLBACK_DECISIONS["quest_chain_continue_phase"])
+            decision["target"] = chain_target
+            decision["reasoning"] = (
+                f"Fallback: continue quest chain {focus.get('name', chain_id)}"
+            )
+            return decision
+        if status == "offered" and "accept_chain" in allowed:
+            reward = int(focus.get("reward_gold", 0) or 0)
+            key = "quest_chain_accept" if reward >= 50 else "quest_chain_decline"
+            decision = dict(FALLBACK_DECISIONS[key])
+            decision["target"] = chain_id
+            return decision
 
     # V1.3 Extension: More aggressive potion buying
     # WK127-T2: threshold re-aligned to <2 — do_shopping only buys at potions<2,

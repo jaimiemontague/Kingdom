@@ -92,6 +92,20 @@ INTERP_SNAP_DIST_SQ = 9.0
 _US = float(getattr(config, "UNIT_SPRITE_PIXELS", config.TILE_SIZE)) / float(config.TILE_SIZE)
 HERO_SCALE = 0.62 * _US
 ENEMY_SCALE = 0.5 * _US
+
+
+# WK137: per-instance enemy billboard scale — `size` stat / 18 (the basic-enemy
+# baseline), clamped so a bad stat can never explode an instance. 18->1.0x,
+# warchief 24->1.33x, bandit_lord 28->1.56x, demon 32->1.78x, dragon 36->2.0x.
+# Recomputed identically in ursina_unit_sync.py (no cross-import between
+# renderer modules, matching this file's ENEMY_SCALE duplication convention).
+_ENEMY_BASE_SIZE = 18.0
+_ENEMY_SCALE_MAX_MULT = 2.0
+
+
+def enemy_billboard_scale(size: int) -> float:
+    mult = max(1.0, min(_ENEMY_SCALE_MAX_MULT, float(size or 18) / _ENEMY_BASE_SIZE))
+    return ENEMY_SCALE * mult
 _WB = float(getattr(config, "URSINA_WORKER_BILLBOARD_BASE", 0.42))
 _WYM = float(getattr(config, "URSINA_WORKER_BILLBOARD_Y_SCALE_MUL", 0.55))
 # Mythos S6 (`inst-parity-gap-fixes`): legacy non-uniform scales restored (the
@@ -782,9 +796,12 @@ class InstancedUnitRenderer:
                 uv = _flip_uv_horizontal(uv)
             wx, wz = sim_px_to_world_xz(e.x, e.y)
             terrain_y = get_terrain_height(wx, wz) if terrain_ok else 0.0
-            wy = terrain_y + ENEMY_SCALE * 0.5
+            # WK137: honor per-enemy `size` so bosses render larger (one mul/div,
+            # no allocation — this is the per-frame hot loop).
+            e_scale = enemy_billboard_scale(e.size)
+            wy = terrain_y + e_scale * 0.5
             vx, vy, vz = self._interp_visual_position(obj_id, wx, wy, wz, tick, blend)
-            pack_outside(vx, vy, vz, ENEMY_SCALE, uv, ENEMY_SCALE)
+            pack_outside(vx, vy, vz, e_scale, uv, e_scale)
             pack_hp_bar(vx, vy, vz, e.hp, e.max_hp, "enemy")
             add_label_source("enemy", e, (vx, vy, vz))
             active_ids.add(obj_id)

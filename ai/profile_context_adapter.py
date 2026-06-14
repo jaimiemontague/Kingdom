@@ -10,6 +10,7 @@ from typing import Any
 
 from ai.context_builder import ContextBuilder
 from ai.decision_moments import DecisionMoment, DecisionMomentType
+from ai.quest_chain_context import quest_chain_prompt_block, select_focus_quest_chain
 from game.sim.hero_profile import HeroProfileSnapshot, build_hero_profile_snapshot
 
 
@@ -19,6 +20,7 @@ _MAX_ENEMIES = 5
 _MAX_ALLIES = 5
 _MAX_BOUNTIES = 5
 _MAX_POIS = 4
+_MAX_QUEST_CHAINS = 3
 
 
 def _compact_profile_dict(snapshot: HeroProfileSnapshot) -> dict[str, Any]:
@@ -114,6 +116,9 @@ def _compact_situation(hero: Any, game_state: dict) -> dict[str, Any]:
         "distances": full.get("distances", {}),
         "hero_stat_block": full.get("hero_stat_block", ""),
     }
+    quest_chains = list(full.get("quest_chains") or [])[:_MAX_QUEST_CHAINS]
+    if quest_chains:
+        out["quest_chains"] = quest_chains
     # WK132: compact nearby-POI strings (<= _MAX_POIS). Key is OMITTED entirely
     # when no POIs are nearby — keeps the no-POI WK67 digest prompts unchanged.
     from ai.behaviors.poi_awareness import format_nearby_pois_compact
@@ -190,4 +195,8 @@ def build_llm_context_for_moment(
         quest_block = _compact_quest_offer(hero)
         if quest_block is not None:
             out["quest_offer"] = quest_block
+    if moment.moment_type == DecisionMomentType.QUEST_CHAIN:
+        focus = select_focus_quest_chain(hero, out["current_situation"].get("quest_chains") or [])
+        if focus is not None:
+            out["quest_chain"] = quest_chain_prompt_block(focus, moment.allowed_actions)
     return out

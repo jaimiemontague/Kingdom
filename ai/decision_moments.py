@@ -16,6 +16,7 @@ from game.entities.hero import HeroState
 # WK127-T9: shared cooldown predicate (no import cycle: ai.behaviors.shopping
 # pulls in movement/view_compat/contracts only, none of which import this module).
 from ai.behaviors.shopping import shop_cooldown_active
+from ai.quest_chain_context import quest_chain_status_allowed_actions, select_focus_quest_chain
 
 # HP band aliases (fractions of max)
 _MOMENT_LOW_HP = 0.50
@@ -35,6 +36,7 @@ class DecisionMomentType(str, Enum):
     SHOPPING_OPPORTUNITY = "shopping_opportunity"
     IDLE_SEEKING_ACTIVITY = "idle_seeking_activity"
     QUEST_OFFER = "quest_offer"  # WK126-T6: standing at a quest-giver NPC
+    QUEST_CHAIN = "quest_chain"  # WK138: active quest-chain decision point
 
 
 # WK126-T6 action carriers for the QUEST_OFFER moment. The semantic verbs
@@ -132,6 +134,39 @@ def _inside_recovery_building(hero: Any) -> bool:
     return slug in {"castle", "inn", "house", "farm"}
 
 
+def _near_safety(hero: Any, game_state: dict) -> bool:
+    for building in game_state.get("buildings", []) or []:
+        bt = getattr(building, "building_type", None)
+        if hasattr(bt, "value"):
+            bt = getattr(bt, "value", bt)
+        if str(bt or "").lower() not in {"castle", "inn", "marketplace"}:
+            continue
+        try:
+            if hero.distance_to(building.center_x, building.center_y) < TILE_SIZE * 5:
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def _quest_chain_forced_retreat(hero: Any, game_state: dict) -> bool:
+    hp = _health_fraction(hero)
+    try:
+        pots = int(getattr(hero, "potions", 0) or 0)
+    except (TypeError, ValueError):
+        pots = 0
+
+    if hp <= _MOMENT_CRITICAL_HP:
+        return True
+
+    near_enemy = _nearest_enemy_tiles(hero, game_state)
+    high_danger = near_enemy is not None and near_enemy <= 3.0
+
+    if hp < _MOMENT_LOW_HP and pots <= 0 and (high_danger or not _near_safety(hero, game_state)):
+        return True
+    return False
+
+
 def _near_marketplace(hero: Any, game_state: dict) -> bool:
     for b in game_state.get("buildings", []) or []:
         if getattr(b, "building_type", None) != "marketplace":
@@ -201,6 +236,56 @@ def moment_quest_offer(hero: Any, *, now_ms: int) -> DecisionMoment | None:
         allowed_actions=(QUEST_OFFER_ACCEPT_ACTION, QUEST_OFFER_DECLINE_ACTION),
         context_focus=("quest_offer", "personality", "health", "distances"),
         cooldown_ms=2_000,
+    )
+
+
+def moment_quest_chain(hero: Any, game_state: dict, now_ms: int) -> DecisionMoment | None:
+    chains = game_state.get("quest_chains", ()) or ()
+    if not chains:
+        return None
+    if _hero_state(hero) in {HeroState.FIGHTING, HeroState.RETREATING}:
+        return None
+
+    focus = select_focus_quest_chain(hero, chains)
+    if focus is None:
+        return None
+
+    status = str(focus.get("status", "") or "").lower()
+    if status not in {"active", "offered"}:
+        return None
+
+    forced_retreat = _quest_chain_forced_retreat(hero, game_state)
+    allowed_actions = quest_chain_status_allowed_actions(focus, survival_forced=forced_retreat)
+    if not allowed_actions:
+        return None
+
+    chain_name = str(focus.get("name", "") or focus.get("chain_type", "") or "quest chain")
+    phase_title = str(focus.get("current_phase_title", "") or focus.get("current_phase_id", "") or "")
+    reward_gold = int(focus.get("reward_gold", 0) or 0)
+    target_name = str(focus.get("target_name", "") or "")
+
+    if forced_retreat:
+        reason = f"{chain_name}: survival gate requires retreat before pressing on"
+        urgency = 2
+    elif status == "active":
+        reason = f"{chain_name}: continue phase {phase_title or 'current phase'}"
+        if target_name:
+            reason += f" toward {target_name}"
+        urgency = 1
+    else:
+        reason = f"{chain_name} offered"
+        if reward_gold > 0:
+            reason += f" ({reward_gold}g)"
+        reason += "; decide whether to accept"
+        urgency = 1
+
+    return DecisionMoment(
+        moment_type=DecisionMomentType.QUEST_CHAIN,
+        urgency=urgency,
+        reason=reason,
+        allowed_actions=allowed_actions,
+        context_focus=("quest_chains", "health", "supplies", "safety", "phase_history"),
+        cooldown_ms=8_000,
     )
 
 
@@ -325,8 +410,8 @@ def determine_decision_moment(hero: Any, game_state: dict, *, now_ms: int) -> De
     """
     Return the highest-priority decision moment for this hero, or None.
 
-    Ordering: low-health combat > quest offer (WK126) > post-combat injured >
-    rested-and-ready > shopping > idle activity.
+    Ordering: low-health combat > quest offer (WK126) > quest chain (WK138) >
+    post-combat injured > rested-and-ready > shopping > idle activity.
     """
     m = moment_low_health_combat(hero)
     if m is not None:
@@ -335,6 +420,9 @@ def determine_decision_moment(hero: Any, game_state: dict, *, now_ms: int) -> De
     # deliberately walked to the NPC and the offer is short-lived. Inert when no
     # offer is staged (plain attribute read; see moment_quest_offer).
     m = moment_quest_offer(hero, now_ms=now_ms)
+    if m is not None:
+        return m
+    m = moment_quest_chain(hero, game_state, now_ms)
     if m is not None:
         return m
     m = moment_post_combat_injured(hero, game_state, now_ms)

@@ -16,6 +16,11 @@ class EnemySpriteSpec:
     outline: Tuple[int, int, int] = (240, 240, 240)
 
 
+# WK137: boss variants reuse their base type's PNG art when they have no folder
+# of their own (assets/sprites/enemies/goblin_warchief/ does not exist; goblin does).
+_ASSET_FOLDER_ALIASES = {"goblin_warchief": "goblin"}
+
+
 class EnemySpriteLibrary:
     """
     Animated enemy sprites (pixel-art-first).
@@ -79,12 +84,26 @@ class EnemySpriteLibrary:
             return (40, 40, 40)
         if et == "bandit":
             return (130, 90, 55)
+        # WK137: boss colors — match ENEMY_STATS so procedural fallbacks read as
+        # "elite" instead of all default brown.
+        if et == "goblin_warchief":
+            return (96, 48, 12)
+        if et == "bandit_lord":
+            return (180, 100, 30)
+        if et == "demon_overlord":
+            return (200, 30, 30)
+        if et == "dragon":
+            return (220, 60, 20)
         # goblin + default
         return (139, 69, 19)
 
     @classmethod
     def _try_load_asset_frames(cls, enemy_type: str, action: str, *, size: int) -> list[pygame.Surface]:
-        folder = cls._assets_dir() / (enemy_type or "goblin") / action
+        # WK137: resolve boss variants to their base type's PNG folder (alias).
+        folder_type = _ASSET_FOLDER_ALIASES.get(
+            (enemy_type or "goblin").lower(), enemy_type or "goblin"
+        )
+        folder = cls._assets_dir() / folder_type / action
         return load_png_frames(folder, scale_to=(int(size), int(size)))
 
     @staticmethod

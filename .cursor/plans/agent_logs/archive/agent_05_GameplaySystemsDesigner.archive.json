@@ -2038,6 +2038,1175 @@
           "follow_ups": []
         }
       }
+    },
+    "wk53_world_beauty_terrain": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk53_world_beauty_terrain.plan.md",
+        "notes": "WK53: Terrain elevation visual sprint. Agent 05 Wave 0 consult-only: gameplay implications advisory for future elevation gameplay systems."
+      },
+      "rounds": {
+        "wk53_r1_sky_fog_architecture": {
+          "sprint_id": "wk53_world_beauty_terrain",
+          "round_id": "wk53_r1_sky_fog_architecture",
+          "status": "done",
+          "what_i_changed": "Consult-only work. Created gameplay implications advisory doc at .cursor/plans/wk53_gameplay_elevation_advisory.md covering building placement on slopes, movement cost scaling, combat elevation advantages, resource economy impact, and heightmap API requirements for future sprite implementation.",
+          "advisory_summary": "Elevation is visual-only in WK53 but data model must support 4 gameplay systems later: (1) Building placement restrictions (slope ≤10°, Guardhouse ≤15°); (2) Movement costs (+20% per 10° uphill, cliffs ≥45° impassable); (3) Combat bonuses (+15% damage on high ground, +1 tile ranged range); (4) Economy tuning (farms on slopes > 5° get -10% gold penalty). Provided 7 API functions required for Agent 03 heightmap design: get_terrain_height, get_slope_at_point, get_slope_between_points, get_max_slope_at_footprint, is_cliff, get_elevation_tier, get_terrain_cost_multiplier. All features marked 'future sprint implementation' — no gameplay code touched WK53.",
+          "files_created": [
+            ".cursor/plans/wk53_gameplay_elevation_advisory.md"
+          ],
+          "files_reviewed": [
+            ".cursor/rules/agent-05-gameplay-onboarding.mdc",
+            ".cursor/rules/01-studio-onboarding.mdc",
+            ".cursor/plans/wk53_world_beauty_terrain.plan.md",
+            "config.py (building types, costs, sizes, enemy stats, hero stats)"
+          ],
+          "commands_run": [],
+          "evidence": {
+            "advisory_doc": "Written to .cursor/plans/wk53_gameplay_elevation_advisory.md with 5 sections (building placement, movement, combat, resources, API), config constants table, risks/mitigations, and 7 public API functions for heightmap system."
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "Agent 03: Use the 7 API functions as contract for Wave 0 architecture doc. Heightmap must support slope queries, elevation tiers, and terrain cost multipliers.",
+            "Future implementation (Agent 05 in WK54+): Building placement gates, movement cost scaling, combat bonuses, economy penalties all depend on this API being complete and accurate."
+          ]
+        }
+      }
+    },
+    "wk57_underground_vertical_stacking": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk57_underground_vertical_stacking.plan.md",
+        "notes": "WK57: Underground vertical stacking. Agent 05 owns Wave 4 (layer pathfinding + underground fog) and Wave 5 (hero transitions + spawning + AI cave exploration)."
+      },
+      "rounds": {
+        "wk57_w4_layer_pathfinding_fog": {
+          "sprint_id": "wk57_underground_vertical_stacking",
+          "round_id": "wk57_w4_layer_pathfinding_fog",
+          "status": "done",
+          "what_i_changed": [
+            "game/systems/pathfinding.py: Added LayerPathfinder class wrapping existing find_path() with layer-aware routing. Handles 4 cases: surface-only, underground-only, surface-to-underground (via cave entrance), underground-to-surface. Underground A* uses 4-directional movement on area walkability grid with local/world coord conversion.",
+            "game/world.py: Added underground_visibility dict in World.__init__. Added init_underground_fog(area) to create per-area UNSEEN grids. Added reveal_underground_circle(area_id, local_x, local_z, radius) for circular fog reveal.",
+            "game/sim_engine.py: After underground area generation in setup_initial_state(), added fog grid initialization loop and LayerPathfinder instantiation (self.layer_pathfinder).",
+            "tests/test_underground.py (new): 13 tests covering UndergroundArea data model (chambers, walkability, heightmap, corridors), underground fog (init, reveal, bounds, unknown area), and LayerPathfinder (surface-only, start==goal, unknown goal, underground-only)."
+          ],
+          "files_changed": [
+            "game/systems/pathfinding.py",
+            "game/world.py",
+            "game/sim_engine.py",
+            "tests/test_underground.py"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "summary": "320 passed, DONE: PASS"
+            },
+            "underground_tests": {
+              "command": "python -m pytest tests/test_underground.py -v",
+              "exit_code": 0,
+              "summary": "13 passed"
+            },
+            "import_check": {
+              "command": "python -c \"from game.systems.pathfinding import LayerPathfinder; print('OK')\"",
+              "exit_code": 0
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Wave 5 (Agent 05): hero descent/ascent state machine, cave entry via POI interaction, underground enemy spawning, AI cave exploration scoring."
+          ]
+        },
+        "wk57_w5_hero_transitions_spawning_ai": {
+          "sprint_id": "wk57_underground_vertical_stacking",
+          "round_id": "wk57_w5_hero_transitions_spawning_ai",
+          "status": "done",
+          "what_i_changed": [
+            "game/entities/hero.py: Added underground_area_id, underground_local_x, underground_local_z fields to Hero.__init__. Added begin_descent(area_id, entrance_x, entrance_y) and begin_ascent() transition methods.",
+            "game/systems/poi_interaction.py: Added _underground_areas and _sim_engine references to POIInteractionSystem.__init__. Replaced _handle_dungeon from flavor-text-only to full cave entry: triggers hero.begin_descent(), marks entrance chamber explored, reveals underground fog, spawns underground enemies. Added module-level _spawn_underground_enemies() function that instantiates enemies from chamber data at layer=-1.",
+            "game/sim_engine.py: Wired underground_areas and sim self-reference to poi_interaction_system after setup. Added WK57 Wave 5E retreat check in update loop: calls check_underground_hero_retreat for underground heroes each tick.",
+            "game/underground.py: Added check_underground_hero_retreat(hero, underground_areas) function that triggers begin_ascent() when hero HP < 30% max or all chambers cleared.",
+            "ai/behaviors/poi_awareness.py: Added dungeon_factor to score_poi_for_personality(): aggressive/brave heroes get 1.5x, cautious heroes get 0.2x (low level) or 0.8x, low HP heroes (<70%) get 0.1x multiplier. Updated maybe_visit_poi() to target entrance tile directly for dungeon POIs.",
+            "tests/test_underground.py: Extended from 13 to 25 tests. Added TestHeroTransitions (5 tests: descent/ascent layer, local coords, field existence), TestHeroRetreat (5 tests: low HP, healthy, all cleared, surface no-op, missing area), TestDungeonScoring (2 tests: aggressive bonus, low HP avoidance)."
+          ],
+          "files_changed": [
+            "game/entities/hero.py",
+            "game/systems/poi_interaction.py",
+            "game/sim_engine.py",
+            "game/underground.py",
+            "ai/behaviors/poi_awareness.py",
+            "tests/test_underground.py"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "summary": "332 passed, DONE: PASS"
+            },
+            "underground_tests": {
+              "command": "python -m pytest tests/test_underground.py -v",
+              "exit_code": 0,
+              "summary": "25 passed"
+            },
+            "method_check": {
+              "command": "python -c \"from game.entities.hero import Hero; h = Hero.__new__(Hero); print(hasattr(h, 'begin_descent'), hasattr(h, 'begin_ascent'))\"",
+              "exit_code": 0,
+              "output": "True True"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Wave 6: QA + performance verification (Agents 10 + 11)."
+          ]
+        }
+      }
+    },
+    "wk60_v159_gameplay_fun": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/v1.6_gameplay_fun_roadmap.plan.md",
+        "notes": "WK60: Make It Fun sprint. Agent 05 owns 7 features: wave events, lair tuning, guild hero cap, hero cost doubling, guardhouse arrows, difficulty system, dev mode."
+      },
+      "rounds": {
+        "wk60_r1_core_gameplay": {
+          "round_id": "wk60_r1_core_gameplay",
+          "sprint_id": "wk60_v159_gameplay_fun",
+          "round_meta": {
+            "prompt_set_id": "wk60_r1_core_gameplay",
+            "build_target": "7 gameplay features for Make It Fun v1.5.9",
+            "created_utc": "2026-05-19T18:00:00Z"
+          },
+          "response": {
+            "status": "complete",
+            "agent_fields": {
+              "scope_guardrails_followed": [
+                "Did not edit: game/ui/ (Agent 08), ai/basic_ai.py (Agent 06), game/audio/ (Agent 14).",
+                "Edited game/engine.py and game/sim_engine.py only for wiring (guild cap check, guardhouse enemies param, difficulty/wave system init) — minimal changes per Feature 3/5/8 wiring."
+              ],
+              "what_i_changed": [
+                "FEATURE 1 — WAVE EVENTS: Created game/systems/wave_events.py with WaveEventSystem. 8-event wave table (Goblin Raid at 3:00 through Demon Siege at 25:00), cycling with escalating count multipliers after table exhausts. Emits 'wave_incoming' and 'wave_cleared' EventBus events for Agent 08 HUD. Awards bonus gold on wave clear. Difficulty-aware (scales enemy counts, HP, damage). Respects MAX_ALIVE_ENEMIES * 1.5 overflow cap.",
+                "FEATURE 1 — SPAWNER TUNING: Updated game/systems/spawner.py: mixed enemy types (weighted pools by game time: early/mid/late), enemies_per_wave cap raised 4->6, spawn interval floor 21000->15000ms, interval reduction -250->-500ms per escalation. Difficulty multipliers applied to spawn interval and enemy stats on creation.",
+                "FEATURE 2 — LAIR TUNING: Updated game/entities/lair.py: GoblinCamp 8.5->6.0s (50%x2/30%x3/20%x1), WolfDen 7.5->5.5s (60%x2/40%x3), SkeletonCrypt 10.5->8.0s (60%x2skel/20%x2archer/20%x1each), SpiderNest 7.0->5.0s (50%x3/30%x4/20%x2), BanditCamp 10.0->7.5s (60%x2/30%x1/10%x3). Updated config.py: MAX_ALIVE_ENEMIES 32->48, LAIR_INITIAL_COUNT 4->5, LAIR_MIN_DISTANCE_FROM_CASTLE_TILES 18->15. Updated game/systems/lairs.py: difficulty multipliers applied to lair spawn intervals (via effective_dt scaling) and enemy HP/damage on spawn.",
+                "FEATURE 3 — GUILD HERO CAP: Updated game/entities/buildings/hiring_mixin.py: added max_heroes attribute (default GUILD_MAX_HEROES=8 from config), can_hire() returns False when heroes_hired >= max_heroes, added on_hero_death() to decrement counter. Updated game/engine.py try_hire_hero(): checks guild.can_hire() with 'Guild is full!' feedback. Updated game/engine.py _cleanup_after_combat(): detects newly dead heroes and calls home_building.on_hero_death() to free guild slots.",
+                "FEATURE 4 — HERO COST: Updated config.py HeroConfig.hire_cost: 50->100.",
+                "FEATURE 5 — GUARDHOUSE ARROWS: Updated game/entities/buildings/defensive.py Guardhouse: added ranged attack (8-tile range, 12 damage, 2s cooldown) using the same projectile event pattern as BallistaTower. Fires arrows at nearest enemy within range while also spawning guards as before. Updated game/engine.py and game/sim_engine.py: pass enemies list to guardhouse update call.",
+                "FEATURE 8 — DIFFICULTY SYSTEM: Created game/systems/difficulty.py with DifficultyLevel enum (EASY/NORMAL/HARD) and DifficultySystem class. Multiplier tables from DifficultyConfig in config.py. get_multiplier(key) for spawn_interval, enemies_per_wave, enemy_hp, enemy_damage, wave_event_count. set_difficulty(level) with lock support. Wired into spawner.py, lairs.py, wave_events.py. Dev mode defaults to Easy.",
+                "FEATURE 9 — DEV MODE: Added DEV_MODE check at bottom of config.py (KINGDOM_DEV_MODE env var). Overrides: HERO_HIRE_COST=0, STARTING_GOLD=999999, GUILD_MAX_HEROES=999. Console banner on activation. DifficultySystem defaults to Easy when DEV_MODE active.",
+                "Updated game/systems/__init__.py: exports DifficultySystem, DifficultyLevel, WaveEventSystem.",
+                "Updated game/sim_engine.py: creates DifficultySystem instance, passes to EnemySpawner, LairSystem, WaveEventSystem. Calls wave_event_system.update() in tick loop.",
+                "Updated tests/test_spawner.py: adjusted enemies_per_wave cap assertion from 4 to 6."
+              ],
+              "files_created": [
+                "game/systems/wave_events.py",
+                "game/systems/difficulty.py"
+              ],
+              "files_changed": [
+                "config.py",
+                "game/entities/lair.py",
+                "game/entities/buildings/hiring_mixin.py",
+                "game/entities/buildings/defensive.py",
+                "game/systems/spawner.py",
+                "game/systems/lairs.py",
+                "game/systems/__init__.py",
+                "game/sim_engine.py",
+                "game/engine.py",
+                "tests/test_spawner.py"
+              ],
+              "how_to_test": [
+                "python -m pytest tests/ -x -q",
+                "python tools/qa_smoke.py --quick",
+                "$env:KINGDOM_DEV_MODE='1'; python main.py  # verify dev mode banner and free heroes"
+              ],
+              "evidence": {
+                "pytest": {
+                  "command": "python -m pytest tests/ -x -q",
+                  "status": "PASS",
+                  "exit_code": 0,
+                  "summary": "339 passed"
+                },
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0,
+                  "summary": "DONE: PASS"
+                }
+              },
+              "blockers": [],
+              "follow_ups": [
+                "Agent 08 (R2): Wave warning HUD toasts, guild 'N/8' display, 'Guild is full!' HUD feedback, difficulty menu UI (Easy/Normal/Hard selector + Lock Difficulty button), '[DEV MODE]' HUD label.",
+                "Agent 14 (R2): Horn SFX for wave warnings, wave-clear fanfare.",
+                "Agent 10 (R3): Perf check with 48 enemy cap + wave events active.",
+                "Phase 2 playtest tuning: all values in config.py are starting points — will iterate on spawn rates, gold costs, wave timing, difficulty curve."
+              ]
+            }
+          }
+        }
+      }
+    },
+    "wk61_playtest_polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk61_playtest_polish.plan.md",
+        "notes": "WK61: Playtest Polish sprint. Agent 05 owns 6 items: hero HP -40%, market time halved, guardhouse 2 arrows, guild/inn healing boost, enemy building AI priority, building destruction + rubble system."
+      },
+      "rounds": {
+        "wk61_r1_gameplay_tuning_and_rubble": {
+          "round_id": "wk61_r1_gameplay_tuning_and_rubble",
+          "sprint_id": "wk61_playtest_polish",
+          "round_meta": {
+            "prompt_set_id": "wk61_r1_all_agent05_items",
+            "build_target": "6 gameplay items from playtest feedback",
+            "created_utc": "2026-05-20T00:00:00Z"
+          },
+          "response": {
+            "status": "complete",
+            "agent_fields": {
+              "scope_guardrails_followed": [
+                "Did not edit: game/graphics/* (Agent 03), game/ui/* (Agent 08), game/audio/* (Agent 14)."
+              ],
+              "what_i_changed": [
+                "Item #13 (HERO HP -40%): config.py base_hp 100->60.",
+                "Item #4 (MARKET HALVED): ai/behaviors/task_durations.py halved buy_potion/buy_weapon/buy_armor/shopping ranges.",
+                "Item #9 (GUARDHOUSE 2 ARROWS): config.py GUARDHOUSE_ARROWS_PER_SHOT=2; game/entities/buildings/defensive.py fires arrow loop.",
+                "Item #11 (HEALING 5x/7x): config.py GUILD_REST_RECOVERY_RATE=0.05, INN_REST_RECOVERY_RATE=0.14; game/entities/buildings/hiring_mixin.py guild rate; game/entities/buildings/economic.py inn rate.",
+                "Item #12 (ENEMY BUILDING AI): config.py ENEMY_BUILDING_PRIORITY_RANGE_TILES=10; game/entities/enemy.py near-town building priority with 0.3/0.4 bias multipliers.",
+                "Item #7 Part A (BUILDING DESTRUCTION FIX): game/entities/buildings/base.py added is_alive property.",
+                "Item #7 Part B (RUBBLE SYSTEM): game/entities/rubble.py created RubbleRecord dataclass + make_rubble_id(); game/cleanup_manager.py spawns RubbleRecord on building destruction; game/sim_engine.py added rubble_records list + expiry tick; game/sim/snapshot.py added rubble_records field to SimStateSnapshot.",
+                "Test fix: tests/test_enemy.py updated test_find_target_does_not_prioritize_building_for_inside_heroes to expect inn as target (matches new near-town building priority behavior).",
+                "Test fix: tests/test_hero.py updated test_inn_resting_tracks_hero_entry_exit_and_fast_heal_rate to expect HP=97 (matches new inn recovery rate 0.14)."
+              ],
+              "files_created": [
+                "game/entities/rubble.py"
+              ],
+              "files_changed": [
+                "config.py",
+                "ai/behaviors/task_durations.py",
+                "game/entities/buildings/defensive.py",
+                "game/entities/buildings/hiring_mixin.py",
+                "game/entities/buildings/economic.py",
+                "game/entities/buildings/base.py",
+                "game/entities/enemy.py",
+                "game/cleanup_manager.py",
+                "game/sim_engine.py",
+                "game/sim/snapshot.py",
+                "tests/test_enemy.py",
+                "tests/test_hero.py"
+              ],
+              "evidence": {
+                "pytest": {
+                  "command": "python -m pytest tests/ -x -q",
+                  "status": "PASS",
+                  "exit_code": 0,
+                  "summary": "339 passed"
+                },
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0,
+                  "summary": "DONE: PASS"
+                }
+              },
+              "blockers": [],
+              "follow_ups": [
+                "Agent 03 (R1): Rubble rendering — reads snapshot.rubble_records to place rock meshes in 3D.",
+                "Agent 11 (R2): Full QA gate pass including rubble lifecycle, healing rates, guardhouse arrows, enemy building priority."
+              ]
+            }
+          }
+        },
+        "wk61_r4_playtest3_regression_cleanup": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r4_playtest3_regression_cleanup",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R4-BUG-004: Added TaxStashMixin; Marketplace/Blacksmith accumulate stored_tax_gold. Hero.buy_item deposits shop-sale tax to inside_building; EconomySystem.hero_purchase logs only (no immediate player credit).",
+            "WK61-R4-BUG-006: Guardhouse sets GUARDHOUSE_MAX_HP=250 with explicit hp/max_hp; Building.get_hp_state() exposes HP for UI/renderer.",
+            "WK61-R4-BUG-005 (entity-side): Relaxed wants_to_shop health gate to SHOP_MIN_HEALTH_FRACTION=0.85 after WK61 base HP reduction blocked shopping. AI policy fixes remain Agent 06."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/ -x -q",
+              "exit_code": 0
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "pytest": "341 passed",
+            "qa_smoke_quick": "PASS (exit 0)",
+            "new_tests": [
+              "test_marketplace_accumulates_shop_tax_in_stored_tax_gold",
+              "test_guardhouse_has_hp_targetable_and_exposes_state"
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 06: Continue R4-BUG-005 AI-side idle regression (exploration/bounty gating in ai/).",
+            "Agent 08: Defensive panel HP line for guardhouse selection UI (game/ui/building_renderers/defensive_panel.py)."
+          ]
+        },
+        "wk61_r6_tax_gold_overlay_models": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r6_tax_gold_overlay_models",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R6-BUG-001 (data): Added has_tax_stash_data / get_overlay_tax_gold contract on Building (None = no stash) and TaxStashMixin (int, 0 when empty).",
+            "NeutralBuilding now inherits TaxStashMixin for consistent stored_tax_gold + collect_taxes.",
+            "config.py: TAX_STASH_BUILDING_TYPES and NON_TAX_STASH_BUILDING_TYPES document taxable vs non-taxable player building types.",
+            "tests/test_wk61_r6_tax_gold_overlay_data.py: parametrized coverage for marketplace, blacksmith, all guilds, temples, dwellings, neutrals; zero-vs-missing distinction; shop/tax deposit paths."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_wk61_r6_tax_gold_overlay_data.py -x -q",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m pytest tests/ -x -q",
+              "exit_code": 0
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "pytest_r6": "27 passed (test_wk61_r6_tax_gold_overlay_data.py)",
+            "pytest_full": "382 passed",
+            "qa_smoke_quick": "PASS (exit 0)",
+            "non_taxable_documented": [
+              "castle",
+              "palace",
+              "inn (drink_income_gold only; not TaxCollector stash)",
+              "trading_post (passive income credits player directly)",
+              "guardhouse",
+              "ballista_tower",
+              "wizard_tower",
+              "fairgrounds",
+              "library",
+              "royal_gardens"
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 03: Ursina hold-G overlay should read has_tax_stash_data / get_overlay_tax_gold (or stored_tax_gold) for all prefab models; show $0 consistently when has_tax_stash_data and amount is 0.",
+            "Agent 11: Verify hold-G overlay screenshot evidence across multiple building models after Agent 03 renderer fix."
+          ]
+        },
+        "wk61_r8_marketplace_potion_tax": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r8_marketplace_potion_tax",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R8-BUG-001: Hero.buy_item now resolves tax deposit shop via _shop_for_tax_deposit — uses inside_building when set, else pending_task_building when pending_task is shopping (WK11 deferred purchase runs after pop_out).",
+            "game/entities/hero.py: optional shop_building kwarg on buy_item for explicit shop routing.",
+            "tests/test_wk61_r8_marketplace_potion_tax.py: regression via real Marketplace + do_shopping deferred path and direct buy_item after pop-out."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_wk61_r8_marketplace_potion_tax.py -x -q",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m pytest tests/ -x -q",
+              "exit_code": 0
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "pytest_r8": "2 passed (test_wk61_r8_marketplace_potion_tax.py)",
+            "pytest_full": "421 passed",
+            "qa_smoke_quick": "PASS (exit 0)",
+            "root_cause": "Deferred shopping finalizes purchase after pop_out_of_building clears inside_building; tax was only stashed when inside_building was set."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11: Verify R8 gates and targeted marketplace potion tax regression after Agent 05 fix."
+          ]
+        },
+        "wk61_r10_v159_economy_pacing_ux": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r10_v159_economy_pacing_ux",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R10-FEAT-001: config.py NEUTRAL_TAX_PER_MINUTE house 9 / farm 12 / food_stand 10; wired neutral_buildings.py constructors; ECONOMY_TAX_RATE_MULT=1.4 documented (shop path unchanged for R8).",
+            "WK61-R10-FEAT-002: Moved spawner timings to config (initial_no_spawn_ms 1500, first_wave_interval_ms 3500, extra_spawn_delay_ms 5000, GOBLIN*2+extra); wave_events.py derives schedule from WAVE_EVENT first_event_minute 2.0 / interval 1.75.",
+            "WK61-R10-FEAT-003: Hero hunger sim contract — next_meal_due_ms, hunger_urgent, buy_meal_at_food_stand() with add_tax_gold + hero_ate event; HUNGER_INTERVAL_MS 180000, FOOD_MEAL_COST_GOLD 10.",
+            "tests/test_wk61_r10_economy_tax_accrual.py and tests/test_wk61_r10_wave_timing.py added."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m pytest tests/test_wk61_r10_economy_tax_accrual.py tests/test_wk61_r10_wave_timing.py tests/test_wk61_r8_marketplace_potion_tax.py -x -q",
+              "exit_code": 0
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "determinism_guard": "PASS (exit 0)",
+            "pytest_r10_r8": "6 passed (R10 economy + wave timing + R8 marketplace tax)",
+            "qa_smoke_quick": "PASS (exit 0)"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 06: Wire hunger_urgent / buy_meal_at_food_stand into basic_ai (tests/test_wk61_r10_hunger_ai.py).",
+            "Agent 08: Optional HUD hunger display (hunger_seconds_until_meal from snapshot) — not added this round."
+          ]
+        },
+        "wk61_r11_playtest_fix_round": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r11_playtest_fix_round",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R11-BUG-001: game/systems/wave_events.py _reserve_wave_spawn_slots trims oldest alive enemies when wave_cap full so Wolf Pack composition (Wolf class) is not dropped; tests/test_wk61_r11_wolf_pack_spawn.py headless Wolf Pack spawn + cap regression.",
+            "WK61-R11-BUG-002: config.py STARTING_BUILDINGS adds food_stand at (127,128) near marketplace; HUNGER_INTERVAL_MS 120000; game/building_factory.py registers FoodStand.",
+            "WK61-R11-BUG-003: config MARKETPLACE_PASSIVE_TAX_* constants; Marketplace.update() accrues deterministic 100-400g into stored_tax_gold via get_rng(market_passive_tax); wired in sim_engine.py + engine.py; tests/test_wk61_r11_marketplace_passive_tax.py."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m pytest tests/test_wk61_r11_wolf_pack_spawn.py tests/test_wk61_r11_marketplace_passive_tax.py tests/test_wk61_r10_hunger_ai.py -x -q",
+              "exit_code": 0,
+              "summary": "12 passed"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "summary": "450 passed, DONE: PASS"
+            }
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0
+            },
+            "pytest_r11": {
+              "command": "python -m pytest tests/test_wk61_r11_wolf_pack_spawn.py tests/test_wk61_r11_marketplace_passive_tax.py tests/test_wk61_r10_hunger_ai.py -x -q",
+              "exit_code": 0,
+              "summary": "12 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "summary": "450 passed, DONE: PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 06: BUG-002 hunger live path — heroes must path to starter food_stand on no-LLM playtest.",
+            "Agent 11: Verify wolf pack + marketplace passive tax + hold-G after Agent 03/08 R11 fixes."
+          ]
+        },
+        "wk61_r12_live_gameplay_fixes": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r12_live_gameplay_fixes",
+          "status": "done",
+          "what_i_changed": [
+            "TASK 1 — Wave counts 2x: game/systems/wave_events.py _WAVE_TABLE doubled all enemy counts (Goblin Raid 8, Wolf Pack 6+4, Skeleton Patrol 6+4, Spider Swarm 12+4, Bandit Ambush 6+4, Goblin Horde 16+4, Boss Wave 2+8); config.py EnemyConfig.max_alive_enemies 48→80.",
+            "TASK 2 — Food stand pacing: config.py HUNGER_INTERVAL_MS 120_000→60_000, FOOD_MEAL_COST_GOLD 10→5.",
+            "TASK 3 — Marketplace potions always available: game/entities/buildings/economic.py Marketplace.__init__ potions_researched=True, potion_price=15; removed redundant Advanced Healing unlock block."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "summary": "463 passed"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "summary": "DONE: PASS"
+            }
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0
+            },
+            "pytest_full": {
+              "command": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "summary": "463 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "summary": "DONE: PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11: Verify doubled wave counts via grep, config tuning values, and marketplace potions_researched=True."
+          ]
+        }
+      }
+    },
+    "wk61-playtest2-regressions": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk61_playtest_polish.plan.md",
+        "notes": "WK61 playtest 2: fix 6 regressions/requests found in Jaimie's second playtest."
+      },
+      "rounds": {
+        "wk61_r1_playtest2_fixes": {
+          "round_id": "wk61_r1_playtest2_fixes",
+          "sprint_id": "wk61-playtest2-regressions",
+          "round_meta": {
+            "prompt_set_id": "wk61_playtest2_regression_fixes",
+            "build_target": "6_playtest_regressions",
+            "created_utc": "2026-05-21T00:00:00Z"
+          },
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "ITEM 1 (CRITICAL) — Hero idle regression: Buildings now have is_alive (WK61-BUG-003), causing hasattr checks in bounty_pursuit.py and basic_ai.py to incorrectly treat building/lair targets as enemy targets. Fixed by excluding building_type targets from zone-distance chase abort (bounty_pursuit.py L558) and from range-to-fight checks (L571), and by ejecting non-lair building targets from FIGHTING state (basic_ai.py L364).",
+              "ITEM 2 — Guard HP halved: guard.py max_hp reduced from 80 to 40.",
+              "ITEM 3 — Buildings attackable: Enemy near-town other_bias loosened from 0.4 to 0.7 so guilds/marketplace/blacksmith are attacked when enemies are nearby (enemy.py find_target).",
+              "ITEM 4 — Guardhouse arrow offsets: Arrow origin spread increased from +/-4px to +/-12px horizontal and +/-4px vertical for visually distinct dual arrows (defensive.py).",
+              "ITEM 5 — Enemy ambient sounds wired: AudioSystem.update_enemy_ambient(enemies) now called each frame from _flush_event_bus in engine.py.",
+              "ITEM 6 — Building destruction cleanup: Added _cleanup_destroyed_buildings() to SimEngine.update() — was missing after architecture refactor. Buildings at 0 HP now get removed from sim.buildings, references cleared, rubble spawned, and BUILDING_DESTROYED events emitted. Also ported guild hero-death tracking to SimEngine cleanup path."
+            ],
+            "files_changed": [
+              "ai/basic_ai.py",
+              "ai/behaviors/bounty_pursuit.py",
+              "game/entities/guard.py",
+              "game/entities/enemy.py",
+              "game/entities/buildings/defensive.py",
+              "game/engine.py",
+              "game/sim_engine.py"
+            ],
+            "verification": {
+              "pytest": {
+                "status": "PASS",
+                "count": "339 passed",
+                "summary": "All 339 tests pass"
+              },
+              "qa_smoke": {
+                "status": "PASS",
+                "summary": "qa_smoke.py --quick passes, observe_sync shows heroes patrolling/fighting/shopping normally"
+              }
+            },
+            "blockers": [],
+            "follow_ups": []
+          }
+        }
+      }
+    },
+    "wk64_ai_contracts_and_system_runner": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk64_ai_contracts_and_system_runner.plan.md",
+        "notes": "WK64 AI Contracts & System Runner. Agent 05 owns Wave 1B: widen SystemContext + ordered SystemRunner."
+      },
+      "rounds": {
+        "wk64_pb_w1_runner": {
+          "sprint_id": "wk64_ai_contracts_and_system_runner",
+          "round_id": "wk64_pb_w1_runner",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "Phase B Wave 1B",
+            "plan_ref": ".cursor/plans/wk64_ai_contracts_and_system_runner.plan.md (section: Wave 1B)",
+            "created_utc": "2026-05-28T00:00:00Z",
+            "launched_by": "tools/ai_studio_orchestrator"
+          },
+          "prompt_text": "PHASE B Wave 1B (Gameplay). (1) equivalence audit of each system update(ctx,dt) vs bespoke call in SimEngine.update(); (2) widen SystemContext with 7 defaulted fields; (3) populate them in _build_system_context(); (4) create game/sim/system_runner.py (SystemRunner); (5) construct it with ONLY proven-equivalent systems (buff + wave_event) preserving exact execution order. Verify suite + determinism + qa_smoke. DO NOT COMMIT.",
+          "what_i_changed": {
+            "summary": "Widened SystemContext with 7 defaulted fields, populated them in _build_system_context(), created SystemRunner, and constructed it in SimEngine holding only the two proven-equivalent fire-and-forget systems (buff_system, wave_event_system). Kept their direct call sites in update() because they are NOT adjacent (other side-effecting logic runs between buff@668 and wave_event@720); collapsing would reorder gameplay. Preserved exact execution order -> determinism guard PASS.",
+            "files_touched": [
+              "game/systems/protocol.py (added 7 defaulted fields to SystemContext + dataclasses.field import)",
+              "game/sim_engine.py (import SystemRunner; construct self._ordered_systems in __init__ after poi_interaction_system; populate 7 new ctx fields in _build_system_context())",
+              "game/sim/system_runner.py (NEW: SystemRunner dataclass with update_all)"
+            ]
+          },
+          "equivalence_audit_table": [
+            {
+              "system": "buff_system",
+              "current_call": "self.buff_system.update(system_ctx, dt) @ sim_engine.py:668 (between _update_fog_of_war() and _maybe_apply_early_pacing_nudge())",
+              "has_update_ctx_dt": true,
+              "equivalent": true,
+              "action": "MIGRATE -> in SystemRunner. Pure update(ctx,dt); reads ctx.heroes/buildings, prunes+applies aura buffs; no surrounding post-processing."
+            },
+            {
+              "system": "wave_event_system",
+              "current_call": "self.wave_event_system.update(system_ctx, dt) @ sim_engine.py:720 (after spawn-cap block, before separation)",
+              "has_update_ctx_dt": true,
+              "equivalent": true,
+              "action": "MIGRATE -> in SystemRunner. Pure update(ctx,dt); mutates ctx.enemies/economy, emits events; no surrounding post-processing."
+            },
+            {
+              "system": "combat_system",
+              "current_call": "self.combat_system.update(system_ctx, dt) @ sim_engine.py:726, IMMEDIATELY followed by enemy_ranged_events emit_batch (727-728), get_emitted_events() (729), _route_combat_events() (730)",
+              "has_update_ctx_dt": true,
+              "equivalent": false,
+              "action": "EXCEPTION (keep bespoke). update() is real work but _emitted_events MUST be drained + routed right after; NOT fire-and-forget."
+            },
+            {
+              "system": "nature_system",
+              "current_call": "self.nature_system.tick(dt, self.trees, world=, buildings=) @ sim_engine.py:624, wrapped in tree-tile bookkeeping (pre_keys 621 / new_keys tile-set 630-644)",
+              "has_update_ctx_dt": false,
+              "equivalent": false,
+              "action": "EXCEPTION (keep bespoke). No update(ctx,dt); only tick(dt, trees, *, world, buildings) + surrounding world-tile sync."
+            },
+            {
+              "system": "spawner",
+              "current_call": "new=self.spawner.spawn(dt); self.enemies.extend(new[:remaining_slots]) @ sim_engine.py:709-711 inside MAX_ALIVE_ENEMIES slot-cap block (705-717)",
+              "has_update_ctx_dt": true,
+              "equivalent": false,
+              "action": "EXCEPTION (keep bespoke). update() (126-130) does UNCONDITIONAL ctx.enemies.extend(spawned); bypasses the slot cap -> would over-spawn."
+            },
+            {
+              "system": "lair_system",
+              "current_call": "lair=self.lair_system.spawn_enemies(dt, self.buildings); self.enemies.extend(lair[:remaining_slots]) @ sim_engine.py:715-717 inside same slot-cap block",
+              "has_update_ctx_dt": true,
+              "equivalent": false,
+              "action": "EXCEPTION (keep bespoke). update() (116-120) does UNCONDITIONAL ctx.enemies.extend(spawned); bypasses the slot cap."
+            },
+            {
+              "system": "bounty_system",
+              "current_call": "claimed=self.bounty_system.check_claims(self.heroes) -> HUD msgs + BOUNTY_CLAIMED emit_batch (755-770); then self.bounty_system.cleanup() (771)",
+              "has_update_ctx_dt": true,
+              "equivalent": false,
+              "action": "EXCEPTION (keep bespoke). update() is a NO-OP (bounty.py:210-212, '_ = (ctx, dt)'). Real work is check_claims()+cleanup() w/ HUD side effects; runner would silently drop claim processing."
+            },
+            {
+              "system": "neutral_building_system",
+              "current_call": "self.neutral_building_system.tick(dt, self.buildings, self.heroes, self.peasants, castle) @ sim_engine.py:774; castle=game_state.get('castle') (669)",
+              "has_update_ctx_dt": true,
+              "equivalent": false,
+              "action": "EXCEPTION (keep bespoke). update() (177-180) derives castle via _find_castle(ctx.buildings); bespoke uses game_state['castle']. Castle source differs -> not provably identical."
+            },
+            {
+              "system": "poi_interaction_system",
+              "current_call": "self.poi_interaction_system.tick_cooldowns(pois, dt) (794) + check_interactions(heroes, pois, world, economy, event_bus, dt) (795-797)",
+              "has_update_ctx_dt": false,
+              "equivalent": false,
+              "action": "EXCEPTION (keep bespoke). No update(ctx,dt); two separate bespoke methods."
+            }
+          ],
+          "equivalence_conclusion": "Only buff_system and wave_event_system are safe to drive through the runner: both are pure update(ctx,dt) with no surrounding post-processing. All 6 others are documented exceptions (combat: event routing; spawner/lair: slot-cap bypass; bounty: no-op update + HUD side effects in check_claims/cleanup; neutral_buildings: differing castle source; nature: no update(ctx,dt) + tile bookkeeping; poi: two bespoke methods). Matches the plan-predicted conclusion.",
+          "system_runner_membership": {
+            "members": [
+              "buff_system",
+              "wave_event_system"
+            ],
+            "order": "buff_system first, then wave_event_system (their current relative order in update())",
+            "why_safe": "Both implement update(ctx, dt) as pure fire-and-forget: they read from ctx and dt, mutate only ctx.enemies/ctx.economy and emit events, and have ZERO surrounding post-processing at their call sites. Their bespoke calls are already literally self.X.update(system_ctx, dt)."
+          },
+          "call_sites_collapsed": {
+            "collapsed": false,
+            "reason": "Per the plan Decision rule (preserve exact execution order at all costs), buff_system.update (sim_engine.py:668) and wave_event_system.update (sim_engine.py:720) are NOT adjacent: peasant spawning, enemy/guard updates, and the spawner/lair slot-cap block run between them. Collapsing into a single update_all would force them back-to-back, reordering side-effecting work and risking determinism/gameplay regressions. Kept the two direct calls; SystemRunner is constructed and seeded for future adjacency-driven consolidation. Non-negotiable deliverables (widened+populated SystemContext, SystemRunner class constructed, equivalence table) are all met."
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk64_system_runner.py -v",
+              "exit_code": 0,
+              "result": "4 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/ -q",
+              "exit_code": 0,
+              "result": "513 passed, 4 skipped"
+            },
+            {
+              "cmd": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "result": "PASS: no violations found (proves no side-effect reorder)"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "result": "DONE: PASS (incl speed_scaling 0.25x)"
+            }
+          ],
+          "evidence": {
+            "system_context_fields": [
+              "heroes",
+              "enemies",
+              "buildings",
+              "world",
+              "economy",
+              "event_bus",
+              "peasants",
+              "guards",
+              "bounties",
+              "pois",
+              "rubble_records",
+              "lairs",
+              "castle"
+            ],
+            "headless_ctx_spotcheck": "peasants=list(0), guards=list(0), bounties=list(0), pois=list(32), rubble_records=list(0), lairs=list(5), castle=BuildingType.CASTLE; runner systems=[BuffSystem, WaveEventSystem]",
+            "full_suite": "513 passed, 4 skipped",
+            "determinism": "PASS",
+            "qa_smoke": "PASS"
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Gate 1 (Agent 11): re-verify full suite + determinism + qa_smoke and grep-confirm SystemContext fields + SystemRunner wiring.",
+            "Future sprint: if buff/wave_event are ever made adjacent (or a no-op-between proof established), collapse their two call sites into one _ordered_systems.update_all(ctx, dt).",
+            "Future sprint: revisit spawner/lair migration only if the MAX_ALIVE_ENEMIES slot-cap moves into the systems; revisit neutral_buildings once castle source is unified to ctx.castle."
+          ]
+        }
+      }
+    },
+    "wk65_round0_deslop_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md",
+        "notes": "WK65 Round 0 (De-Slop Foundation). Agent 05 Wave 1: write buildings/systems characterization net GREEN on current code. Wave-2 poi_interaction deletion is a later activation."
+      },
+      "rounds": {
+        "wk65_w1_characterization": {
+          "sprint_id": "wk65_round0_deslop_foundation",
+          "round_id": "wk65_w1_characterization",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "Wave 1 (characterization pins, green on current code)",
+            "plan_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md (section: Agent 05 (GameplaySystems) — buildings/systems pins)",
+            "created_utc": "2026-05-29T00:00:00Z",
+            "launched_by": "tools/ai_studio_orchestrator"
+          },
+          "prompt_text": "Wave-1 ONLY: create tests/test_wk65_buildings_systems_characterization.py, GREEN on current unmodified code. Pin (1) ranged-tower fire cadence via SINGULAR _last_ranged_event + cooldown (do NOT assert plural _last_ranged_events — deferred to Round C), (2) building update() dispatch outcomes, (3) DifficultySystem hp/damage scaling at a couple levels. CREATE only that one test file; edit no production code. DO NOT COMMIT. DO NOT PUSH.",
+          "what_i_changed": {
+            "summary": "Created the buildings/systems characterization safety net (14 tests) that pins observable behavior Round C will dedup. No production code touched. Green before any deletion exists; this is the bracket proving the Wave-2 deletions are inert.",
+            "files_touched": [
+              "tests/test_wk65_buildings_systems_characterization.py (NEW, created)"
+            ],
+            "production_code_edited": "NONE (test file only, per file-ownership table)"
+          },
+          "behaviors_pinned": {
+            "ranged_tower_fire_cadence": [
+              "Guardhouse.update(dt, guards_list, enemies): fires at in-range enemy, deals GUARDHOUSE_ARROW_DAMAGE * GUARDHOUSE_ARROWS_PER_SHOT (12*2=24) per volley, sets SINGULAR _last_ranged_event (type=ranged_projectile, kind=arrow, to_x/to_y=enemy pos), latches target.",
+              "Guardhouse respects GUARDHOUSE_ARROW_COOLDOWN (2.0s): no second volley on a sub-cooldown tick; fires again after cooldown elapses.",
+              "Guardhouse clears _last_ranged_event and target when cooldown ready but no enemy in range.",
+              "BallistaTower.update(dt, enemies): deals attack_damage (15), sets singular _last_ranged_event, respects attack_interval (2.0s) cooldown.",
+              "Unconstructed ranged tower (is_constructed=False) performs no attack (pins the early-return guard).",
+              "DELIBERATELY did NOT assert on _last_ranged_events (plural) — deferred to Round C RangedAttackMixin per plan."
+            ],
+            "building_update_dispatch": [
+              "Guardhouse.update returns True (should_spawn) once spawn_interval (30s) elapses and guard cap not reached; False under interval and False at/over max_guards cap.",
+              "TradingPost.update(dt, economy): grants income_amount gold once income_interval elapses; tracks total_income_generated.",
+              "Marketplace.update(dt, economy): accrues passive tax into stored_tax_gold once MARKETPLACE_PASSIVE_TAX_INTERVAL_MS elapses (deterministic via get_rng; sim clock pinned via monkeypatch).",
+              "Marketplace timed-research: research_progress climbs 0 -> mid -> 1.0 across research_duration_ms; advance_research completes potions research."
+            ],
+            "difficulty_scaling": [
+              "Multiplier table: NORMAL neutral (1.0), EASY softens hp/damage (<1.0), HARD hardens (>1.0); unknown keys fall back to 1.0.",
+              "NORMAL leaves a fresh Goblin unscaled.",
+              "EASY scales a fresh Goblin hp/damage DOWN via exact production formula max(1,int(round(base*mult))) applied only when mult!=1.0.",
+              "HARD scales a fresh Skeleton hp/damage UP via the same formula; verified strict increase.",
+              "Pin mirrors the formula triplicated across spawner.py:189-197, lairs.py:144-153, wave_events.py:254-259 that Round C unifies into DifficultySystem.apply_to_enemy."
+            ]
+          },
+          "commands_run": [
+            "python -m pytest tests/test_wk65_buildings_systems_characterization.py -q  -> 14 passed (run twice, stable)",
+            "python tools/qa_smoke.py --quick  -> DONE: PASS"
+          ],
+          "evidence": {
+            "pytest_result": "14 passed, 1 warning in ~0.1s (stable across two runs)",
+            "qa_smoke": "DONE: PASS (exit 0)",
+            "green_on_current_code": true
+          },
+          "surprising_findings_for_round_c": [
+            "Guardhouse already maintains BOTH the singular _last_ranged_event AND the plural _last_ranged_events list; the singular is literally set to _last_ranged_events[0]. The plural exists only on Guardhouse (multi-arrow), not on BallistaTower or Enemy.do_attack — so a Round-C RangedAttackMixin must treat plural as a Guardhouse-specific extension, not a base contract.",
+            "BallistaTower.update probes self.get_ranged_spec() via hasattr+try/except but the real BallistaTower defines no get_ranged_spec, so it ALWAYS falls to defaults (kind=bolt, color=(180,180,200), size=2). This is the get_ranged_spec entanglement the plan deferred — the only real implementer is the test double in conftest. Round C should decide whether buildings get a real get_ranged_spec or the defaults become explicit.",
+            "The hp/damage scaling is byte-identical in all three sites (spawner/lairs/wave_events) including the mult!=1.0 short-circuit and the max(1, round) rounding; a single DifficultySystem.apply_to_enemy(enemy) is a clean drop-in. Note the guard does NOT scale speed/xp/gold — only hp and attack_power — so apply_to_enemy must preserve that exact scope.",
+            "Guardhouse.update has dual responsibility (guard spawn + ranged) and returns a guard-spawn bool while mutating ranged state as a side effect; the two concerns share one tick path. This is the stringly-adjacent dispatch the plan flags for Round B/C."
+          ],
+          "blockers": [],
+          "recommended_next_actions": [
+            "Wave-2 (later activation): delete _spawn_underground_enemies in game/systems/poi_interaction.py:445-491 + its commented ref at :376 after grep-confirm; re-run this characterization file + -k poi to confirm still GREEN."
+          ]
+        },
+        "wk65_w2_deletion_hygiene": {
+          "sprint_id": "wk65_round0_deslop_foundation",
+          "round_id": "wk65_w2_deletion_hygiene",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "Wave 2 (dead-code deletion)",
+            "plan_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md (section: Agent 05 (GameplaySystems) — delete dead underground spawner)",
+            "created_utc": "2026-05-29T00:00:00Z",
+            "launched_by": "tools/ai_studio_orchestrator"
+          },
+          "prompt_text": "Wave-2 deletion: delete the dead module-level function _spawn_underground_enemies (game/systems/poi_interaction.py ~445-491) + its only (commented-out) reference at ~376. Grep-confirm FIRST. Touch NO other underground/dungeon logic (_handle_dungeon, begin_descent, fog reveal all stay). EDIT only game/systems/poi_interaction.py. SCOPED verification only. DO NOT COMMIT. DO NOT PUSH.",
+          "grep_confirm": {
+            "command": "rg -n \"_spawn_underground_enemies\" game ai tools tests",
+            "output_before_edit": [
+              "game\\systems\\poi_interaction.py:376:        # _spawn_underground_enemies(area, self._sim_engine, event_bus)",
+              "game\\systems\\poi_interaction.py:445:def _spawn_underground_enemies(area, sim_engine, event_bus):"
+            ],
+            "verdict": "VERIFIED DEAD: only 2 hits, both in game/systems/poi_interaction.py — the def (:445) and the commented-out call (:376). ZERO live callers in game/, ai/, tools/, tests/. No uncommented caller anywhere.",
+            "output_after_edit": "(no matches; rg exit code 1) — symbol fully removed."
+          },
+          "what_i_changed": {
+            "summary": "Deleted the verified-dead module-level function _spawn_underground_enemies and its only reference (a commented-out call). Pure subtraction, no behavior change. The function was never invoked (its single call site was already commented out behind a 'underground visuals disabled' feature gate).",
+            "files_touched": [
+              "game/systems/poi_interaction.py (EDIT: 57 lines removed, 0 added)"
+            ],
+            "deletions": [
+              "Function def _spawn_underground_enemies(area, sim_engine, event_bus) + body + docstring (was lines ~445-491), and its 3-line WK57-Wave-5C section-header comment block that introduced it.",
+              "The commented-out call '# _spawn_underground_enemies(area, self._sim_engine, event_bus)' at ~376 plus its 2 orphaned explanatory comment lines (WK57 Wave 5C / feature-gate note)."
+            ],
+            "loc_removed": 57,
+            "loc_added": 0,
+            "imports_touched": "NONE — TILE_SIZE (config) and get_rng (game.sim.determinism) both remain used by many other call sites in the file; imports kept.",
+            "underground_dungeon_logic_untouched": "CONFIRMED. Left intact: _handle_dungeon (still in _HANDLERS dispatch under 'dungeon'), hero.begin_descent call, world.reveal_underground_circle fog reveal, area.chambers[0].is_explored entrance mark, and the hero_entered_underground event emit. Underground is LIVE on mountain maps — only the dead enemy spawner was removed."
+          },
+          "commands_run": [
+            "rg -n \"_spawn_underground_enemies\" game ai tools tests  -> (before) 2 hits both in poi_interaction.py; (after) 0 hits / exit 1",
+            "python -c ast.parse(poi_interaction.py)  -> AST OK",
+            "git diff --numstat game/systems/poi_interaction.py  -> 0\t57 (57 removed, 0 added)",
+            "python -m pytest tests/test_wk65_buildings_systems_characterization.py tests/test_ai_poi_awareness.py -q -k \"poi or building or ranged or difficulty\"  -> 34 passed",
+            "python -m pytest tests/test_wk65_buildings_systems_characterization.py -q  -> 14 passed",
+            "python tools/determinism_guard.py --paths game/systems/poi_interaction.py  -> PASS (exit 0)"
+          ],
+          "evidence": {
+            "scoped_pytest_selectors": "34 passed (test_wk65_buildings_systems_characterization.py + test_ai_poi_awareness.py, -k 'poi or building or ranged or difficulty')",
+            "wave1_pins_full": "14 passed (test_wk65_buildings_systems_characterization.py) — my Wave-1 pins STILL GREEN after deletion (proves deletion inert)",
+            "determinism_guard": "[determinism_guard] PASS: no violations found (exit 0)",
+            "loc_removed": 57,
+            "note_on_full_suite": "Did NOT run full pytest / qa_smoke per task instruction (scoped verification only; Agent 01 runs the full suite + qa_smoke at Gate 2)."
+          },
+          "blockers": [],
+          "report_to_agent_01": {
+            "grep_result": "VERIFIED DEAD — 2 hits before (def @:445 + commented call @:376, both in poi_interaction.py), 0 hits after. No live callers in game/ai/tools/tests.",
+            "loc_removed": 57,
+            "scoped_gates": "GREEN — 34 passed (scoped -k), 14 passed (full Wave-1 pins), determinism_guard PASS on poi_interaction.py.",
+            "no_other_underground_logic_touched": "CONFIRMED — _handle_dungeon, begin_descent, reveal_underground_circle fog reveal, chamber explored-mark, and hero_entered_underground emit all preserved. Edit scoped to game/systems/poi_interaction.py only.",
+            "committed": false
+          },
+          "recommended_next_actions": [
+            "Agent 01 / Gate 2: run full pytest + qa_smoke --quick + validate_assets to confirm the deletion is inert across the whole suite (scoped gates already green here)."
+          ]
+        }
+      }
+    },
+    "wk70_round_c1_buildingdef_registry": {
+      "rounds": {
+        "wk70_w1": {
+          "sprint_id": "wk70_round_c1_buildingdef_registry",
+          "round_id": "wk70_w1",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "W1 (BuildingDef + BUILDING_DEFS single source + derived config maps)",
+            "plan_ref": ".cursor/plans/wk70_round_c1_buildingdef_registry.plan.md (section 6 W1)",
+            "created_utc": "2026-05-30T00:00:00Z",
+            "launched_by": "tools/ai_studio_orchestrator"
+          },
+          "prompt_text": "W1 ONLY: create game/content/buildings.py (BuildingDef dataclass + BUILDING_DEFS single source covering all 30 enum keys incl 8 WK34 zombies flagged purge_candidate, 5 lairs is_lair, 12 POIs is_poi cls=None) and REPLACE the 4 hardcoded config.py dicts with byte-identical derived views (COSTS/OCCUPANTS exclude lairs; SIZES/COLORS include lairs+POIs). Add BuildingType coverage assert. Resolve cls without an import cycle. STOP after W1 for PM gate; do W2 (factory + catalog/hotkeys) after.",
+          "grep_confirm": {
+            "building_modules_importing_config": "game/entities/neutral_buildings.py + game/entities/lair.py import config -> module-level cls import would cycle config<->entities",
+            "cls_source": "game/building_factory.py:45-73 (27 keys) mirrored into _CLASS_NAMES",
+            "enum": "game/entities/buildings/types.py = 30-member BuildingType",
+            "hotkeys_placeable": "game/ui/build_catalog_panel.py:21-32 (hotkeys), :61-66 (placeable order)"
+          },
+          "what_i_changed": {
+            "new_file": "game/content/buildings.py (+ game/content/__init__.py) — BuildingDef(frozen,slots) + BUILDING_DEFS (47 keys: 30 enum incl 8 zombies, 5 lairs, 12 POIs) + lazy building_class_for() accessor + assert_building_type_coverage()",
+            "config.py": "replaced the 4 hand-authored dicts (BUILDING_COSTS/SIZES/COLORS/MAX_OCCUPANTS) with derived comprehensions over BUILDING_DEFS; BUILDING_CONSTRAINTS/PREREQUISITES/INN economy left untouched",
+            "cls_cycle_handling": "cls stored as None in every def; resolved lazily via building_class_for(key) which imports game.entities inside the function. Coverage assert lives in buildings.py and loads game/entities/buildings/types.py by file path (importlib) to read the enum WITHOUT triggering the game.entities/game.systems package __init__ graph (which imports config) — fully cycle-free. config.py imports NOTHING from game.entities."
+          },
+          "commands_run": [
+            "derived-vs-original equality (vs git HEAD:config.py): all 4 dicts IDENTICAL keys+values+insertion order",
+            "python -m pytest tests/test_building.py tests/test_wk67_ai_boundary.py -q -> 22 passed",
+            "python -m pytest -q -> 633 passed, 4 skipped, 0 failed",
+            "python tools/determinism_guard.py -> PASS"
+          ],
+          "evidence": {
+            "derived_vs_original": "BUILDING_COSTS(42)/SIZES(47)/COLORS(47)/MAX_OCCUPANTS(42) byte-identical (keys+values+order) to original committed config.py — zero diff",
+            "digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged (test_wk67_ai_boundary.py:181 passed)",
+            "suite": "633 passed / 4 skipped / 0 failed",
+            "determinism_guard": "PASS: no violations found",
+            "import_cycle": "resolved — config imports game.content.buildings only; buildings.py imports nothing from game.entities at load; enum coverage loaded by file path"
+          },
+          "blockers": [],
+          "report_to_agent_01": {
+            "status": "W1 complete, STOPPED for PM gate before W2",
+            "new_file": "game/content/buildings.py (+ game/content/__init__.py)",
+            "cls_cycle": "cls=None + lazy building_class_for() accessor; coverage assert reads enum via importlib file-path load of types.py (no package __init__, no config<->entities cycle)",
+            "derived_equality": "IDENTICAL — all 4 derived views == original (keys+values+order), zero diff",
+            "digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (unchanged)",
+            "suite": "633 passed / 4 skipped / 0 failed; determinism_guard PASS",
+            "did_not_commit": true
+          },
+          "recommended_next_actions": [
+            "PM gate: confirm snapshot-equality + digest, then release W2",
+            "W2: derive BuildingFactory.BUILDING_REGISTRY via building_class_for() (== current 27), derive placeable_buildings+BUILDING_HOTKEYS in build_catalog_panel.py, make building_list_panel.py read derived maps, replace input_handler if/elif hotkey chain with {hotkey:type} reverse-map"
+          ]
+        },
+        "wk70_w2": {
+          "sprint_id": "wk70_round_c1_buildingdef_registry",
+          "round_id": "wk70_w2",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "W2 (derive factory registry + catalog/hotkeys/placeable; kill the 2 duplicate copies + the input_handler if/elif chain)",
+            "plan_ref": ".cursor/plans/wk70_round_c1_buildingdef_registry.plan.md (section 6 W2)",
+            "created_utc": "2026-05-30T00:00:00Z",
+            "launched_by": "tools/ai_studio_orchestrator"
+          },
+          "prompt_text": "W2: derive BuildingFactory.BUILDING_REGISTRY (==current 27) via building_class_for(); derive placeable_buildings (placeable_order) + BUILDING_HOTKEYS in build_catalog_panel.py from BUILDING_DEFS; make building_list_panel.py read the SAME derived maps (delete its duplicate BUILDING_HOTKEYS + placeable_buildings); replace input_handler.py:298-320 if/elif hotkey chain with a {hotkey:type} reverse-map. Behavior byte-identical; DO NOT COMMIT.",
+          "what_i_changed": {
+            "game/building_factory.py": "replaced the hand-written 27-key dict with BUILDING_REGISTRY=_build_registry(): derives from BUILDING_DEFS via the W1 lazy building_class_for() accessor, skipping POIs and castle/house/farm; deleted the 28-line block of top-level entity-class imports (cycle-safe: imports only game.content.buildings at module top). Result == current 27 by class __name__.",
+            "game/ui/build_catalog_panel.py": "added module-level PLACEABLE_BUILDINGS (sorted by placeable_order, placeable only) + BUILDING_HOTKEYS ({type:hotkey} for placeable defs) DERIVED from BUILDING_DEFS; self.placeable_buildings now = list(PLACEABLE_BUILDINGS).",
+            "game/ui/building_list_panel.py": "DELETED its duplicate 10-key BUILDING_HOTKEYS dict + hardcoded placeable_buildings list; now imports BUILDING_HOTKEYS + PLACEABLE_BUILDINGS from build_catalog_panel (single source); self.placeable_buildings = list(PLACEABLE_BUILDINGS).",
+            "game/input_handler.py": "replaced the hardcoded 1-8/t/u if-elif hotkey chain with a single 'elif event.key in BUILD_HOTKEY_TO_TYPE' branch; added module-level BUILD_HOTKEY_TO_TYPE = {d.hotkey.lower(): k} reverse-map derived from BUILDING_DEFS."
+          },
+          "input_handler_reverse_map": "BUILD_HOTKEY_TO_TYPE maps event.key -> building_type. Hotkeys are lowercased (d.hotkey.lower()) because pygame key.name() yields lowercase letter keys: the pre-WK70 chain fired on lowercase t/u even though the catalog hotkey dict stores T/U. Digit hotkeys 1-8 are unchanged by .lower(). Result == old chain exactly: {1:warrior_guild,2:marketplace,3:ranger_guild,4:rogue_guild,5:wizard_guild,6:blacksmith,7:inn,8:trading_post,t:temple,u:guardhouse}.",
+          "duplicate_copies_deleted": [
+            "game/ui/building_list_panel.py BUILDING_HOTKEYS (was lines 16-27) -> now imported",
+            "game/ui/building_list_panel.py hardcoded placeable_buildings list (was lines 64-69) -> now list(PLACEABLE_BUILDINGS)",
+            "game/input_handler.py if/elif hotkey chain (was lines 298-320) -> reverse-map lookup",
+            "game/building_factory.py hand-written 27-key BUILDING_REGISTRY dict + 28 lines of entity-class imports -> derived from BUILDING_DEFS"
+          ],
+          "derived_equality": {
+            "BUILDING_REGISTRY": "27 mappings == current by class __name__ (True). Key insertion order differs only for food_stand (now grouped with neutral buildings vs 6th in the old hand-written dict); registry is used only via .get(), so order is behaviorally irrelevant.",
+            "BUILDING_HOTKEYS": "== {warrior_guild:1,marketplace:2,ranger_guild:3,rogue_guild:4,wizard_guild:5,blacksmith:6,inn:7,trading_post:8,temple:T,guardhouse:U} (True); building_list_panel BUILDING_HOTKEYS is the SAME object (shared import)",
+            "PLACEABLE_BUILDINGS": "== [warrior_guild,ranger_guild,rogue_guild,wizard_guild,marketplace,blacksmith,inn,trading_post,temple,guardhouse] (True) in both module-level constant and both panels self.placeable_buildings",
+            "BUILD_HOTKEY_TO_TYPE": "== old if/elif chain exactly (lowercased t/u) (True)"
+          },
+          "commands_run": [
+            "local equality check: BUILDING_REGISTRY(27)==current by class name True; CAT/LIST BUILDING_HOTKEYS==known True (shared object); PLACEABLE_BUILDINGS==known True; reverse-map==old chain True",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed (digest unchanged)",
+            "python -m pytest -q -> 633 passed, 4 skipped, 0 failed",
+            "python tools/determinism_guard.py -> PASS: no violations found",
+            "python tools/qa_smoke.py --quick -> DONE: PASS"
+          ],
+          "evidence": {
+            "registry": "BuildingFactory.BUILDING_REGISTRY == current 27 mappings (by class __name__), derived via building_class_for()",
+            "hotkeys_placeable": "BUILDING_HOTKEYS + PLACEABLE_BUILDINGS derived in build_catalog_panel.py; building_list_panel.py imports them (duplicate copies removed); input_handler reverse-map derived",
+            "digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged (test_wk67_ai_boundary.py:181 passed)",
+            "suite": "633 passed / 4 skipped / 0 failed",
+            "determinism_guard": "PASS: no violations found",
+            "qa_smoke": "qa_smoke.py --quick DONE: PASS",
+            "import_cycle": "none new — building_factory now imports only game.content.buildings at module top (no entity classes); input_handler imports game.content.buildings (cycle-safe)"
+          },
+          "blockers": [],
+          "report_to_agent_01": {
+            "status": "W2 complete; DID NOT COMMIT",
+            "derived_maps": "BUILDING_REGISTRY (27, ==current by class name), BUILDING_HOTKEYS (==known), PLACEABLE_BUILDINGS (==known), BUILD_HOTKEY_TO_TYPE (==old chain); all byte-identical to baseline",
+            "duplicate_copies_deleted": "building_list_panel.py BUILDING_HOTKEYS + placeable list; input_handler if/elif chain; building_factory hand-written registry + entity imports",
+            "input_handler_reverse_map": "{d.hotkey.lower(): type} keyed on lowercase so event.key t/u match (preserves old chain trigger keys); 1-8+t+u place the same buildings",
+            "digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (unchanged)",
+            "suite": "633 passed / 4 skipped / 0 failed; determinism_guard PASS; qa_smoke --quick PASS",
+            "did_not_commit": true
+          },
+          "recommended_next_actions": [
+            "PM gate: confirm snapshot-equality + digest + suite, then release W3 (Agent 11 snapshot-equality test + full DoD gate)",
+            "W3 test should assert BUILDING_REGISTRY 27 mappings by class name (not key order), and the catalog/hotkey/placeable derive to the known values"
+          ]
+        }
+      },
+      "sprint_meta": {
+        "created_utc": "2026-05-30T00:00:00Z"
+      }
+    },
+    "wk72_round_c2_entity_dedup": {
+      "rounds": {
+        "wk72_w1": {
+          "sprint_id": "wk72_round_c2_entity_dedup",
+          "round_id": "wk72_w1",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "W1 (DifficultySystem.apply_to_enemy + wire 3 spawn sites)",
+            "plan_ref": ".cursor/plans/wk72_round_c2_entity_dedup.plan.md (section 1.1, W1)",
+            "created_utc": "2026-05-30T00:00:00Z",
+            "launched_by": "tools/ai_studio_orchestrator"
+          },
+          "prompt_text": "W1 ONLY: add DifficultySystem.apply_to_enemy(self,enemy)->None reproducing the EXACT triplicated HP+damage spawn-scaling (spawner.py ~189-197, lairs.py ~144-153, wave_events.py ~254-259); replace all 3 inline blocks with difficulty.apply_to_enemy(enemy) under the existing if difficulty is not None guard. Behavior byte-identical; digest b73961...148ded unchanged. STOP after W1 for PM gate. DO NOT COMMIT.",
+          "what_i_changed": {
+            "game/systems/difficulty.py": "Added apply_to_enemy(self, enemy)->None to class DifficultySystem. Body: hp_mult=self.get_multiplier(\"enemy_hp\"); dmg_mult=self.get_multiplier(\"enemy_damage\"); if hp_mult!=1.0: enemy.max_hp=max(1,int(round(enemy.max_hp*hp_mult))); enemy.hp=enemy.max_hp; if dmg_mult!=1.0: enemy.attack_power=max(1,int(round(enemy.attack_power*dmg_mult))). This is byte-identical to the per-enemy logic in all 3 former sites.",
+            "game/systems/spawner.py": "Replaced the inline per-enemy block (lines ~189-197) inside the spawn loop with: if self.difficulty is not None: self.difficulty.apply_to_enemy(enemy). Guard preserved.",
+            "game/systems/lairs.py": "Replaced the inline block (~144-153). Kept the original combined guard if spawned and self.difficulty is not None:, then for enemy in spawned: self.difficulty.apply_to_enemy(enemy). Multipliers now read per-enemy inside the method instead of once before the loop (effect identical).",
+            "game/systems/wave_events.py": "Removed the hoisted hp_mult/dmg_mult fetch block (~230-235, hp_mult/dmg_mult were used ONLY in the per-enemy block) and replaced the per-enemy scaling (~254-259) with: if self.difficulty is not None: self.difficulty.apply_to_enemy(enemy). count_mult fetch left untouched (separate concern, wave_event_count)."
+          },
+          "block_diff_finding": "All 3 sites had BYTE-IDENTICAL per-enemy scaling: same !=1.0 short-circuits, same max(1,int(round(stat*mult))) rounding+floor guard, same enemy.hp=enemy.max_hp resync, same attribute names. NOTE: prompt speculated attrs might be enemy.damage/enemy.attack -- the actual attribute scaled is enemy.attack_power (HP via enemy.max_hp/enemy.hp). No site scaled speed/gold or anything beyond HP+attack_power. Only structural difference: spawner fetched multipliers per-enemy inside its own guard; lairs/wave_events hoisted the fetch once before the loop. Since apply_to_enemy reads the multipliers itself, this difference is invisible to behavior -- unified cleanly, no divergence to report.",
+          "verification": {
+            "digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded UNCHANGED -- tests/test_wk67_ai_boundary.py 10 passed",
+            "full_suite": "654 passed, 4 skipped, 0 failed (139.43s)",
+            "determinism_guard": "PASS: no violations found",
+            "qa_smoke_quick": "DONE: PASS (exit 0)"
+          },
+          "do_not_commit_ack": true,
+          "next": "STOP after W1 for PM gate. W2 (navigation.advance_along_path_to) pending PM go."
+        },
+        "wk72_w2": {
+          "sprint_id": "wk72_round_c2_entity_dedup",
+          "round_id": "wk72_w2",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "W2 (navigation.advance_along_path_to + wire enemy x2; guard left inline)",
+            "plan_ref": ".cursor/plans/wk72_round_c2_entity_dedup.plan.md (section 1.2, W2)",
+            "created_utc": "2026-05-30T00:00:00Z",
+            "launched_by": "tools/ai_studio_orchestrator"
+          },
+          "prompt_text": "W2: extract navigation.advance_along_path_to(entity, world, buildings, goal_x, goal_y, dt, ...) reproducing the path-replan-and-follow block copy-pasted in enemy.py (Enemy.update ~289-320, SkeletonArcher.update ~562-589) and guard.py (~159-180); call from those 3 sites. SCOPE enemy+guard ONLY; do NOT touch hero.py/tax_collector.py. DIFF first; parameterize exact differences without changing behavior; if a site can't be cleanly unified, leave it and report. Behavior byte-identical; digest b73961...148ded unchanged. DO NOT COMMIT.",
+          "helper_signature": "advance_along_path_to(entity, world, buildings, goal_x: float, goal_y: float, dt: float, now_ms_val: int) -> None  (in game/systems/navigation.py)",
+          "helper_body_summary": "Reproduces the Enemy/SkeletonArcher path-follow block byte-for-byte: init entity.path/_path_goal if missing; goal_key=(int(goal_x),int(goal_y)); read _path_commit_until_ms; has_path; want_replan = ((not has_path) or (_path_goal!=goal_key and now>=path_commit)) and now>=_next_replan_ms; on replan, compute_path_worldpoints(world,buildings,entity.x,entity.y,goal_x,goal_y) -- None=deferred (keep path), else set path/_path_goal/_path_commit_until_ms(+_path_commit_duration_ms||500) and _next_replan_ms (+800 if empty path else +150); then if entity.path: follow_path(entity,dt) else entity.move_towards(goal_x,goal_y,dt). now_ms_val passed in (both call sites already compute now_ms_val=now_ms()).",
+          "what_i_changed": {
+            "game/systems/navigation.py": "Added advance_along_path_to(...) after follow_path(). Docstring notes it is byte-identical to the former Enemy/SkeletonArcher inline blocks and that guard.py is deliberately left inline (differs).",
+            "game/entities/enemy.py": "Site A (Enemy.update path-follow, former ~292-321): replaced inline block with `from game.systems.navigation import advance_along_path_to; advance_along_path_to(self, world, buildings, target_x, target_y, dt, now_ms_val)`. Site B (SkeletonArcher.update move-closer path-follow, former ~566-590): same replacement. The else-branch move_towards(target_x,target_y,dt) (world is None) preserved at both. SkeletonArcher KITING/retreat block (~534-548) left untouched -- different pattern (no commit/replan window), import compute_path_worldpoints/follow_path retained there.",
+            "game/entities/guard.py": "UNCHANGED -- left inline (see block_diff_finding)."
+          },
+          "block_diff_finding": "Enemy (A) vs SkeletonArcher (B): logic BYTE-IDENTICAL; the only delta was 2 explanatory comment lines present in A and absent in B (no behavior). Both unified into the helper. Guard (G) DIVERGES in 3 behavior-affecting ways and was LEFT INLINE per the 'leave-and-report' instruction: (1) guard's want_replan has NO _next_replan_ms throttle and guard never sets _next_replan_ms (no 800/150ms replan window) -- different replan cadence; (2) guard calls follow_path(self,dt) UNCONDITIONALLY even on empty path (stays still), whereas A/B do `if path: follow_path else: move_towards(...)` (direct-steer fallback) -- genuine control-flow divergence; (3) guard uses `buildings or []` vs A/B `buildings`, and reads goal via self.target_position tuple. Parameterizing all three (throttle flag + fallback-steer flag + goal-attr indirection) would turn the helper into flag-soup and risk the digest, so guard stays inline. Only enemy x2 wired.",
+          "sites_wired": "2 of 3 -- Enemy.update (enemy.py) and SkeletonArcher.update move-closer (enemy.py). Guard left inline (reported).",
+          "verification": {
+            "digest_test": "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed, 1 warning. _AI_DECISION_DIGEST b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded UNCHANGED (hard-coded assert in test passed).",
+            "full_suite": "python -m pytest -q -> 654 passed, 4 skipped, 0 failed (135.81s). Matches baseline.",
+            "determinism_guard": "python tools/determinism_guard.py -> PASS: no violations found.",
+            "qa_smoke": "python tools/qa_smoke.py --quick -> DONE: PASS (all scenarios exit_code=0)."
+          },
+          "scope_compliance": "Lane respected: only game/systems/navigation.py + game/entities/enemy.py touched (guard.py inspected, left unchanged). hero.py and tax_collector.py NOT touched. No commit.",
+          "notes_for_pm": "W2 done. Enemy/archer path-follow now single-sourced via navigation.advance_along_path_to; guard intentionally left inline due to 3 behavioral divergences (replan throttle, unconditional follow, buildings-or-[]). If a future round wants guard unified, it must first decide whether to give guards the _next_replan_ms throttle + direct-steer fallback (a deliberate behavior change, would move the digest)."
+        }
+      }
+    },
+    "wk73_round_b2_enemy_stats_table": {
+      "sprint_meta": {
+        "title": "WK73 Round B-2b: enemy.py ENEMY_STATS table",
+        "plan_ref": ".cursor/plans/wk73_round_b2_enemy_stats_table.plan.md",
+        "created_utc": "2026-05-30T00:00:00Z"
+      },
+      "rounds": {
+        "wk73_w1": {
+          "sprint_id": "wk73_round_b2_enemy_stats_table",
+          "round_id": "wk73_w1",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "W1 (ENEMY_STATS table + Enemy.__init__ apply + shim 7 stat subclasses)",
+            "plan_ref": ".cursor/plans/wk73_round_b2_enemy_stats_table.plan.md (sections 1-2, W1)",
+            "created_utc": "2026-05-30T00:00:00Z",
+            "launched_by": "tools/ai_studio_orchestrator"
+          },
+          "prompt_text": "Collapse the 7 stat-block Enemy subclasses (Goblin, Wolf, Skeleton, Spider, Bandit, BanditLord, DemonOverlord) into ONE ENEMY_STATS table applied by Enemy.__init__. Behavior byte-identical; WK67 digest b73961...148ded unchanged. SkeletonArcher (behavioral kiting) left untouched. Lane = game/entities/enemy.py only. DO NOT COMMIT.",
+          "what_i_changed": [
+            "Added `from dataclasses import dataclass` import.",
+            "Added `@dataclass(frozen=True) EnemyStats` (fields: hp, attack_power, speed, xp_reward, gold_reward, color, size, has_attackers=False, is_boss=False, name=None).",
+            "Added `ENEMY_STATS: dict[str, EnemyStats]` with the EXACT current per-type values for goblin/wolf/skeleton/spider/bandit/bandit_lord/demon_overlord (config-derived values still reference GOBLIN_HP etc.; goblin keeps GOBLIN_ATTACK*2).",
+            "Enemy.__init__: AFTER the existing base init, `s = ENEMY_STATS.get(enemy_type)`; if present apply hp, max_hp(=hp), attack_power, speed, xp_reward, gold_reward, color, size; conditionally set self.name (boss types), self.is_boss=True (boss types), self.attackers=set() (has_attackers types). Unknown types keep base defaults exactly (skeleton_archer not in table -> keeps its own __init__).",
+            "Moved register_attacker up to base Enemy, GATED on `hasattr(self,'attackers')` so wolf/skeleton/skeleton_archer (which never had `attackers`) keep byte-identical gold behavior (combat.py calls via hasattr guard; get_gold_recipients reads attackers via getattr(...,set())).",
+            "Reduced Goblin/Wolf/Skeleton/Spider/Bandit/BanditLord/DemonOverlord to 1-line shims (`def __init__(self,x,y): super().__init__(x,y,'<key>')`). Class NAMES kept (lair.py/spawner.py construct by name -- untouched).",
+            "SkeletonArcher LEFT ENTIRELY AS-IS (behavioral update/kiting + its ranged stat fields). Did NOT add a table row for it."
+          ],
+          "enemy_stats_fields": "hp:int, attack_power:int, speed:float, xp_reward:int, gold_reward:int, color:tuple, size:int, has_attackers:bool=False, is_boss:bool=False, name:str|None=None",
+          "enemy_stats_table": {
+            "goblin": "hp=GOBLIN_HP(30), atk=GOBLIN_ATTACK*2(10), spd=GOBLIN_SPEED(90.0), xp=25, gold=15, color=(139,69,19), size=18, attackers",
+            "wolf": "hp=WOLF_HP(22), atk=WOLF_ATTACK(4), spd=WOLF_SPEED(138.0), xp=20, gold=9, color=(160,160,160), size=18, NO attackers",
+            "skeleton": "hp=SKELETON_HP(55), atk=SKELETON_ATTACK(7), spd=SKELETON_SPEED(66.0), xp=35, gold=21, color=(220,220,240), size=18, NO attackers",
+            "spider": "hp=18, atk=4, spd=156.0, xp=18, gold=8, color=(30,30,30), size=18, attackers",
+            "bandit": "hp=42, atk=9, spd=102.0, xp=32, gold=18, color=(120,80,50), size=18, attackers",
+            "bandit_lord": "hp=300, atk=20, spd=90.0, xp=150, gold=200, color=(180,100,30), size=28, attackers, is_boss, name='The Bandit Lord'",
+            "demon_overlord": "hp=500, atk=30, spd=72.0, xp=300, gold=500, color=(200,30,30), size=32, attackers, is_boss, name='The Demon Overlord'"
+          },
+          "shims": "Goblin/Wolf/Skeleton/Spider/Bandit/BanditLord/DemonOverlord each = 1-line super().__init__ with its exact key. SkeletonArcher unchanged.",
+          "skeleton_archer": "LEFT AS-IS (not folded). It is behavioral (kiting update) and sets extra ranged fields (attack_range, min_range, attack_cooldown_max, is_ranged_attacker, kite state); skeleton_archer is NOT a key in ENEMY_STATS, so ENEMY_STATS.get('skeleton_archer') is None and its own __init__ runs unchanged.",
+          "parity_check": "Wrote a one-off harness: loaded OLD enemy.py from `git show HEAD:` and compared instance __dict__ (minus entity_id) for all 8 types constructed at the same (x,y). RESULT: ALL PARITY OK -- byte-identical attrs and identical key sets for every type incl. SkeletonArcher. Only surface delta: register_attacker now present on wolf/skeleton/skeleton_archer (no-op when attackers absent), which is observable-behavior-preserving (digest unchanged).",
+          "verification": {
+            "wk67_digest_test": "PASS (10 passed) -- digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-UNCHANGED",
+            "full_suite": "667 passed, 4 skipped, 0 failed (140.84s) -- matches baseline",
+            "determinism_guard": "PASS: no violations found (exit 0)",
+            "qa_smoke_quick": "DONE: PASS (exit 0)"
+          },
+          "loc": {
+            "enemy_py_before": 623,
+            "enemy_py_after": 687,
+            "note": "LOC went UP because the explicit ENEMY_STATS table + EnemyStats dataclass + docstrings are more verbose than the old inline stat blocks; the WIN is de-duplication/single-source-of-truth, not raw line count. Per-subclass stat duplication eliminated; 7 subclasses now 1-line shims."
+          },
+          "scope_compliance": "Touched ONLY game/entities/enemy.py. Did NOT touch lair.py, spawner.py, combat.py, config.py. No new file created (table lives in enemy.py). Did NOT rebalance any stat. DID NOT COMMIT.",
+          "notes_for_pm": "Ready for Agent 11 W2 stat-parity test. Note for the parity test: wolf/skeleton/skeleton_archer must NOT have an `attackers` attribute (only goblin/spider/bandit/bandit_lord/demon_overlord do); bosses (bandit_lord/demon_overlord) have name+is_boss; non-bosses have neither name nor is_boss attribute. register_attacker now exists on the base (gated) -- this is intentional and digest-neutral."
+        }
+      }
+    },
+    "wk114_round_b_zombie_building_purge": {
+      "sprint_meta": {
+        "title": "WK114 Round B: purge the 8 WK34 zombie building types",
+        "plan_ref": ".cursor/plans/wk114_round_b_zombie_building_purge.plan.md",
+        "created_utc": "2026-05-31T00:00:00Z"
+      },
+      "rounds": {
+        "wk114_round_b_w1": {
+          "sprint_id": "wk114_round_b_zombie_building_purge",
+          "round_id": "wk114_round_b_w1",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "W1 (the entire atomic code purge, plan sections A-G)",
+            "plan_ref": ".cursor/plans/wk114_round_b_zombie_building_purge.plan.md (section 2 A-G)",
+            "created_utc": "2026-05-31T00:00:00Z",
+            "launched_by": "tools/ai_studio_orchestrator"
+          },
+          "prompt_text": "Wave 1: execute the ENTIRE code purge per plan section 2 (A-G) in one atomic pass. Delete the 8 zombie building types (gnome_hovel, elven_bungalow, dwarven_settlement, ballista_tower, wizard_tower, fairgrounds, library, royal_gardens). Remove ONLY zombie members from shared lists; KEEP guardhouse/palace/guilds/temples/poi_wizard_tower. Self-verify per section 2. The full suite WILL be red (pinned tests) - expected; Agent 11 fixes it. DO NOT COMMIT.",
+          "what_i_changed": [
+            "A. game/content/buildings.py: removed the 8 BUILDING_DEFS entries + the 8 _CLASS_NAMES entries; removed the now-dead purge_candidate field from BuildingDef dataclass and the _b() factory param/passthrough; updated module docstring + _CLASS_NAMES comment (27->19). KEEP assert_building_type_coverage + poi_wizard_tower.",
+            "A. game/entities/buildings/types.py: removed the 8 BuildingType enum members (GNOME_HOVEL..ROYAL_GARDENS). KEEP GUARDHOUSE, PALACE.",
+            "A. game/entities/buildings/dwellings.py: file contained ONLY the 3 zombie classes -> DELETED via git rm (staged, not committed).",
+            "A. game/entities/buildings/defensive.py: deleted BallistaTower + WizardTower classes; removed now-unused is_research_unlocked import. KEEP Guardhouse + the file.",
+            "A. game/entities/buildings/special.py: deleted Fairgrounds, Library, RoyalGardens classes; removed now-unused imports (RESEARCH_DURATION_MS_PER_100_GOLD, sim_now_ms, is_research_unlocked, unlock_research). KEEP Palace + the file.",
+            "A. game/entities/buildings/__init__.py: removed BallistaTower/WizardTower from defensive import, removed whole dwellings import line, removed Fairgrounds/Library/RoyalGardens from special import; removed the 8 names from __all__.",
+            "A. game/entities/__init__.py: removed the 8 from the re-export block (dwellings line + zombie defensive/special names).",
+            "B. game/sim_engine.py: removed the 3 standalone elif branches (ballista_tower, wizard_tower, fairgrounds) in _update_buildings. KEPT the shared research-advance loop (~L885) and the shared _last_ranged_event collection loop (~L918).",
+            "B. game/systems/buffs.py: removed the royal_gardens aura block (sole aura producer); KEPT generic Buff/apply_or_refresh_buff/remove_expired_buffs infra and the prune-expired loop; updated module docstring.",
+            "B. game/entities/peasant.py: removed gnome_hovel detection; speed_mult is now unconditional 1.0.",
+            "C. config.py: BUILDING_CONSTRAINTS -> {}; removed ballista_tower prereq from BUILDING_PREREQUISITES; removed 3 dwellings from TAX_STASH_BUILDING_TYPES; removed 5 zombies from NON_TAX_STASH_BUILDING_TYPES. KEPT STARTING_BUILDINGS untouched.",
+            "D. ai/decision_moments.py: removed elven_bungalow/dwarven_settlement/gnome_hovel from _inside_recovery_building set. KEPT castle/inn/house/farm.",
+            "D. game/sim/hero_profile.py: removed the 8 zombies from PROFILE_DISCOVERY_BUILDING_TYPES. KEPT poi_wizard_tower, guilds, economic types, palace.",
+            "E. game/ui/building_renderers/__init__.py: removed 3 dwellings from _GUILD_TYPES, ballista/wizard_tower from _DEFENSIVE_TYPES, fairgrounds/library/royal_gardens from _SPECIAL_TYPES. PANEL_RENDERERS derives from those sets.",
+            "E. game/ui/building_renderers/special_panel.py: deleted _render_fairgrounds/_render_library/_render_royal_gardens + their dispatch; removed now-unused COLOR_GOLD import; updated class docstring. KEPT _render_palace.",
+            "E. game/ui/building_renderers/defensive_panel.py: deleted _render_ballista_tower/_render_wizard_tower + their dispatch; updated class docstring. KEPT _render_guardhouse + _render_hp_block.",
+            "E. game/ui/building_panel.py: removed the library research click handler + the library hover branch + the now-orphaned library_research_rects/library_research_hovered attribute defs and their reset (only consumer was the deleted _render_library).",
+            "E. game/ui/hud.py: removed the stale controls-overlay rows for the 8 (collapsed temple/guardhouse row; dropped the F/I/R row).",
+            "E. game/ui/pause_menu.py: removed the 8 keybind-help strings (G/E/V/Y/O/F/I/R).",
+            "E. game/input/keyboard.py: replaced the stale 'WK34 REMOVED - will return' comment with a WK114-purged note.",
+            "F. game/graphics/renderers/building_renderer.py: removed the 8 center-label _LABELS entries + the ballista_tower attack-range circle special-case.",
+            "F. game/graphics/ursina_renderer.py: removed the 8 label-map entries (ballista_tower/wizard_tower/fairground/library/gardens/gnome_hovel/elven_bungalow/dwarven_settlement). poi_wizard_tower not present in that map.",
+            "G. assets/prefabs/buildings/gnome_hovel_v1.json: LEFT in place (orphaned cosmetic, not imported by code; plan permits leave-or-delete)."
+          ],
+          "verification_raw": {
+            "1_import_smoke": "PASS - all 13 modules import.",
+            "2_coverage_assert": "PASS - 'coverage OK' (assert_building_type_coverage passes; enum subset of defs).",
+            "3_purge_candidate_grep": "ZERO hits - grep -rn purge_candidate game/ ai/ config.py exit=1 (no matches).",
+            "4_no_dangling_refs": "PASS - source-only grep of the 8 type strings + 8 class names: ZERO class-name hits; type-string hits are ONLY poi_wizard_tower (KEEP), WK114 purge-doc comments (buildings.py docstring, keyboard.py), shared 'Library' research-pattern comments (base.py/economic.py/config.py - serve Marketplace/Blacksmith), and 'sprite library' (interior_view_panel.py, unrelated SpriteLibrary).",
+            "5_kept_types_intact": "True True True True; zombies gone: True.",
+            "6_lengths": "len(BUILDING_DEFS) = 39 (was 47, -8); len(BUILDING_REGISTRY) = 19 (was 27, -8); zombie classes in registry: [].",
+            "determinism_guard": "PASS (independent run) - no violations found, exit 0.",
+            "pytest_quick": "RED (EXPECTED per plan) - 4 test-collection errors from pinned/collateral test files importing deleted modules/classes. Agent 11 fixes in Wave 2."
+          },
+          "flags_for_pm": [
+            "EXTRA collateral test files NOT in Agent 11's plan-listed set (plan section 3 lists test_wk70/test_buffs/test_wk61_r6_tax_gold_overlay_data/test_wk68/test_hero_profile_contract): (a) tests/test_wk65_buildings_systems_characterization.py imports BallistaTower from game.entities.buildings.defensive (L45) and exercises it (L144/L174); (b) tests/test_wk61_r6_tax_gold_overlay_data.py imports game.entities.buildings.dwellings (deleted) and is transitively imported by tests/test_wk61_r6_qa_renderer_tax_coverage.py + tests/test_wk61_r7_tax_overlay_none_guard.py. Agent 11 should cover these or PM should adjudicate.",
+            "Did NOT touch tests/ (Agent 11 domain), the PM hub, or game/engine.py. dwellings.py deletion staged via git rm only (NOT committed). No git add/commit/push performed."
+          ]
+        }
+      }
     }
   }
 }

@@ -12,26 +12,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_01_ExecutiveProducer_PM.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk61_playtest_polish`
-- `wk62_architecture_cleanup_baseline`
-- `wk63_engine_boundary_cleanup`
-- `wk64_ai_contracts_and_system_runner`
-- `wk65_round0_deslop_foundation`
-- `wk66_round_a1_render_boundary`
-- `wk67_round_a2_ai_boundary`
+- `v1_6_0_release`
+- `wk134_llm_verification`
+- `wk135_inventory_ui`
+- `wk136_chat_hang_gpt5`
+- `v1_6_1_release`
+- `wk137_initial_goblin_wave`
+- `wk138_adventure_ledger_foundation`
 
-**Archived sprints:** 54
+**Archived sprints:** 124
 - `wk7-ui-polish`
 - `v1.3-visual-polish-journey-ai`
 - `wk6-audio-buildmenu-fogbounties-explorexp`
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `…`
-- `v16_r5_hud_perf_worldspace_ui`
-- `wk57_underground_vertical_stacking`
-- `wk58_ursina_entities_overload`
-- `wk59_lair_diagnostic`
-- `wk60_v159_gameplay_fun`
+- `wk130_sidebar_chat_ux`
+- `wk131_items_inventory`
+- `mythos_lag_fix`
+- `wk132_pois_roundout`
+- `wk133_quests_vertical_slice`
 
 ### 02 — GameDirector_ProductOwner
 
@@ -55,26 +55,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_03_TechnicalDirector_Architecture.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk58_ursina_entities_overload`
-- `wk60_v159_gameplay_fun`
-- `wk61_playtest_polish`
-- `wk62_architecture_cleanup_baseline` — Task D — FrameContext design + minimal implementation: Created game/presentation/frame_context.py with a @dataclass(slots=True) FrameContext holding snapshot (SimStateSnapshot) and game_state (dict). Static factory FrameContext.build(engine) constructs both once.; Modified EngineRenderCoordinator.render() to build FrameContext once at the top of the render pass and reuse ctx.snapshot / ctx.game_state throughout. Eliminated 2 redundant e.get_game_state() calls per frame (HUD render, debug panel render) and 1 conditional call (pause menu fallback). Previously the pygame render path called get_game_state() up to 3 times per frame; now it calls it exactly once via FrameContext.build().
-- `wk63_engine_boundary_cleanup`
-- `wk65_round0_deslop_foundation`
-- `wk66_round_a1_render_boundary`
+- `wk76_round_b2_engine_selection_facade`
+- `wk77_round_b2_input_handler_split`
+- `wk78_round_b2_engine_lifecycle_facade`
+- `wk86_round_b_worldgen_extract`
+- `wk133_quests_vertical_slice`
+- `wk137_initial_goblin_wave`
+- `wk138_adventure_ledger_foundation`
 
-**Archived sprints:** 48
+**Archived sprints:** 60
 - `wk33-terrain-lair-economy-prefabs`
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `…`
-- `wk53_world_beauty_terrain`
-- `v16_r5_hud_perf_worldspace_ui`
-- `wk57_underground_vertical_stacking`
-- `wk57-wave4-underground-camera-hotfix`
-- `wk59_lair_diagnostic`
+- `wk67_round_a2_ai_boundary`
+- `wk68_building_interaction_and_render_lastmile`
+- `wk69_round_b1_simengine_decomposition`
+- `wk71_round_b2_hero_mixin_split`
+- `wk75_round_b2_engine_actions_facade`
 
 ### 04 — NetworkingDeterminism_Lead
 
@@ -82,20 +82,21 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_04_NetworkingDeterminism_Lead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk9-sim-render-tests-ui` — PASS: no `pygame` imports in any entity files.; PASS: protocol-conforming systems remain deterministic (seeded RNG + sim-time usage).
 - `wk10-ai-behavior-refactor` — PASS: no `random` module usage and no wall-clock APIs in `ai/behaviors/`.; PASS: no inter-behavior imports/circular dependencies inside behavior modules.
 - `wk49_hero_profile_foundation`
 - `wk50_llm_context_direct_prompts`
 - `wk51_attachment_ux_phase3`
 - `wk63_engine_boundary_cleanup`
 - `wk64_ai_contracts_and_system_runner`
+- `wk68_building_interaction_and_render_lastmile`
 
-**Archived sprints:** 5
+**Archived sprints:** 6
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk66_round_a1_render_boundary`
 - `wk4-new-enemy-skeleton-archer`
 - `wk8-engine-entities-refactor`
+- `wk9-sim-render-tests-ui`
 
 ### 05 — GameplaySystemsDesigner
 
@@ -103,26 +104,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_05_GameplaySystemsDesigner.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk53_world_beauty_terrain`
-- `wk57_underground_vertical_stacking` — game/entities/hero.py: Added underground_area_id, underground_local_x, underground_local_z fields to Hero.__init__. Added begin_descent(area_id, entrance_x, entrance_y) and begin_ascent() transition methods.; game/systems/poi_interaction.py: Added _underground_areas and _sim_engine references to POIInteractionSystem.__init__. Replaced _handle_dungeon from flavor-text-only to full cave entry: triggers hero.begin_descent(), marks entrance chamber explored, reveals underground fog, spawns underground enemies. Added module-level _spawn_underground_enemies() function that instantiates enemies from chamber data at layer=-1.
-- `wk60_v159_gameplay_fun`
-- `wk61_playtest_polish` — TASK 1 — Wave counts 2x: game/systems/wave_events.py _WAVE_TABLE doubled all enemy counts (Goblin Raid 8, Wolf Pack 6+4, Skeleton Patrol 6+4, Spider Swarm 12+4, Bandit Ambush 6+4, Goblin Horde 16+4, Boss Wave 2+8); config.py EnemyConfig.max_alive_enemies 48→80.; TASK 2 — Food stand pacing: config.py HUNGER_INTERVAL_MS 120_000→60_000, FOOD_MEAL_COST_GOLD 10→5.
-- `wk61-playtest2-regressions` — ITEM 1 (CRITICAL) — Hero idle regression: Buildings now have is_alive (WK61-BUG-003), causing hasattr checks in bounty_pursuit.py and basic_ai.py to incorrectly treat building/lair targets as enemy targets. Fixed by excluding building_type targets from zone-distance chase abort (bounty_pursuit.py L558) and from range-to-fight checks (L571), and by ejecting non-lair building targets from FIGHTING state (basic_ai.py L364).; ITEM 2 — Guard HP halved: guard.py max_hp reduced from 80 to 40.
-- `wk64_ai_contracts_and_system_runner`
-- `wk65_round0_deslop_foundation`
+- `wk119_round_b_systemrunner_deadwiring` — 1. game/sim/system_runner.py: DELETED via `git rm` (staged, NOT committed). The whole dead module — SystemRunner dataclass + its never-called update_all(ctx, dt).; 2. game/sim_engine.py (~L44): removed the import line `from game.sim.system_runner import SystemRunner`.
+- `wk124_hero_kit_ai_and_ui_fixes` — config.py: added WIZARD_ATTACK_RANGE_TILES=4.5, WIZARD_SPELL_COLOR=(170,90,230), WIZARD_SPELL_SIZE_PX=4 (after HERO_SPEED); CLERIC_HEAL_RADIUS_TILES=4, CLERIC_HEAL_AMOUNT=8, CLERIC_HEAL_COOLDOWN_MS=2500, CLERIC_HEAL_MIN_TARGET_PCT=0.85; RANGER_GLOBAL_FRONTIER_STRIDE_TILES=8, RANGER_REROAM_COMMIT_MS=8000 (after the existing RANGER_FRONTIER_* block, for Agent 06 to READ).; game/entities/hero.py: (1) imported the 3 WIZARD_* consts; (2) attack_range branch -- added elif wizard: attack_range = TILE_SIZE * WIZARD_ATTACK_RANGE_TILES (ranger/melee branches untouched); (3) is_ranged_attacker = self.hero_class in ('ranger','wizard') (was ranger-only); (4) added self._heal_cooldown_until_ms = 0 near the attack-range init; (5) NEW method get_ranged_spec(self) returning kind=magic/color=WIZARD_SPELL_COLOR/size_px=WIZARD_SPELL_SIZE_PX for wizard ONLY, else None.
+- `wk131_items_inventory` — game/content/items.py (NEW): ItemDef dataclass (item_id,name,slot,rarity,buy/sell price,attack/defense/speed/max_hp,style,effect,flavor) + 22-item registry (10 weapons, 4 armor, 5 accessories, 3 consumables). to_shop_dict() reproduces the pre-WK131 hardcoded shop dicts byte-compatibly (same name/type/style/price/stats keys, plus an 'id' key); blacksmith_price = buy*0.6 reproduces all 6 legacy smith prices exactly. No RNG, no sim-time, no config.py edits.; game/systems/loot.py (NEW): LootSystem on a single get_rng('loot') stream (injectable). roll_enemy_drop: bosses (bandit_lord/demon_overlord) ALWAYS drop from rare+ pool; regular enemies 7% common drop. roll_poi_drop: 35% item chance in addition to gold, pool by tier (<=2 common, 3 uncommon, >=4 rare+). grant_item -> hero.receive_item. Constructing draws zero RNG; rolls only inside kill/interaction handlers.
+- `wk132_pois_roundout` — game/entities/poi.py: 5 new POIDefinitions (poi_mysterious_well 1x1 t2 uncommon 'well'; poi_ruined_outpost 3x3 t3 uncommon 'outpost' vision_radius=5; poi_windmill_ruin 2x2 t1 rare 'windmill' frontier-only; poi_ancient_ruins 5x5 t3 rare 'ruins'; poi_dragon_cave 3x3 t5 legendary 'boss' mountains/high). PointOfInterest gains grants_vision=False runtime flag (WK132).; game/systems/poi_interaction.py: 4 new handlers + dispatch entries. _handle_well: ONE interaction-stream draw picks gold 40% (tier-scaled randint) / item 25% (roll_poi_drop, miss pays 10*tier consolation gold) / 1-2 monsters 20% (shared poi_combat_triggered emitter) / reveal-nearest-undiscovered-POI 15% (unbounded cascade); one-time, depletes. _handle_outpost: phase 1 reuses the combat pipeline (tier-scaled, 10s retry cooldown); phase 2 claims when no living enemy is within 8 tiles of centre (via _sim_engine; clear when unwired) -> grants_vision=True permanent. _handle_windmill: one-time knowledge, fog reveal 8, no cascade, repair-quest transform explicitly deferred. _handle_ruins: fog reveal 15 + cascade-discover nearest + tier gold + roll_poi_drop(3)=uncommon pool; persistent landmark. _handle_boss: poi_dragon_cave -> Dragon. Behavior-preserving refactors: _cascade_discover_nearest + _emit_combat_spawn + module _tier_enemy_types factored out of knowledge/combat handlers (existing tests byte-green).
+- `wk133_quests_vertical_slice` — game/systems/quest.py: NEW QuestSystem.on_giver_destroyed(giver_id, event_bus) -- early-returns when not self.quests (digest guard); fails (reason='giver_destroyed', escrow consumed, QUEST_FAILED + HUD toast via existing _fail) every OPEN quest whose giver_id matches and accepted_by is None; SKIPS accepted quests (they survive and pay normally); prunes failed quests immediately so get_active_quests/view.quests stop carrying them the same tick.; game/systems/quest.py: QA gap 1 FIXED -- new raid_lair branch in update() calls _repin_idle_raider(quest, hero): an accepted raider that is HeroState.IDLE with target None AND fit (hp >= 60% max_hp) gets hero.target = lair + set_target_position(lair center) + state=MOVING. Never hijacks FIGHTING/RESTING/SHOPPING/RETREATING heroes or heroes carrying any target; wounded (<60%) idle raiders keep their normal retreat/rest cycle. Lazy HeroState import (no entity import cycle); no RNG; only reachable when quests exist (inside update's digest guard).
+- `wk137_initial_goblin_wave`
+- `wk138_adventure_ledger_foundation` — Added game/content/quest_chains.py with a declarative Relic of the Old Shrine chain definition (scout_location -> collect_item -> deliver_item), stable ids, and a gold reward profile. The relic is represented as authoritative quest facts rather than a live item object.; Added game/systems/quest_chain.py with QuestChainSystem and QuestChainInstance runtime state. State uses primitive facts/history only, resolves live targets from stable ids at tick time, archives completed/failed chains, and early-returns when no chains are live.
 
-**Archived sprints:** 22
+**Archived sprints:** 33
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk4-new-enemy-skeleton-archer`
 - `wk5-demolition-projectiles-workers`
 - `v1.3-visual-polish-journey-ai`
 - `…`
-- `wk44-stage2-dynamic-trees`
-- `wk45-stage2_5-sapling-spawning`
-- `wk46-stage3-lumberjack-builders`
-- `wk49_hero_profile_foundation`
-- `wk50_llm_context_direct_prompts`
+- `wk65_round0_deslop_foundation`
+- `wk70_round_c1_buildingdef_registry`
+- `wk72_round_c2_entity_dedup`
+- `wk73_round_b2_enemy_stats_table`
+- `wk114_round_b_zombie_building_purge`
 
 ### 06 — AIBehaviorDirector_LLM
 
@@ -130,19 +131,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_06_AIBehaviorDirector_LLM.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `v1.3-visual-polish-journey-ai` — Fixed bounty pursuit by reducing the minimum score gate so heroes accept bounties again.; Implemented Journey behavior triggered by recent shopping + full health, with class-specific routing.
-- `wk24-ui-and-renderer-polish`
-- `wk49_hero_profile_foundation` — docs/ai/hero_profile_llm_readiness.md: LLM readiness review — profile_to_dict suitability, storage vs prompt limits, merge strategy with ContextBuilder, missing fields before Phase 2 adapter.
-- `wk50_llm_context_direct_prompts` — ai/context_builder.py: When synthetic home guild is prepended to known_places_llm, use select_known_places_for_llm(..., limit=7) first so rows[:8] still seats home + priority POIs (inn, marketplace). WK50 R17 marketplace resolution now scans the same truncated known_llm_rows sent to prompts.; ai/providers/mock_provider.py: Inn phrase uses token-boundary regex so incidental substrings do not trigger go-to-inn paths.
-- `wk61_playtest_polish` — ai/basic_ai.py: hunger tick now runs for all heroes except RETREATING/DEAD (FIGHTING and RESTING included); healthy fighters can disengage to eat.; ai/behaviors/hunger.py: _CRITICAL_HP_FRACTION 0.25 -> 0.15 so heroes seek meals down to 15% HP.
-- `wk64_ai_contracts_and_system_runner`
-- `wk65_round0_deslop_foundation`
+- `wk124_hero_kit_ai_and_ui_fixes`
+- `wk127_midgame_idle_defend_pin` — T5 game/entities/hero_rest.py: 3 sites is_damaged -> is_under_attack (rest_at_building start-guard, update_resting pop-out, can_rest_at_home) — permanent chip damage no longer blocks resting at home forever nor ejects resting heroes; a FRESH hit (3s window) still does.; T6 tests/test_wk127_midgame_idle.py: test_damaged_castle_does_not_pin_heroes — pins the castle half of the r1 router fix (was regression-unprotected).
+- `wk132_pois_roundout`
+- `wk133_quests_vertical_slice`
+- `wk134_llm_verification`
+- `wk136_chat_hang_gpt5`
+- `wk138_adventure_ledger_foundation`
 
-**Archived sprints:** 4
+**Archived sprints:** 22
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk4-new-enemy-skeleton-archer`
 - `wk6-audio-buildmenu-fogbounties-explorexp`
+- `v1.3-visual-polish-journey-ai`
+- `…`
+- `wk84_round_d_zones_extract`
+- `wk85_round_d_handle_idle_split`
+- `wk110_round_b_ai_vocab`
+- `wk112_round_b_direct_prompt_validator`
+- `wk120_round_b_task_router_extract`
 
 ### 07 — ContentScenarioDirector
 
@@ -155,6 +163,7 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - `wk4-new-enemy-skeleton-archer` — WK4 r2_ack: Agent 07 consult-only; all locked Build A decisions are acceptable from content/readability/pacing perspective; Confirmed understanding: ranged-only, instant-hit, 80/20 spawn mix, manifest+placeholders, gates all align with wk4_r1 recommendations
 - `wk34-final-3d-model-pass-pre-v1-5`
 - `wk49_hero_profile_foundation` — Defined a future-facing hero memory event taxonomy (quests, narrative/story beats, relationships/social edges, LLM/long-term recall) constrained to WK49 MVP: four concrete MVP event_type strings aligned with roadmap Phase 7 and roadmap Phase 6, mapped to HeroMemoryEntry-style fields.; Clarified semantics and subject fields for MVP events: discovered_place, visited_building, bought_item, defeated_enemy (stable keys for Agent 03/05 contract wiring; no gameplay or persistence implementation in this round).
+- `wk133_quests_vertical_slice` — Fixed the PM-verified blocker from r1: BuildingFactory().create('herald_post', 10, 10) returned None because herald_post had no _CLASS_NAMES entry, so the placement action (game/engine_facades/actions.py:114 -> engine.building_factory.create) could not place it.; Mapping chosen: a concrete class is REQUIRED — no generic-Building option exists in the registry mechanism (the factory calls cls(grid_x, grid_y); base Building needs a third building_type arg, and _build_registry skips any key whose building_class_for() is None). Added a minimal HeraldPost(Building) subclass in game/entities/buildings/special.py (alongside Palace, the closest minimal precedent): __init__ only calls super().__init__(grid_x, grid_y, 'herald_post') — all size/cost/color metadata flows from BUILDING_DEFS via the base class.
 
 **Archived sprints:** 0
 
@@ -164,26 +173,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_08_UX_UI_Director.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk50_llm_context_direct_prompts` — game/ui/chat_panel.py: format_direct_prompt_hint() gates success copy on physical_committed; compact lines — Order applied, Redirected — safer option/path, Refused — …, Not applied — no action committed; chat-only remains no hint.; game/engine.py: _poll_conversation_response runs apply_validated_direct_prompt_physical before receive_response; passes physical_committed in direct_feedback.
-- `wk51_attachment_ux_phase3` — game/ui/hud.py: _render_pin_button now uses cached pygame.font.SysFont chain (segoeuiemoji / Segoe UI / Noto Color Emoji / arial) to render U+1F4CC pushpin emoji; pinned = full-alpha blit centered in pin_button_rect, unpinned = copy with alpha 128; fallback to existing circle+P if font missing or glyph width<=4.; Phase 4b screenshots: docs/screenshots/wk51_r7_pin_before (baseline from main hud) and docs/screenshots/wk51_r7_pin_after.
-- `wk52_attachment_phase3_radar_alerts_memorial` — BUG A+B game/ui/building_panel.py: render() accepts left_rect matching HUD `_layout_rects_for_screen`; panel_x/y/width/layout height from rect (no floating over map); `_fallback_left_rect` for callers without HUD.; game/engine_facades/render_coordinator.py: pass hud._last_left_rect into BuildingPanel.render.
-- `v16_r5_hud_perf_worldspace_ui` — game/graphics/ursina_renderer.py _sync_snapshot_heroes(): Added hero name label (UrsinaText, billboard, y=-0.6), hero gold display ($X or $X(+Y) when total_gold>0, gold-yellow HSV, y=-0.8), hero rest indicator ('Zzz' when state==RESTING, light blue, y=0.7 x=0.3). All three blocks placed AFTER Agent 09 health bar code (line ~1017) and BEFORE active_ids.add(obj_id) (line ~1067).; game/graphics/ursina_renderer.py _sync_snapshot_tax_collector(): Added tax collector carried_gold display ($N when carried>0, gold-yellow HSV, y=0.5). Placed AFTER billboard sync and BEFORE active_ids.add(obj_id).
-- `wk60_v159_gameplay_fun` — TASK 1 — WAVE WARNING HUD TOASTS: game/ui/hud.py: Added wave toast system (on_wave_incoming, on_wave_cleared, _render_wave_toast) — prominent centered banner with fade-in/out, countdown timer for incoming waves, gold-colored clear reward. game/engine.py: Subscribed to 'wave_incoming' and 'wave_cleared' EventBus events, routed to HUD via _on_wave_incoming_event and _on_wave_cleared_event handlers.; TASK 2 — GUILD N/8 DISPLAY: game/ui/building_renderers/guild_panel.py: Replaced 'Total Heroes: N' with 'Heroes: N/max_heroes' using building.heroes_hired and building.max_heroes attributes from HiringBuilding mixin. Text turns red when guild is at capacity.
-- `wk61_playtest_polish` — WK61-R11-BUG-005 game/ui/hud.py: main_solo split handle (8px hit) at bottom of unpinned hero/enemy/building column above minimap; _left_split_fracs['main_solo']; pointer down/move/up for main_solo drag; handle_click returns sidebar_split_drag on handle hit; chat-popup path keeps full column height (R9 regression guard).; tests/test_wk61_r11_sidebar_main_solo_handle.py: solo handle layout, drag fraction update, handle_click action, visible handle pixels.
-- `wk62_architecture_cleanup_baseline` — NEW game/ui/ui_actions.py: Typed UIAction(frozen dataclass, slots=True) with kind:str and payload:object|None; normalize_ui_action() converts legacy str/dict/None returns to UIAction or None.; NEW game/ui/hud_layout.py: HUDLayout(dataclass, slots=True) holding top_bar, bottom_bar, left_panel, right_panel, minimap, command_bar, speed_control, recall_button, memorial_button rects; HUDLayoutManager.compute() pure-geometry function from screen_w/h and theme metrics; authoritative LEFT_COL_W, RADAR_MINIMAP_H, RADAR_MINIMAP_W, RECALL_BTN_W, MEMORIAL_BTN_W constants.
+- `wk68_building_interaction_and_render_lastmile`
+- `wk130_sidebar_chat_ux` — game/ui/hud_layout.py: LEFT_COL_W 224->246 (RADAR_MINIMAP_W aliases it); HERO_MENU_CHAT_MIN_H 152->190; HERO_MENU_CHAT_PREFERRED_H 220->280; NEW HERO_MENU_CHAT_MAX_FRAC=0.45 (was inline 0.38 in hero_menu_chat_desired_h).; game/ui/hud_watch_card.py: WATCH_CARD_CHAT_H 150->190; derived WATCH_CARD_FULL_H_WITH_CHAT now 446 (NO_CHAT stays 236) via existing component-sum expressions.
+- `wk131_items_inventory` — game/ui/hero_panel.py: NEW module helpers format_gear_line(prefix,name,bonus) -> 'W: Iron Sword (+5)', format_accessory_mods(dict) -> '+2 atk, +2 def' (non-zero atk/def/spd/hp only), wrap_bag_names(names, max_chars=38, max_lines=3) word-wrap with ellipsis cap, fit_panel_line(font,text,max_w) pixel-true ellipsize (char-count truncation alone can overflow the 246px column with wide glyphs). _render_standard_hero Gear block now renders W/A lines WITH key stat, NEW 'Acc: <name> (<mods>)' line (Acc: None when empty), NEW 'Bag: n/cap' line + wrapped backpack names in font_tiny, +3px pad before the next divider when bag names render. Data: live hero dicts (hero.weapon/armor/accessory legacy dicts, hero.backpack ItemDefs, backpack_capacity) with HeroInventorySnapshot overrides when a profile is supplied (weapon_attack/armor_defense/accessory_name/backpack WK131 fields). All new lines go through TextLabel.render -> global text-surface cache (same dirty-gate pattern as the rest of the panel); content height flows through the existing last_content_height measure pass.; game/ui/hud_watch_card.py: render_hero_watch_card_infocard draws a compact 'Weapon / Armor' gear line (font_tiny, ellipsized to card width) in the stats-band slack under the XP bar, ONLY when it fits inside the existing stats_h allotment (it fits exactly: painted stats bottom 45px + 2 + 11px line = 58 = WATCH_CARD_STATS_COMPACT_H). Card height and ALL WATCH_CARD_* constants unchanged; chat band already absorbs a variable painted bottom via painted_stats_bottom_override, so the chat band starts below the gear line with no layout-constant change. Cached via (text,width) sig in hud._watch_gear_sig/_watch_gear_label_surf (dirty-gated, set via setattr - no hud.py edit).
+- `wk133_quests_vertical_slice`
+- `wk135_inventory_ui`
+- `wk135_quickfix_stray_tan_squares`
+- `wk138_adventure_ledger_foundation` — game/ui/quest_view_panel.py: added active quest-chain rendering to the existing board. It now pulls quest_chain snapshots from the sim/read-model, resolves assigned hero/reward/current phase, and renders chain status plus completed/current/upcoming phase labels. Full-size layouts show the chain card with the current objective; compact layouts now compress into a smaller title + summary/objective/timeline stack so the 1024x576 create modal stays readable without overlap.; tests/test_wk138_quest_chain_ui.py: NEW deterministic pygame fixture coverage for the active chain board, completed/failed outcomes, and compact small-row rendering. The tests also save proof PNGs under docs/screenshots/wk138_quest_chain_ui_panels.
 
-**Archived sprints:** 22
+**Archived sprints:** 43
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `wk6-audio-buildmenu-fogbounties-explorexp`
 - `…`
-- `wk20-ui-input-bridge`
-- `wk22-3d-refinement`
-- `wk24-ui-and-renderer-polish`
-- `wk38-refactor-stage3-gamecommands`
-- `wk49_hero_profile_foundation`
+- `wk52_attachment_phase3_radar_alerts_memorial`
+- `v16_r5_hud_perf_worldspace_ui`
+- `wk60_v159_gameplay_fun`
+- `wk61_playtest_polish`
+- `wk62_architecture_cleanup_baseline`
 
 ### 09 — ArtDirector_Pixel_Animation_VFX
 
@@ -191,26 +200,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_09_ArtDirector_Pixel_Animation_VFX.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk47_unit_instancing_core`
-- `wk48_hd2d_polish`
-- `v16_r5_hud_perf_worldspace_ui`
-- `tiny_rpg_sprite_rebuild`
-- `wk61_playtest_polish`
-- `wk62_architecture_cleanup_baseline`
-- `wk66_round_a1_render_boundary`
+- `wk118_round_b_ursina_app_frame`
+- `wk122_round_b_hud_upload_fullband`
+- `wk123_round_b_hud_upload_multiband`
+- `white_squares_unit_atlas_sampler_fix`
+- `wk124_hero_kit_ai_and_ui_fixes`
+- `wk133_quests_vertical_slice` — game/graphics/ursina_unit_sync.py: new QuestGiverRenderState NamedTuple + attach_quest_giver_states(snapshot, engine) (render-boundary export, see hook_point).; game/graphics/ursina_unit_sync.py sync_snapshot_quest_givers(): NPC body switched from the untextured herald-gold quad to the tax-collector atlas-UV billboard (PM-designated humanoid stand-in): r._sync_unit_atlas_billboard(ent, obj_id, qg, 'worker', 'tax_collector', ...) at PEASANT_SCALE_XZ/Y (the exact sync_snapshot_tax_collector call shape); QuestGiverRenderState carries no state/anim fields so base_clip_from_dto resolves to the looping 'idle' clip; Herald label now at TAX_COLLECTOR_SPEC.label_y/scale. Marker call (sync_quest_giver_marker(ent, qg.is_open)) + quest_giver:<giver_id> keying + underground gate + _OVERLAY_CHILD_ATTRS teardown all unchanged.
+- `wk126_urgent_font_cache_crash`
 
-**Archived sprints:** 22
+**Archived sprints:** 49
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `v1.3-visual-polish-journey-ai`
 - `…`
-- `wk32-inn-texture-polish`
-- `wk32-camera-construction-nature-polish`
-- `wk33-terrain-lair-economy-prefabs`
-- `ad_hoc-cleric-hero-pixel-sprites`
-- `orch_tiny_warrior_red`
+- `wk62_architecture_cleanup_baseline`
+- `wk66_round_a1_render_boundary`
+- `wk109_round_b_ursina_fog_overlay`
+- `wk117_round_b_ursina_app_ui_overlay`
+- `wk116_round_b_ursina_app_input`
 
 ### 10 — PerformanceStability_Lead
 
@@ -218,26 +227,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_10_PerformanceStability_Lead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk49_hero_profile_foundation`
-- `wk50_llm_context_direct_prompts`
-- `wk52_attachment_phase3_radar_alerts_memorial`
-- `v16_r5_hud_perf_worldspace_ui` — hud_texture_upload: avg=13.0-14.1ms P90=42.8-43.3ms max=48.0-60.8ms — P90 NOT below 15ms target; partial improvement from 49ms baseline.; ursina_renderer: avg=7.9-8.4ms P90=9.0-10.5ms max=22.8-24.6ms — within 12ms P90 budget.
 - `wk58_ursina_entities_overload`
 - `wk65_round0_deslop_foundation` — ursina_renderer.py: net -205 LOC (215 deletions / 10 doc-comment insertions). Deleted: _unit_anim_surface (dead), the unreachable underground render block + 2 orphaned helpers, _apply_poi_mystery_state (no-op) + all 3 call sites, 5 dead env-scale consts.; pygame_renderer.py: +5 LOC logging adoption only (import get_logger + module _log + log-on-swallow around vfx render; still swallows).
 - `wk66_round_a1_render_boundary`
+- `wk67_round_a2_ai_boundary`
+- `wk68_building_interaction_and_render_lastmile`
+- `wk125_paused_walltime_hero_freeze`
+- `wk137_initial_goblin_wave`
 
-**Archived sprints:** 20
+**Archived sprints:** 24
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `wk5-demolition-projectiles-workers`
 - `…`
-- `wk36-refactor-stage1-snapshot-decouple`
-- `wk37-refactor-stage2-simengine-presentation-split`
-- `wk41-mechanical-module-split`
-- `wk42-renderer-dedupe-wire-collabs`
 - `wk47_unit_instancing_core`
+- `wk49_hero_profile_foundation`
+- `wk50_llm_context_direct_prompts`
+- `wk52_attachment_phase3_radar_alerts_memorial`
+- `v16_r5_hud_perf_worldspace_ui`
 
 ### 11 — QA_TestEngineering_Lead
 
@@ -245,26 +254,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_11_QA_TestEngineering_Lead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk58_ursina_entities_overload`
-- `wk61_playtest_polish`
-- `wk62_architecture_cleanup_baseline`
-- `wk63_engine_boundary_cleanup`
-- `wk64_ai_contracts_and_system_runner`
-- `wk65_round0_deslop_foundation`
-- `wk66_round_a1_render_boundary`
+- `wk124_hero_kit_ai_and_ui_fixes`
+- `wk91_round_b_ursina_building_sync`
+- `wk121_round_b_watch_card_maximize_bug`
+- `wk131_items_inventory`
+- `wk133_quests_vertical_slice`
+- `wk137_initial_goblin_wave`
+- `wk138_adventure_ledger_foundation` — Verified WK138 end to end without any code edits; the existing quest-chain tests and QA gates already covered the sprint.; Captured and inspected the WK138 ui_panels screenshot set and confirmed the quest-chain board/modal are readable without overlap.
 
-**Archived sprints:** 42
+**Archived sprints:** 98
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `wk5-demolition-projectiles-workers`
 - `…`
-- `wk49_hero_profile_foundation`
-- `wk50_llm_context_direct_prompts`
-- `wk51_attachment_ux_phase3`
-- `wk52_attachment_phase3_radar_alerts_memorial`
-- `wk57_underground_vertical_stacking`
+- `wk110_round_b_ai_vocab`
+- `wk120_round_b_task_router_extract`
+- `wk118_round_b_ursina_app_frame`
+- `wk116_round_b_ursina_app_input`
+- `wk117_round_b_ursina_app_ui_overlay`
 
 ### 11_verify — QA_Verifier
 
@@ -282,20 +291,22 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_12_ToolsDevEx_Lead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `v1.3-visual-polish-journey-ai`
-- `wk8-engine-entities-refactor`
 - `wk9-sim-render-tests-ui`
 - `wk47_unit_instancing_core`
 - `wk61_playtest_polish`
 - `wk65_round0_deslop_foundation`
 - `tooling_roll_agent_logs_fix`
+- `wk67_round_a2_ai_boundary` — tools/screenshot_scenarios.py: added URSINA_CAPTURE_SCENARIOS entry 'ursina_melee_combat' (patch_path=tools/wk67_combat_capture_patch.py, default_ticks=480 (~8s warmup so terrain/models/shaders load before the grab; the held pose is tick-independent), default_out_subdir=wk67_combat, stem=ursina_melee_combat, env={KINGDOM_URSINA_REVEAL_ON_START=1, KINGDOM_URSINA_EDITORCAMERA=0, KINGDOM_URSINA_CAM_FOCUS_BUILDING_TYPE=castle, KINGDOM_URSINA_CAM_FOCUS_SPAN=16}).; tools/screenshot_scenarios.py: added scenario_ursina_melee_combat(engine, *, seed) builder (pygame Shot path, mirrors the Ursina patch: warrior hero + goblin adjacent near the castle, hero FIGHTING+target=enemy, _force_strike apply hook stamps attack/hurt one-shot triggers) and registered it in the get_scenario if-ladder (after wk61_hero_menu_chat).
+- `wk124_hero_kit_ai_and_ui_fixes`
 
-**Archived sprints:** 5
+**Archived sprints:** 7
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `wk5-demolition-projectiles-workers`
+- `v1.3-visual-polish-journey-ai`
+- `wk8-engine-entities-refactor`
 
 ### 13 — SteamRelease_Ops_Marketing
 
@@ -303,15 +314,16 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_13_SteamRelease_Ops_Marketing.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk1-broad-sweep-midweek-endweek` — Build A: player-facing clarity (hero intent + last decision) and bounty legibility (responders + attractiveness).; Build B: early pacing guardrail + balance polish + stability/perf pass and expanded smoke coverage.
 - `wk2-hero-polish-ai-sprites` — Prepared WK2 Build A/B patch-note scaffolds: Build A = hero AI jank fixes; Build B = 4-class sprite animations.; Release-facing gate: publish only verified bullets after deterministic repro + `python tools/qa_smoke.py --quick` and manual smoke are green.
 - `wk3-ui-polish-1080p-pixelart` — Updated WK3 Build B patch notes draft with closeout-required sections: UI polish highlights, snapshot/gallery commands, and concrete credits bullets.; Verified attribution packaging: every pack under assets/third_party is listed in assets/ATTRIBUTION and includes LICENSE/README files.
 - `wk4-new-enemy-skeleton-archer` — Context re-ACK complete: confirmed understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn mix, pipeline completeness, gates).; Role-specific deliverables: patch notes drafts (gated by QA), attribution compliance (if needed), release checklist alignment.
 - `wk7-ui-polish` — Assigned to attribution proof for the CC0 UI art pack.; Blocked pending Agent 09's UI pack selection and source/license URLs.
 - `wk41-mechanical-module-split` — CHANGELOG.md — added subsection **WK41 — Mechanical module split** under Prototype v1.5.1 (player-facing + dev-oriented bullets; no new version number).
 - `wk58_ursina_entities_overload`
+- `v1_6_1_release`
 
-**Archived sprints:** 0
+**Archived sprints:** 1
+- `wk1-broad-sweep-midweek-endweek`
 
 ### 14 — SoundDirector_Audio
 
@@ -321,6 +333,7 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 **Rolling sprints (most recent kept):**
 - `wk65_round0_deslop_foundation` — Grep-confirmed AudioSystem.emit_from_events was dead: zero call sites across game/ ai/ tools/ tests/. The only audio_system.py hit was the definition (line 234); rg "\.emit_from_events\(" returned zero call sites anywhere.; VFXSystem.emit_from_events (game/graphics/vfx.py:66,79) is a DIFFERENT class and was NOT touched.
 - `wk6-audio-buildmenu-fogbounties-explorexp` — Final Build A file list: 6 SFX files (build, bounty, weapons) + 1 ambient loop (day_loop.ogg), single files per event.; Event → sound key mapping aligned to Agent 03 contract: building_placed → build_place, ranged_projectile → ranger_shot/skeleton_archer_shot.
+- `wk79_round_c_audio_split`
 
 **Archived sprints:** 0
 
@@ -330,14 +343,16 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_15_ModelAssembler_KitbashLead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk31-perf-fps-and-pack-scale` — assets/prefabs/buildings/inn_v2.json — watermill-wide-fantasy-town + cart + stall-bench + fence + planks (5 pieces); FT-only attribution.; assets/prefabs/buildings/farm_v2.json — windmill-fantasy-town.glb single hero (1 piece).
-- `wk30-buildings-pipeline` — assets/prefabs/buildings/castle_v1.json — Jaimie kitbashed interactively (20 pieces, 4 corner towers, fortified perimeter with central gate). Agent 15 post-save: trimmed coarse attribution from [retro-fantasy-kit, survival-kit] to [retro-fantasy-kit] (no Survival pieces placed).; assets/prefabs/buildings/warrior_guild_v1.json — Agent 15 hand-authored (8 pieces). 2x2 painted-plaster armory with high-pitched gable roof. Reference kit for Ranger/Rogue palette swaps.
 - `wk29-first-house-playtest` — assets/prefabs/buildings/peasant_house_small_v1.json — kitbashed by Jaimie in tools/model_assembler_kenney.py; 2 Retro Fantasy pieces (wall-door.glb at base, roof.glb lifted +1.0 on Y); saved and round-trip confirmed by reopening with --open.; assets/prefabs/buildings/peasant_house_small_v1.json — Agent 15 hand-trimmed attribution from ['kenney_retro-fantasy-kit','kenney_survival-kit'] (coarse auto-inference) down to ['kenney_retro-fantasy-kit'] only, since neither piece comes from the Survival kit.
 - `wk28-assembler-spike` — Log only — no new prefab files this round.
 - `wk34-final-3d-model-pass-pre-v1-5` — Regenerated assets/prefabs/buildings/temple_build_20_v1.json and temple_build_50_v1.json from current temple_v1.json (14 plinth+road+hedge+obelisk; 29 = full wall shell without roof or temple_frame_quad overlays).
 - `wk43-building-nature-stage1` — assets/prefabs/buildings/food_stand_build_20_v1.json — 20% stage (plot pad + crate + shovel) for a clear under-construction read.; assets/prefabs/buildings/food_stand_build_50_v1.json — 50% stage (stall-fantasy-town) with the same wood stall texture override as the completed Food Stand.
 - `wk46-stage3-lumberjack-builders` — assets/models/environment/log_stackLarge.glb — copied from Kenney Nature Kit raw downloads into runtime-resolved environment path (do not reference raw folders at runtime).
+- `wk132_pois_roundout` — game/content/buildings.py — OUT-OF-LANE BUT REQUIRED: added the 5 WK132 POI BuildingDefs (sizes mirror POI_DEFINITIONS: well 1x1, outpost 3x3, windmill 2x2, ruins 5x5, dragon cave 3x3; is_poi=True, cost/occupants 0). Without this no prefab-side change could fix the renders.; tests/test_wk70_building_registry.py — updated the snapshot-equality literals for the 5 new POIs (COSTS/SIZES/COLORS/MAX_OCCUPANTS + POIS set + counts 34->39 / 39->44 / 12->17 POIs).
+- `wk133_quests_vertical_slice` — assets/prefabs/buildings/herald_post_v1.json — NEW, 7 pieces, footprint [2,2] matching BUILDING_DEFS herald_post (2,2); building_type herald_post resolves via the default {bts}_v1.json rule in game/graphics/ursina_prefabs.py (no renderer edits needed).
 
-**Archived sprints:** 2
+**Archived sprints:** 4
 - `wk33-terrain-lair-economy-prefabs`
 - `wk32-camera-construction-nature-polish`
+- `wk31-perf-fps-and-pack-scale`
+- `wk30-buildings-pipeline`

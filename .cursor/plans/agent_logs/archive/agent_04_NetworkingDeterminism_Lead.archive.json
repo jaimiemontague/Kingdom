@@ -701,6 +701,131 @@
           }
         }
       }
+    },
+    "wk9-sim-render-tests-ui": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk9_sim-render_tests_ui_8f93dd8e.plan.md",
+        "notes": "WK9 final determinism verification for sim/render separation, protocol adoption, and renderer architecture."
+      },
+      "rounds": {
+        "wk9_r2_verification": {
+          "sprint_id": "wk9-sim-render-tests-ui",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk9_sim-render_tests_ui_8f93dd8e.plan.md",
+            "notes": "Final verification round."
+          },
+          "round_id": "wk9_r2_verification",
+          "round_meta": {
+            "prompt_set_id": "wk9_final_verification_r2_v1",
+            "build_target": "verification",
+            "sent_at_local": "2026-02-18T08:57:50.1534915-07:00"
+          },
+          "prompt_text": "Confirm sim boundary cleanliness after renderer split, audit renderer side effects, verify deterministic registry/system behavior, and run determinism guard.",
+          "response": {
+            "received_at_local": "2026-02-18T08:57:50.1534915-07:00",
+            "status": "complete_with_findings",
+            "raw": "Agent 04 WK9 verification complete. Entity sim boundary is clean: no `pygame` imports remain under `game/entities/`. Protocol-conforming systems (`CombatSystem`, `BuffSystem`, `BountySystem`, `LairSystem`, `NeutralBuildingSystem`, `EnemySpawner`) remain determinism-safe (sim time wrappers and seeded RNG streams used where randomness exists). RendererRegistry lookup is deterministic (`id(entity)` key + dict get, no set-iteration decision paths). Determinism gate passed. However, two sim/render boundary regressions were found in renderer code: (1) renderer animation updates mutate entity simulation objects by clearing `_render_anim_trigger`; (2) `BountyRenderer` writes UI cache surfaces/metadata back onto bounty simulation objects. These are boundary leaks even though deterministic guard passes.",
+            "summary_bullets": [
+              "PASS: no `pygame` imports in any entity files.",
+              "PASS: protocol-conforming systems remain deterministic (seeded RNG + sim-time usage).",
+              "PASS: RendererRegistry keying/lookup path is deterministic.",
+              "PASS: `python tools/determinism_guard.py`.",
+              "FINDINGS: renderer layer mutates simulation objects (entity trigger reset and bounty UI cache writes)."
+            ],
+            "proposed_changes": [
+              "Move `_render_anim_trigger` consumption into renderer-owned state map keyed by entity id (do not mutate entity objects).",
+              "Move bounty text/cache surfaces into `BountyRenderer` internal cache keyed by bounty id/object id (do not set attrs on bounty objects)."
+            ],
+            "acceptance_criteria": [
+              "No renderer writes to simulation objects during render/update_animation.",
+              "Entity files remain `pygame`-free.",
+              "Protocol systems keep deterministic time/RNG behavior.",
+              "`python tools/determinism_guard.py` passes."
+            ],
+            "risks": [
+              "Render-loop side effects can couple visual frame cadence to simulation object mutation, undermining strict sim/render separation."
+            ],
+            "dependencies": [
+              "Agent 03/09 to address renderer side-effect regressions in `game/graphics/renderers/`."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "File and prioritize boundary-fix patch before treating WK9 sim/render separation as complete.",
+              "After fix, re-run determinism audit and QA smoke gate."
+            ],
+            "agent_fields": {
+              "status": "FAIL_FINDINGS",
+              "what_i_changed": [
+                "Verification-only; no code changes made."
+              ],
+              "bugs_found": [
+                {
+                  "id": "WK9-BUG-DET-001",
+                  "title": "Renderer mutates entity sim trigger field",
+                  "severity": "major",
+                  "what_broke": "Render-layer animation update clears `_render_anim_trigger` on entity objects, creating sim object writes from render code.",
+                  "causing_files": [
+                    "game/graphics/renderers/hero_renderer.py",
+                    "game/graphics/renderers/enemy_renderer.py",
+                    "game/graphics/renderers/worker_renderer.py"
+                  ],
+                  "repro_steps": [
+                    "Create a live entity with `_render_anim_trigger` set (e.g., via combat one-shot).",
+                    "Call `RendererRegistry.update_animations(dt, ...)`.",
+                    "Observe `_render_anim_trigger` becomes `None` from renderer code path."
+                  ]
+                },
+                {
+                  "id": "WK9-BUG-DET-002",
+                  "title": "BountyRenderer writes UI cache onto sim bounty objects",
+                  "severity": "major",
+                  "what_broke": "Renderer caches are stored by `setattr` on bounty objects (`_ui_cache_*`), causing render-side writes to simulation-domain objects.",
+                  "causing_files": [
+                    "game/graphics/renderers/bounty_renderer.py"
+                  ],
+                  "repro_steps": [
+                    "Create an unclaimed bounty object with reward/tier values.",
+                    "Call `BountyRenderer.render_bounty(surface, bounty, camera_offset)` once.",
+                    "Inspect bounty object and confirm `_ui_cache_*` attributes were added/updated by renderer."
+                  ]
+                }
+              ],
+              "evidence": {
+                "determinism_guard": {
+                  "command": "python tools/determinism_guard.py",
+                  "exit_code": 0,
+                  "result": "PASS"
+                },
+                "determinism_guard_targeted": {
+                  "command": "python tools/determinism_guard.py --paths game/graphics/renderers game/systems/bounty.py game/systems/lairs.py game/systems/neutral_buildings.py game/systems/spawner.py game/systems/combat.py game/systems/buffs.py",
+                  "exit_code": 0,
+                  "result": "PASS"
+                },
+                "entity_pygame_import_scan": {
+                  "command": "rg '^\\s*(import\\s+pygame|from\\s+pygame\\s+import)' game/entities",
+                  "result": "No matches found"
+                },
+                "reviewed_files": [
+                  "game/graphics/renderers/__init__.py",
+                  "game/graphics/renderers/registry.py",
+                  "game/graphics/renderers/hero_renderer.py",
+                  "game/graphics/renderers/enemy_renderer.py",
+                  "game/graphics/renderers/building_renderer.py",
+                  "game/graphics/renderers/worker_renderer.py",
+                  "game/graphics/renderers/bounty_renderer.py",
+                  "game/systems/combat.py",
+                  "game/systems/buffs.py",
+                  "game/systems/bounty.py",
+                  "game/systems/lairs.py",
+                  "game/systems/neutral_buildings.py",
+                  "game/systems/spawner.py",
+                  "game/systems/protocol.py"
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

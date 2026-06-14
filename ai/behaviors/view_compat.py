@@ -99,6 +99,10 @@ class _DictGameStateView:
         return []
 
     @property
+    def quest_chains(self):
+        return self._gs.get("quest_chains", []) or []
+
+    @property
     def castle(self):
         return self._gs.get("castle")
 
@@ -133,6 +137,7 @@ def view_to_legacy_context(view: Any) -> dict:
         "heroes": view.heroes,
         "bounties": view.bounties,
         "pois": view.pois,
+        "quest_chains": getattr(view, "quest_chains", ()) or (),
         "gold": view.player_gold,
         "castle": view.castle,
         "micro_view_building": None,

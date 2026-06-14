@@ -1,1682 +1,1396 @@
 {
- "schema_version": "2.0",
- "agent": {
-  "id": "12",
-  "name": "ToolsDevEx_Lead"
- },
- "notes": [
-  "This file is owned by Agent 12 only.",
-  "Structure nests rounds inside sprints to keep history organized."
- ],
- "sprints": {
-  "v1.3-visual-polish-journey-ai": {
-   "sprint_meta": {
-    "plan_ref": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
-    "notes": "v1.3 execution: visual polish + Journey AI"
-   },
-   "rounds": {
-    "v1.3_r1_execution_and_polish": {
-     "round_id": "v1.3_r1_execution_and_polish",
-     "status": "done",
-     "what_i_changed": {
-      "files": [
-       "tools/screenshot_scenarios.py"
-      ],
-      "summary": "Added a v1.3 UI polish capture scenario (ui_polish_after / v1.3_after) that aggregates base overview, UI panels, pause menu, and build catalog shots for deterministic before/after comparisons."
-     },
-     "how_to_test": [
-      "python tools/qa_smoke.py --quick",
-      "python tools/validate_assets.py --strict --check-attribution",
-      "python tools/capture_screenshots.py --scenario ui_polish_after --seed 3 --out docs/screenshots/v1.3_after/ui_polish_after_seed3 --size 1920x1080 --ticks 0"
-     ],
-     "evidence": {
-      "qa_smoke": {
-       "command": "python tools/qa_smoke.py --quick",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "qa_smoke DONE: PASS (see agent-tools/5680da9e-abf2-42bb-99c2-b3649d5ed980.txt)"
+  "schema_version": "2.0",
+  "agent": {
+    "id": "12",
+    "name": "ToolsDevEx_Lead"
+  },
+  "notes": [
+    "This file is owned by Agent 12 only.",
+    "Structure nests rounds inside sprints to keep history organized."
+  ],
+  "sprints": {
+    "wk9-sim-render-tests-ui": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk9_sim-render_tests_ui_8f93dd8e.plan.md",
+        "notes": "WK9 final verification and pytest gate integration."
       },
-      "validate_assets": {
-       "command": "python tools/validate_assets.py --strict --check-attribution",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "No output (strict validation completed successfully)."
+      "rounds": {
+        "wk9_r2_verification": {
+          "round_id": "wk9_r2_verification",
+          "status": "done",
+          "what_i_changed": {
+            "files": [
+              "tools/qa_smoke.py"
+            ],
+            "summary": "Integrated pytest into the mandatory quick QA gate and re-verified tooling under WK9 sim/render separation.",
+            "details": [
+              "Added a pytest stage to `qa_smoke --quick` using `python -m pytest tests/`.",
+              "Made pytest mandatory in quick mode: nonzero pytest exit fails the gate.",
+              "Added explicit failure when `tests/` is missing to keep the unit-test gate enforceable."
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python tools/determinism_guard.py",
+            "python -c \"import tools.observe_sync, tools.qa_smoke, tools.determinism_guard, tools.capture_screenshots; print('tools_import_ok')\"",
+            "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk9_tooling_verify/base_overview_seed3 --size 1280x720 --ticks 0"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "Quick gate now includes pytest. Output shows `pytest (unit tests)` stage and `29 passed` before profile runs."
+            },
+            "pytest_via_gate": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "Executed inside qa_smoke quick; 29 tests passed in 0.15s."
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "[validate_assets] SUMMARY errors=0 warns=0"
+            },
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "[determinism_guard] PASS: no violations found"
+            },
+            "tool_imports": {
+              "command": "python -c \"import tools.observe_sync, tools.qa_smoke, tools.determinism_guard, tools.capture_screenshots; print('tools_import_ok')\"",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "All core tooling modules import successfully with WK9 renderer structure."
+            },
+            "capture_screenshots": {
+              "command": "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk9_tooling_verify/base_overview_seed3 --size 1280x720 --ticks 0",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "Capture runner executed successfully and wrote manifest + 4 PNG outputs."
+            }
+          },
+          "bugs_found": [],
+          "blockers": []
+        }
       }
-     },
-     "blockers": []
     },
-    "v1.3_r3_visual_polish_pass_2": {
-     "round_id": "v1.3_r3_visual_polish_pass_2",
-     "status": "done",
-     "what_i_changed": {
-      "files": [
-       "tools/screenshot_scenarios.py"
-      ],
-      "summary": "Added deterministic terrain/trees focus capture scenario (world_variation / terrain_variety) and kept ui_polish_after as the primary UI polish set for pass 2."
-     },
-     "how_to_test": [
-      "python tools/qa_smoke.py --quick",
-      "python tools/validate_assets.py --strict --check-attribution",
-      "python tools/capture_screenshots.py --scenario ui_polish_after --seed 3 --out docs/screenshots/v1.3.0_after/ui_polish_after_seed3 --size 1920x1080 --ticks 0",
-      "python tools/capture_screenshots.py --scenario world_variation --seed 3 --out docs/screenshots/v1.3.0_after/world_variation_seed3 --size 1920x1080 --ticks 0"
-     ],
-     "evidence": {
-      "qa_smoke": {
-       "command": "python tools/qa_smoke.py --quick",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "qa_smoke DONE: PASS (see agent-tools/9a48024b-ef20-47f1-a18c-126cc8a82977.txt)"
+    "wk47_unit_instancing_core": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/unit_instancing_master_plan_09d73f6a.plan.md",
+        "notes": "WK47 R1 baseline atlas + Ursina perf stress harness"
       },
-      "validate_assets": {
-       "command": "python tools/validate_assets.py --strict --check-attribution",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "No output (strict validation completed successfully)."
-      },
-      "screenshots": {
-       "status": "not_captured",
-       "notes": "Scenario commands documented for QA/PM capture."
+      "rounds": {
+        "wk47_r1_baseline_atlas": {
+          "sprint_id": "wk47_unit_instancing_core",
+          "round_id": "wk47_r1_baseline_atlas",
+          "status": "done",
+          "what_i_changed": "Added tools/perf_stress_test.py: SimEngine populates warrior guild + N/2 warriors + N/2 goblins; Ursina boots with application.asset_folder forced to repo root; frames are driven via Ursina app.run() + __main__.update timing UrsinaRenderer.update(build_snapshot()) per frame (matches game loop). Prints avg/min/max ms, avg FPS, 1% low FPS (worst 1% frame-time mean), p99 ms; writes tools/perf_stress_baseline_wk47.json (last_run + rolling history). Default --warmup 30.",
+          "commands_run": [
+            {
+              "command": "python tools/perf_stress_test.py --units 200 --frames 300",
+              "exit_code": 0
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "perf_stress_sample": {
+              "command": "python tools/perf_stress_test.py --units 200 --frames 300",
+              "exit_code": 0,
+              "note": "Representative baseline on dev machine (see tools/perf_stress_baseline_wk47.json last_run)."
+            }
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Agent 10 (WK47 validation round): run perf_stress_test at 200/500/1000 units with instancing on/off per PM hub."
+          ]
+        }
       }
-     },
-     "blockers": []
     },
-    "v1.3_r5_extension_mid_sprint": {
-     "round_id": "v1.3_r5_extension_mid_sprint",
-     "status": "done",
-     "what_i_changed": {
-      "files": [
-       "tools/screenshot_scenarios.py"
-      ],
-      "summary": "Added deterministic capture scenario for the Audio page (3 sliders) and Blacksmith panel: scenario `ui_audio_blacksmith` (alias `v1_3_audio_blacksmith`)."
-     },
-     "how_to_test": [
-      "python tools/qa_smoke.py --quick",
-      "python tools/validate_assets.py --strict --check-attribution",
-      "python tools/capture_screenshots.py --scenario ui_audio_blacksmith --seed 3 --out docs/screenshots/v1.3.0_after/ui_audio_blacksmith_seed3 --size 1920x1080 --ticks 0"
-     ],
-     "evidence": {
-      "qa_smoke": {
-       "command": "python tools/qa_smoke.py --quick",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "qa_smoke DONE: PASS (see agent-tools/3269630a-47b4-49ef-acce-f1a4ba80ca61.txt)"
+    "wk61_playtest_polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk61_playtest_polish.plan.md",
+        "notes": "WK61 playtest polish — Agent 12 owns Ursina capture scenarios for hold-G tax overlay evidence."
       },
-      "validate_assets": {
-       "command": "python tools/validate_assets.py --strict --check-attribution",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "No output (strict validation completed successfully)."
-      },
-      "screenshots": {
-       "status": "not_captured",
-       "notes": "Scenario command documented for QA/PM capture."
+      "rounds": {
+        "wk61_r10_v159_economy_pacing_ux": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r10_v159_economy_pacing_ux",
+          "round_meta": {
+            "wave": 2,
+            "build_target": "hold-G tax overlay Ursina capture scenario for Agent 11 sign-off",
+            "plan_ref": ".cursor/plans/wk61_r10_v1.5.9_9ecaca05.plan.md"
+          },
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Added WK61 R10 hold-G Ursina capture tooling: patch seeds tax gold + forces G held (clone of R7), screenshot_scenarios entry wk61_hold_g_tax_overlay with WK60 starting buildings, and run_ursina_capture_once.py --scenario/--ticks/--out wiring.",
+            "files_created": [
+              "tools/wk61_r10_capture_patch.py"
+            ],
+            "files_modified": [
+              "tools/screenshot_scenarios.py",
+              "tools/run_ursina_capture_once.py"
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "notes": "PASS"
+            },
+            {
+              "cmd": "python tools/run_ursina_capture_once.py --scenario wk61_hold_g_tax_overlay --ticks 5400 --out docs/screenshots/wk61_r10_hold_g",
+              "exit_code": 0,
+              "notes": "PNG saved; patch seeded tax on house, marketplace, ranger_guild, rogue_guild, warrior_guild, wizard_guild"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json",
+              "exit_code": 0,
+              "notes": "Log JSON validated"
+            }
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "ursina_capture": {
+              "command": "python tools/run_ursina_capture_once.py --scenario wk61_hold_g_tax_overlay --ticks 5400 --out docs/screenshots/wk61_r10_hold_g",
+              "exit_code": 0,
+              "png": "docs/screenshots/wk61_r10_hold_g/hold_g_tax_overlay_20260523_134524_910.png",
+              "seeded_tax_types": [
+                "house",
+                "marketplace",
+                "ranger_guild",
+                "rogue_guild",
+                "warrior_guild",
+                "wizard_guild"
+              ],
+              "visual_note": "Wide overview capture; Agent 11 should confirm multiple building dollar labels visible (Agent 03 overlay may need zoom or camera framing if absent)."
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11: inspect docs/screenshots/wk61_r10_hold_g/ for multiple building dollar labels (including dollar-zero acceptable per R10 spec)",
+            "If labels not visible in capture PNG, consult Agent 03 on overlay sync timing or camera zoom for scenario"
+          ]
+        }
       }
-     },
-     "blockers": []
     },
-    "infra_agent12_onboarding_rule": {
-     "round_id": "infra_agent12_onboarding_rule",
-     "status": "done",
-     "what_i_changed": {
-      "files": [
-       ".cursor/rules/09-agent12-toolsdevex-onboarding.mdc"
-      ],
-      "summary": "Created Agent 12 role-specific onboarding rule file. Covers: who I am, file ownership, all tool commands + flags (qa_smoke, validate_assets, observe_sync scenarios, capture_screenshots, build_gallery, generate_cc0_placeholders, agent_log_synthesis), manifest contract, attribution contract, sprint history summary (WK1–WK7 + post-WK7), Studio Gateway orientation, and common mistakes to avoid."
-     },
-     "how_to_test": [
-      "Read .cursor/rules/09-agent12-toolsdevex-onboarding.mdc and confirm it is accurate",
-      "python tools/qa_smoke.py --quick",
-      "python tools/validate_assets.py --strict --check-attribution"
-     ],
-     "evidence": {
-      "qa_smoke": {
-       "command": "python tools/qa_smoke.py --quick",
-       "exit_code": 0,
-       "status": "PASS"
+    "wk65_round0_deslop_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md",
+        "notes": "WK65 Round 0 de-slop foundation. Agent 12 Wave-0: QA tool-correctness fixes (determinism_guard 3 fixes + observe_sync dual-clock) + pinning tests. Wave-2 hygiene is a later activation."
       },
-      "validate_assets": {
-       "command": "python tools/validate_assets.py --strict --check-attribution",
-       "exit_code": 0,
-       "status": "PASS"
+      "rounds": {
+        "wk65_w2_deletion_hygiene": {
+          "sprint_id": "wk65_round0_deslop_foundation",
+          "round_id": "wk65_w2_deletion_hygiene",
+          "status": "done",
+          "pm_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md -> 'Agent 12 (ToolsDevEx) — repo hygiene' (Wave 2)",
+          "wave": "W2",
+          "prompt_text": "Wave 2 repo hygiene: (1) archive dead one-off tools/ scripts to tools/archive/ after grep-confirming zero live references; (2) resolve the .claude/worktrees/ shadow copy only if stale/clean/non-main. Scoped verify (test_wk65_tooling.py + git status). DO NOT COMMIT. Touch only tools/** and the .claude/worktrees/ removal.",
+          "what_i_changed": [
+            "Task 1: git mv 11 confirmed-dead one-off tools/ scripts into tools/archive/ (moves staged, NOT committed): 4x patch_*.py + 7x update_pm_hub_wk*.py.",
+            "Task 2: removed the stale, clean, non-main worktree .claude/worktrees/quirky-roentgen-e15808 (git worktree remove succeeded logically; OneDrive file-lock required a follow-up git worktree prune + rm -rf to clear the physical dir and .git/worktrees/ metadata, which then succeeded on retry). .claude/worktrees/ is now empty and the worktree is gone from `git worktree list`.",
+            "Did NOT touch determinism_guard.py / observe_sync.py (Wave 0 already done). Did NOT touch any non-tools/ file. Did NOT archive tools/wk61_r10_capture_patch.py because it has a LIVE caller (see below)."
+          ],
+          "task1_scripts_archived": {
+            "method": "For each candidate: rg -n \"<scriptname_without_ext>\" game ai tools tests .cursor (ignoring the file itself + .cursor/plans/agent_logs/ historical entries). Archived only those with ZERO live references. Also ran a repo-root-wide rg excluding the scripts themselves + agent_logs = zero hits; no .github/workflows CI exists.",
+            "archived_count": 11,
+            "archived_list": [
+              "tools/patch_hero_id.py -> tools/archive/patch_hero_id.py  (grep-confirm: zero references in game ai tools tests .cursor)",
+              "tools/patch_ai_use_hero_id.py -> tools/archive/patch_ai_use_hero_id.py  (grep-confirm: zero references)",
+              "tools/patch_enemy_attackers.py -> tools/archive/patch_enemy_attackers.py  (grep-confirm: zero references)",
+              "tools/patch_combat_attackers.py -> tools/archive/patch_combat_attackers.py  (grep-confirm: zero references)",
+              "tools/update_pm_hub_wk51.py -> tools/archive/update_pm_hub_wk51.py  (grep-confirm: zero references)",
+              "tools/update_pm_hub_wk50_hotfix.py -> tools/archive/update_pm_hub_wk50_hotfix.py  (grep-confirm: zero references)",
+              "tools/update_pm_hub_wk50_r14.py -> tools/archive/update_pm_hub_wk50_r14.py  (grep-confirm: zero references)",
+              "tools/update_pm_hub_wk50_r15.py -> tools/archive/update_pm_hub_wk50_r15.py  (grep-confirm: zero references)",
+              "tools/update_pm_hub_wk50_r16.py -> tools/archive/update_pm_hub_wk50_r16.py  (grep-confirm: zero references)",
+              "tools/update_pm_hub_wk50_r17.py -> tools/archive/update_pm_hub_wk50_r17.py  (grep-confirm: zero references)",
+              "tools/update_pm_hub_wk50_r18.py -> tools/archive/update_pm_hub_wk50_r18.py  (grep-confirm: zero references)"
+            ],
+            "candidates_left_in_place": [
+              "tools/wk61_r10_capture_patch.py -- LEFT (NOT archived): it is a LIVE one-off capture patch. grep-confirm shows it referenced as 'patch_path': 'tools/wk61_r10_capture_patch.py' in tools/screenshot_scenarios.py:1366 (scenario 'wk61_hold_g_tax_overlay'), and tools/run_ursina_capture_once.py reads that patch_path (line 169), asserts patch_path.is_file() (line 230), and dynamically imports+executes it via importlib.util.spec_from_file_location (lines 55-56, 234). Archiving would break the wk61_hold_g_tax_overlay Ursina capture scenario at runtime. Per Critical Design Rule #1 (zero live callers required), left in place."
+            ],
+            "archive_dir_note": "tools/archive/ already existed and is git-tracked (previously held tools/archive/root_wk40_stage5/**); the 11 new files land directly under tools/archive/."
+          },
+          "task2_worktree_outcome": {
+            "result": "REMOVED",
+            "target": ".claude/worktrees/quirky-roentgen-e15808",
+            "pre_checks": "git worktree list -> it was a separate worktree on branch claude/quirky-roentgen-e15808 at ca92e3e, NOT the main checkout (main = the OneDrive path at 5d20445) and NOT the active checkout. git -C <wt> status -> 'nothing to commit, working tree clean' (behind origin/main by 117 commits, fast-forwardable). => stale + clean + non-main => safe to remove per task gate.",
+            "removal_steps": "1) git worktree remove '.claude/worktrees/quirky-roentgen-e15808' -> unregistered from `git worktree list` but reported 'Permission denied' deleting the physical dir + .git/worktrees metadata (Windows/OneDrive transient file lock). 2) git worktree prune (cleared stale gitdir pointers). 3) rm -rf '.claude/worktrees/quirky-roentgen-e15808' (succeeded on retry). 4) rm -rf '.git/worktrees/quirky-roentgen-e15808' (succeeded on retry).",
+            "final_state": ".claude/worktrees/ is empty; .git/worktrees/quirky-roentgen-e15808 gone; absent from `git worktree list`. Shadow second-repo copy that doubled every grep is fully resolved."
+          },
+          "how_to_test": [
+            "python -m pytest tests/test_wk65_tooling.py -q   (scoped Wave-0 regression)",
+            "git status   (confirm only the 11 intended renames into tools/archive/ are staged from my work; worktree gone)",
+            "git worktree list   (quirky-roentgen-e15808 absent)"
+          ],
+          "evidence": [
+            {
+              "command": "git mv (x11) tools/<dead>.py tools/archive/",
+              "result": "ALL 11 MOVES OK",
+              "status": "PASS"
+            },
+            {
+              "command": "git status",
+              "result": "11 renames into tools/archive/ staged (4 patch_*.py + 7 update_pm_hub_wk*.py); no other tools/ changes from me. (Many non-tools/ files modified/untracked = OTHER parallel Wave-2 agents 03/05/06/14 in the shared working tree.)",
+              "status": "PASS"
+            },
+            {
+              "command": "git worktree remove + prune + rm -rf (.claude + .git metadata)",
+              "result": ".claude/worktrees/ empty; .git/worktrees/quirky-roentgen-e15808 removed; absent from `git worktree list`",
+              "status": "PASS"
+            },
+            {
+              "command": "python -m pytest tests/test_wk65_tooling.py -q",
+              "result": "BLOCKED at collection: conftest.py import fails -> config.py NameError 'HERO' is not defined at config.py:419 (HERO_HIRE_COST = HERO.hire_cost). This is Agent 03's in-progress Wave-2 config.py dataclass-flatten (Task 3) leaving a transient broken import in the SHARED working tree; it breaks ALL test collection, not just mine. NOT caused by my hygiene work (git mv of dead tools/ scripts + worktree removal cannot affect config.py).",
+              "status": "BLOCKED_BY_PARALLEL_AGENT_03"
+            },
+            {
+              "command": "python -c ast.parse + --help on tools/determinism_guard.py; ast.parse on tools/observe_sync.py",
+              "result": "determinism_guard parse OK + --help exit 0; observe_sync parse OK. My Wave-0 deliverables intact (no config dependency). git diff tests/test_wk65_tooling.py = empty (untouched this wave).",
+              "status": "PASS"
+            }
+          ],
+          "surfaced_but_not_masked": "N/A for this wave (no determinism_guard matcher changes in W2; Wave-0 already reported clean).",
+          "blockers": [
+            "tests/test_wk65_tooling.py cannot run to green RIGHT NOW because Agent 03's parallel Wave-2 config.py flatten is mid-edit and config.py fails to import (NameError 'HERO' at config.py:419), which breaks conftest.py collection for the ENTIRE suite. This is expected to clear once Agent 03 finishes inlining the flat aliases. My Wave-0 tooling tests are unaffected by anything I did this wave and will pass once collection recovers. Re-verify at Gate 2 (Agent 01/11)."
+          ],
+          "questions_back_to_pm": [],
+          "notes_non_blocking": [
+            "Pre-existing orphan worktree metadata: .git/worktrees/uhy/ exists (dated Dec 15) with a dangling gitdir ('gitdir file does not exist' on prune), no on-disk worktree, and is NOT in `git worktree list`. It is unrelated to quirky-roentgen-e15808 and out of my assigned scope, so I left it. `git worktree prune` would clean it but hit the same OneDrive Permission-denied lock; recommend a follow-up `git worktree prune` when the lock clears (cosmetic only).",
+            "OneDrive on this checkout intermittently locks files (Permission denied on git worktree remove/prune); retries succeeded. Worth noting for any future worktree/file-deletion ops."
+          ],
+          "recommended_next_actions": [
+            "Agent 01/11 at Gate 2: re-run `python -m pytest tests/test_wk65_tooling.py -q` after Agent 03's config.py flatten lands clean (`python -c \"import config\"` must succeed first); expect GREEN.",
+            "Optional cosmetic: `git worktree prune` to clear the pre-existing dangling .git/worktrees/uhy metadata once the OneDrive lock releases."
+          ]
+        },
+        "wk65_w0_tooling_baseline": {
+          "sprint_id": "wk65_round0_deslop_foundation",
+          "round_id": "wk65_w0_tooling_baseline",
+          "status": "done",
+          "pm_ref": "sprints['wk65_round0_deslop_foundation'].rounds['wk65_r0_plan'].pm_agent_prompts['12'] + plan section 'Agent 12 (ToolsDevEx) - fix the QA tools FIRST'",
+          "wave": 0,
+          "prompt_text": "Wave 0: fix determinism_guard.py (a: --paths-outside-root relative_to crash; b: separate parse-errors from violations; c: alias-aware AST matcher) + observe_sync.py dual-clock (delete now_ms_val=int((t*1000)/60), read game.sim.timebase.now_ms()) + write tests/test_wk65_tooling.py. REPORT-DONT-MASK any newly-surfaced pre-existing determinism violation. DO NOT COMMIT.",
+          "what_i_changed": {
+            "files": [
+              "tools/determinism_guard.py (EDIT)",
+              "tools/observe_sync.py (EDIT)",
+              "tests/test_wk65_tooling.py (NEW, 21 tests)"
+            ],
+            "determinism_guard_fixes": [
+              "(a) --paths-outside-root crash FIXED: added _display_path(p) helper (try p.relative_to(PROJECT_ROOT) except ValueError -> str(p)); used it in _violation() and the parse_error dict (was file.relative_to(PROJECT_ROOT)); main() now resolves input roots to absolute (roots=[Path(p).resolve() for p in ns.paths]).",
+              "(b) parse-errors separated from violations: main() partitions all_findings into parse_errors (kind==parse_error) vs violations; prints parse errors under a distinct WARN header; PASS/FAIL + exit code now driven ONLY by real violations (return 0 if not violations else 1). --json now emits {violations, parse_errors} instead of {findings}.",
+              "(c) alias-aware AST matching: added _build_alias_map(tree) (scans ast.Import/ast.ImportFrom for tracked modules pygame/time/datetime/random; maps bound name -> canonical prefix tuple) + _normalize_chain(chain, aliases) (rewrites chain root through alias map). scan_file builds the alias map and normalizes each call chain before matching. Handles: import time as t; from random import random; from time import time as now; etc. rng.random() on a passed-in object stays NOT flagged."
+            ],
+            "observe_sync_fix": "dual-clock removed: deleted now_ms_val=int((t*1000)/60) (multiplier-blind); now reads now_ms_val=int(now_ms()) from game.sim.timebase (single authoritative clock set each tick via set_sim_now_ms(int(t*sim_dt*1000)), which IS speed-multiplier-aware). Added now_ms to the existing timebase import. Verified hero.stuck_since_ms is set via the SAME clock (hero.py:9 from game.sim.timebase import now_ms as sim_now_ms), so max_stuck_ms = now_ms_val - stuck_since_ms is now correct under any speed multiplier.",
+            "summary": "Wave-0 tool-correctness fixes only; no behavior change beyond the 4 documented bug fixes. Touched only the 3 files in my lane. No commit/push."
+          },
+          "how_to_test": [
+            "python -m pytest tests/test_wk65_tooling.py -q",
+            "python tools/determinism_guard.py",
+            "python tools/qa_smoke.py --quick",
+            "python tools/observe_sync.py --seconds 24 --heroes 20 --seed 3 --log-every 9999 --qa --bounty"
+          ],
+          "evidence": {
+            "pytest_wk65_tooling": {
+              "command": "python -m pytest tests/test_wk65_tooling.py -q",
+              "exit_code": 0,
+              "status": "PASS",
+              "detail": "21 passed, 1 warning"
+            },
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS",
+              "detail": "[determinism_guard] PASS: no violations found. Also verified --paths game/entities game/systems ai => PASS exit 0. Alias-aware matcher surfaced NO pre-existing hidden violation (clean, as plan predicted for Round 0)."
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "detail": "DONE: PASS. All speed_scaling profiles (0.1x/0.25x/0.5x/1.0x) green - exercises the observe_sync dual-clock fix under multiplier."
+            },
+            "observe_sync_bounty": {
+              "command": "python tools/observe_sync.py --seconds 24 --heroes 20 --seed 3 --log-every 9999 --qa --bounty",
+              "exit_code": 0,
+              "status": "PASS",
+              "detail": "[qa] PASS: bounty_exists=True bounty_has_responder=True ... ; counters max_stuck_ms=2100 (non-zero, correct after clock fix)."
+            },
+            "full_suite_regression": {
+              "command": "python -m pytest tests/ -q",
+              "exit_code": 0,
+              "status": "PASS",
+              "detail": "536 passed, 4 skipped - no regressions from tool changes."
+            }
+          },
+          "surfaced_but_not_masked": "NONE. Repo-wide determinism_guard with the new alias-aware matcher reports PASS (no pre-existing violations surfaced). Nothing weakened, nothing hidden.",
+          "blockers": [],
+          "questions_back_to_pm": [],
+          "notes_non_blocking": [
+            "Pre-existing (NOT my regression): observe_sync --scenario hero_stuck_repro at --speed-multiplier 0.5 reports [qa] FAIL with stuck_events=0/max_stuck_ms=0. Verified via git stash: the UNMODIFIED baseline observe_sync produces the identical FAIL at 0.5x. Cause: at 0.5x, 24 real seconds = 12 sim-seconds, below the hero stuck-detection threshold, so stuck_active never trips (independent of my now_ms_val line, which only feeds max_stuck_ms accounting). This scenario+speed combo is NOT in the qa_smoke gate set (qa_smoke runs hero_stuck_repro only at default speed, which PASSES) and is not one of my 4 required gates. Flagging for awareness only; not a Round-0 blocker.",
+            "--json output schema changed from {findings:[...]} to {violations:[...], parse_errors:[...]} as part of fix (b). Grep confirms no repo code consumes determinism_guard --json (qa_smoke invokes the guard without --json and checks only exit code), so this is safe."
+          ],
+          "recommended_next_actions": [
+            "Wave-2 hygiene (my later activation): git mv grep-confirmed dead one-off tools to tools/archive/ + resolve .claude/worktrees shadow."
+          ]
+        }
       }
-     },
-     "blockers": []
+    },
+    "tooling_roll_agent_logs_fix": {
+      "sprint_meta": {
+        "created_utc": "2026-05-29T22:00:00Z",
+        "notes": "Standalone tooling fix dispatched 2026-05-29: sprint-ordering bug in tools/roll_agent_logs.py (mixed dated+undated logs archived recent work). Predecessor-time inheritance + new test matrix."
+      },
+      "rounds": {
+        "roll_agent_logs_ordering_fix": {
+          "sprint_id": "tooling_roll_agent_logs_fix",
+          "round_id": "roll_agent_logs_ordering_fix",
+          "status": "done",
+          "pm_ref": "standalone dispatch (no PM round) - real incident 2026-05-29: agent_01 roll archived recent wk64+wk65",
+          "wave": 0,
+          "prompt_text": "Fix the sprint-ordering bug in tools/roll_agent_logs.py _ordered_sprint_keys (undated sprints sorted as 1970 epoch -> recent appended-undated sprints wrongly archived by keep-last-N). Replace with predecessor-time inheritance; add tests/test_roll_agent_logs.py matrix. DO NOT COMMIT.",
+          "what_i_changed": {
+            "tools/roll_agent_logs.py": "Rewrote _ordered_sprint_keys: undated sprints now inherit the timestamp of their most-recent DATED predecessor (walk dict in insertion order, carry last_seen forward; leading-undated inherit EPOCH and sort oldest). All-undated logs still early-return insertion order (worker-log path, unchanged). _parse_created_utc unchanged. Expanded the docstring to document the undated-inherits-predecessor behavior and the 2026-05-29 incident. No other behavioral change.",
+            "tests/test_roll_agent_logs.py": "NEW. 10-test matrix imported from the real tool API (_ordered_sprint_keys, _roll_one, module LOG_DIR/ARCHIVE_DIR): (a) all-dated out-of-order -> chronological; (b) all-undated -> exact insertion order; (c) bug case dated wk58..wk63 + undated wk64/65/66 -> keep=7 archives exactly [wk58,wk59] (FAILS old epoch logic); (d) interspersed undated sorts between dated neighbors; (e) leading-undated sorts oldest/archived-first; empty; + two end-to-end _roll_one tests (dry-run computes archive set, real write moves wk58/wk59 into the archive file) using monkeypatched LOG_DIR/ARCHIVE_DIR over pytest tmp_path."
+          },
+          "how_to_test": [
+            "python -m pytest tests/test_roll_agent_logs.py -q  ->  10 passed",
+            "python -m pytest -q  ->  592 passed, 4 skipped, 0 failed",
+            "python tools/roll_agent_logs.py --keep 7 --dry-run  ->  runs cleanly, processed=27, all skipped (real logs already <= 7), no crash"
+          ],
+          "evidence": {
+            "new_tests": "10 passed in 0.14s",
+            "full_suite": "592 passed, 4 skipped, 1 warning in 96.34s",
+            "old_logic_repro": "old epoch ordering on the bug case produced archived=[wk64,wk65] (recent work); fixed logic produces archived=[wk58,wk59] (oldest), kept=[wk60..wk66]",
+            "real_dryrun": "keep=7 dry_run=True processed=27 rolled=0 skipped=27 (no_roll_needed / not_schema_log); no error"
+          },
+          "surfaced_but_not_masked": "NONE. Worker-log all-undated path is preserved exactly (early return). No determinism or schema behavior weakened.",
+          "blockers": [],
+          "questions_back_to_pm": [],
+          "notes_non_blocking": [
+            "Observed agent_12 log itself has several leaked top-level sprint keys (e.g. wk20-ui-input-bridge) sitting beside the canonical sprints dict; the tool only reads sprints[...] so this is cosmetic, not flagged here."
+          ],
+          "recommended_next_actions": [
+            "Optionally backfill created_utc on undated sprint blocks across agent logs so ordering is fully explicit rather than inheritance-derived."
+          ]
+        },
+        "roll_agent_logs_ordering_fix_review_revision": {
+          "round_id": "roll_agent_logs_ordering_fix_review_revision",
+          "round_meta": {
+            "prompt_set_id": "tooling_roll_fix_adversarial_review_revision",
+            "sent_at_local": "2026-05-29T16:00:00-06:00"
+          },
+          "prompt_text": "Re-dispatch after adversarial review of the prior attempt. Two review findings, both classified NON-BLOCKING / out-of-scope: (1) inherited time is the IMMEDIATE dated predecessor, not a running max -> only matters if dated sprints are appended out of chronological order (never happens in real append-only logs); faithful to spec, worth a one-line awareness note in the test docstring, no code change. (2) agent_12 log has leaked top-level sprint keys beside the canonical sprints dict; tool only reads sprints[...] so cosmetic / pre-existing / out of scope. Re-run all gates.",
+          "what_i_changed": {
+            "tools/roll_agent_logs.py": "No code change in this revision (the fix from the prior round stands): _ordered_sprint_keys uses predecessor-time inheritance with EPOCH for leading-undated, all-undated early-returns insertion order, _parse_created_utc unchanged. The IMMEDIATE-predecessor (non-running-max) behavior is intentional and faithful to the prescribed algorithm; review finding 1 confirmed it needs no code change.",
+            "tests/test_roll_agent_logs.py": "Added the review-requested awareness note to the module docstring: the inherited timestamp is the IMMEDIATE dated predecessor, NOT a running max, so out-of-chronological-order DATED inserts can place a trailing undated sprint in the middle; documented as faithful-to-spec (never triggers on real append-only logs) so it is not mistaken for a regression. No test assertions changed; the 10-test matrix is unchanged.",
+            "review_finding_2_top_level_leaked_keys": "NOT addressed (correctly out of scope): the leaked top-level sprint keys (wk18.., wk20.., etc.) sit beside the canonical sprints dict; roll_agent_logs only reads obj[\"sprints\"], so they are cosmetic and pre-existing. Left untouched per review classification."
+          },
+          "how_to_test": [
+            "python -m pytest tests/test_roll_agent_logs.py -q  ->  10 passed",
+            "python -m pytest -q  ->  592 passed, 4 skipped, 0 failed (no regression)",
+            "python tools/roll_agent_logs.py --keep 7 --dry-run  ->  runs cleanly, processed=27, no crash; agent_12 itself now shows would_roll (archived=1) because its canonical sprints dict holds 8 sprints at keep=7 -> the ordering logic handles it correctly without error",
+            "old-vs-new repro: reconstructed old epoch logic on the bug case archives [wk64,wk65] (recent work, the bug); fixed logic archives [wk58,wk59] (oldest) -> the bug-case test genuinely fails against old logic"
+          ],
+          "evidence": {
+            "new_tests": "10 passed in 0.13s",
+            "full_suite": "592 passed, 4 skipped, 1 warning in 97.89s",
+            "real_dryrun": "keep=7 dry_run=True processed=27 rolled=1 skipped=26; the lone would_roll is agent_12 (archived=1, kept=7) because its sprints dict now has 8 entries; all others no_roll_needed / not_schema_log; no error",
+            "old_logic_repro": "OLD ordered [wk64,wk65,wk66,wk58,wk59,wk60,wk61,wk62,wk63] -> archived [wk64,wk65]; NEW ordered [wk58..wk66] -> archived [wk58,wk59]",
+            "review_findings_dispositions": "Finding 1 (immediate-predecessor not running-max): documented as awareness note in test docstring, no code change (faithful to spec). Finding 2 (leaked top-level keys): out of scope, untouched."
+          },
+          "agent_fields": {
+            "pm_acknowledged": false,
+            "code_change_this_revision": false,
+            "docstring_awareness_note_added": true,
+            "gates_passed": [
+              "pytest tests/test_roll_agent_logs.py",
+              "pytest (full suite)",
+              "roll_agent_logs.py --keep 7 --dry-run"
+            ],
+            "blockers": []
+          }
+        }
+      }
+    },
+    "wk67_round_a2_ai_boundary": {
+      "sprint_meta": {
+        "created_utc": "2026-05-29T00:00:00Z",
+        "notes": "WK67 Round A-2 AI-boundary sprint. Agent 12 Wave 4 (L9): tools-side re-exports of the Kenney material/scale-tint, ursina input-debug, and ursina-screenshot helpers that Agent 10 moved into game/graphics/."
+      },
+      "rounds": {
+        "wk67_w4_l9": {
+          "sprint_id": "wk67_round_a2_ai_boundary",
+          "round_id": "wk67_w4_l9",
+          "status": "done",
+          "wave": "W4",
+          "pm_ref": "Agent 12 Wave 4 prompt (L9 tools-side re-exports); PM hub agent_01 sprint wk67_round_a2_ai_boundary",
+          "task": "L9 tools-side re-exports: after Agent 10 MOVED the Kenney material/shader, pack-scale/tint, ursina input-debug, and ursina-screenshot helpers verbatim into game/graphics/, replace the now-duplicated defs in the four tools/ modules with thin re-export imports from game.graphics so every other tools/ caller keeps working. tools->game is the allowed (non-circular) direction.",
+          "what_i_changed": [
+            "tools/model_viewer_kenney.py: removed the moved MaterialDebugStats dataclass, the _FACTOR_LIT_VERT/_FACTOR_LIT_FRAG shader strings, _factor_lit_shader_cache, _get_factor_lit_shader, and _apply_gltf_color_and_shading defs; added a top-of-module re-export 'from game.graphics.kenney_material import (MaterialDebugStats, _FACTOR_LIT_FRAG, _FACTOR_LIT_VERT, _apply_gltf_color_and_shading, _get_factor_lit_shader)'; dropped the now-unused 'from dataclasses import dataclass' import. KEPT the viewer-only loaders/lighting (_collect_gltf_under, collect_viewer_sections, _fit_uniform_and_ground, _pack_border_entity, _setup_scene_lighting, _load_model_node_from_file, _rel_for_label, run_viewer, etc.) and the existing prefab_texture_overrides usage.",
+            "tools/kenney_pack_scale.py: replaced the ENTIRE body of defs with a single thin re-export 'from game.graphics.kenney_material import (RETRO_REFERENCE_MAX_EXTENT, _ENV_TREE_COLOR_MULTIPLIER_DEFAULT, _MERGED_COLLISION_PACK, _MERGED_GLB_DEFAULT_MULTIPLIER, _MERGED_SURVIVAL_ONLY_BASENAMES, _PACK_COLOR_MULTIPLIER_BY_FOLDER, _PACK_EXTENT_MULTIPLIER_BY_FOLDER, _RETRO_RAW_GLB, _SURVIVAL_RAW_GLB, _load_merged_survival_only_basenames, _norm_rel, apply_kenney_pack_color_tint_to_entity, infer_kenney_pack_folder_id, pack_color_multiplier_for_rel, pack_extent_multiplier_for_rel, pack_max_extent_for_rel)'; merged the WK67 note into the existing module docstring (removed stray duplicate closing triple-quote).",
+            "tools/ursina_input_debug.py: replaced the def body with 'from game.graphics.ursina_input_debug import (ENV_KEY, is_ursina_debug_input_enabled, maybe_print_wk20_input_on_lmb, print_wk20_input_line)'; added WK67 note to docstring.",
+            "tools/ursina_screenshot.py: replaced the def body with 'from game.graphics.ursina_screenshot import (_screenshot_filename_stem, build_screenshot_filepath, docs_screenshots_dir, next_auto_screenshot_path, next_auto_screenshot_path_for, save_ursina_window_screenshot, screenshot_output_dir)'; KEPT the __main__ helper-info block (now uses the re-exported names); added WK67 note to docstring.",
+            "Edited tools/** ONLY. Did NOT touch game/**, ai/**, or tests/**. No commit, no push."
+          ],
+          "no_duplicate_defs_grep": {
+            "command": "rg -n '^def _apply_gltf_color_and_shading|^def apply_kenney_pack_color_tint_to_entity|^def pack_extent_multiplier_for_rel|^def save_ursina_window_screenshot|^def is_ursina_debug_input_enabled' tools/",
+            "result": "NO MATCHES (all five are now re-export imports, not defs in tools/) - PASS"
+          },
+          "import_smoke": {
+            "four_reexport_modules": "python -c 'import tools.model_viewer_kenney; import tools.kenney_pack_scale; import tools.ursina_input_debug; import tools.ursina_screenshot' -> OK four re-export modules (clean)",
+            "other_tools_consumers": "python -c 'import tools.model_assembler_kenney; import tools.wall_flush_pair_kenney; import tools.wk31_flush_screenshot_batch; import tools.ursina_capture; import tools.run_ursina_capture_once; import tools.run_worker_scale_ursina_shot' -> OK other tools consumers (clean). model_assembler_kenney + wall_flush_pair_kenney import _apply_gltf_color_and_shading via the viewer re-export and still get _load_model_node_from_file/_setup_scene_lighting/_fit_uniform_and_ground/_rel_for_label from the viewer (those were NOT moved).",
+            "symbol_resolution_and_identity": "All 5 viewer material symbols + 16 pack-scale symbols + 4 input-debug + 7 screenshot symbols import successfully. Identity check: tools.kenney_pack_scale.pack_extent_multiplier_for_rel IS game.graphics.kenney_material.pack_extent_multiplier_for_rel; RETRO_REFERENCE_MAX_EXTENT==5.0 both sides. Behavior spot-check: pack_extent_multiplier_for_rel('environment/lair.glb')==1.0; pack_color_multiplier_for_rel('Models/GLTF format/tree.gltf')~=0.75.",
+            "viewer_help": "python tools/model_viewer_kenney.py --help -> exit 0, usage printed (confirms top-of-module re-export of _apply_gltf_color_and_shading resolves at load)."
+          },
+          "graphics_to_tools_check": {
+            "command": "rg -n 'from tools|import tools' game/graphics",
+            "result": "Only two doc-COMMENT mentions in game/graphics/kenney_material.py ('moved verbatim from tools/...'); ZERO actual import statements. No graphics->tools runtime import re-introduced - PASS"
+          },
+          "evidence": {
+            "full_suite": {
+              "command": "python -m pytest -q",
+              "result": "598 passed, 4 skipped, 1 warning in ~104s",
+              "baseline": "598 passed / 4 skipped",
+              "status": "GREEN (matches baseline exactly)"
+            }
+          },
+          "blockers": [],
+          "completion_receipt": "WK67 W4 (L9) tools-side re-exports COMPLETE. Four tools/ modules (model_viewer_kenney, kenney_pack_scale, ursina_input_debug, ursina_screenshot) now re-export the moved helpers from game.graphics; no duplicate defs remain; all tools consumers import clean; graphics->tools still zero imports; full suite 598 passed / 4 skipped (baseline). No commit, no push. Edited tools/** only."
+        },
+        "wk67_w5_determinism": {
+          "sprint_id": "wk67_round_a2_ai_boundary",
+          "round_id": "wk67_w5_determinism",
+          "status": "done",
+          "wave": "W5",
+          "pm_ref": "Agent 12 Wave 5 prompt (registered Ursina melee-combat capture scenario, item 5c); plan wk67_round_a2_ai_boundary.plan.md Wave 5 / Agent 12; PM hub agent_01",
+          "task": "Add a registered Ursina melee-combat capture scenario (ursina_melee_combat): spawn a hero + enemy adjacent near the castle, force a melee strike + hurt one-shot, capture the strike+hurt frame on the PRIMARY (Ursina) renderer (the unit-render/anim boundary had thin visual coverage there). Must capture BYTE-IDENTICAL across two DETERMINISTIC_SIM runs with the wall-clock perf/FPS debug overlay disabled. Edit only tools/**.",
+          "what_i_changed": [
+            "tools/screenshot_scenarios.py: added URSINA_CAPTURE_SCENARIOS entry 'ursina_melee_combat' (patch_path=tools/wk67_combat_capture_patch.py, default_ticks=480 (~8s warmup so terrain/models/shaders load before the grab; the held pose is tick-independent), default_out_subdir=wk67_combat, stem=ursina_melee_combat, env={KINGDOM_URSINA_REVEAL_ON_START=1, KINGDOM_URSINA_EDITORCAMERA=0, KINGDOM_URSINA_CAM_FOCUS_BUILDING_TYPE=castle, KINGDOM_URSINA_CAM_FOCUS_SPAN=16}).",
+            "tools/screenshot_scenarios.py: added scenario_ursina_melee_combat(engine, *, seed) builder (pygame Shot path, mirrors the Ursina patch: warrior hero + goblin adjacent near the castle, hero FIGHTING+target=enemy, _force_strike apply hook stamps attack/hurt one-shot triggers) and registered it in the get_scenario if-ladder (after wk61_hero_menu_chat).",
+            "tools/wk67_combat_capture_patch.py: NEW capture patch (modeled on tools/wk61_r10_capture_patch.py). Monkey-patches UrsinaApp.__init__ to: (1) disable the wall-clock FPS/frame-time debug overlay (window.fps_counter.enabled=False); (2) reveal fog; (3) disable wave/neutral spawners; (4) clear non-castle buildings + dynamic entities and place a warrior hero adjacent (one tile) to a goblin just south of the castle, hero.state=FIGHTING + target=enemy, enemy.target=hero, both at full hp, with the attack/hurt one-shot triggers stamped; (5) wrap UrsinaRenderer._compute_anim_frame so the two tagged combatants ALWAYS render a fixed mid-clip frame (hero=attack mid-swing, enemy=hurt recoil) independent of tick/wall-clock; (6) install a FIXED oblique camera aimed at the combat midpoint (blend=0, no follow/orbit). Wraps engine.tick_simulation to re-pin positions/state/hp/alive + re-stamp triggers + re-aim the camera after EVERY sim tick, so the held strike survives any number of ticks. No import-time os.environ mutation."
+          ],
+          "how_attack_tick_forced": "CombatSystem (game/systems/combat.py) lets a hero strike when attack_cooldown<=0 AND (_hero_in_combat_state: FIGHTING or living enemy target) AND a living enemy is within attack_range. The patch pins the hero one tile from the goblin (within TILE_SIZE*1.5 melee range), sets hero.state=FIGHTING + hero.target=enemy, and resets attack_cooldown=0 every tick so the strike re-fires each combat cycle; hero.on_attack_landed -> _queue_render_animation('attack') and enemy.take_damage -> _queue_render_animation('hurt'). To make the captured frame independent of WHICH tick the wall-clock auto-exit lands on, the patch wraps _compute_anim_frame to lock the two tagged combatants to a fixed mid-clip frame (hero attack frame ~n//2+1, enemy hurt frame ~n//2+1) every frame, and re-stamps the triggers + pins positions/hp each tick.",
+          "how_overlay_suppressed": "The only wall-clock presentation element in the grabbed framebuffer was Ursina's built-in FPS/frame-time counter (window.fps_counter, enabled at game/graphics/ursina_app.py:72). It renders a varying number per run. The patch (tools/, not game/) sets window.fps_counter.enabled=False in patched UrsinaApp.__init__ for the capture only. The renderer status_text (Gold/Heroes/Enemies/Buildings counts) is deterministic and left as-is. EditorCamera is disabled (KINGDOM_URSINA_EDITORCAMERA=0) and the patch installs a fixed camera at blend=0, so there is no camera-blend jitter.",
+          "two_run_byte_identical_proof": {
+            "command": "python tools/run_ursina_capture_once.py --scenario ursina_melee_combat --ticks 480 --out docs/screenshots/wk67_combat --no-llm  (run twice, DETERMINISTIC_SIM=1, SIM_SEED=3)",
+            "hash_algo": "SHA256",
+            "hash_A": "2DE5D5F489B94AF40F645AA0281ECEBCB25E2D430202EB2DAA50737D77312D92",
+            "hash_B": "2DE5D5F489B94AF40F645AA0281ECEBCB25E2D430202EB2DAA50737D77312D92",
+            "size_bytes": 700296,
+            "result": "BYTE-IDENTICAL (hash_A == hash_B). Also confirmed identical across separate 8s-warmup runs (same hash), proving the capture is fully tick-independent."
+          },
+          "capture_path": "docs/screenshots/wk67_combat/ursina_melee_combat_*.png (size 700296 bytes)",
+          "viewed_combat_pose": "YES. Viewed the PNG: hero 'Sir Aldric' (green health bar) mid-swing with sword blade extended toward the goblin; 'Goblin' label on the struck enemy one tile to the right; castle backdrop. Status text confirms Heroes:1 | Enemies:1. Clear melee strike + hurt pose.",
+          "gates": {
+            "full_suite": "598 passed, 4 skipped, 1 warning in 105.47s (python -m pytest -q, clean env with DETERMINISTIC_SIM/SIM_SEED unset) -- matches expected 598/4. No import-time env mutation added to the scenario module.",
+            "qa_smoke_quick": "PASS (python tools/qa_smoke.py --quick -> DONE: PASS)",
+            "module_import": "python -c 'import tools.screenshot_scenarios' OK; get_ursina_capture_scenario('ursina_melee_combat') resolves; scenario_ursina_melee_combat present; patch file parses."
+          },
+          "still_varies": "Nothing. After disabling the FPS counter overlay, fixing the camera (blend=0, EditorCamera off), and locking the anim pose + positions per tick, the two PNGs are byte-identical (and identical to runs with a different warmup duration). The pre-existing wall-clock perf/FPS overlay + camera-blend the plan flagged are both neutralized for this capture (overlay disabled, camera fixed).",
+          "constraints_respected": "Edited only tools/** (tools/screenshot_scenarios.py, NEW tools/wk67_combat_capture_patch.py). No edits to game/**, ai/**, or tests/**. No import-time os.environ mutation. No commit, no push.",
+          "blockers": [],
+          "completion_receipt": "WK67 W5 (item 5c) COMPLETE. Registered Ursina melee-combat capture scenario 'ursina_melee_combat' (scenario builder + URSINA_CAPTURE_SCENARIOS entry + get_scenario dispatch + NEW tools/wk67_combat_capture_patch.py). Hero strikes adjacent goblin (verified strike+hurt pose); perf/FPS debug overlay disabled + fixed camera; two DETERMINISTIC_SIM runs BYTE-IDENTICAL (SHA256 2DE5D5...312D92). Full suite 598 passed / 4 skipped; qa_smoke --quick PASS. tools-only; no commit/push."
+        }
+      }
+    },
+    "wk124_hero_kit_ai_and_ui_fixes": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
+        "created_utc": "2026-06-03T00:00:00Z",
+        "notes": "WK124 hero kit: wizard spell (T3) + cleric heal (T4) VFX capture scenarios so the PM can screenshot-verify the new combat VFX on the GPU box (Agent 12 Wave 3)."
+      },
+      "rounds": {
+        "r1": {
+          "round_id": "r1",
+          "status": "done",
+          "pm_ref": "Agent 12 (ToolsDevEx_Lead) Wave 3 prompt — WK124-T3 wizard spell + WK124-T4 cleric heal Ursina capture scenarios.",
+          "what_i_changed": {
+            "files": [
+              "tools/wk124_wizard_cleric_capture_patch.py (NEW)",
+              "tools/screenshot_scenarios.py (registered ursina_wizard_cast + ursina_cleric_heal in URSINA_CAPTURE_SCENARIOS)"
+            ],
+            "summary": "Authored a new Ursina capture patch (modeled closely on tools/wk122_guardhouse_arrows_capture_patch.py + tools/wk67_combat_capture_patch.py) building TWO deterministic scenes selected by the KINGDOM_WK124_SCENE env var. WIZARD scene (KINGDOM_WK124_SCENE=wizard): reveals map, disables wave+neutral spawns, places ONE real Hero(hero_class='wizard', is_ranged_attacker=True, attack_range=TILE_SIZE*4.5) FIGHTING ONE goblin ~3 tiles apart (inside the 4.5-tile spell range), holds the goblin alive/in-range and resets the wizard attack_cooldown each tick so the live CombatSystem genuinely emits ranged_projectile{projectile_kind:'magic'} (faithfulness), re-stamps the wizard 'attack' (staff cast) one-shot trigger AND locks that clip to a mid-cast frame via a _compute_anim_frame wrapper (mirrors wk67), then re-pins ONE mid-flight ProjectileVFX(kind='magic') into engine.vfx_system._projectiles AFTER the tick so the captured frame always shows the purple orb (visibility). CLERIC scene (KINGDOM_WK124_SCENE=cleric): reveals map, disables spawns, places ONE real Hero(hero_class='cleric') + ONE wounded Hero(hero_class='warrior') ally ~2 tiles apart (inside CLERIC_HEAL_RADIUS_TILES=4), re-wounds the ally to ~40% HP (below CLERIC_HEAL_MIN_TARGET_PCT=0.85) and resets cleric._heal_cooldown_until_ms=0 each tick so the live ClericHealSystem genuinely emits hero_heal (faithfulness), then re-pins ONE mid-flight ProjectileVFX(kind='heal') so the captured frame always shows the GREEN heal bolt (the green particle burst is pygame-only; the heal billboard is what reads in the Ursina 3D path). Both scenes use a FIXED (non-EditorCamera) oblique camera re-aimed each tick at the held projectile's true 3D Y (terrain_height + PROJECTILE_BILLBOARD_Y) so the orb/bolt sits dead-center; FPS overlay disabled; no import-time os.environ mutation. PM framing knobs: KINGDOM_WK124_SEP_TILES / _CAM_SPAN / _CAM_ELEV / _PROGRESS. Registered both scenarios in URSINA_CAPTURE_SCENARIOS following the exact shape of ursina_guardhouse_arrows (patch_path, default_ticks=480, default_out_subdir, stem, env block with reveal-on-start + EditorCamera off + disable-neutral-spawn + the scene selector)."
+          },
+          "how_to_test": [
+            "python -c \"import tools.screenshot_scenarios; from tools.screenshot_scenarios import get_ursina_capture_scenario; print(get_ursina_capture_scenario('ursina_wizard_cast')); print(get_ursina_capture_scenario('ursina_cleric_heal'))\"",
+            "python -c \"import importlib.util,sys; spec=importlib.util.spec_from_file_location('p','tools/wk124_wizard_cleric_capture_patch.py'); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m); print('patch import OK')\"",
+            "python tools/qa_smoke.py --quick",
+            "python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json > NUL",
+            "PM (GPU box) live capture: python tools/run_ursina_capture_once.py --scenario ursina_wizard_cast --out docs/screenshots/wk124_wizard_cast",
+            "PM (GPU box) live capture: python tools/run_ursina_capture_once.py --scenario ursina_cleric_heal --out docs/screenshots/wk124_cleric_heal"
+          ],
+          "evidence": {
+            "scenario_registration": {
+              "command": "python -c \"... get_ursina_capture_scenario('ursina_wizard_cast'); ... ('ursina_cleric_heal')\"",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "Both scenarios resolve; patch_path=tools/wk124_wizard_cleric_capture_patch.py; default_ticks=480; env carries KINGDOM_WK124_SCENE (wizard/cleric), reveal-on-start, EditorCamera off, disable-neutral-spawn."
+            },
+            "patch_import": {
+              "command": "python -c \"importlib.util ... exec_module ...; print('patch import OK')\"",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "patch import OK (apply_patch ran; only monkeypatches UrsinaApp.__init__ — no Ursina window opened)."
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "DONE: PASS — determinism guard + all headless sim/speed-scaling/scenario profiles exit_code=0."
+            },
+            "log_json_valid": {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json > NUL",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "headless_gpu_caveat": "Cannot screenshot-verify Ursina headlessly (scoped exception per MEMORY: game/graphics/ursina_* render slices ship with import/registration gates + PM live capture). Both gates above prove imports + scenario registration succeed; the PM runs the live capture on Jaimie's GPU box and gives the visual verdict.",
+          "constraints_respected": "Edited ONLY tools/wk124_wizard_cleric_capture_patch.py (new) + tools/screenshot_scenarios.py + this log. No edits to game/**, ai/**, config.py. No import-time os.environ mutation. DID NOT COMMIT, DID NOT run git (other modified files in the tree are concurrent WK124 sessions).",
+          "blockers": [],
+          "follow_ups": [
+            "PM: run the two live captures on the GPU box (commands above) and confirm (1) wizard scene shows a purple magic orb mid-flight wizard->goblin + the wizard staff cast pose; (2) cleric scene shows a GREEN heal bolt mid-flight cleric->ally. If framing needs nudging, iterate via KINGDOM_WK124_CAM_SPAN / _CAM_ELEV / _PROGRESS / _SEP_TILES (no code edits)."
+          ]
+        }
+      }
     }
-   }
   },
-  "wk8-engine-entities-refactor": {
-   "sprint_meta": {
-    "plan_ref": ".cursor/plans/wk8_engine+entities_refactor_9cc21436.plan.md",
-    "notes": "WK8 verification after engine + entities structural refactor."
-   },
-   "rounds": {
-    "wk8_r2_verification": {
-     "round_id": "wk8_r2_verification",
-     "status": "done",
-     "what_i_changed": {
-      "files": [],
-      "summary": "Verified tooling compatibility against the new engine/entities structure. Confirmed backward-compat imports still resolve and all primary tools execute successfully.",
-      "compat_checks": [
-       "tools/screenshot_scenarios.py still imports Building from game.entities.building (shim path) and executes via capture flow.",
-       "tools/capture_screenshots.py still imports GameEngine from game.engine and completes deterministic capture run.",
-       "tools/observe_sync.py and tools/qa_smoke.py execute all standard headless profiles successfully."
-      ]
-     },
-     "how_to_test": [
-      "python tools/determinism_guard.py",
-      "python tools/qa_smoke.py --quick",
-      "python tools/validate_assets.py --report",
-      "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk8_tooling_verify/base_overview_seed3 --size 1280x720 --ticks 0",
-      "python -c \"from game.entities.building import Building; from game.engine import GameEngine; print('imports_ok', Building.__name__, GameEngine.__name__)\""
-     ],
-     "evidence": {
-      "determinism_guard": {
-       "command": "python tools/determinism_guard.py",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "[determinism_guard] PASS: no violations found"
-      },
-      "qa_smoke": {
-       "command": "python tools/qa_smoke.py --quick",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "All quick profiles PASS: determinism_guard, base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM."
-      },
-      "validate_assets": {
-       "command": "python tools/validate_assets.py --report",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "[validate_assets] SUMMARY errors=0 warns=0"
-      },
-      "capture_screenshots": {
-       "command": "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk8_tooling_verify/base_overview_seed3 --size 1280x720 --ticks 0",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "Capture completed and wrote manifest + 4 PNGs."
-      },
-      "import_compat": {
-       "command": "python -c \"from game.entities.building import Building; from game.engine import GameEngine; print('imports_ok', Building.__name__, GameEngine.__name__)\"",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "Backward-compatible imports resolved: Building, GameEngine."
-      },
-      "determinism_scan_coverage": {
-       "command": "python -c \"from tools import determinism_guard as d; files=d._iter_py_files(d.DEFAULT_SCAN_DIRS, exclude_dirs=d.DEFAULT_EXCLUDE_DIRS); print('scan_count', len(files)); print('includes_base', any(p.name=='base.py' and 'buildings' in p.parts for p in files)); print('includes_guilds', any(p.name=='guilds.py' and 'buildings' in p.parts for p in files)); print('includes_types', any(p.name=='types.py' and 'buildings' in p.parts for p in files));\"",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "Scan includes new package files under game/entities/buildings (base, guilds, types)."
-      }
-     },
-     "bugs_found": [],
-     "blockers": []
+  "wk18-llm-merger-and-mechanics": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk18_llm_merger_and_mechanics.plan.md",
+      "notes": "WK18: LLM-AI Merger, Physicality, & Dev Tools"
     },
-    "wk8_r4_final_verification": {
-     "round_id": "wk8_r4_final_verification",
-     "status": "done",
-     "what_i_changed": {
-      "files": [
-       "config.py"
-      ],
-      "summary": "Implemented Track 3C by introducing frozen config dataclass groups and preserving full backward compatibility via legacy module-level aliases. Re-verified tooling and gates after Track 3 landed.",
-      "dataclass_groups": [
-       "WindowConfig",
-       "SimConfig",
-       "MapConfig",
-       "CameraConfig",
-       "HeroConfig",
-       "EnemyConfig",
-       "LairConfig",
-       "BountyConfig",
-       "EconomyConfig",
-       "LLMConfig",
-       "RangerConfig"
-      ],
-      "compatibility_notes": [
-       "Legacy constants remain available (e.g., WINDOW_WIDTH, FPS, TILE_SIZE, BOUNTY_REWARD_HIGH).",
-       "Building dictionaries and color constants were left unchanged as requested.",
-       "Added grouped objects (WINDOW, SIM, MAP, CAMERA, HERO, ENEMY, LAIR, BOUNTY, ECONOMY, LLM, RANGER) for typed access."
-      ]
-     },
-     "how_to_test": [
-      "python tools/qa_smoke.py --quick",
-      "python tools/validate_assets.py --report",
-      "python tools/determinism_guard.py",
-      "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk8_r4_tooling_verify/base_overview_seed3 --size 1280x720 --ticks 0",
-      "python -c \"import tools.observe_sync, tools.qa_smoke, tools.determinism_guard, tools.capture_screenshots; print('tools_import_ok')\"",
-      "python -c \"from game.entities.building import Building; from game.engine import GameEngine; print('imports_ok', Building.__name__, GameEngine.__name__)\"",
-      "python -c \"import config; print('aliases_ok', config.WINDOW.width==config.WINDOW_WIDTH, config.SIM.tick_hz==config.SIM_TICK_HZ, config.BOUNTY.reward_high==config.BOUNTY_REWARD_HIGH, config.LLM.timeout==config.LLM_TIMEOUT)\""
-     ],
-     "evidence": {
-      "qa_smoke": {
-       "command": "python tools/qa_smoke.py --quick",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "All quick profiles PASS: determinism_guard, base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM."
-      },
-      "validate_assets": {
-       "command": "python tools/validate_assets.py --report",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "[validate_assets] SUMMARY errors=0 warns=0"
-      },
-      "determinism_guard": {
-       "command": "python tools/determinism_guard.py",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "[determinism_guard] PASS: no violations found"
-      },
-      "capture_screenshots": {
-       "command": "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk8_r4_tooling_verify/base_overview_seed3 --size 1280x720 --ticks 0",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "Capture completed and wrote manifest + 4 PNGs."
-      },
-      "tool_imports": {
-       "command": "python -c \"import tools.observe_sync, tools.qa_smoke, tools.determinism_guard, tools.capture_screenshots; print('tools_import_ok')\"",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "All four tool modules import without errors."
-      },
-      "import_compat": {
-       "command": "python -c \"from game.entities.building import Building; from game.engine import GameEngine; print('imports_ok', Building.__name__, GameEngine.__name__)\"",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "Backward-compatible imports resolved: Building, GameEngine."
-      },
-      "alias_compat": {
-       "command": "python -c \"import config; print('aliases_ok', config.WINDOW.width==config.WINDOW_WIDTH, config.SIM.tick_hz==config.SIM_TICK_HZ, config.BOUNTY.reward_high==config.BOUNTY_REWARD_HIGH, config.LLM.timeout==config.LLM_TIMEOUT)\"",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "Dataclass fields and legacy alias constants match."
+    "rounds": {
+      "wk18_r1_kickoff": {
+        "round_id": "wk18_r1_kickoff",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "game/events.py",
+            "ai/llm_brain.py",
+            "main.py"
+          ],
+          "summary": "Built AI Monitoring Data Tap: EventBus events LLM_PROMPT_SENT and LLM_RESPONSE_RECEIVED; LLMBrain emits before/after provider.complete(); main.py wires event_bus to llm_brain for Dev Overlay consumption."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "Run game with LLM (e.g. python main.py --provider mock), trigger hero decisions; Agent 08 subscribes to LLM_PROMPT_SENT / LLM_RESPONSE_RECEIVED for Dev Tools Overlay."
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": []
       }
-     },
-     "bugs_found": [],
-     "blockers": []
     }
-   }
   },
-  "wk9-sim-render-tests-ui": {
-   "sprint_meta": {
-    "plan_ref": ".cursor/plans/wk9_sim-render_tests_ui_8f93dd8e.plan.md",
-    "notes": "WK9 final verification and pytest gate integration."
-   },
-   "rounds": {
-    "wk9_r2_verification": {
-     "round_id": "wk9_r2_verification",
-     "status": "done",
-     "what_i_changed": {
-      "files": [
-       "tools/qa_smoke.py"
-      ],
-      "summary": "Integrated pytest into the mandatory quick QA gate and re-verified tooling under WK9 sim/render separation.",
-      "details": [
-       "Added a pytest stage to `qa_smoke --quick` using `python -m pytest tests/`.",
-       "Made pytest mandatory in quick mode: nonzero pytest exit fails the gate.",
-       "Added explicit failure when `tests/` is missing to keep the unit-test gate enforceable."
-      ]
-     },
-     "how_to_test": [
-      "python tools/qa_smoke.py --quick",
-      "python tools/validate_assets.py --report",
-      "python tools/determinism_guard.py",
-      "python -c \"import tools.observe_sync, tools.qa_smoke, tools.determinism_guard, tools.capture_screenshots; print('tools_import_ok')\"",
-      "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk9_tooling_verify/base_overview_seed3 --size 1280x720 --ticks 0"
-     ],
-     "evidence": {
-      "qa_smoke": {
-       "command": "python tools/qa_smoke.py --quick",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "Quick gate now includes pytest. Output shows `pytest (unit tests)` stage and `29 passed` before profile runs."
-      },
-      "pytest_via_gate": {
-       "command": "python -m pytest tests/",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "Executed inside qa_smoke quick; 29 tests passed in 0.15s."
-      },
-      "validate_assets": {
-       "command": "python tools/validate_assets.py --report",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "[validate_assets] SUMMARY errors=0 warns=0"
-      },
-      "determinism_guard": {
-       "command": "python tools/determinism_guard.py",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "[determinism_guard] PASS: no violations found"
-      },
-      "tool_imports": {
-       "command": "python -c \"import tools.observe_sync, tools.qa_smoke, tools.determinism_guard, tools.capture_screenshots; print('tools_import_ok')\"",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "All core tooling modules import successfully with WK9 renderer structure."
-      },
-      "capture_screenshots": {
-       "command": "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk9_tooling_verify/base_overview_seed3 --size 1280x720 --ticks 0",
-       "exit_code": 0,
-       "status": "PASS",
-       "notes": "Capture runner executed successfully and wrote manifest + 4 PNG outputs."
+  "wk20-ui-input-bridge": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk20_ui_input_bridge.plan.md",
+      "notes": "WK20 UI Input Bridge — Ursina debug input telemetry"
+    },
+    "rounds": {
+      "wk20_r2_implementation": {
+        "round_id": "wk20_r2_implementation",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/__init__.py",
+            "tools/ursina_input_debug.py",
+            "game/graphics/ursina_app.py"
+          ],
+          "summary": "Implemented PM WK20 R2: KINGDOM_URSINA_DEBUG_INPUT=1 gates print() of one WK20_INPUT line per LMB rising edge (raw_ursina, pygame from get_mouse_pos, ui_hit/world_xz/tile na until wired). Core helpers in tools/ursina_input_debug.py; UrsinaApp imports hook after render_pygame."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "Manual Ursina: set env KINGDOM_URSINA_DEBUG_INPUT=1, launch 3D viewer, click — one WK20_INPUT line per click; pygame tuple tracks Agent 08 get_mouse_pos when implemented."
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": []
       }
-     },
-     "bugs_found": [],
-     "blockers": []
     }
-   }
   },
-  "wk47_unit_instancing_core": {
-   "sprint_meta": {
-    "plan_ref": ".cursor/plans/unit_instancing_master_plan_09d73f6a.plan.md",
-    "notes": "WK47 R1 baseline atlas + Ursina perf stress harness"
-   },
-   "rounds": {
-    "wk47_r1_baseline_atlas": {
-     "sprint_id": "wk47_unit_instancing_core",
-     "round_id": "wk47_r1_baseline_atlas",
-     "status": "done",
-     "what_i_changed": "Added tools/perf_stress_test.py: SimEngine populates warrior guild + N/2 warriors + N/2 goblins; Ursina boots with application.asset_folder forced to repo root; frames are driven via Ursina app.run() + __main__.update timing UrsinaRenderer.update(build_snapshot()) per frame (matches game loop). Prints avg/min/max ms, avg FPS, 1% low FPS (worst 1% frame-time mean), p99 ms; writes tools/perf_stress_baseline_wk47.json (last_run + rolling history). Default --warmup 30.",
-     "commands_run": [
-      {
-       "command": "python tools/perf_stress_test.py --units 200 --frames 300",
-       "exit_code": 0
-      },
-      {
-       "command": "python tools/qa_smoke.py --quick",
-       "exit_code": 0
-      },
-      {
-       "command": "python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json",
-       "exit_code": 0
+  "wk21-3d-visual-polish": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk21_3d_visual_polish.plan.md",
+      "notes": "WK21 — F12 Ursina window screenshot to docs/screenshots/"
+    },
+    "rounds": {
+      "wk21_r3_bug_hunt": {
+        "round_id": "wk21_r3_bug_hunt",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/ursina_screenshot.py",
+            "game/graphics/ursina_app.py"
+          ],
+          "summary": "WK21 R3: Added tools/ursina_screenshot.save_ursina_window_screenshot() using ShowBase.screenshot (main GraphicsWindow = full 3D + UI overlay). UrsinaApp _handle_ursina_input handles f12 before LMB path; writes docs/screenshots/ursina_<ts>.png, prints [screenshot], HUD message."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "Manual: launch Ursina viewer, press F12 — PNG under docs/screenshots/, HUD confirms filename."
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": []
       }
-     ],
-     "evidence": {
-      "qa_smoke": {
-       "command": "python tools/qa_smoke.py --quick",
-       "exit_code": 0,
-       "status": "PASS"
-      },
-      "perf_stress_sample": {
-       "command": "python tools/perf_stress_test.py --units 200 --frames 300",
-       "exit_code": 0,
-       "note": "Representative baseline on dev machine (see tools/perf_stress_baseline_wk47.json last_run)."
-      }
-     },
-     "blockers": [],
-     "recommended_next_actions": [
-      "Agent 10 (WK47 validation round): run perf_stress_test at 200/500/1000 units with instancing on/off per PM hub."
-     ]
     }
-   }
   },
-  "wk61_playtest_polish": {
-   "sprint_meta": {
-    "plan_ref": ".cursor/plans/wk61_playtest_polish.plan.md",
-    "notes": "WK61 playtest polish — Agent 12 owns Ursina capture scenarios for hold-G tax overlay evidence."
-   },
-   "rounds": {
-    "wk61_r10_v159_economy_pacing_ux": {
-     "sprint_id": "wk61_playtest_polish",
-     "round_id": "wk61_r10_v159_economy_pacing_ux",
-     "round_meta": {
-      "wave": 2,
-      "build_target": "hold-G tax overlay Ursina capture scenario for Agent 11 sign-off",
-      "plan_ref": ".cursor/plans/wk61_r10_v1.5.9_9ecaca05.plan.md"
-     },
-     "status": "done",
-     "what_i_changed": {
-      "summary": "Added WK61 R10 hold-G Ursina capture tooling: patch seeds tax gold + forces G held (clone of R7), screenshot_scenarios entry wk61_hold_g_tax_overlay with WK60 starting buildings, and run_ursina_capture_once.py --scenario/--ticks/--out wiring.",
-      "files_created": [
-       "tools/wk61_r10_capture_patch.py"
-      ],
-      "files_modified": [
-       "tools/screenshot_scenarios.py",
-       "tools/run_ursina_capture_once.py"
-      ]
-     },
-     "commands_run": [
-      {
-       "cmd": "python tools/qa_smoke.py --quick",
-       "exit_code": 0,
-       "notes": "PASS"
-      },
-      {
-       "cmd": "python tools/run_ursina_capture_once.py --scenario wk61_hold_g_tax_overlay --ticks 5400 --out docs/screenshots/wk61_r10_hold_g",
-       "exit_code": 0,
-       "notes": "PNG saved; patch seeded tax on house, marketplace, ranger_guild, rogue_guild, warrior_guild, wizard_guild"
-      },
-      {
-       "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json",
-       "exit_code": 0,
-       "notes": "Log JSON validated"
+  "v1_5-sprint-1_1-3d-tooling": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk25_sprint_1_1_3d_tooling.plan.md",
+      "notes": "v1.5 Phase 1 — 3D manifest + validate_assets; master_plan_3d_graphics_v1_5.md"
+    },
+    "rounds": {
+      "sprint_1_1_execution": {
+        "round_id": "sprint_1_1_execution",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/assets_manifest.json",
+            "tools/validate_assets.py",
+            "tools/generate_cc0_placeholders.py",
+            "assets/models/heroes/.gitkeep",
+            "assets/models/enemies/.gitkeep",
+            "assets/models/buildings/.gitkeep",
+            "assets/models/workers/.gitkeep",
+            "assets/models/environment/.gitkeep"
+          ],
+          "summary": "Schema 1.5: removed per-entity states arrays; added environment.types; validator now checks assets/models/<category>/<kind>.glb|.gltf|.obj (no PNG/frame paths). CC0 placeholder script uses fixed legacy state lists so it still runs. Added empty model category dirs with .gitkeep for flat drop-in layout."
+        },
+        "how_to_test": [
+          "python tools/validate_assets.py --report",
+          "python tools/qa_smoke.py --quick"
+        ],
+        "evidence": {
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "0 errors, 50 warns (expected until .glb/.gltf/.obj files land per manifest)"
+          },
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": []
       }
-     ],
-     "evidence": {
-      "qa_smoke": {
-       "command": "python tools/qa_smoke.py --quick",
-       "exit_code": 0,
-       "status": "PASS"
+    }
+  },
+  "wk28-assembler-spike": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk28_assembler_spike_41c2daeb.plan.md",
+      "notes": "Pre-1.5 spike. Ship MVP Kenney .glb kit assembler tool (no game/ai/config.py changes this sprint)."
+    },
+    "rounds": {
+      "wk28_r1_execution": {
+        "round_id": "wk28_r1_execution",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/model_assembler_kenney.py"
+          ],
+          "summary": "New interactive Ursina assembler tool (v0.1) for kitbashing Kenney .glb/.gltf pieces into prefab JSON under assets/prefabs/buildings/. Scans 529 pieces across Models/GLB format (200) and Models/GLTF format (329). Reuses _load_model_node_from_file + _apply_gltf_color_and_shading from tools/model_viewer_kenney.py so both textured (Retro Fantasy / Survival) and factor-only (Nature Kit) pieces render correctly. CLI: --new / --open <prefab_id> / --prefab-id / --out-dir. Controls: left-click ground places snapped-to-1.0-unit-grid piece; left-click placed piece selects; WASD nudge 1.0u XZ; Q/E rotate 90deg Y; [ / ] move Y by 0.25u; Delete removes; RMB/MMB/scroll EditorCamera; ESC quits or cancels modal. Toolbar: New, Open (dialog lists existing prefabs), Save, ID..., Type..., WxD..., Attrib... — each opens an inline InputField modal. Left panel: filter InputField + paginated library (16 rows/page, prev/next). Selection shown as yellow wireframe-box overlay around the piece. Auto-infers attribution from subdir of placed pieces (GLB format -> retro-fantasy + survival; GLTF format -> nature-kit) when user leaves attrib empty. Matches assets/prefabs/schema.md v0.1 exactly."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "python tools/model_assembler_kenney.py --help",
+          "python tools/model_assembler_kenney.py --new --prefab-id smoke_test_v1  (then place 3 pieces, Q to rotate, Delete one, click Save, ESC to quit)",
+          "python tools/model_assembler_kenney.py --open smoke_test_v1  (confirms visual round-trip)"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "All 14 smoke profiles green (determinism_guard, pytest, base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling x4, interior_view, quest_panel, conversation). No game/ai/config.py changes."
+          },
+          "validate_assets": {
+            "status": "NOT_RUN",
+            "note": "No assets/ changes this sprint; not required per onboarding (Step 6)."
+          },
+          "cli_help": {
+            "command": "python tools/model_assembler_kenney.py --help",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "module_import": {
+            "command": "python -c \"import tools.model_assembler_kenney as m; print(m.AssemblerApp, m.main)\"",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "Verifies reuse imports from tools.model_viewer_kenney resolve cleanly."
+          },
+          "library_scan": {
+            "command": "python -c \"from tools.model_assembler_kenney import _collect_piece_library; from pathlib import Path; print(len(_collect_piece_library(Path('assets/models'))))\"",
+            "exit_code": 0,
+            "status": "PASS",
+            "result": "529 pieces (200 GLB + 329 GLTF format)"
+          },
+          "save_load_round_trip": {
+            "status": "PASS",
+            "note": "Non-Ursina unit check: _save_prefab_json + _load_prefab_json with 3 pieces (2 GLB format, 1 GLTF format) reproduces identical JSON; attribution auto-inferred as [kenney_nature-kit, kenney_retro-fantasy-kit, kenney_survival-kit]; required schema fields present (prefab_id, building_type, footprint_tiles, ground_anchor_y, rotation_steps, attribution, pieces, notes); pieces[] items have model+pos+rot+scale; missing prefab returns None."
+          },
+          "human_visual_check": {
+            "status": "PENDING",
+            "owner": "15_ModelAssembler_KitbashLead",
+            "note": "Per wk28 plan sec 6, Agent 15 runs the Ursina round-trip acceptance test (place 3 pieces, save, reopen, confirm pixel-close). Agent 09 consult-reviews textured + factor-only rendering. Neither is blocking Agent 12's deliverable."
+          }
+        },
+        "cli_surface": {
+          "commands": [
+            "python tools/model_assembler_kenney.py --new",
+            "python tools/model_assembler_kenney.py --new --prefab-id my_house_v1",
+            "python tools/model_assembler_kenney.py --open <prefab_id>",
+            "python tools/model_assembler_kenney.py --new --out-dir <alt_dir>"
+          ],
+          "output_path": "assets/prefabs/buildings/<prefab_id>.json",
+          "defaults": {
+            "prefab_id": "untitled_v1",
+            "building_type": "house",
+            "footprint_tiles": [
+              1,
+              1
+            ],
+            "ground_anchor_y": 0.0,
+            "rotation_steps": 90
+          }
+        },
+        "acceptance_checklist_wk28_FEAT_001": {
+          "launches_via_new_and_open_id": "DONE (CLI verified; Ursina launch covered by Agent 15 acceptance test)",
+          "piece_picker_scans_GLB_and_GLTF_format": "DONE (529 pieces scanned; paginated + filterable)",
+          "click_ground_spawns_piece_at_1u_grid_ground_anchor_y": "DONE (_snap centers cells on 0.5,1.5,... and uses meta.ground_anchor_y for Y)",
+          "WASD_nudge_1u_QE_rotate_90_brackets_y_025_delete_removes": "DONE (see handle_input)",
+          "save_writes_json_matching_schema": "DONE (round-trip verified; attribution/notes/rotation_steps preserved)",
+          "reopen_reproduces_layout": "DONE via _load_prefab_json + _instantiate_pending_pieces (Ursina visual check is Agent 15 task)",
+          "two_path_shader_classifier_applied_per_piece": "DONE (_apply_gltf_color_and_shading imported from tools/model_viewer_kenney.py and invoked on every placed piece in _spawn_piece_core)"
+        },
+        "out_of_scope_deferred": [
+          "Baking prefab to single .glb",
+          "Multi-selection / copy-paste",
+          "Sub-unit snap override",
+          "Undo stack beyond last delete",
+          "Thumbnail cache"
+        ],
+        "coordination": {
+          "agent_15": "Schema assets/prefabs/schema.md was already authored (read it; matched JSON output exactly).",
+          "agent_09": "Consult-only. Can verify classifier behavior in tool when launched (place a wall-paint-door.glb for textured and a tree_pine.glb for factor-only).",
+          "agent_11": "Consult-only post-merge gate. qa_smoke --quick PASS confirmed above."
+        },
+        "blockers": [],
+        "known_limitations": [
+          "v0.1 uses Ursina's built-in InputField for modals; no native file-save dialog. Good enough for spike; revisit if Agent 15 reports ergonomic friction.",
+          "Attribution auto-inference is coarse (GLB format folder is a Retro Fantasy + Survival merge); Agent 15 should hand-edit via Attrib... button before committing real prefabs.",
+          "Selection marker uses a bounding-box wireframe derived from tight-bounds at selection time; very large pieces produce a large box (cosmetic only).",
+          "No undo for placements (only Delete). Deferred per plan section 4.4."
+        ],
+        "recommended_next_actions": [
+          "Agent 15: run `python tools/model_assembler_kenney.py --new --prefab-id peasant_house_small_v1`, kitbash 3+ pieces, click Save, ESC, then `python tools/model_assembler_kenney.py --open peasant_house_small_v1` to confirm visual round-trip; log evidence in agent_15 log.",
+          "Agent 09 (consult): while the tool is open, confirm one Retro Fantasy Kit piece (e.g. wall-paint-door.glb) renders textured and one Nature Kit piece (e.g. tree_pine.glb from Models/GLTF format/) renders with custom-lit shading (not flat white, not pitch black). Matches integration guide Section 5.",
+          "PM: when Agent 15 visual round-trip passes, wk28 exit criteria are satisfied and you can close the sprint."
+        ]
       },
-      "ursina_capture": {
-       "command": "python tools/run_ursina_capture_once.py --scenario wk61_hold_g_tax_overlay --ticks 5400 --out docs/screenshots/wk61_r10_hold_g",
-       "exit_code": 0,
-       "png": "docs/screenshots/wk61_r10_hold_g/hold_g_tax_overlay_20260523_134524_910.png",
-       "seeded_tax_types": [
-        "house",
-        "marketplace",
-        "ranger_guild",
-        "rogue_guild",
-        "warrior_guild",
-        "wizard_guild"
-       ],
-       "visual_note": "Wide overview capture; Agent 11 should confirm multiple building dollar labels visible (Agent 03 overlay may need zoom or camera framing if absent)."
+      "wk28_r1_hotfix_launch_crash": {
+        "round_id": "wk28_r1_hotfix_launch_crash",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/model_assembler_kenney.py"
+          ],
+          "summary": "Hotfix: assembler crashed on launch with `AttributeError: 'NoneType' object has no attribute 'scale'` at `btn.text_entity.scale = 0.55`. Root cause: Ursina's Button only instantiates `text_entity` when initial `text` is non-empty; the library-row buttons were created with `text=\"\"` as placeholders. Fix: (1) seed row buttons with `text=\" \"` so text_entity exists; (2) guard all three `.text_entity.*` accesses with `if getattr(btn, 'text_entity', None) is not None`; (3) in `_refresh_list_buttons`, use `' '` instead of `''` for empty/unused rows so text_entity isn't torn down at runtime."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "python tools/model_assembler_kenney.py --new --prefab-id smoke_test_v1",
+          "python tools/model_assembler_kenney.py --open smoke_test_v1"
+        ],
+        "evidence": {
+          "reporter": "jaimie_playtest (user pasted traceback from terminal 1.txt)",
+          "crash_location": "tools/model_assembler_kenney.py line 480, _build_ui, `btn.text_entity.scale = 0.55`",
+          "syntax_check": {
+            "command": "python -c \"import ast; ast.parse(open('tools/model_assembler_kenney.py',encoding='utf-8').read())\"",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "import_check": {
+            "command": "python -c \"import tools.model_assembler_kenney\"",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "ursina_launch": {
+            "status": "PASS",
+            "reporter": "jaimie_playtest",
+            "note": "2026-04-16: Jaimie confirmed the assembler runs and looks great after the text_entity hotfix (Ursina window opens, UI usable)."
+          }
+        },
+        "blockers": []
+      },
+      "wk28_r2_closeout": {
+        "round_id": "wk28_r2_closeout",
+        "status": "done",
+        "closeout_summary": {
+          "sprint": "wk28-assembler-spike",
+          "agent_12_scope": "WK28-FEAT-001: tools/model_assembler_kenney.py v0.1 + wk28_r1_hotfix_launch_crash (Ursina Button.text_entity)",
+          "deliverable_files": [
+            "tools/model_assembler_kenney.py"
+          ],
+          "gates": {
+            "qa_smoke_quick": "PASS after hotfix (exit 0; all smoke profiles)"
+          },
+          "human_acceptance": {
+            "who": "Jaimie (human)",
+            "when_local": "2026-04-16",
+            "verbatim_feedback": "Looks great!",
+            "interpretation": "Human playtest confirms assembler launches and is usable post-hotfix; Agent 12 closes WK28 tooling deliverable."
+          },
+          "handoff": {
+            "01_PM": "WK28 Agent 12 work is closed from Tools side; PM may close sprint when DoD is met repo-wide (schema, Agent 15 round-trip, Agent 09 consult, Agent 11 gate per plan).",
+            "15_ModelAssembler": "Owns formal prefab round-trip evidence + any prefab JSON committed under assets/prefabs/buildings/.",
+            "09_Art": "Optional consult: textured vs factor-only render check in assembler.",
+            "11_QA": "Run python tools/qa_smoke.py --quick on final merge if other agents touch code."
+          }
+        },
+        "what_i_changed": {
+          "files": [
+            ".cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json"
+          ],
+          "summary": "Closeout round only: records human confirmation and sprint handoff; no additional tool code in this round."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "python tools/model_assembler_kenney.py --new --prefab-id smoke_test_v1"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "Last run after hotfix; re-run if new commits land before merge."
+          },
+          "human_signoff": {
+            "status": "PASS",
+            "source": "user_message_2026-04-16"
+          }
+        },
+        "blockers": []
       }
-     },
-     "blockers": [],
-     "follow_ups": [
-      "Agent 11: inspect docs/screenshots/wk61_r10_hold_g/ for multiple building dollar labels (including dollar-zero acceptable per R10 spec)",
-      "If labels not visible in capture PNG, consult Agent 03 on overlay sync timing or camera zoom for scenario"
-     ]
     }
-   }
   },
-  "wk65_round0_deslop_foundation": {
-   "sprint_meta": {
-    "plan_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md",
-    "notes": "WK65 Round 0 de-slop foundation. Agent 12 Wave-0: QA tool-correctness fixes (determinism_guard 3 fixes + observe_sync dual-clock) + pinning tests. Wave-2 hygiene is a later activation."
-   },
-   "rounds": {
-    "wk65_w2_deletion_hygiene": {
-     "sprint_id": "wk65_round0_deslop_foundation",
-     "round_id": "wk65_w2_deletion_hygiene",
-     "status": "done",
-     "pm_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md -> 'Agent 12 (ToolsDevEx) — repo hygiene' (Wave 2)",
-     "wave": "W2",
-     "prompt_text": "Wave 2 repo hygiene: (1) archive dead one-off tools/ scripts to tools/archive/ after grep-confirming zero live references; (2) resolve the .claude/worktrees/ shadow copy only if stale/clean/non-main. Scoped verify (test_wk65_tooling.py + git status). DO NOT COMMIT. Touch only tools/** and the .claude/worktrees/ removal.",
-     "what_i_changed": [
-      "Task 1: git mv 11 confirmed-dead one-off tools/ scripts into tools/archive/ (moves staged, NOT committed): 4x patch_*.py + 7x update_pm_hub_wk*.py.",
-      "Task 2: removed the stale, clean, non-main worktree .claude/worktrees/quirky-roentgen-e15808 (git worktree remove succeeded logically; OneDrive file-lock required a follow-up git worktree prune + rm -rf to clear the physical dir and .git/worktrees/ metadata, which then succeeded on retry). .claude/worktrees/ is now empty and the worktree is gone from `git worktree list`.",
-      "Did NOT touch determinism_guard.py / observe_sync.py (Wave 0 already done). Did NOT touch any non-tools/ file. Did NOT archive tools/wk61_r10_capture_patch.py because it has a LIVE caller (see below)."
-     ],
-     "task1_scripts_archived": {
-      "method": "For each candidate: rg -n \"<scriptname_without_ext>\" game ai tools tests .cursor (ignoring the file itself + .cursor/plans/agent_logs/ historical entries). Archived only those with ZERO live references. Also ran a repo-root-wide rg excluding the scripts themselves + agent_logs = zero hits; no .github/workflows CI exists.",
-      "archived_count": 11,
-      "archived_list": [
-       "tools/patch_hero_id.py -> tools/archive/patch_hero_id.py  (grep-confirm: zero references in game ai tools tests .cursor)",
-       "tools/patch_ai_use_hero_id.py -> tools/archive/patch_ai_use_hero_id.py  (grep-confirm: zero references)",
-       "tools/patch_enemy_attackers.py -> tools/archive/patch_enemy_attackers.py  (grep-confirm: zero references)",
-       "tools/patch_combat_attackers.py -> tools/archive/patch_combat_attackers.py  (grep-confirm: zero references)",
-       "tools/update_pm_hub_wk51.py -> tools/archive/update_pm_hub_wk51.py  (grep-confirm: zero references)",
-       "tools/update_pm_hub_wk50_hotfix.py -> tools/archive/update_pm_hub_wk50_hotfix.py  (grep-confirm: zero references)",
-       "tools/update_pm_hub_wk50_r14.py -> tools/archive/update_pm_hub_wk50_r14.py  (grep-confirm: zero references)",
-       "tools/update_pm_hub_wk50_r15.py -> tools/archive/update_pm_hub_wk50_r15.py  (grep-confirm: zero references)",
-       "tools/update_pm_hub_wk50_r16.py -> tools/archive/update_pm_hub_wk50_r16.py  (grep-confirm: zero references)",
-       "tools/update_pm_hub_wk50_r17.py -> tools/archive/update_pm_hub_wk50_r17.py  (grep-confirm: zero references)",
-       "tools/update_pm_hub_wk50_r18.py -> tools/archive/update_pm_hub_wk50_r18.py  (grep-confirm: zero references)"
-      ],
-      "candidates_left_in_place": [
-       "tools/wk61_r10_capture_patch.py -- LEFT (NOT archived): it is a LIVE one-off capture patch. grep-confirm shows it referenced as 'patch_path': 'tools/wk61_r10_capture_patch.py' in tools/screenshot_scenarios.py:1366 (scenario 'wk61_hold_g_tax_overlay'), and tools/run_ursina_capture_once.py reads that patch_path (line 169), asserts patch_path.is_file() (line 230), and dynamically imports+executes it via importlib.util.spec_from_file_location (lines 55-56, 234). Archiving would break the wk61_hold_g_tax_overlay Ursina capture scenario at runtime. Per Critical Design Rule #1 (zero live callers required), left in place."
-      ],
-      "archive_dir_note": "tools/archive/ already existed and is git-tracked (previously held tools/archive/root_wk40_stage5/**); the 11 new files land directly under tools/archive/."
-     },
-     "task2_worktree_outcome": {
-      "result": "REMOVED",
-      "target": ".claude/worktrees/quirky-roentgen-e15808",
-      "pre_checks": "git worktree list -> it was a separate worktree on branch claude/quirky-roentgen-e15808 at ca92e3e, NOT the main checkout (main = the OneDrive path at 5d20445) and NOT the active checkout. git -C <wt> status -> 'nothing to commit, working tree clean' (behind origin/main by 117 commits, fast-forwardable). => stale + clean + non-main => safe to remove per task gate.",
-      "removal_steps": "1) git worktree remove '.claude/worktrees/quirky-roentgen-e15808' -> unregistered from `git worktree list` but reported 'Permission denied' deleting the physical dir + .git/worktrees metadata (Windows/OneDrive transient file lock). 2) git worktree prune (cleared stale gitdir pointers). 3) rm -rf '.claude/worktrees/quirky-roentgen-e15808' (succeeded on retry). 4) rm -rf '.git/worktrees/quirky-roentgen-e15808' (succeeded on retry).",
-      "final_state": ".claude/worktrees/ is empty; .git/worktrees/quirky-roentgen-e15808 gone; absent from `git worktree list`. Shadow second-repo copy that doubled every grep is fully resolved."
-     },
-     "how_to_test": [
-      "python -m pytest tests/test_wk65_tooling.py -q   (scoped Wave-0 regression)",
-      "git status   (confirm only the 11 intended renames into tools/archive/ are staged from my work; worktree gone)",
-      "git worktree list   (quirky-roentgen-e15808 absent)"
-     ],
-     "evidence": [
-      {
-       "command": "git mv (x11) tools/<dead>.py tools/archive/",
-       "result": "ALL 11 MOVES OK",
-       "status": "PASS"
-      },
-      {
-       "command": "git status",
-       "result": "11 renames into tools/archive/ staged (4 patch_*.py + 7 update_pm_hub_wk*.py); no other tools/ changes from me. (Many non-tools/ files modified/untracked = OTHER parallel Wave-2 agents 03/05/06/14 in the shared working tree.)",
-       "status": "PASS"
-      },
-      {
-       "command": "git worktree remove + prune + rm -rf (.claude + .git metadata)",
-       "result": ".claude/worktrees/ empty; .git/worktrees/quirky-roentgen-e15808 removed; absent from `git worktree list`",
-       "status": "PASS"
-      },
-      {
-       "command": "python -m pytest tests/test_wk65_tooling.py -q",
-       "result": "BLOCKED at collection: conftest.py import fails -> config.py NameError 'HERO' is not defined at config.py:419 (HERO_HIRE_COST = HERO.hire_cost). This is Agent 03's in-progress Wave-2 config.py dataclass-flatten (Task 3) leaving a transient broken import in the SHARED working tree; it breaks ALL test collection, not just mine. NOT caused by my hygiene work (git mv of dead tools/ scripts + worktree removal cannot affect config.py).",
-       "status": "BLOCKED_BY_PARALLEL_AGENT_03"
-      },
-      {
-       "command": "python -c ast.parse + --help on tools/determinism_guard.py; ast.parse on tools/observe_sync.py",
-       "result": "determinism_guard parse OK + --help exit 0; observe_sync parse OK. My Wave-0 deliverables intact (no config dependency). git diff tests/test_wk65_tooling.py = empty (untouched this wave).",
-       "status": "PASS"
+  "wk30-buildings-pipeline": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk30_buildings_pipeline.plan.md",
+      "notes": "WK30-FEAT-004 manifest + validator"
+    },
+    "rounds": {
+      "wk30_r1_execution": {
+        "round_id": "wk30_r1_execution",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/assets_manifest.json",
+            "tools/validate_assets.py",
+            "assets/prefabs/buildings/castle_v1.json",
+            "assets/prefabs/buildings/warrior_guild_v1.json",
+            "assets/prefabs/buildings/ranger_guild_v1.json",
+            "assets/prefabs/buildings/rogue_guild_v1.json"
+          ],
+          "summary": "Added prefabs.buildings required/optional lists. Implemented prefab JSON validation (file exists, parse, required keys, piece models resolve under assets/models/, non-empty attribution). Missing optional prefab = WARN; missing/malformed required = ERROR. Process exit code fails on any error-level finding. Added minimal valid stub prefabs for castle + three guilds (footprints match config.py; Agent 15 replaces with full kitbash). Optional wizard_guild_v1 not present — WARN only."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "python tools/validate_assets.py --report"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "WARN missing optional wizard_guild_v1.json; WARN missing flat models for manifest categories (non-strict, pre-existing)"
+          }
+        },
+        "blockers": []
       }
-     ],
-     "surfaced_but_not_masked": "N/A for this wave (no determinism_guard matcher changes in W2; Wave-0 already reported clean).",
-     "blockers": [
-      "tests/test_wk65_tooling.py cannot run to green RIGHT NOW because Agent 03's parallel Wave-2 config.py flatten is mid-edit and config.py fails to import (NameError 'HERO' at config.py:419), which breaks conftest.py collection for the ENTIRE suite. This is expected to clear once Agent 03 finishes inlining the flat aliases. My Wave-0 tooling tests are unaffected by anything I did this wave and will pass once collection recovers. Re-verify at Gate 2 (Agent 01/11)."
-     ],
-     "questions_back_to_pm": [],
-     "notes_non_blocking": [
-      "Pre-existing orphan worktree metadata: .git/worktrees/uhy/ exists (dated Dec 15) with a dangling gitdir ('gitdir file does not exist' on prune), no on-disk worktree, and is NOT in `git worktree list`. It is unrelated to quirky-roentgen-e15808 and out of my assigned scope, so I left it. `git worktree prune` would clean it but hit the same OneDrive Permission-denied lock; recommend a follow-up `git worktree prune` when the lock clears (cosmetic only).",
-      "OneDrive on this checkout intermittently locks files (Permission denied on git worktree remove/prune); retries succeeded. Worth noting for any future worktree/file-deletion ops."
-     ],
-     "recommended_next_actions": [
-      "Agent 01/11 at Gate 2: re-run `python -m pytest tests/test_wk65_tooling.py -q` after Agent 03's config.py flatten lands clean (`python -c \"import config\"` must succeed first); expect GREEN.",
-      "Optional cosmetic: `git worktree prune` to clear the pre-existing dangling .git/worktrees/uhy metadata once the OneDrive lock releases."
-     ]
+    }
+  },
+  "wk31-perf-fps-and-pack-scale": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md",
+      "notes": "WK31 Part A.2.1 — pack scale single source of truth (viewer / assembler / runtime)"
     },
-    "wk65_w0_tooling_baseline": {
-     "sprint_id": "wk65_round0_deslop_foundation",
-     "round_id": "wk65_w0_tooling_baseline",
-     "status": "done",
-     "pm_ref": "sprints['wk65_round0_deslop_foundation'].rounds['wk65_r0_plan'].pm_agent_prompts['12'] + plan section 'Agent 12 (ToolsDevEx) - fix the QA tools FIRST'",
-     "wave": 0,
-     "prompt_text": "Wave 0: fix determinism_guard.py (a: --paths-outside-root relative_to crash; b: separate parse-errors from violations; c: alias-aware AST matcher) + observe_sync.py dual-clock (delete now_ms_val=int((t*1000)/60), read game.sim.timebase.now_ms()) + write tests/test_wk65_tooling.py. REPORT-DONT-MASK any newly-surfaced pre-existing determinism violation. DO NOT COMMIT.",
-     "what_i_changed": {
-      "files": [
-       "tools/determinism_guard.py (EDIT)",
-       "tools/observe_sync.py (EDIT)",
-       "tests/test_wk65_tooling.py (NEW, 21 tests)"
-      ],
-      "determinism_guard_fixes": [
-       "(a) --paths-outside-root crash FIXED: added _display_path(p) helper (try p.relative_to(PROJECT_ROOT) except ValueError -> str(p)); used it in _violation() and the parse_error dict (was file.relative_to(PROJECT_ROOT)); main() now resolves input roots to absolute (roots=[Path(p).resolve() for p in ns.paths]).",
-       "(b) parse-errors separated from violations: main() partitions all_findings into parse_errors (kind==parse_error) vs violations; prints parse errors under a distinct WARN header; PASS/FAIL + exit code now driven ONLY by real violations (return 0 if not violations else 1). --json now emits {violations, parse_errors} instead of {findings}.",
-       "(c) alias-aware AST matching: added _build_alias_map(tree) (scans ast.Import/ast.ImportFrom for tracked modules pygame/time/datetime/random; maps bound name -> canonical prefix tuple) + _normalize_chain(chain, aliases) (rewrites chain root through alias map). scan_file builds the alias map and normalizes each call chain before matching. Handles: import time as t; from random import random; from time import time as now; etc. rng.random() on a passed-in object stays NOT flagged."
-      ],
-      "observe_sync_fix": "dual-clock removed: deleted now_ms_val=int((t*1000)/60) (multiplier-blind); now reads now_ms_val=int(now_ms()) from game.sim.timebase (single authoritative clock set each tick via set_sim_now_ms(int(t*sim_dt*1000)), which IS speed-multiplier-aware). Added now_ms to the existing timebase import. Verified hero.stuck_since_ms is set via the SAME clock (hero.py:9 from game.sim.timebase import now_ms as sim_now_ms), so max_stuck_ms = now_ms_val - stuck_since_ms is now correct under any speed multiplier.",
-      "summary": "Wave-0 tool-correctness fixes only; no behavior change beyond the 4 documented bug fixes. Touched only the 3 files in my lane. No commit/push."
-     },
-     "how_to_test": [
-      "python -m pytest tests/test_wk65_tooling.py -q",
-      "python tools/determinism_guard.py",
-      "python tools/qa_smoke.py --quick",
-      "python tools/observe_sync.py --seconds 24 --heroes 20 --seed 3 --log-every 9999 --qa --bounty"
-     ],
-     "evidence": {
-      "pytest_wk65_tooling": {
-       "command": "python -m pytest tests/test_wk65_tooling.py -q",
-       "exit_code": 0,
-       "status": "PASS",
-       "detail": "21 passed, 1 warning"
+    "rounds": {
+      "wk31_r1_execution": {
+        "round_id": "wk31_r1_execution",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/kenney_pack_scale.py",
+            "tools/model_viewer_kenney.py",
+            "tools/model_assembler_kenney.py",
+            "tools/wall_flush_pair_kenney.py",
+            "game/graphics/ursina_renderer.py"
+          ],
+          "summary": "Added tools/kenney_pack_scale.py: RETRO_REFERENCE_MAX_EXTENT=5.0 as 1.0 calibration; per-pack multipliers keyed by raw-tree folder id plus merged-path inference (GLB format default Retro; GLTF format Nature; -fantasy-town / -graveyard suffixes; character- blocky). model_viewer uses pack_max_extent_for_rel per asset; assembler and ursina_renderer multiply authored JSON scale by pack_extent_multiplier_for_rel. wall_flush_pair defaults --max-extent from the same helper. Agent 15 can tune multipliers after flush pass."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "python tools/model_viewer_kenney.py --max-total 8",
+          "python tools/wall_flush_pair_kenney.py --model Models/GLB format/wall-door.glb"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": [],
+        "agent_fields": {
+          "pack_extent_multipliers_2026_04_18": {
+            "kenney_retro-fantasy-kit": 1.0,
+            "kenney_survival-kit": 1.14,
+            "kenney_nature-kit": 1.2,
+            "kenney_fantasy-town-kit_2.0": 1.1,
+            "kenney_graveyard-kit_5.0": 1.1,
+            "kenney_blocky-characters_20": 1.0,
+            "Models/GLB format unsuffixed": 1.0,
+            "environment": 1.0
+          }
+        }
       },
-      "determinism_guard": {
-       "command": "python tools/determinism_guard.py",
-       "exit_code": 0,
-       "status": "PASS",
-       "detail": "[determinism_guard] PASS: no violations found. Also verified --paths game/entities game/systems ai => PASS exit 0. Alias-aware matcher surfaced NO pre-existing hidden violation (clean, as plan predicted for Round 0)."
-      },
-      "qa_smoke": {
-       "command": "python tools/qa_smoke.py --quick",
-       "exit_code": 0,
-       "status": "PASS",
-       "detail": "DONE: PASS. All speed_scaling profiles (0.1x/0.25x/0.5x/1.0x) green - exercises the observe_sync dual-clock fix under multiplier."
-      },
-      "observe_sync_bounty": {
-       "command": "python tools/observe_sync.py --seconds 24 --heroes 20 --seed 3 --log-every 9999 --qa --bounty",
-       "exit_code": 0,
-       "status": "PASS",
-       "detail": "[qa] PASS: bounty_exists=True bounty_has_responder=True ... ; counters max_stuck_ms=2100 (non-zero, correct after clock fix)."
-      },
-      "full_suite_regression": {
-       "command": "python -m pytest tests/ -q",
-       "exit_code": 0,
-       "status": "PASS",
-       "detail": "536 passed, 4 skipped - no regressions from tool changes."
+      "wk31_r2_economy": {
+        "round_id": "wk31_r2_economy",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/assets_manifest.json"
+          ],
+          "summary": "Part B: moved inn_v1, farm_v1, food_stand_v1, gnome_hovel_v1 from prefabs.buildings.optional to required (WK31B-FEAT-005). Prefab JSONs already present under assets/prefabs/buildings/. No validator code changes."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "python tools/validate_assets.py --report"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": []
       }
-     },
-     "surfaced_but_not_masked": "NONE. Repo-wide determinism_guard with the new alias-aware matcher reports PASS (no pre-existing violations surfaced). Nothing weakened, nothing hidden.",
-     "blockers": [],
-     "questions_back_to_pm": [],
-     "notes_non_blocking": [
-      "Pre-existing (NOT my regression): observe_sync --scenario hero_stuck_repro at --speed-multiplier 0.5 reports [qa] FAIL with stuck_events=0/max_stuck_ms=0. Verified via git stash: the UNMODIFIED baseline observe_sync produces the identical FAIL at 0.5x. Cause: at 0.5x, 24 real seconds = 12 sim-seconds, below the hero stuck-detection threshold, so stuck_active never trips (independent of my now_ms_val line, which only feeds max_stuck_ms accounting). This scenario+speed combo is NOT in the qa_smoke gate set (qa_smoke runs hero_stuck_repro only at default speed, which PASSES) and is not one of my 4 required gates. Flagging for awareness only; not a Round-0 blocker.",
-      "--json output schema changed from {findings:[...]} to {violations:[...], parse_errors:[...]} as part of fix (b). Grep confirms no repo code consumes determinism_guard --json (qa_smoke invokes the guard without --json and checks only exit code), so this is safe."
-     ],
-     "recommended_next_actions": [
-      "Wave-2 hygiene (my later activation): git mv grep-confirmed dead one-off tools to tools/archive/ + resolve .claude/worktrees shadow."
-     ]
     }
-   }
   },
-  "tooling_roll_agent_logs_fix": {
-   "sprint_meta": {
-    "created_utc": "2026-05-29T22:00:00Z",
-    "notes": "Standalone tooling fix dispatched 2026-05-29: sprint-ordering bug in tools/roll_agent_logs.py (mixed dated+undated logs archived recent work). Predecessor-time inheritance + new test matrix."
-   },
-   "rounds": {
-    "roll_agent_logs_ordering_fix": {
-     "sprint_id": "tooling_roll_agent_logs_fix",
-     "round_id": "roll_agent_logs_ordering_fix",
-     "status": "done",
-     "pm_ref": "standalone dispatch (no PM round) - real incident 2026-05-29: agent_01 roll archived recent wk64+wk65",
-     "wave": 0,
-     "prompt_text": "Fix the sprint-ordering bug in tools/roll_agent_logs.py _ordered_sprint_keys (undated sprints sorted as 1970 epoch -> recent appended-undated sprints wrongly archived by keep-last-N). Replace with predecessor-time inheritance; add tests/test_roll_agent_logs.py matrix. DO NOT COMMIT.",
-     "what_i_changed": {
-      "tools/roll_agent_logs.py": "Rewrote _ordered_sprint_keys: undated sprints now inherit the timestamp of their most-recent DATED predecessor (walk dict in insertion order, carry last_seen forward; leading-undated inherit EPOCH and sort oldest). All-undated logs still early-return insertion order (worker-log path, unchanged). _parse_created_utc unchanged. Expanded the docstring to document the undated-inherits-predecessor behavior and the 2026-05-29 incident. No other behavioral change.",
-      "tests/test_roll_agent_logs.py": "NEW. 10-test matrix imported from the real tool API (_ordered_sprint_keys, _roll_one, module LOG_DIR/ARCHIVE_DIR): (a) all-dated out-of-order -> chronological; (b) all-undated -> exact insertion order; (c) bug case dated wk58..wk63 + undated wk64/65/66 -> keep=7 archives exactly [wk58,wk59] (FAILS old epoch logic); (d) interspersed undated sorts between dated neighbors; (e) leading-undated sorts oldest/archived-first; empty; + two end-to-end _roll_one tests (dry-run computes archive set, real write moves wk58/wk59 into the archive file) using monkeypatched LOG_DIR/ARCHIVE_DIR over pytest tmp_path."
-     },
-     "how_to_test": [
-      "python -m pytest tests/test_roll_agent_logs.py -q  ->  10 passed",
-      "python -m pytest -q  ->  592 passed, 4 skipped, 0 failed",
-      "python tools/roll_agent_logs.py --keep 7 --dry-run  ->  runs cleanly, processed=27, all skipped (real logs already <= 7), no crash"
-     ],
-     "evidence": {
-      "new_tests": "10 passed in 0.14s",
-      "full_suite": "592 passed, 4 skipped, 1 warning in 96.34s",
-      "old_logic_repro": "old epoch ordering on the bug case produced archived=[wk64,wk65] (recent work); fixed logic produces archived=[wk58,wk59] (oldest), kept=[wk60..wk66]",
-      "real_dryrun": "keep=7 dry_run=True processed=27 rolled=0 skipped=27 (no_roll_needed / not_schema_log); no error"
-     },
-     "surfaced_but_not_masked": "NONE. Worker-log all-undated path is preserved exactly (early return). No determinism or schema behavior weakened.",
-     "blockers": [],
-     "questions_back_to_pm": [],
-     "notes_non_blocking": [
-      "Observed agent_12 log itself has several leaked top-level sprint keys (e.g. wk20-ui-input-bridge) sitting beside the canonical sprints dict; the tool only reads sprints[...] so this is cosmetic, not flagged here."
-     ],
-     "recommended_next_actions": [
-      "Optionally backfill created_utc on undated sprint blocks across agent logs so ordering is fully explicit rather than inheritance-derived."
-     ]
+  "wk32-camera-construction-nature-polish": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
+      "notes": "WK32 E pack color tint; B.6 manifest optional construction prefab ids"
     },
-    "roll_agent_logs_ordering_fix_review_revision": {
-     "round_id": "roll_agent_logs_ordering_fix_review_revision",
-     "round_meta": {
-      "prompt_set_id": "tooling_roll_fix_adversarial_review_revision",
-      "sent_at_local": "2026-05-29T16:00:00-06:00"
-     },
-     "prompt_text": "Re-dispatch after adversarial review of the prior attempt. Two review findings, both classified NON-BLOCKING / out-of-scope: (1) inherited time is the IMMEDIATE dated predecessor, not a running max -> only matters if dated sprints are appended out of chronological order (never happens in real append-only logs); faithful to spec, worth a one-line awareness note in the test docstring, no code change. (2) agent_12 log has leaked top-level sprint keys beside the canonical sprints dict; tool only reads sprints[...] so cosmetic / pre-existing / out of scope. Re-run all gates.",
-     "what_i_changed": {
-      "tools/roll_agent_logs.py": "No code change in this revision (the fix from the prior round stands): _ordered_sprint_keys uses predecessor-time inheritance with EPOCH for leading-undated, all-undated early-returns insertion order, _parse_created_utc unchanged. The IMMEDIATE-predecessor (non-running-max) behavior is intentional and faithful to the prescribed algorithm; review finding 1 confirmed it needs no code change.",
-      "tests/test_roll_agent_logs.py": "Added the review-requested awareness note to the module docstring: the inherited timestamp is the IMMEDIATE dated predecessor, NOT a running max, so out-of-chronological-order DATED inserts can place a trailing undated sprint in the middle; documented as faithful-to-spec (never triggers on real append-only logs) so it is not mistaken for a regression. No test assertions changed; the 10-test matrix is unchanged.",
-      "review_finding_2_top_level_leaked_keys": "NOT addressed (correctly out of scope): the leaked top-level sprint keys (wk18.., wk20.., etc.) sit beside the canonical sprints dict; roll_agent_logs only reads obj[\"sprints\"], so they are cosmetic and pre-existing. Left untouched per review classification."
-     },
-     "how_to_test": [
-      "python -m pytest tests/test_roll_agent_logs.py -q  ->  10 passed",
-      "python -m pytest -q  ->  592 passed, 4 skipped, 0 failed (no regression)",
-      "python tools/roll_agent_logs.py --keep 7 --dry-run  ->  runs cleanly, processed=27, no crash; agent_12 itself now shows would_roll (archived=1) because its canonical sprints dict holds 8 sprints at keep=7 -> the ordering logic handles it correctly without error",
-      "old-vs-new repro: reconstructed old epoch logic on the bug case archives [wk64,wk65] (recent work, the bug); fixed logic archives [wk58,wk59] (oldest) -> the bug-case test genuinely fails against old logic"
-     ],
-     "evidence": {
-      "new_tests": "10 passed in 0.13s",
-      "full_suite": "592 passed, 4 skipped, 1 warning in 97.89s",
-      "real_dryrun": "keep=7 dry_run=True processed=27 rolled=1 skipped=26; the lone would_roll is agent_12 (archived=1, kept=7) because its sprints dict now has 8 entries; all others no_roll_needed / not_schema_log; no error",
-      "old_logic_repro": "OLD ordered [wk64,wk65,wk66,wk58,wk59,wk60,wk61,wk62,wk63] -> archived [wk64,wk65]; NEW ordered [wk58..wk66] -> archived [wk58,wk59]",
-      "review_findings_dispositions": "Finding 1 (immediate-predecessor not running-max): documented as awareness note in test docstring, no code change (faithful to spec). Finding 2 (leaked top-level keys): out of scope, untouched."
-     },
-     "agent_fields": {
-      "pm_acknowledged": false,
-      "code_change_this_revision": false,
-      "docstring_awareness_note_added": true,
-      "gates_passed": [
-       "pytest tests/test_roll_agent_logs.py",
-       "pytest (full suite)",
-       "roll_agent_logs.py --keep 7 --dry-run"
-      ],
-      "blockers": []
-     }
-    }
-   }
-  },
-  "wk67_round_a2_ai_boundary": {
-   "sprint_meta": {
-    "created_utc": "2026-05-29T00:00:00Z",
-    "notes": "WK67 Round A-2 AI-boundary sprint. Agent 12 Wave 4 (L9): tools-side re-exports of the Kenney material/scale-tint, ursina input-debug, and ursina-screenshot helpers that Agent 10 moved into game/graphics/."
-   },
-   "rounds": {
-    "wk67_w4_l9": {
-     "sprint_id": "wk67_round_a2_ai_boundary",
-     "round_id": "wk67_w4_l9",
-     "status": "done",
-     "wave": "W4",
-     "pm_ref": "Agent 12 Wave 4 prompt (L9 tools-side re-exports); PM hub agent_01 sprint wk67_round_a2_ai_boundary",
-     "task": "L9 tools-side re-exports: after Agent 10 MOVED the Kenney material/shader, pack-scale/tint, ursina input-debug, and ursina-screenshot helpers verbatim into game/graphics/, replace the now-duplicated defs in the four tools/ modules with thin re-export imports from game.graphics so every other tools/ caller keeps working. tools->game is the allowed (non-circular) direction.",
-     "what_i_changed": [
-      "tools/model_viewer_kenney.py: removed the moved MaterialDebugStats dataclass, the _FACTOR_LIT_VERT/_FACTOR_LIT_FRAG shader strings, _factor_lit_shader_cache, _get_factor_lit_shader, and _apply_gltf_color_and_shading defs; added a top-of-module re-export 'from game.graphics.kenney_material import (MaterialDebugStats, _FACTOR_LIT_FRAG, _FACTOR_LIT_VERT, _apply_gltf_color_and_shading, _get_factor_lit_shader)'; dropped the now-unused 'from dataclasses import dataclass' import. KEPT the viewer-only loaders/lighting (_collect_gltf_under, collect_viewer_sections, _fit_uniform_and_ground, _pack_border_entity, _setup_scene_lighting, _load_model_node_from_file, _rel_for_label, run_viewer, etc.) and the existing prefab_texture_overrides usage.",
-      "tools/kenney_pack_scale.py: replaced the ENTIRE body of defs with a single thin re-export 'from game.graphics.kenney_material import (RETRO_REFERENCE_MAX_EXTENT, _ENV_TREE_COLOR_MULTIPLIER_DEFAULT, _MERGED_COLLISION_PACK, _MERGED_GLB_DEFAULT_MULTIPLIER, _MERGED_SURVIVAL_ONLY_BASENAMES, _PACK_COLOR_MULTIPLIER_BY_FOLDER, _PACK_EXTENT_MULTIPLIER_BY_FOLDER, _RETRO_RAW_GLB, _SURVIVAL_RAW_GLB, _load_merged_survival_only_basenames, _norm_rel, apply_kenney_pack_color_tint_to_entity, infer_kenney_pack_folder_id, pack_color_multiplier_for_rel, pack_extent_multiplier_for_rel, pack_max_extent_for_rel)'; merged the WK67 note into the existing module docstring (removed stray duplicate closing triple-quote).",
-      "tools/ursina_input_debug.py: replaced the def body with 'from game.graphics.ursina_input_debug import (ENV_KEY, is_ursina_debug_input_enabled, maybe_print_wk20_input_on_lmb, print_wk20_input_line)'; added WK67 note to docstring.",
-      "tools/ursina_screenshot.py: replaced the def body with 'from game.graphics.ursina_screenshot import (_screenshot_filename_stem, build_screenshot_filepath, docs_screenshots_dir, next_auto_screenshot_path, next_auto_screenshot_path_for, save_ursina_window_screenshot, screenshot_output_dir)'; KEPT the __main__ helper-info block (now uses the re-exported names); added WK67 note to docstring.",
-      "Edited tools/** ONLY. Did NOT touch game/**, ai/**, or tests/**. No commit, no push."
-     ],
-     "no_duplicate_defs_grep": {
-      "command": "rg -n '^def _apply_gltf_color_and_shading|^def apply_kenney_pack_color_tint_to_entity|^def pack_extent_multiplier_for_rel|^def save_ursina_window_screenshot|^def is_ursina_debug_input_enabled' tools/",
-      "result": "NO MATCHES (all five are now re-export imports, not defs in tools/) - PASS"
-     },
-     "import_smoke": {
-      "four_reexport_modules": "python -c 'import tools.model_viewer_kenney; import tools.kenney_pack_scale; import tools.ursina_input_debug; import tools.ursina_screenshot' -> OK four re-export modules (clean)",
-      "other_tools_consumers": "python -c 'import tools.model_assembler_kenney; import tools.wall_flush_pair_kenney; import tools.wk31_flush_screenshot_batch; import tools.ursina_capture; import tools.run_ursina_capture_once; import tools.run_worker_scale_ursina_shot' -> OK other tools consumers (clean). model_assembler_kenney + wall_flush_pair_kenney import _apply_gltf_color_and_shading via the viewer re-export and still get _load_model_node_from_file/_setup_scene_lighting/_fit_uniform_and_ground/_rel_for_label from the viewer (those were NOT moved).",
-      "symbol_resolution_and_identity": "All 5 viewer material symbols + 16 pack-scale symbols + 4 input-debug + 7 screenshot symbols import successfully. Identity check: tools.kenney_pack_scale.pack_extent_multiplier_for_rel IS game.graphics.kenney_material.pack_extent_multiplier_for_rel; RETRO_REFERENCE_MAX_EXTENT==5.0 both sides. Behavior spot-check: pack_extent_multiplier_for_rel('environment/lair.glb')==1.0; pack_color_multiplier_for_rel('Models/GLTF format/tree.gltf')~=0.75.",
-      "viewer_help": "python tools/model_viewer_kenney.py --help -> exit 0, usage printed (confirms top-of-module re-export of _apply_gltf_color_and_shading resolves at load)."
-     },
-     "graphics_to_tools_check": {
-      "command": "rg -n 'from tools|import tools' game/graphics",
-      "result": "Only two doc-COMMENT mentions in game/graphics/kenney_material.py ('moved verbatim from tools/...'); ZERO actual import statements. No graphics->tools runtime import re-introduced - PASS"
-     },
-     "evidence": {
-      "full_suite": {
-       "command": "python -m pytest -q",
-       "result": "598 passed, 4 skipped, 1 warning in ~104s",
-       "baseline": "598 passed / 4 skipped",
-       "status": "GREEN (matches baseline exactly)"
+    "rounds": {
+      "wk32_r1_execution": {
+        "round_id": "wk32_r1_execution",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/kenney_pack_scale.py",
+            "tools/model_viewer_kenney.py",
+            "tools/model_assembler_kenney.py",
+            "tools/wall_flush_pair_kenney.py",
+            "game/graphics/ursina_renderer.py",
+            "tools/assets_manifest.json",
+            ".cursor/plans/kenney_gltf_ursina_integration_guide.md"
+          ],
+          "summary": "Extended kenney_pack_scale with pack_color_multiplier_for_rel (mirrors extent routing) and apply_kenney_pack_color_tint_to_entity — sets Ursina Entity.color to (m,m,m) after _apply_gltf_color_and_shading. Defaults: Retro/merged Retro/cursor-pixel 1.0; Survival/Nature/Fantasy Town/Graveyard/Blocky 0.60. Wired in model_viewer_kenney, model_assembler_kenney, ursina_renderer _load_prefab_instance, wall_flush_pair_kenney. Integration guide §7.1. assets_manifest prefabs.buildings.optional: nine WK32 construction-stage ids (plots + pilot intermediates); validator warns until Agent 15 adds JSON files."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "python tools/validate_assets.py --report"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "WARN missing optional prefab JSON for new WK32 ids until Agent 15 lands; other WARNs pre-existing"
+          }
+        },
+        "blockers": [],
+        "screenshots": []
+      },
+      "wk32_r1_revision_2026_04_18": {
+        "round_id": "wk32_r1_revision_2026_04_18",
+        "status": "done",
+        "pm_ref": "pm_status_summary.revision_2026_04_18 + pm_agent_prompts[12] rewrite",
+        "pre_code_checklist": {
+          "file_map": [
+            "tools/kenney_pack_scale.py — pack_extent_multiplier_for_rel, pack_color_multiplier_for_rel, apply_kenney_pack_color_tint_to_entity; per-pack tables",
+            "tools/model_viewer_kenney.py — gallery loads models; apply tint after _apply_gltf_color_and_shading",
+            "tools/model_assembler_kenney.py — piece spawn; tint after shading",
+            "tools/wall_flush_pair_kenney.py — diagnostic pair spawn; tint after shading",
+            "game/graphics/ursina_renderer.py — prefab pieces + _finalize_kenney_scatter_entity(path) uses pack tint",
+            ".cursor/plans/kenney_gltf_ursina_integration_guide.md — §7.1 policy doc",
+            "tools/assets_manifest.json — prefabs.buildings required/optional lists"
+          ],
+          "architecture_options": [
+            "OPT A — In pack_color_multiplier_for_rel: retune table 0.60→0.75; env/ → Nature kit value; normalize assets/models/ prefix. PROS: one module, matches PM. CONS: future non-Nature env assets get same tint. RISK: LOW. EFFORT: XS. CHOSEN.",
+            "OPT B — Filename pack suffixes for env/. PROS: precise per-file. CONS: renames, Agent 15 churn. RISK: MED. EFFORT: M. REJECTED this sprint.",
+            "OPT C — Separate _ENV_COLOR_MULTIPLIER constant. PROS: tunable. CONS: second knob. RISK: LOW. EFFORT: S. REJECTED — PM asked to tie env/ to Nature routing."
+          ],
+          "existing_code_conflicts": [
+            "pack_extent_multiplier_for_rel must keep environment/ → 1.0 — independent; do not change.",
+            "Scatter passes model paths as assets/models/environment/... — required stripping prefix in pack_color_multiplier_for_rel so env/ tint and classification apply (fixed in this revision).",
+            "None further: no tests snapshot 0.60 (pytest -q: 93 passed)."
+          ]
+        },
+        "what_i_changed": {
+          "files": [
+            "tools/kenney_pack_scale.py",
+            ".cursor/plans/kenney_gltf_ursina_integration_guide.md",
+            "tools/assets_manifest.json",
+            "docs/screenshots/wk32_nature/20260418_1430_pack_color_albedo_swatches.png"
+          ],
+          "summary": "WK32-BUG-005 / WK32-FEAT-009: _PACK_COLOR_MULTIPLIER_BY_FOLDER non-Retro 0.60→0.75; environment/ uses Nature value; strip leading assets/models/ so Ursina scatter paths classify as environment/. Manifest: plot_1x1_v1, plot_2x2_v1, plot_3x3_v1 moved from optional to required (Agent 15 JSON on disk). Six pilot intermediates remain optional. Albedo comparison PNG (three swatches: Retro 1.0, prior 0.60, retune 0.75)."
+        },
+        "how_to_test": [
+          "python -m pytest tests -q",
+          "python tools/qa_smoke.py --quick",
+          "python tools/validate_assets.py --report"
+        ],
+        "evidence": {
+          "pytest": {
+            "command": "python -m pytest tests -q",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "93 passed"
+          },
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "errors=0; WARNs pre-existing (flat models, some env manifest kinds not yet on disk)"
+          }
+        },
+        "screenshots": [
+          "docs/screenshots/wk32_nature/20260418_1430_pack_color_albedo_swatches.png — three-panel albedo modulate (white×1.0, ×0.60 prior policy, ×0.75 retune); in-game visual check still recommended for Agent 09"
+        ],
+        "blockers": []
+      },
+      "wk32_r2_visual_followup": {
+        "round_id": "wk32_r2_visual_followup",
+        "status": "done",
+        "pm_ref": "sprints[\"wk32-camera-construction-nature-polish\"].rounds[\"wk32_r2_visual_followup\"] — WK32-R2-FEAT-004 manifest/schema; Inn 3x2 plot + inn_v2 ladder prefabs",
+        "what_i_changed": {
+          "files": [
+            "assets/prefabs/buildings/plot_3x2_v1.json — new 3x2 empty-plot prefab (footprint [3,2], building_type plot_3x2; six resource-stone + structure-poles)",
+            "assets/prefabs/buildings/inn_v2_build_20_v1.json — first 9/38 pieces from inn_v2.json (~24% construction stage)",
+            "assets/prefabs/buildings/inn_v2_build_50_v1.json — first 22/38 pieces from inn_v2.json (~58% construction stage)",
+            "tools/assets_manifest.json — prefabs.buildings.required: +plot_3x2_v1 (ordered before plot_3x3_v1); optional: +inn_v2_build_20_v1, inn_v2_build_50_v1",
+            "assets/prefabs/schema.md — v0.5: non-square plot_{w}x{h}_v1 + inn_v2 stage naming convention"
+          ],
+          "summary": "Shipped manifest-validated prefabs for Inn 3x2 plot and inn_v2 construction ladder (slice from final inn_v2 for 20/50 stages; Agent 15 may replace with authored art). No pack tint changes. Workstream F (auto-spawn spacing) is Agent 05 — not touched."
+        },
+        "how_to_test": [
+          "python tools/validate_assets.py --report",
+          "python tools/qa_smoke.py --quick",
+          "Optional manual: python tools/model_assembler_kenney.py --open plot_3x2_v1 (opens Ursina)"
+        ],
+        "evidence": {
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "errors=0; WARNs pre-existing flat-model allowlist (heroes/enemies/buildings/workers); prefab section clean for new JSONs"
+          },
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "screenshots": [],
+        "blockers": []
+      },
+      "wk32_r3_preview_load_hotfix": {
+        "round_id": "wk32_r3_preview_load_hotfix",
+        "status": "done",
+        "pm_ref": "WK32-R3-BUG-002 + WK32-R3-FEAT-002 — Panda3D .bam cache-miss triage + prewarm tool",
+        "what_i_changed": {
+          "files": [
+            "tools/prewarm_panda_bam_cache.py — new offscreen prewarm tool; loads environment .obj once and writes models_compressed/... .bam files",
+            "docs/dev/panda_bam_cache.md — developer note explaining cache-miss noise and prewarm command"
+          ],
+          "summary": "Added a lightweight prewarm command so first-run OBJ→BAM conversion can be done explicitly (offscreen) and the scary ':loader(error): Unable to open ... .bam' lines are documented as expected cache-miss behavior when followed by a saved .bam. This does not change game code or the r2 non-grid grass behavior; it just unblocks preview workflow."
+        },
+        "how_to_test": [
+          "python tools/validate_assets.py --report",
+          "python tools/qa_smoke.py --quick",
+          "Optional: python tools/prewarm_panda_bam_cache.py --environment",
+          "Manual preview: python main.py --renderer ursina --no-llm (allow first run time if cache not warmed)"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "errors=0; WARNs pre-existing flat-model allowlist (heroes/enemies/buildings/workers)"
+          }
+        },
+        "screenshots": [],
+        "blockers": [
+          "Preview startup perf regression (dense grass / entity count) is owned by Agent 03 (WK32-R3-BUG-001). This tool addresses first-run OBJ cache conversion + log confusion only."
+        ]
+      },
+      "wk32_r4_tree_fog_perf_hotfix": {
+        "round_id": "wk32_r4_tree_fog_perf_hotfix",
+        "status": "done",
+        "pm_ref": "WK32-R4-BUG-001 — trees too light",
+        "what_i_changed": {
+          "files": [
+            "tools/kenney_pack_scale.py — environment/ tree-only tint multiplier (defaults 0.65) + env var override KINGDOM_ENV_TREE_COLOR_MULT",
+            "docs/dev/panda_bam_cache.md — note on adjusting KINGDOM_ENV_TREE_COLOR_MULT for quick local tuning"
+          ],
+          "summary": "Tree tint routing was already correct (environment/ uses Nature 0.75), but promoted meadow trees still read too bright in screenshot. Added a targeted darker multiplier for environment tree models only (tree_*.*) with an env var override for quick tuning. No changes to grass/non-grid scatter; fog semantics and hero-spawn perf are owned by Agents 03/10."
+        },
+        "how_to_test": [
+          "python tools/validate_assets.py --report",
+          "python tools/qa_smoke.py --quick",
+          "Manual visual check: set KINGDOM_ENV_TREE_COLOR_MULT=0.65; python main.py --renderer ursina --no-llm"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "errors=0; WARNs pre-existing flat-model allowlist (heroes/enemies/buildings/workers)"
+          }
+        },
+        "screenshots": [
+          "PM screenshot ref: image-543b2be6-eb68-44c4-98db-2bf5d46ec6ed.png (red-arrow meadow trees too bright before tree-only tint)."
+        ],
+        "blockers": [
+          "Agent 09 signoff still needed on final perceived brightness.",
+          "Fog SEEN vs VISIBLE semantics for static props is Agent 03 (WK32-R4-BUG-003).",
+          "Hero-spawn lag diagnosis/fix is Agent 10/03 (WK32-R4-BUG-002)."
+        ]
       }
-     },
-     "blockers": [],
-     "completion_receipt": "WK67 W4 (L9) tools-side re-exports COMPLETE. Four tools/ modules (model_viewer_kenney, kenney_pack_scale, ursina_input_debug, ursina_screenshot) now re-export the moved helpers from game.graphics; no duplicate defs remain; all tools consumers import clean; graphics->tools still zero imports; full suite 598 passed / 4 skipped (baseline). No commit, no push. Edited tools/** only."
-    },
-    "wk67_w5_determinism": {
-     "sprint_id": "wk67_round_a2_ai_boundary",
-     "round_id": "wk67_w5_determinism",
-     "status": "done",
-     "wave": "W5",
-     "pm_ref": "Agent 12 Wave 5 prompt (registered Ursina melee-combat capture scenario, item 5c); plan wk67_round_a2_ai_boundary.plan.md Wave 5 / Agent 12; PM hub agent_01",
-     "task": "Add a registered Ursina melee-combat capture scenario (ursina_melee_combat): spawn a hero + enemy adjacent near the castle, force a melee strike + hurt one-shot, capture the strike+hurt frame on the PRIMARY (Ursina) renderer (the unit-render/anim boundary had thin visual coverage there). Must capture BYTE-IDENTICAL across two DETERMINISTIC_SIM runs with the wall-clock perf/FPS debug overlay disabled. Edit only tools/**.",
-     "what_i_changed": [
-      "tools/screenshot_scenarios.py: added URSINA_CAPTURE_SCENARIOS entry 'ursina_melee_combat' (patch_path=tools/wk67_combat_capture_patch.py, default_ticks=480 (~8s warmup so terrain/models/shaders load before the grab; the held pose is tick-independent), default_out_subdir=wk67_combat, stem=ursina_melee_combat, env={KINGDOM_URSINA_REVEAL_ON_START=1, KINGDOM_URSINA_EDITORCAMERA=0, KINGDOM_URSINA_CAM_FOCUS_BUILDING_TYPE=castle, KINGDOM_URSINA_CAM_FOCUS_SPAN=16}).",
-      "tools/screenshot_scenarios.py: added scenario_ursina_melee_combat(engine, *, seed) builder (pygame Shot path, mirrors the Ursina patch: warrior hero + goblin adjacent near the castle, hero FIGHTING+target=enemy, _force_strike apply hook stamps attack/hurt one-shot triggers) and registered it in the get_scenario if-ladder (after wk61_hero_menu_chat).",
-      "tools/wk67_combat_capture_patch.py: NEW capture patch (modeled on tools/wk61_r10_capture_patch.py). Monkey-patches UrsinaApp.__init__ to: (1) disable the wall-clock FPS/frame-time debug overlay (window.fps_counter.enabled=False); (2) reveal fog; (3) disable wave/neutral spawners; (4) clear non-castle buildings + dynamic entities and place a warrior hero adjacent (one tile) to a goblin just south of the castle, hero.state=FIGHTING + target=enemy, enemy.target=hero, both at full hp, with the attack/hurt one-shot triggers stamped; (5) wrap UrsinaRenderer._compute_anim_frame so the two tagged combatants ALWAYS render a fixed mid-clip frame (hero=attack mid-swing, enemy=hurt recoil) independent of tick/wall-clock; (6) install a FIXED oblique camera aimed at the combat midpoint (blend=0, no follow/orbit). Wraps engine.tick_simulation to re-pin positions/state/hp/alive + re-stamp triggers + re-aim the camera after EVERY sim tick, so the held strike survives any number of ticks. No import-time os.environ mutation."
-     ],
-     "how_attack_tick_forced": "CombatSystem (game/systems/combat.py) lets a hero strike when attack_cooldown<=0 AND (_hero_in_combat_state: FIGHTING or living enemy target) AND a living enemy is within attack_range. The patch pins the hero one tile from the goblin (within TILE_SIZE*1.5 melee range), sets hero.state=FIGHTING + hero.target=enemy, and resets attack_cooldown=0 every tick so the strike re-fires each combat cycle; hero.on_attack_landed -> _queue_render_animation('attack') and enemy.take_damage -> _queue_render_animation('hurt'). To make the captured frame independent of WHICH tick the wall-clock auto-exit lands on, the patch wraps _compute_anim_frame to lock the two tagged combatants to a fixed mid-clip frame (hero attack frame ~n//2+1, enemy hurt frame ~n//2+1) every frame, and re-stamps the triggers + pins positions/hp each tick.",
-     "how_overlay_suppressed": "The only wall-clock presentation element in the grabbed framebuffer was Ursina's built-in FPS/frame-time counter (window.fps_counter, enabled at game/graphics/ursina_app.py:72). It renders a varying number per run. The patch (tools/, not game/) sets window.fps_counter.enabled=False in patched UrsinaApp.__init__ for the capture only. The renderer status_text (Gold/Heroes/Enemies/Buildings counts) is deterministic and left as-is. EditorCamera is disabled (KINGDOM_URSINA_EDITORCAMERA=0) and the patch installs a fixed camera at blend=0, so there is no camera-blend jitter.",
-     "two_run_byte_identical_proof": {
-      "command": "python tools/run_ursina_capture_once.py --scenario ursina_melee_combat --ticks 480 --out docs/screenshots/wk67_combat --no-llm  (run twice, DETERMINISTIC_SIM=1, SIM_SEED=3)",
-      "hash_algo": "SHA256",
-      "hash_A": "2DE5D5F489B94AF40F645AA0281ECEBCB25E2D430202EB2DAA50737D77312D92",
-      "hash_B": "2DE5D5F489B94AF40F645AA0281ECEBCB25E2D430202EB2DAA50737D77312D92",
-      "size_bytes": 700296,
-      "result": "BYTE-IDENTICAL (hash_A == hash_B). Also confirmed identical across separate 8s-warmup runs (same hash), proving the capture is fully tick-independent."
-     },
-     "capture_path": "docs/screenshots/wk67_combat/ursina_melee_combat_*.png (size 700296 bytes)",
-     "viewed_combat_pose": "YES. Viewed the PNG: hero 'Sir Aldric' (green health bar) mid-swing with sword blade extended toward the goblin; 'Goblin' label on the struck enemy one tile to the right; castle backdrop. Status text confirms Heroes:1 | Enemies:1. Clear melee strike + hurt pose.",
-     "gates": {
-      "full_suite": "598 passed, 4 skipped, 1 warning in 105.47s (python -m pytest -q, clean env with DETERMINISTIC_SIM/SIM_SEED unset) -- matches expected 598/4. No import-time env mutation added to the scenario module.",
-      "qa_smoke_quick": "PASS (python tools/qa_smoke.py --quick -> DONE: PASS)",
-      "module_import": "python -c 'import tools.screenshot_scenarios' OK; get_ursina_capture_scenario('ursina_melee_combat') resolves; scenario_ursina_melee_combat present; patch file parses."
-     },
-     "still_varies": "Nothing. After disabling the FPS counter overlay, fixing the camera (blend=0, EditorCamera off), and locking the anim pose + positions per tick, the two PNGs are byte-identical (and identical to runs with a different warmup duration). The pre-existing wall-clock perf/FPS overlay + camera-blend the plan flagged are both neutralized for this capture (overlay disabled, camera fixed).",
-     "constraints_respected": "Edited only tools/** (tools/screenshot_scenarios.py, NEW tools/wk67_combat_capture_patch.py). No edits to game/**, ai/**, or tests/**. No import-time os.environ mutation. No commit, no push.",
-     "blockers": [],
-     "completion_receipt": "WK67 W5 (item 5c) COMPLETE. Registered Ursina melee-combat capture scenario 'ursina_melee_combat' (scenario builder + URSINA_CAPTURE_SCENARIOS entry + get_scenario dispatch + NEW tools/wk67_combat_capture_patch.py). Hero strikes adjacent goblin (verified strike+hurt pose); perf/FPS debug overlay disabled + fixed camera; two DETERMINISTIC_SIM runs BYTE-IDENTICAL (SHA256 2DE5D5...312D92). Full suite 598 passed / 4 skipped; qa_smoke --quick PASS. tools-only; no commit/push."
     }
-   }
   },
-  "wk124_hero_kit_ai_and_ui_fixes": {
-   "sprint_meta": {
-    "plan_ref": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
-    "created_utc": "2026-06-03T00:00:00Z",
-    "notes": "WK124 hero kit: wizard spell (T3) + cleric heal (T4) VFX capture scenarios so the PM can screenshot-verify the new combat VFX on the GPU box (Agent 12 Wave 3)."
-   },
-   "rounds": {
-    "r1": {
-     "round_id": "r1",
-     "status": "done",
-     "pm_ref": "Agent 12 (ToolsDevEx_Lead) Wave 3 prompt — WK124-T3 wizard spell + WK124-T4 cleric heal Ursina capture scenarios.",
-     "what_i_changed": {
-      "files": [
-       "tools/wk124_wizard_cleric_capture_patch.py (NEW)",
-       "tools/screenshot_scenarios.py (registered ursina_wizard_cast + ursina_cleric_heal in URSINA_CAPTURE_SCENARIOS)"
-      ],
-      "summary": "Authored a new Ursina capture patch (modeled closely on tools/wk122_guardhouse_arrows_capture_patch.py + tools/wk67_combat_capture_patch.py) building TWO deterministic scenes selected by the KINGDOM_WK124_SCENE env var. WIZARD scene (KINGDOM_WK124_SCENE=wizard): reveals map, disables wave+neutral spawns, places ONE real Hero(hero_class='wizard', is_ranged_attacker=True, attack_range=TILE_SIZE*4.5) FIGHTING ONE goblin ~3 tiles apart (inside the 4.5-tile spell range), holds the goblin alive/in-range and resets the wizard attack_cooldown each tick so the live CombatSystem genuinely emits ranged_projectile{projectile_kind:'magic'} (faithfulness), re-stamps the wizard 'attack' (staff cast) one-shot trigger AND locks that clip to a mid-cast frame via a _compute_anim_frame wrapper (mirrors wk67), then re-pins ONE mid-flight ProjectileVFX(kind='magic') into engine.vfx_system._projectiles AFTER the tick so the captured frame always shows the purple orb (visibility). CLERIC scene (KINGDOM_WK124_SCENE=cleric): reveals map, disables spawns, places ONE real Hero(hero_class='cleric') + ONE wounded Hero(hero_class='warrior') ally ~2 tiles apart (inside CLERIC_HEAL_RADIUS_TILES=4), re-wounds the ally to ~40% HP (below CLERIC_HEAL_MIN_TARGET_PCT=0.85) and resets cleric._heal_cooldown_until_ms=0 each tick so the live ClericHealSystem genuinely emits hero_heal (faithfulness), then re-pins ONE mid-flight ProjectileVFX(kind='heal') so the captured frame always shows the GREEN heal bolt (the green particle burst is pygame-only; the heal billboard is what reads in the Ursina 3D path). Both scenes use a FIXED (non-EditorCamera) oblique camera re-aimed each tick at the held projectile's true 3D Y (terrain_height + PROJECTILE_BILLBOARD_Y) so the orb/bolt sits dead-center; FPS overlay disabled; no import-time os.environ mutation. PM framing knobs: KINGDOM_WK124_SEP_TILES / _CAM_SPAN / _CAM_ELEV / _PROGRESS. Registered both scenarios in URSINA_CAPTURE_SCENARIOS following the exact shape of ursina_guardhouse_arrows (patch_path, default_ticks=480, default_out_subdir, stem, env block with reveal-on-start + EditorCamera off + disable-neutral-spawn + the scene selector)."
-     },
-     "how_to_test": [
-      "python -c \"import tools.screenshot_scenarios; from tools.screenshot_scenarios import get_ursina_capture_scenario; print(get_ursina_capture_scenario('ursina_wizard_cast')); print(get_ursina_capture_scenario('ursina_cleric_heal'))\"",
-      "python -c \"import importlib.util,sys; spec=importlib.util.spec_from_file_location('p','tools/wk124_wizard_cleric_capture_patch.py'); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m); print('patch import OK')\"",
-      "python tools/qa_smoke.py --quick",
-      "python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json > NUL",
-      "PM (GPU box) live capture: python tools/run_ursina_capture_once.py --scenario ursina_wizard_cast --out docs/screenshots/wk124_wizard_cast",
-      "PM (GPU box) live capture: python tools/run_ursina_capture_once.py --scenario ursina_cleric_heal --out docs/screenshots/wk124_cleric_heal"
-     ],
-     "evidence": {
-      "scenario_registration": {
-       "command": "python -c \"... get_ursina_capture_scenario('ursina_wizard_cast'); ... ('ursina_cleric_heal')\"",
-       "exit_code": 0,
-       "status": "PASS",
-       "note": "Both scenarios resolve; patch_path=tools/wk124_wizard_cleric_capture_patch.py; default_ticks=480; env carries KINGDOM_WK124_SCENE (wizard/cleric), reveal-on-start, EditorCamera off, disable-neutral-spawn."
-      },
-      "patch_import": {
-       "command": "python -c \"importlib.util ... exec_module ...; print('patch import OK')\"",
-       "exit_code": 0,
-       "status": "PASS",
-       "note": "patch import OK (apply_patch ran; only monkeypatches UrsinaApp.__init__ — no Ursina window opened)."
-      },
-      "qa_smoke": {
-       "command": "python tools/qa_smoke.py --quick",
-       "exit_code": 0,
-       "status": "PASS",
-       "note": "DONE: PASS — determinism guard + all headless sim/speed-scaling/scenario profiles exit_code=0."
-      },
-      "log_json_valid": {
-       "command": "python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json > NUL",
-       "exit_code": 0,
-       "status": "PASS"
+  "wk33-terrain-lair-economy-prefabs": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
+      "notes": "WK33 r0: manifest v1.6 (textures + lair env kind + econ prefab ids); validate_assets textures check"
+    },
+    "rounds": {
+      "wk33_r0_kickoff": {
+        "round_id": "wk33_r0_kickoff",
+        "status": "done",
+        "pm_ref": "sprints['wk33-terrain-lair-economy-prefabs'].rounds['wk33_r0_kickoff'] — Agent 12 block",
+        "what_i_changed": {
+          "files": [
+            "tools/assets_manifest.json — schema 1.6: environment.types +lair; textures.files floor_ground_grass.png; prefabs.buildings.optional +marketplace_v1, blacksmith_v1, trading_post_v1",
+            "tools/validate_assets.py — v1.6 _validate_texture_files; manifest textures.files"
+          ],
+          "summary": "Ground tiling albedo path is now gate-checked. Lair static mesh and economy prefab JSONs are listed so Agent 15/03 work clears warns (lair: assets/models/environment/lair.{glb|gltf|obj}; prefabs under assets/prefabs/buildings/). No models_compressed/."
+        },
+        "how_to_test": [
+          "python tools/validate_assets.py --report",
+          "python tools/qa_smoke.py --quick"
+        ],
+        "evidence": {
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "errors=0; SUMMARY warns=50 (incl. missing environment:lair, optional marketplace_v1/blacksmith_v1/trading_post_v1 until A15; pre-existing flat-model warns)"
+          },
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": []
       }
-     },
-     "headless_gpu_caveat": "Cannot screenshot-verify Ursina headlessly (scoped exception per MEMORY: game/graphics/ursina_* render slices ship with import/registration gates + PM live capture). Both gates above prove imports + scenario registration succeed; the PM runs the live capture on Jaimie's GPU box and gives the visual verdict.",
-     "constraints_respected": "Edited ONLY tools/wk124_wizard_cleric_capture_patch.py (new) + tools/screenshot_scenarios.py + this log. No edits to game/**, ai/**, config.py. No import-time os.environ mutation. DID NOT COMMIT, DID NOT run git (other modified files in the tree are concurrent WK124 sessions).",
-     "blockers": [],
-     "follow_ups": [
-      "PM: run the two live captures on the GPU box (commands above) and confirm (1) wizard scene shows a purple magic orb mid-flight wizard->goblin + the wizard staff cast pose; (2) cleric scene shows a GREEN heal bolt mid-flight cleric->ally. If framing needs nudging, iterate via KINGDOM_WK124_CAM_SPAN / _CAM_ELEV / _PROGRESS / _SEP_TILES (no code edits)."
-     ]
     }
-   }
-  }
- },
- "wk18-llm-merger-and-mechanics": {
-  "sprint_meta": {
-   "plan_ref": ".cursor/plans/wk18_llm_merger_and_mechanics.plan.md",
-   "notes": "WK18: LLM-AI Merger, Physicality, & Dev Tools"
   },
-  "rounds": {
-   "wk18_r1_kickoff": {
-    "round_id": "wk18_r1_kickoff",
-    "status": "done",
-    "what_i_changed": {
-     "files": [
-      "game/events.py",
-      "ai/llm_brain.py",
-      "main.py"
-     ],
-     "summary": "Built AI Monitoring Data Tap: EventBus events LLM_PROMPT_SENT and LLM_RESPONSE_RECEIVED; LLMBrain emits before/after provider.complete(); main.py wires event_bus to llm_brain for Dev Overlay consumption."
+  "wk33-midsprint-assembler-scale-hotkeys": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/assembler_scale_hotkeys_177ca989.plan.md",
+      "notes": "Midsprint: -/= scale nudge; logical scale in JSON; pack_extent on Entity only"
     },
-    "how_to_test": [
-     "python tools/qa_smoke.py --quick",
-     "Run game with LLM (e.g. python main.py --provider mock), trigger hero decisions; Agent 08 subscribes to LLM_PROMPT_SENT / LLM_RESPONSE_RECEIVED for Dev Tools Overlay."
-    ],
-    "evidence": {
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     }
-    },
-    "blockers": []
-   }
-  }
- },
- "wk20-ui-input-bridge": {
-  "sprint_meta": {
-   "plan_ref": ".cursor/plans/wk20_ui_input_bridge.plan.md",
-   "notes": "WK20 UI Input Bridge — Ursina debug input telemetry"
-  },
-  "rounds": {
-   "wk20_r2_implementation": {
-    "round_id": "wk20_r2_implementation",
-    "status": "done",
-    "what_i_changed": {
-     "files": [
-      "tools/__init__.py",
-      "tools/ursina_input_debug.py",
-      "game/graphics/ursina_app.py"
-     ],
-     "summary": "Implemented PM WK20 R2: KINGDOM_URSINA_DEBUG_INPUT=1 gates print() of one WK20_INPUT line per LMB rising edge (raw_ursina, pygame from get_mouse_pos, ui_hit/world_xz/tile na until wired). Core helpers in tools/ursina_input_debug.py; UrsinaApp imports hook after render_pygame."
-    },
-    "how_to_test": [
-     "python tools/qa_smoke.py --quick",
-     "Manual Ursina: set env KINGDOM_URSINA_DEBUG_INPUT=1, launch 3D viewer, click — one WK20_INPUT line per click; pygame tuple tracks Agent 08 get_mouse_pos when implemented."
-    ],
-    "evidence": {
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     }
-    },
-    "blockers": []
-   }
-  }
- },
- "wk21-3d-visual-polish": {
-  "sprint_meta": {
-   "plan_ref": ".cursor/plans/wk21_3d_visual_polish.plan.md",
-   "notes": "WK21 — F12 Ursina window screenshot to docs/screenshots/"
-  },
-  "rounds": {
-   "wk21_r3_bug_hunt": {
-    "round_id": "wk21_r3_bug_hunt",
-    "status": "done",
-    "what_i_changed": {
-     "files": [
-      "tools/ursina_screenshot.py",
-      "game/graphics/ursina_app.py"
-     ],
-     "summary": "WK21 R3: Added tools/ursina_screenshot.save_ursina_window_screenshot() using ShowBase.screenshot (main GraphicsWindow = full 3D + UI overlay). UrsinaApp _handle_ursina_input handles f12 before LMB path; writes docs/screenshots/ursina_<ts>.png, prints [screenshot], HUD message."
-    },
-    "how_to_test": [
-     "python tools/qa_smoke.py --quick",
-     "Manual: launch Ursina viewer, press F12 — PNG under docs/screenshots/, HUD confirms filename."
-    ],
-    "evidence": {
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     }
-    },
-    "blockers": []
-   }
-  }
- },
- "v1_5-sprint-1_1-3d-tooling": {
-  "sprint_meta": {
-   "plan_ref": ".cursor/plans/wk25_sprint_1_1_3d_tooling.plan.md",
-   "notes": "v1.5 Phase 1 — 3D manifest + validate_assets; master_plan_3d_graphics_v1_5.md"
-  },
-  "rounds": {
-   "sprint_1_1_execution": {
-    "round_id": "sprint_1_1_execution",
-    "status": "done",
-    "what_i_changed": {
-     "files": [
-      "tools/assets_manifest.json",
-      "tools/validate_assets.py",
-      "tools/generate_cc0_placeholders.py",
-      "assets/models/heroes/.gitkeep",
-      "assets/models/enemies/.gitkeep",
-      "assets/models/buildings/.gitkeep",
-      "assets/models/workers/.gitkeep",
-      "assets/models/environment/.gitkeep"
-     ],
-     "summary": "Schema 1.5: removed per-entity states arrays; added environment.types; validator now checks assets/models/<category>/<kind>.glb|.gltf|.obj (no PNG/frame paths). CC0 placeholder script uses fixed legacy state lists so it still runs. Added empty model category dirs with .gitkeep for flat drop-in layout."
-    },
-    "how_to_test": [
-     "python tools/validate_assets.py --report",
-     "python tools/qa_smoke.py --quick"
-    ],
-    "evidence": {
-     "validate_assets_report": {
-      "command": "python tools/validate_assets.py --report",
-      "exit_code": 0,
-      "status": "PASS",
-      "note": "0 errors, 50 warns (expected until .glb/.gltf/.obj files land per manifest)"
-     },
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     }
-    },
-    "blockers": []
-   }
-  }
- },
- "wk28-assembler-spike": {
-  "sprint_meta": {
-   "plan_ref": ".cursor/plans/wk28_assembler_spike_41c2daeb.plan.md",
-   "notes": "Pre-1.5 spike. Ship MVP Kenney .glb kit assembler tool (no game/ai/config.py changes this sprint)."
-  },
-  "rounds": {
-   "wk28_r1_execution": {
-    "round_id": "wk28_r1_execution",
-    "status": "done",
-    "what_i_changed": {
-     "files": [
-      "tools/model_assembler_kenney.py"
-     ],
-     "summary": "New interactive Ursina assembler tool (v0.1) for kitbashing Kenney .glb/.gltf pieces into prefab JSON under assets/prefabs/buildings/. Scans 529 pieces across Models/GLB format (200) and Models/GLTF format (329). Reuses _load_model_node_from_file + _apply_gltf_color_and_shading from tools/model_viewer_kenney.py so both textured (Retro Fantasy / Survival) and factor-only (Nature Kit) pieces render correctly. CLI: --new / --open <prefab_id> / --prefab-id / --out-dir. Controls: left-click ground places snapped-to-1.0-unit-grid piece; left-click placed piece selects; WASD nudge 1.0u XZ; Q/E rotate 90deg Y; [ / ] move Y by 0.25u; Delete removes; RMB/MMB/scroll EditorCamera; ESC quits or cancels modal. Toolbar: New, Open (dialog lists existing prefabs), Save, ID..., Type..., WxD..., Attrib... — each opens an inline InputField modal. Left panel: filter InputField + paginated library (16 rows/page, prev/next). Selection shown as yellow wireframe-box overlay around the piece. Auto-infers attribution from subdir of placed pieces (GLB format -> retro-fantasy + survival; GLTF format -> nature-kit) when user leaves attrib empty. Matches assets/prefabs/schema.md v0.1 exactly."
-    },
-    "how_to_test": [
-     "python tools/qa_smoke.py --quick",
-     "python tools/model_assembler_kenney.py --help",
-     "python tools/model_assembler_kenney.py --new --prefab-id smoke_test_v1  (then place 3 pieces, Q to rotate, Delete one, click Save, ESC to quit)",
-     "python tools/model_assembler_kenney.py --open smoke_test_v1  (confirms visual round-trip)"
-    ],
-    "evidence": {
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS",
-      "note": "All 14 smoke profiles green (determinism_guard, pytest, base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling x4, interior_view, quest_panel, conversation). No game/ai/config.py changes."
-     },
-     "validate_assets": {
-      "status": "NOT_RUN",
-      "note": "No assets/ changes this sprint; not required per onboarding (Step 6)."
-     },
-     "cli_help": {
-      "command": "python tools/model_assembler_kenney.py --help",
-      "exit_code": 0,
-      "status": "PASS"
-     },
-     "module_import": {
-      "command": "python -c \"import tools.model_assembler_kenney as m; print(m.AssemblerApp, m.main)\"",
-      "exit_code": 0,
-      "status": "PASS",
-      "note": "Verifies reuse imports from tools.model_viewer_kenney resolve cleanly."
-     },
-     "library_scan": {
-      "command": "python -c \"from tools.model_assembler_kenney import _collect_piece_library; from pathlib import Path; print(len(_collect_piece_library(Path('assets/models'))))\"",
-      "exit_code": 0,
-      "status": "PASS",
-      "result": "529 pieces (200 GLB + 329 GLTF format)"
-     },
-     "save_load_round_trip": {
-      "status": "PASS",
-      "note": "Non-Ursina unit check: _save_prefab_json + _load_prefab_json with 3 pieces (2 GLB format, 1 GLTF format) reproduces identical JSON; attribution auto-inferred as [kenney_nature-kit, kenney_retro-fantasy-kit, kenney_survival-kit]; required schema fields present (prefab_id, building_type, footprint_tiles, ground_anchor_y, rotation_steps, attribution, pieces, notes); pieces[] items have model+pos+rot+scale; missing prefab returns None."
-     },
-     "human_visual_check": {
-      "status": "PENDING",
-      "owner": "15_ModelAssembler_KitbashLead",
-      "note": "Per wk28 plan sec 6, Agent 15 runs the Ursina round-trip acceptance test (place 3 pieces, save, reopen, confirm pixel-close). Agent 09 consult-reviews textured + factor-only rendering. Neither is blocking Agent 12's deliverable."
-     }
-    },
-    "cli_surface": {
-     "commands": [
-      "python tools/model_assembler_kenney.py --new",
-      "python tools/model_assembler_kenney.py --new --prefab-id my_house_v1",
-      "python tools/model_assembler_kenney.py --open <prefab_id>",
-      "python tools/model_assembler_kenney.py --new --out-dir <alt_dir>"
-     ],
-     "output_path": "assets/prefabs/buildings/<prefab_id>.json",
-     "defaults": {
-      "prefab_id": "untitled_v1",
-      "building_type": "house",
-      "footprint_tiles": [
-       1,
-       1
-      ],
-      "ground_anchor_y": 0.0,
-      "rotation_steps": 90
-     }
-    },
-    "acceptance_checklist_wk28_FEAT_001": {
-     "launches_via_new_and_open_id": "DONE (CLI verified; Ursina launch covered by Agent 15 acceptance test)",
-     "piece_picker_scans_GLB_and_GLTF_format": "DONE (529 pieces scanned; paginated + filterable)",
-     "click_ground_spawns_piece_at_1u_grid_ground_anchor_y": "DONE (_snap centers cells on 0.5,1.5,... and uses meta.ground_anchor_y for Y)",
-     "WASD_nudge_1u_QE_rotate_90_brackets_y_025_delete_removes": "DONE (see handle_input)",
-     "save_writes_json_matching_schema": "DONE (round-trip verified; attribution/notes/rotation_steps preserved)",
-     "reopen_reproduces_layout": "DONE via _load_prefab_json + _instantiate_pending_pieces (Ursina visual check is Agent 15 task)",
-     "two_path_shader_classifier_applied_per_piece": "DONE (_apply_gltf_color_and_shading imported from tools/model_viewer_kenney.py and invoked on every placed piece in _spawn_piece_core)"
-    },
-    "out_of_scope_deferred": [
-     "Baking prefab to single .glb",
-     "Multi-selection / copy-paste",
-     "Sub-unit snap override",
-     "Undo stack beyond last delete",
-     "Thumbnail cache"
-    ],
-    "coordination": {
-     "agent_15": "Schema assets/prefabs/schema.md was already authored (read it; matched JSON output exactly).",
-     "agent_09": "Consult-only. Can verify classifier behavior in tool when launched (place a wall-paint-door.glb for textured and a tree_pine.glb for factor-only).",
-     "agent_11": "Consult-only post-merge gate. qa_smoke --quick PASS confirmed above."
-    },
-    "blockers": [],
-    "known_limitations": [
-     "v0.1 uses Ursina's built-in InputField for modals; no native file-save dialog. Good enough for spike; revisit if Agent 15 reports ergonomic friction.",
-     "Attribution auto-inference is coarse (GLB format folder is a Retro Fantasy + Survival merge); Agent 15 should hand-edit via Attrib... button before committing real prefabs.",
-     "Selection marker uses a bounding-box wireframe derived from tight-bounds at selection time; very large pieces produce a large box (cosmetic only).",
-     "No undo for placements (only Delete). Deferred per plan section 4.4."
-    ],
-    "recommended_next_actions": [
-     "Agent 15: run `python tools/model_assembler_kenney.py --new --prefab-id peasant_house_small_v1`, kitbash 3+ pieces, click Save, ESC, then `python tools/model_assembler_kenney.py --open peasant_house_small_v1` to confirm visual round-trip; log evidence in agent_15 log.",
-     "Agent 09 (consult): while the tool is open, confirm one Retro Fantasy Kit piece (e.g. wall-paint-door.glb) renders textured and one Nature Kit piece (e.g. tree_pine.glb from Models/GLTF format/) renders with custom-lit shading (not flat white, not pitch black). Matches integration guide Section 5.",
-     "PM: when Agent 15 visual round-trip passes, wk28 exit criteria are satisfied and you can close the sprint."
-    ]
-   },
-   "wk28_r1_hotfix_launch_crash": {
-    "round_id": "wk28_r1_hotfix_launch_crash",
-    "status": "done",
-    "what_i_changed": {
-     "files": [
-      "tools/model_assembler_kenney.py"
-     ],
-     "summary": "Hotfix: assembler crashed on launch with `AttributeError: 'NoneType' object has no attribute 'scale'` at `btn.text_entity.scale = 0.55`. Root cause: Ursina's Button only instantiates `text_entity` when initial `text` is non-empty; the library-row buttons were created with `text=\"\"` as placeholders. Fix: (1) seed row buttons with `text=\" \"` so text_entity exists; (2) guard all three `.text_entity.*` accesses with `if getattr(btn, 'text_entity', None) is not None`; (3) in `_refresh_list_buttons`, use `' '` instead of `''` for empty/unused rows so text_entity isn't torn down at runtime."
-    },
-    "how_to_test": [
-     "python tools/qa_smoke.py --quick",
-     "python tools/model_assembler_kenney.py --new --prefab-id smoke_test_v1",
-     "python tools/model_assembler_kenney.py --open smoke_test_v1"
-    ],
-    "evidence": {
-     "reporter": "jaimie_playtest (user pasted traceback from terminal 1.txt)",
-     "crash_location": "tools/model_assembler_kenney.py line 480, _build_ui, `btn.text_entity.scale = 0.55`",
-     "syntax_check": {
-      "command": "python -c \"import ast; ast.parse(open('tools/model_assembler_kenney.py',encoding='utf-8').read())\"",
-      "exit_code": 0,
-      "status": "PASS"
-     },
-     "import_check": {
-      "command": "python -c \"import tools.model_assembler_kenney\"",
-      "exit_code": 0,
-      "status": "PASS"
-     },
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     },
-     "ursina_launch": {
-      "status": "PASS",
-      "reporter": "jaimie_playtest",
-      "note": "2026-04-16: Jaimie confirmed the assembler runs and looks great after the text_entity hotfix (Ursina window opens, UI usable)."
-     }
-    },
-    "blockers": []
-   },
-   "wk28_r2_closeout": {
-    "round_id": "wk28_r2_closeout",
-    "status": "done",
-    "closeout_summary": {
-     "sprint": "wk28-assembler-spike",
-     "agent_12_scope": "WK28-FEAT-001: tools/model_assembler_kenney.py v0.1 + wk28_r1_hotfix_launch_crash (Ursina Button.text_entity)",
-     "deliverable_files": [
-      "tools/model_assembler_kenney.py"
-     ],
-     "gates": {
-      "qa_smoke_quick": "PASS after hotfix (exit 0; all smoke profiles)"
-     },
-     "human_acceptance": {
-      "who": "Jaimie (human)",
-      "when_local": "2026-04-16",
-      "verbatim_feedback": "Looks great!",
-      "interpretation": "Human playtest confirms assembler launches and is usable post-hotfix; Agent 12 closes WK28 tooling deliverable."
-     },
-     "handoff": {
-      "01_PM": "WK28 Agent 12 work is closed from Tools side; PM may close sprint when DoD is met repo-wide (schema, Agent 15 round-trip, Agent 09 consult, Agent 11 gate per plan).",
-      "15_ModelAssembler": "Owns formal prefab round-trip evidence + any prefab JSON committed under assets/prefabs/buildings/.",
-      "09_Art": "Optional consult: textured vs factor-only render check in assembler.",
-      "11_QA": "Run python tools/qa_smoke.py --quick on final merge if other agents touch code."
-     }
-    },
-    "what_i_changed": {
-     "files": [
-      ".cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json"
-     ],
-     "summary": "Closeout round only: records human confirmation and sprint handoff; no additional tool code in this round."
-    },
-    "how_to_test": [
-     "python tools/qa_smoke.py --quick",
-     "python tools/model_assembler_kenney.py --new --prefab-id smoke_test_v1"
-    ],
-    "evidence": {
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS",
-      "note": "Last run after hotfix; re-run if new commits land before merge."
-     },
-     "human_signoff": {
-      "status": "PASS",
-      "source": "user_message_2026-04-16"
-     }
-    },
-    "blockers": []
-   }
-  }
- },
- "wk30-buildings-pipeline": {
-  "sprint_meta": {
-   "plan_ref": ".cursor/plans/wk30_buildings_pipeline.plan.md",
-   "notes": "WK30-FEAT-004 manifest + validator"
-  },
-  "rounds": {
-   "wk30_r1_execution": {
-    "round_id": "wk30_r1_execution",
-    "status": "done",
-    "what_i_changed": {
-     "files": [
-      "tools/assets_manifest.json",
-      "tools/validate_assets.py",
-      "assets/prefabs/buildings/castle_v1.json",
-      "assets/prefabs/buildings/warrior_guild_v1.json",
-      "assets/prefabs/buildings/ranger_guild_v1.json",
-      "assets/prefabs/buildings/rogue_guild_v1.json"
-     ],
-     "summary": "Added prefabs.buildings required/optional lists. Implemented prefab JSON validation (file exists, parse, required keys, piece models resolve under assets/models/, non-empty attribution). Missing optional prefab = WARN; missing/malformed required = ERROR. Process exit code fails on any error-level finding. Added minimal valid stub prefabs for castle + three guilds (footprints match config.py; Agent 15 replaces with full kitbash). Optional wizard_guild_v1 not present — WARN only."
-    },
-    "how_to_test": [
-     "python tools/qa_smoke.py --quick",
-     "python tools/validate_assets.py --report"
-    ],
-    "evidence": {
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     },
-     "validate_assets_report": {
-      "command": "python tools/validate_assets.py --report",
-      "exit_code": 0,
-      "status": "PASS",
-      "note": "WARN missing optional wizard_guild_v1.json; WARN missing flat models for manifest categories (non-strict, pre-existing)"
-     }
-    },
-    "blockers": []
-   }
-  }
- },
- "wk31-perf-fps-and-pack-scale": {
-  "sprint_meta": {
-   "plan_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md",
-   "notes": "WK31 Part A.2.1 — pack scale single source of truth (viewer / assembler / runtime)"
-  },
-  "rounds": {
-   "wk31_r1_execution": {
-    "round_id": "wk31_r1_execution",
-    "status": "done",
-    "what_i_changed": {
-     "files": [
-      "tools/kenney_pack_scale.py",
-      "tools/model_viewer_kenney.py",
-      "tools/model_assembler_kenney.py",
-      "tools/wall_flush_pair_kenney.py",
-      "game/graphics/ursina_renderer.py"
-     ],
-     "summary": "Added tools/kenney_pack_scale.py: RETRO_REFERENCE_MAX_EXTENT=5.0 as 1.0 calibration; per-pack multipliers keyed by raw-tree folder id plus merged-path inference (GLB format default Retro; GLTF format Nature; -fantasy-town / -graveyard suffixes; character- blocky). model_viewer uses pack_max_extent_for_rel per asset; assembler and ursina_renderer multiply authored JSON scale by pack_extent_multiplier_for_rel. wall_flush_pair defaults --max-extent from the same helper. Agent 15 can tune multipliers after flush pass."
-    },
-    "how_to_test": [
-     "python tools/qa_smoke.py --quick",
-     "python tools/model_viewer_kenney.py --max-total 8",
-     "python tools/wall_flush_pair_kenney.py --model Models/GLB format/wall-door.glb"
-    ],
-    "evidence": {
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     }
-    },
-    "blockers": [],
-    "agent_fields": {
-     "pack_extent_multipliers_2026_04_18": {
-      "kenney_retro-fantasy-kit": 1.0,
-      "kenney_survival-kit": 1.14,
-      "kenney_nature-kit": 1.2,
-      "kenney_fantasy-town-kit_2.0": 1.1,
-      "kenney_graveyard-kit_5.0": 1.1,
-      "kenney_blocky-characters_20": 1.0,
-      "Models/GLB format unsuffixed": 1.0,
-      "environment": 1.0
-     }
+    "rounds": {
+      "r0_implement": {
+        "round_id": "r0_implement",
+        "status": "done",
+        "pm_ref": "sprints['wk33-midsprint-assembler-scale-hotkeys'].rounds['r0_implement']",
+        "what_i_changed": {
+          "files": [
+            "tools/model_assembler_kenney.py — SCALE_NUDGE_FACTOR / FINE, MIN/MAX; apply_piece_scale_to_entity; _nudge_selected_scale; handle_input -/= (minus, subtract, equals); _refresh_status scale= line; module Controls docstring"
+          ],
+          "summary": "Selected piece: - shrinks, = grows (multiplicative); Shift uses finer step. Logical triple clamped [0.01, 5.0]. Entity.scale = logical * pack_extent_multiplier_for_rel after each edit; JSON unchanged contract."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "Manual: python tools/model_assembler_kenney.py --open farm_v1 — select piece, -/=, Shift+/-, confirm status line and save/reopen"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": []
+      }
     }
-   },
-   "wk31_r2_economy": {
-    "round_id": "wk31_r2_economy",
-    "status": "done",
-    "what_i_changed": {
-     "files": [
-      "tools/assets_manifest.json"
-     ],
-     "summary": "Part B: moved inn_v1, farm_v1, food_stand_v1, gnome_hovel_v1 from prefabs.buildings.optional to required (WK31B-FEAT-005). Prefab JSONs already present under assets/prefabs/buildings/. No validator code changes."
-    },
-    "how_to_test": [
-     "python tools/qa_smoke.py --quick",
-     "python tools/validate_assets.py --report"
-    ],
-    "evidence": {
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     },
-     "validate_assets_report": {
-      "command": "python tools/validate_assets.py --report",
-      "exit_code": 0,
-      "status": "PASS"
-     }
-    },
-    "blockers": []
-   }
-  }
- },
- "wk32-camera-construction-nature-polish": {
-  "sprint_meta": {
-   "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
-   "notes": "WK32 E pack color tint; B.6 manifest optional construction prefab ids"
   },
-  "rounds": {
-   "wk32_r1_execution": {
-    "round_id": "wk32_r1_execution",
-    "status": "done",
-    "what_i_changed": {
-     "files": [
-      "tools/kenney_pack_scale.py",
-      "tools/model_viewer_kenney.py",
-      "tools/model_assembler_kenney.py",
-      "tools/wall_flush_pair_kenney.py",
-      "game/graphics/ursina_renderer.py",
-      "tools/assets_manifest.json",
-      ".cursor/plans/kenney_gltf_ursina_integration_guide.md"
-     ],
-     "summary": "Extended kenney_pack_scale with pack_color_multiplier_for_rel (mirrors extent routing) and apply_kenney_pack_color_tint_to_entity — sets Ursina Entity.color to (m,m,m) after _apply_gltf_color_and_shading. Defaults: Retro/merged Retro/cursor-pixel 1.0; Survival/Nature/Fantasy Town/Graveyard/Blocky 0.60. Wired in model_viewer_kenney, model_assembler_kenney, ursina_renderer _load_prefab_instance, wall_flush_pair_kenney. Integration guide §7.1. assets_manifest prefabs.buildings.optional: nine WK32 construction-stage ids (plots + pilot intermediates); validator warns until Agent 15 adds JSON files."
+  "wk35-refactor-stage0-regression-baseline": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+      "notes": "Stage 0: regression baseline + test hardening (Agent 12 deliverable: engine access inventory doc)"
     },
-    "how_to_test": [
-     "python tools/qa_smoke.py --quick",
-     "python tools/validate_assets.py --report"
-    ],
-    "evidence": {
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     },
-     "validate_assets_report": {
-      "command": "python tools/validate_assets.py --report",
-      "exit_code": 0,
-      "status": "PASS",
-      "note": "WARN missing optional prefab JSON for new WK32 ids until Agent 15 lands; other WARNs pre-existing"
-     }
-    },
-    "blockers": [],
-    "screenshots": []
-   },
-   "wk32_r1_revision_2026_04_18": {
-    "round_id": "wk32_r1_revision_2026_04_18",
-    "status": "done",
-    "pm_ref": "pm_status_summary.revision_2026_04_18 + pm_agent_prompts[12] rewrite",
-    "pre_code_checklist": {
-     "file_map": [
-      "tools/kenney_pack_scale.py — pack_extent_multiplier_for_rel, pack_color_multiplier_for_rel, apply_kenney_pack_color_tint_to_entity; per-pack tables",
-      "tools/model_viewer_kenney.py — gallery loads models; apply tint after _apply_gltf_color_and_shading",
-      "tools/model_assembler_kenney.py — piece spawn; tint after shading",
-      "tools/wall_flush_pair_kenney.py — diagnostic pair spawn; tint after shading",
-      "game/graphics/ursina_renderer.py — prefab pieces + _finalize_kenney_scatter_entity(path) uses pack tint",
-      ".cursor/plans/kenney_gltf_ursina_integration_guide.md — §7.1 policy doc",
-      "tools/assets_manifest.json — prefabs.buildings required/optional lists"
-     ],
-     "architecture_options": [
-      "OPT A — In pack_color_multiplier_for_rel: retune table 0.60→0.75; env/ → Nature kit value; normalize assets/models/ prefix. PROS: one module, matches PM. CONS: future non-Nature env assets get same tint. RISK: LOW. EFFORT: XS. CHOSEN.",
-      "OPT B — Filename pack suffixes for env/. PROS: precise per-file. CONS: renames, Agent 15 churn. RISK: MED. EFFORT: M. REJECTED this sprint.",
-      "OPT C — Separate _ENV_COLOR_MULTIPLIER constant. PROS: tunable. CONS: second knob. RISK: LOW. EFFORT: S. REJECTED — PM asked to tie env/ to Nature routing."
-     ],
-     "existing_code_conflicts": [
-      "pack_extent_multiplier_for_rel must keep environment/ → 1.0 — independent; do not change.",
-      "Scatter passes model paths as assets/models/environment/... — required stripping prefix in pack_color_multiplier_for_rel so env/ tint and classification apply (fixed in this revision).",
-      "None further: no tests snapshot 0.60 (pytest -q: 93 passed)."
-     ]
-    },
-    "what_i_changed": {
-     "files": [
-      "tools/kenney_pack_scale.py",
-      ".cursor/plans/kenney_gltf_ursina_integration_guide.md",
-      "tools/assets_manifest.json",
-      "docs/screenshots/wk32_nature/20260418_1430_pack_color_albedo_swatches.png"
-     ],
-     "summary": "WK32-BUG-005 / WK32-FEAT-009: _PACK_COLOR_MULTIPLIER_BY_FOLDER non-Retro 0.60→0.75; environment/ uses Nature value; strip leading assets/models/ so Ursina scatter paths classify as environment/. Manifest: plot_1x1_v1, plot_2x2_v1, plot_3x3_v1 moved from optional to required (Agent 15 JSON on disk). Six pilot intermediates remain optional. Albedo comparison PNG (three swatches: Retro 1.0, prior 0.60, retune 0.75)."
-    },
-    "how_to_test": [
-     "python -m pytest tests -q",
-     "python tools/qa_smoke.py --quick",
-     "python tools/validate_assets.py --report"
-    ],
-    "evidence": {
-     "pytest": {
-      "command": "python -m pytest tests -q",
-      "exit_code": 0,
-      "status": "PASS",
-      "note": "93 passed"
-     },
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     },
-     "validate_assets_report": {
-      "command": "python tools/validate_assets.py --report",
-      "exit_code": 0,
-      "status": "PASS",
-      "note": "errors=0; WARNs pre-existing (flat models, some env manifest kinds not yet on disk)"
-     }
-    },
-    "screenshots": [
-     "docs/screenshots/wk32_nature/20260418_1430_pack_color_albedo_swatches.png — three-panel albedo modulate (white×1.0, ×0.60 prior policy, ×0.75 retune); in-game visual check still recommended for Agent 09"
-    ],
-    "blockers": []
-   },
-   "wk32_r2_visual_followup": {
-    "round_id": "wk32_r2_visual_followup",
-    "status": "done",
-    "pm_ref": "sprints[\"wk32-camera-construction-nature-polish\"].rounds[\"wk32_r2_visual_followup\"] — WK32-R2-FEAT-004 manifest/schema; Inn 3x2 plot + inn_v2 ladder prefabs",
-    "what_i_changed": {
-     "files": [
-      "assets/prefabs/buildings/plot_3x2_v1.json — new 3x2 empty-plot prefab (footprint [3,2], building_type plot_3x2; six resource-stone + structure-poles)",
-      "assets/prefabs/buildings/inn_v2_build_20_v1.json — first 9/38 pieces from inn_v2.json (~24% construction stage)",
-      "assets/prefabs/buildings/inn_v2_build_50_v1.json — first 22/38 pieces from inn_v2.json (~58% construction stage)",
-      "tools/assets_manifest.json — prefabs.buildings.required: +plot_3x2_v1 (ordered before plot_3x3_v1); optional: +inn_v2_build_20_v1, inn_v2_build_50_v1",
-      "assets/prefabs/schema.md — v0.5: non-square plot_{w}x{h}_v1 + inn_v2 stage naming convention"
-     ],
-     "summary": "Shipped manifest-validated prefabs for Inn 3x2 plot and inn_v2 construction ladder (slice from final inn_v2 for 20/50 stages; Agent 15 may replace with authored art). No pack tint changes. Workstream F (auto-spawn spacing) is Agent 05 — not touched."
-    },
-    "how_to_test": [
-     "python tools/validate_assets.py --report",
-     "python tools/qa_smoke.py --quick",
-     "Optional manual: python tools/model_assembler_kenney.py --open plot_3x2_v1 (opens Ursina)"
-    ],
-    "evidence": {
-     "validate_assets_report": {
-      "command": "python tools/validate_assets.py --report",
-      "exit_code": 0,
-      "status": "PASS",
-      "note": "errors=0; WARNs pre-existing flat-model allowlist (heroes/enemies/buildings/workers); prefab section clean for new JSONs"
-     },
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     }
-    },
-    "screenshots": [],
-    "blockers": []
-   },
-   "wk32_r3_preview_load_hotfix": {
-    "round_id": "wk32_r3_preview_load_hotfix",
-    "status": "done",
-    "pm_ref": "WK32-R3-BUG-002 + WK32-R3-FEAT-002 — Panda3D .bam cache-miss triage + prewarm tool",
-    "what_i_changed": {
-     "files": [
-      "tools/prewarm_panda_bam_cache.py — new offscreen prewarm tool; loads environment .obj once and writes models_compressed/... .bam files",
-      "docs/dev/panda_bam_cache.md — developer note explaining cache-miss noise and prewarm command"
-     ],
-     "summary": "Added a lightweight prewarm command so first-run OBJ→BAM conversion can be done explicitly (offscreen) and the scary ':loader(error): Unable to open ... .bam' lines are documented as expected cache-miss behavior when followed by a saved .bam. This does not change game code or the r2 non-grid grass behavior; it just unblocks preview workflow."
-    },
-    "how_to_test": [
-     "python tools/validate_assets.py --report",
-     "python tools/qa_smoke.py --quick",
-     "Optional: python tools/prewarm_panda_bam_cache.py --environment",
-     "Manual preview: python main.py --renderer ursina --no-llm (allow first run time if cache not warmed)"
-    ],
-    "evidence": {
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     },
-     "validate_assets_report": {
-      "command": "python tools/validate_assets.py --report",
-      "exit_code": 0,
-      "status": "PASS",
-      "note": "errors=0; WARNs pre-existing flat-model allowlist (heroes/enemies/buildings/workers)"
-     }
-    },
-    "screenshots": [],
-    "blockers": [
-     "Preview startup perf regression (dense grass / entity count) is owned by Agent 03 (WK32-R3-BUG-001). This tool addresses first-run OBJ cache conversion + log confusion only."
-    ]
-   },
-   "wk32_r4_tree_fog_perf_hotfix": {
-    "round_id": "wk32_r4_tree_fog_perf_hotfix",
-    "status": "done",
-    "pm_ref": "WK32-R4-BUG-001 — trees too light",
-    "what_i_changed": {
-     "files": [
-      "tools/kenney_pack_scale.py — environment/ tree-only tint multiplier (defaults 0.65) + env var override KINGDOM_ENV_TREE_COLOR_MULT",
-      "docs/dev/panda_bam_cache.md — note on adjusting KINGDOM_ENV_TREE_COLOR_MULT for quick local tuning"
-     ],
-     "summary": "Tree tint routing was already correct (environment/ uses Nature 0.75), but promoted meadow trees still read too bright in screenshot. Added a targeted darker multiplier for environment tree models only (tree_*.*) with an env var override for quick tuning. No changes to grass/non-grid scatter; fog semantics and hero-spawn perf are owned by Agents 03/10."
-    },
-    "how_to_test": [
-     "python tools/validate_assets.py --report",
-     "python tools/qa_smoke.py --quick",
-     "Manual visual check: set KINGDOM_ENV_TREE_COLOR_MULT=0.65; python main.py --renderer ursina --no-llm"
-    ],
-    "evidence": {
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     },
-     "validate_assets_report": {
-      "command": "python tools/validate_assets.py --report",
-      "exit_code": 0,
-      "status": "PASS",
-      "note": "errors=0; WARNs pre-existing flat-model allowlist (heroes/enemies/buildings/workers)"
-     }
-    },
-    "screenshots": [
-     "PM screenshot ref: image-543b2be6-eb68-44c4-98db-2bf5d46ec6ed.png (red-arrow meadow trees too bright before tree-only tint)."
-    ],
-    "blockers": [
-     "Agent 09 signoff still needed on final perceived brightness.",
-     "Fog SEEN vs VISIBLE semantics for static props is Agent 03 (WK32-R4-BUG-003).",
-     "Hero-spawn lag diagnosis/fix is Agent 10/03 (WK32-R4-BUG-002)."
-    ]
-   }
-  }
- },
- "wk33-terrain-lair-economy-prefabs": {
-  "sprint_meta": {
-   "plan_ref": ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
-   "notes": "WK33 r0: manifest v1.6 (textures + lair env kind + econ prefab ids); validate_assets textures check"
+    "rounds": {
+      "wk35_r1_execution": {
+        "round_id": "wk35_r1_execution",
+        "status": "done",
+        "pm_ref": "master_plan_architecture_refactor.md Stage 0 / Task 0-C",
+        "what_i_changed": {
+          "files": [
+            "docs/refactor/engine_access_inventory.md"
+          ],
+          "summary": "Captured machine-readable inventory of direct engine accesses from Ursina bridge files to serve as Stage 1 checklist for renderer/app decoupling."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": [
+          "PM hub sprint entry for wk35 was not yet present in agent_01 log in this workspace copy; proceeded with Stage 0 Task 0-C as specified in master plan."
+        ]
+      }
+    }
   },
-  "rounds": {
-   "wk33_r0_kickoff": {
-    "round_id": "wk33_r0_kickoff",
-    "status": "done",
-    "pm_ref": "sprints['wk33-terrain-lair-economy-prefabs'].rounds['wk33_r0_kickoff'] — Agent 12 block",
-    "what_i_changed": {
-     "files": [
-      "tools/assets_manifest.json — schema 1.6: environment.types +lair; textures.files floor_ground_grass.png; prefabs.buildings.optional +marketplace_v1, blacksmith_v1, trading_post_v1",
-      "tools/validate_assets.py — v1.6 _validate_texture_files; manifest textures.files"
-     ],
-     "summary": "Ground tiling albedo path is now gate-checked. Lair static mesh and economy prefab JSONs are listed so Agent 15/03 work clears warns (lair: assets/models/environment/lair.{glb|gltf|obj}; prefabs under assets/prefabs/buildings/). No models_compressed/."
+  "wk40-refactor-stage5-cleanup": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk40_stage_5_sprint_404c01dc.plan.md",
+      "notes": "Workstream A Task 5-A: root script archive + GLB scratch delete"
     },
-    "how_to_test": [
-     "python tools/validate_assets.py --report",
-     "python tools/qa_smoke.py --quick"
-    ],
-    "evidence": {
-     "validate_assets_report": {
-      "command": "python tools/validate_assets.py --report",
-      "exit_code": 0,
-      "status": "PASS",
-      "note": "errors=0; SUMMARY warns=50 (incl. missing environment:lair, optional marketplace_v1/blacksmith_v1/trading_post_v1 until A15; pre-existing flat-model warns)"
-     },
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     }
-    },
-    "blockers": []
-   }
+    "rounds": {
+      "wk40_r0_kickoff": {
+        "round_id": "wk40_r0_kickoff",
+        "status": "done",
+        "pm_ref": "sprints['wk40-refactor-stage5-cleanup'].rounds['wk40_r0_kickoff']",
+        "what_i_changed": {
+          "files": [
+            "tools/archive/root_wk40_stage5/README.md",
+            "tools/archive/root_wk40_stage5/*.py — 7 pm_*.py, 4 extract_*.py, get_agent_responses.py, test_llm.py (moved from repo root)",
+            "Deleted root: scratch_debug_glb.py, scratch_debug_glb_2.py … _6.py"
+          ],
+          "summary": "Root cleanup per master plan Stage 5 / WK40 plan. Grep found no README/docs references to removed paths; no code imported these modules. .cursor/plans/agent_logs/pm_*.py left untouched."
+        },
+        "how_to_test": [
+          "python -m pytest tests/",
+          "python tools/validate_assets.py --report",
+          "python tools/qa_smoke.py --quick"
+        ],
+        "evidence": {
+          "pytest": {
+            "command": "python -m pytest tests/ -q",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "validate_assets": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "0 errors (report mode)"
+          },
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": []
+      }
+    }
   }
- },
- "wk33-midsprint-assembler-scale-hotkeys": {
-  "sprint_meta": {
-   "plan_ref": ".cursor/plans/assembler_scale_hotkeys_177ca989.plan.md",
-   "notes": "Midsprint: -/= scale nudge; logical scale in JSON; pack_extent on Entity only"
-  },
-  "rounds": {
-   "r0_implement": {
-    "round_id": "r0_implement",
-    "status": "done",
-    "pm_ref": "sprints['wk33-midsprint-assembler-scale-hotkeys'].rounds['r0_implement']",
-    "what_i_changed": {
-     "files": [
-      "tools/model_assembler_kenney.py — SCALE_NUDGE_FACTOR / FINE, MIN/MAX; apply_piece_scale_to_entity; _nudge_selected_scale; handle_input -/= (minus, subtract, equals); _refresh_status scale= line; module Controls docstring"
-     ],
-     "summary": "Selected piece: - shrinks, = grows (multiplicative); Shift uses finer step. Logical triple clamped [0.01, 5.0]. Entity.scale = logical * pack_extent_multiplier_for_rel after each edit; JSON unchanged contract."
-    },
-    "how_to_test": [
-     "python tools/qa_smoke.py --quick",
-     "Manual: python tools/model_assembler_kenney.py --open farm_v1 — select piece, -/=, Shift+/-, confirm status line and save/reopen"
-    ],
-    "evidence": {
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     }
-    },
-    "blockers": []
-   }
-  }
- },
- "wk35-refactor-stage0-regression-baseline": {
-  "sprint_meta": {
-   "plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
-   "notes": "Stage 0: regression baseline + test hardening (Agent 12 deliverable: engine access inventory doc)"
-  },
-  "rounds": {
-   "wk35_r1_execution": {
-    "round_id": "wk35_r1_execution",
-    "status": "done",
-    "pm_ref": "master_plan_architecture_refactor.md Stage 0 / Task 0-C",
-    "what_i_changed": {
-     "files": [
-      "docs/refactor/engine_access_inventory.md"
-     ],
-     "summary": "Captured machine-readable inventory of direct engine accesses from Ursina bridge files to serve as Stage 1 checklist for renderer/app decoupling."
-    },
-    "how_to_test": [
-     "python tools/qa_smoke.py --quick"
-    ],
-    "evidence": {
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     }
-    },
-    "blockers": [
-     "PM hub sprint entry for wk35 was not yet present in agent_01 log in this workspace copy; proceeded with Stage 0 Task 0-C as specified in master plan."
-    ]
-   }
-  }
- },
- "wk40-refactor-stage5-cleanup": {
-  "sprint_meta": {
-   "plan_ref": ".cursor/plans/wk40_stage_5_sprint_404c01dc.plan.md",
-   "notes": "Workstream A Task 5-A: root script archive + GLB scratch delete"
-  },
-  "rounds": {
-   "wk40_r0_kickoff": {
-    "round_id": "wk40_r0_kickoff",
-    "status": "done",
-    "pm_ref": "sprints['wk40-refactor-stage5-cleanup'].rounds['wk40_r0_kickoff']",
-    "what_i_changed": {
-     "files": [
-      "tools/archive/root_wk40_stage5/README.md",
-      "tools/archive/root_wk40_stage5/*.py — 7 pm_*.py, 4 extract_*.py, get_agent_responses.py, test_llm.py (moved from repo root)",
-      "Deleted root: scratch_debug_glb.py, scratch_debug_glb_2.py … _6.py"
-     ],
-     "summary": "Root cleanup per master plan Stage 5 / WK40 plan. Grep found no README/docs references to removed paths; no code imported these modules. .cursor/plans/agent_logs/pm_*.py left untouched."
-    },
-    "how_to_test": [
-     "python -m pytest tests/",
-     "python tools/validate_assets.py --report",
-     "python tools/qa_smoke.py --quick"
-    ],
-    "evidence": {
-     "pytest": {
-      "command": "python -m pytest tests/ -q",
-      "exit_code": 0,
-      "status": "PASS"
-     },
-     "validate_assets": {
-      "command": "python tools/validate_assets.py --report",
-      "exit_code": 0,
-      "status": "PASS",
-      "note": "0 errors (report mode)"
-     },
-     "qa_smoke": {
-      "command": "python tools/qa_smoke.py --quick",
-      "exit_code": 0,
-      "status": "PASS"
-     }
-    },
-    "blockers": []
-   }
-  }
- }
 }

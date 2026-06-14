@@ -74,6 +74,62 @@ class BountyEvalSnapshot:
         }
 
 
+@dataclass(slots=True, frozen=True)
+class QuestChainHistorySummary:
+    """Small immutable history record for an active quest chain."""
+
+    event: str
+    phase_id: str = ""
+    phase_title: str = ""
+    status: str = ""
+    hero_id: str | None = None
+    target_id: str = ""
+    target_name: str = ""
+    target_position: tuple[float, float] | None = None
+    at_ms: int = 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True, frozen=True)
+class QuestChainPhaseSnapshot:
+    """Primitive read model for one phase in a quest-chain timeline."""
+
+    phase_id: str
+    title: str
+    objective_type: str
+    status: str
+    assigned_hero_id: str | None = None
+    target_id: str = ""
+    target_name: str = ""
+    target_position: tuple[float, float] | None = None
+    history: tuple[QuestChainHistorySummary, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True, frozen=True)
+class QuestChainSnapshot:
+    """Immutable, read-only chain snapshot for AI/view consumers."""
+
+    chain_id: int | str
+    chain_type: str
+    name: str
+    status: str
+    assigned_hero_id: str | None = None
+    current_phase_id: str = ""
+    current_phase_title: str = ""
+    current_objective_type: str = ""
+    target_id: str = ""
+    target_name: str = ""
+    target_position: tuple[float, float] | None = None
+    phases: tuple[QuestChainPhaseSnapshot, ...] = ()
+    history: tuple[QuestChainHistorySummary, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 

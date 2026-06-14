@@ -39,6 +39,7 @@ from game.systems import (
 from game.systems.buffs import BuffSystem
 from game.systems.cleric_heal import ClericHealSystem
 from game.systems.quest import QuestSystem
+from game.systems.quest_chain import QuestChainSystem
 from game.systems.difficulty import DifficultySystem, DifficultyLevel
 from game.systems.wave_events import WaveEventSystem
 from game.building_factory import BuildingFactory
@@ -175,6 +176,10 @@ class SimEngine:
         # from a constructed Herald's Post, so the WK67 digest scenario (no posts,
         # no quests) never executes any quest path.
         self.quest_system = QuestSystem()
+        # WK138: quest-chain runtime registration. The system is a no-op while
+        # no chains are live, so wiring it here keeps the cadence/read-model
+        # surface available without changing the empty/default path.
+        self.quest_chain_system = QuestChainSystem()
         self.quest_givers: list[QuestGiver] = []
         # WK131: seeded item drops on ENEMY_KILLED (constructing draws no RNG;
         # rolls happen only when a kill event routes through _route_combat_events,
@@ -627,6 +632,8 @@ class SimEngine:
             )
         if "quest_givers" in _view_fields:
             _quest_kwargs["quest_givers"] = tuple(g.to_ai_info() for g in self.quest_givers)
+        if "quest_chains" in _view_fields:
+            _quest_kwargs["quest_chains"] = self._active_quest_chain_views()
         return AiGameView(
             world=WorldView(self.world),
             heroes=tuple(self.heroes),
@@ -642,6 +649,22 @@ class SimEngine:
             commands=SimCommandSink(self),
             **_quest_kwargs,
         )
+
+    def _active_quest_chain_views(self) -> tuple:
+        """Return read-only quest-chain snapshots, or () when no chains are live."""
+        chain_system = getattr(self, "quest_chain_system", None)
+        if chain_system is None:
+            return ()
+        for getter_name in (
+            "get_active_chain_snapshots",
+            "get_active_chain_views",
+            "get_active_chains",
+        ):
+            getter = getattr(chain_system, getter_name, None)
+            if callable(getter):
+                chains = getter()
+                return () if chains is None else tuple(chains)
+        return ()
 
     @property
     def lumber_ops(self) -> "LumberOps":
@@ -793,6 +816,7 @@ class SimEngine:
                 for b in self.buildings
             ),
             bounty_dtos=tuple(bounty_dto_from(b) for b in _bounties),
+            quest_chains=self._active_quest_chain_views(),
         )
 
     # ---------------------------------------------------------------------
@@ -1076,6 +1100,9 @@ class SimEngine:
         # block below is gated on quest_givers existing at all; the WK67 digest
         # scenario has no Herald's Post, so neither branch ever runs there.
         self.quest_system.update(system_ctx, dt)
+        # WK138: quest-chain cadence hook. Empty-update is a no-op when no
+        # chains are live, so this stays digest-stable in the WK67 scenario.
+        self.quest_chain_system.update(system_ctx, dt)
         if self.quest_givers:
             # Cull NPCs whose post was destroyed (mirrors guard cleanup — the
             # destroyed post has already been removed from self.buildings).

@@ -9,321 +9,6 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
-    "wk49_hero_profile_foundation": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md",
-        "roadmap_ref": ".cursor/plans/wk49_hero_profile_roadmap_6f3a1b2c.plan.md",
-        "notes": "R6 readiness: perf consult + code skim; no game code edits (consult-only)."
-      },
-      "rounds": {
-        "wk49_r6_readiness_qa_perf": {
-          "sprint_id": "wk49_hero_profile_foundation",
-          "round_id": "wk49_r6_readiness_qa_perf",
-          "status": "done",
-          "what_i_changed": "No code changes. Consult: reviewed get_game_state hero profile build path (sim_engine.py + game/sim/hero_profile.py) and hero-side bounds (game/entities/hero.py + game/systems/hero_memory.py). Ran headless perf_benchmark and full qa_smoke --quick.",
-          "commands_run": [
-            {
-              "shell": "PowerShell",
-              "commands": "python tools/perf_benchmark.py",
-              "exit_code": 0
-            },
-            {
-              "shell": "PowerShell",
-              "commands": "python tools/qa_smoke.py --quick",
-              "exit_code": 0
-            },
-            {
-              "shell": "PowerShell",
-              "commands": "python -m json.tool .cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json",
-              "exit_code": 0
-            },
-            {
-              "shell": "PowerShell",
-              "commands": "npx tsx \"tools\\ai_studio_orchestrator\\src\\cli.ts\" complete --cwd \"C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\" --sprint \"wk49_hero_profile_foundation\" --round \"wk49_r6_readiness_qa_perf\" --agent \"10\" --token \"e2eed7f0-a655-42c4-a1bf-58ee670ebd6f\" --status done --summary \"Perf consult: perf_benchmark 1.344 ms/tick (exit 0), qa_smoke --quick PASS (exit 0). Profile snapshots rebuilt per get_game_state per hero; sorts bounded (<=100 places, <=30 memory). No game edits.\" --log-path \".cursor\\plans\\agent_logs\\agent_10_PerformanceStability_Lead.json\" --log-round 'sprints[\"wk49_hero_profile_foundation\"].rounds[\"wk49_r6_readiness_qa_perf\"]'",
-              "exit_code": 0,
-              "note": "PowerShell requires single quotes around --log-round so [ and \\ inside double quotes are not misparsed."
-            }
-          ],
-          "evidence": {
-            "perf_benchmark": {
-              "command": "python tools/perf_benchmark.py",
-              "exit_code": 0,
-              "ms_per_tick_total": 1.344,
-              "ticks": 720,
-              "seconds": 12.0,
-              "heroes": 20,
-              "note": "Headless sim only; no Ursina/UI draw. Pathfinding ms/tick 0.873 — dominant vs profile work."
-            },
-            "qa_smoke": {
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "status": "PASS (determinism_guard + pytest 148 passed + observe_sync scenarios)"
-            },
-            "profile_snapshot_perf_review": {
-              "get_game_state_builds": "build_hero_profile_snapshot for each hero with hero_id on every get_game_state call (typical once/frame).",
-              "per_hero_sorts": "sort_known_places + sort_memory_entries in build_hero_profile_snapshot; sizes bounded by KNOWN_PLACES_MAX_ENTRIES=100 and PROFILE_MEMORY_MAX_ENTRIES=30.",
-              "memory_bounds": "Hero.record_profile_memory trims list; known_places trimmed via _trim_known_places_if_needed — no unbounded growth at caps.",
-              "watch_if_scaled": "If hero counts march to dozens+ and get_game_state is invoked multiple times per frame, consider caching snapshots or building only selected_hero_profile eagerly; not indicated by current headless ms/tick.",
-              "sim_engine_other_sorted": "pre-existing sorted() on trees/new_keys/revealers in sim_engine — unrelated to WK49 profile path."
-            }
-          },
-          "blockers": [],
-          "follow_ups": [],
-          "recommended_next_actions": [
-            "Optional: if PM raises caps on known_places or profile_memory sharply, re-profile UI/renderer sessions (F2 / run_ursina_capture_once) — snapshot sorts scale O(n log n) but n is small today."
-          ]
-        }
-      }
-    },
-    "wk50_llm_context_direct_prompts": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md",
-        "notes": "WK50 R4 Phase 2A QA/perf consult: autonomous LLM moments, cooldowns, bounded prompt context."
-      },
-      "rounds": {
-        "wk50_r4_phase2a_qa_perf": {
-          "sprint_id": "wk50_llm_context_direct_prompts",
-          "round_id": "wk50_r4_phase2a_qa_perf",
-          "status": "done",
-          "what_i_changed": "No code changes (consult-only). Reviewed Phase 2A path in ai/decision_moments.py, ai/profile_context_adapter.py, and ai/behaviors/llm_bridge.py. Ran perf_benchmark.py and qa_smoke.py --quick.",
-          "commands_run": [
-            {
-              "shell": "PowerShell",
-              "commands": "python tools/perf_benchmark.py",
-              "exit_code": 0
-            },
-            {
-              "shell": "PowerShell",
-              "commands": "python tools/qa_smoke.py --quick",
-              "exit_code": 0
-            },
-            {
-              "shell": "PowerShell",
-              "commands": "python -m json.tool .cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json",
-              "exit_code": 0
-            },
-            {
-              "shell": "PowerShell",
-              "commands": "npx tsx \"tools\\ai_studio_orchestrator\\src\\cli.ts\" complete --cwd \"C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\" --sprint \"wk50_llm_context_direct_prompts\" --round \"wk50_r4_phase2a_qa_perf\" --agent \"10\" --token \"e8a0b969-38da-41f9-bbab-545568de98cc\" --status done --summary \"Phase 2A consult: moments event-gated, cooldown/pending enforced, context capped; perf_benchmark ~1.298 ms/tick exit 0, qa_smoke --quick PASS exit 0. No game code edits.\" --log-path \".cursor\\plans\\agent_logs\\agent_10_PerformanceStability_Lead.json\" --log-round 'sprints[\"wk50_llm_context_direct_prompts\"].rounds[\"wk50_r4_phase2a_qa_perf\"]'",
-              "exit_code": 0,
-              "note": "Use single quotes around --log-round in PowerShell; double-quoted value was misparsed (unknown option)."
-            }
-          ],
-          "evidence": {
-            "decision_frequency": "`should_consult_llm` returns true only when `determine_decision_moment` returns a named moment (low-health combat, post-combat injured, rested-and-ready, or shopping opportunity), not every tick.",
-            "cooldown_pending": "`cooldown_ms = max(LLM_DECISION_COOLDOWN, moment.cooldown_ms)` plus `consult_suppressed_by_request_state` (sim-ms last_llm_decision_time and pending_llm_decision). Global cooldown default 2000ms; per-moment minimums 4000–15000ms.",
-            "bounded_context": "profile_context_adapter caps: 8 places, 10 memory entries (200-char summaries), 5 enemies/allies/bounties; compact profile omits full place/memory lists; `wk50_autonomous` built only inside `request_llm_decision`.",
-            "tests_reference": "tests/test_wk50_phase2a_decision_contracts.py includes cooldown and pending suppression for `should_consult_llm`.",
-            "perf_benchmark": {
-              "command": "python tools/perf_benchmark.py",
-              "exit_code": 0,
-              "ms_per_tick_total": 1.298,
-              "ticks": 720,
-              "seconds": 12.0,
-              "heroes": 20,
-              "note": "Headless sim; benchmark does not exercise live LLM I/O. ms/tick in line with recent ~1.3 band."
-            },
-            "qa_smoke": {
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "status": "PASS (determinism_guard + pytest 166 passed + observe_sync scenarios including --llm mock decision plumbing)"
-            }
-          },
-          "blockers": [],
-          "follow_ups": [],
-          "recommended_next_actions": [
-            "After Phase 2B direct-prompt path ships, re-assess combined prompt/token size with real providers; optional Ursina+F2 probe if conversation volume increases."
-          ]
-        }
-      }
-    },
-    "wk52_attachment_phase3_radar_alerts_memorial": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md",
-        "notes": "WK52 Phase 3: radar minimap, watch card, memorial; R2 perf consult (Agent 10) + QA (Agent 11)."
-      },
-      "rounds": {
-        "wk52_r2_perf_qa": {
-          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
-          "round_id": "wk52_r2_perf_qa",
-          "status": "done",
-          "what_i_changed": "No game code edits (read-only perf consult). Reviewed game/ui/hud.py _render_radar_minimap, _render_watch_card_chrome, and world_to_radar. Cloud VM: ran pip install -r requirements.txt so perf_benchmark and qa_smoke could execute (pygame/pytest were missing).",
-          "commands_run": [
-            {
-              "shell": "bash",
-              "commands": "npm --prefix tools/ai_studio_orchestrator install --silent",
-              "exit_code": 0
-            },
-            {
-              "shell": "bash",
-              "commands": "python3 -m pip install -r requirements.txt -q",
-              "exit_code": 0
-            },
-            {
-              "shell": "bash",
-              "commands": "python3 tools/perf_benchmark.py",
-              "exit_code": 0
-            },
-            {
-              "shell": "bash",
-              "commands": "python3 tools/qa_smoke.py --quick",
-              "exit_code": 0
-            },
-            {
-              "shell": "bash",
-              "commands": "python3 -m json.tool .cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json",
-              "exit_code": 0
-            }
-          ],
-          "evidence": {
-            "hud_perf_review": {
-              "pygame_Surface_in_radar_watch_card": "_render_radar_minimap and _render_watch_card_chrome do not call pygame.Surface(); they use pygame.draw and blit onto the passed surface.",
-              "world_to_radar_and_radar_loops": "world_to_radar (hud.py ~31-39) is O(1) per call. Entity loops are O(buildings+enemies+heroes) with O(1) is_revealed grid index each; no quadratic nested entity loops.",
-              "hp_xp_text_surfaces": "When watch card expanded, self.font_tiny.render runs every frame for HP, XP, Lv, and Mana lines, plus header name and chevron (hud.py ~687-743). FLAG for Agent 08: cache surfaces keyed on changing stats/name like _recall_label_sig (~884-888).",
-              "name_truncate_while_loop": "Header may call font_tiny.render multiple times per frame while shortening name — amplifies allocation churn for long names."
-            },
-            "perf_benchmark": {
-              "command": "python3 tools/perf_benchmark.py",
-              "exit_code": 0,
-              "platform_note": "linux cloud, Python 3.12.3",
-              "seconds": 12.0,
-              "ticks": 720,
-              "heroes": 20,
-              "ms_per_tick_total": 0.65,
-              "ms_per_tick_pathfinding": 0.462,
-              "baseline_plus_minus_5pct": "Not comparable to prior Agent 10 JSON baselines (e.g. wk50 ~1.298 ms/tick on Windows): this run 0.65 differs by >5%. Headless benchmark does not render pygame HUD. Conclusion: no sim-path red flag from benchmark; re-establish ms/tick baseline on one fixed host post-WK52 for strict ±5% tracking."
-            },
-            "qa_smoke": {
-              "command": "python3 tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "status": "PASS"
-            }
-          },
-          "blockers": [],
-          "follow_ups": [
-            "WK52-08-PERF-001 (owner Agent 08): Cache watch-card stat labels (HP/XP/Lv/Mana) and optionally header text when expanded; avoid per-frame font.render for stable strings.",
-            "WK52-08-PERF-002 (owner Agent 08, optional): _render_recall_button uses new pygame.Surface SRCALPHA for fallen dim and each flash pulse frame — pool or narrow blit if profiling shows churn (hud.py ~892-911)."
-          ],
-          "recommended_next_actions": [
-            "Record a fresh perf_benchmark number on the standard dev/CI machine after WK52 merges; use that as the ±5% baseline.",
-            "For HUD cost: F2 overlay or pygame HUD timing probe during pinned+expanded watch card if frame-time issues appear in manual play."
-          ]
-        }
-      }
-    },
-    "v16_r5_hud_perf_worldspace_ui": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/hud_ui_performance_issue_resolution.md",
-        "notes": "v1.6 Round 5: PIL bypass + world-space UI (building labels, hero names, health bars). Agent 10 Round 3 profiling assessment."
-      },
-      "rounds": {
-        "r5_round3_profiling_assessment": {
-          "sprint_id": "v16_r5_hud_perf_worldspace_ui",
-          "round_id": "r5_round3_profiling_assessment",
-          "round_meta": {
-            "prompt_set_id": "r5_round3",
-            "build_target": "Before/after profiling of PIL bypass + world-space UI changes",
-            "sent_at_local": "2026-05-17"
-          },
-          "response": {
-            "status": "complete",
-            "raw": "R5 Round 3 profiling assessment: Ran two 20s Ursina FPS probes with 10-hero spawn (20 heroes measured) and 10s warmup. Results consistent across both runs. hud_texture_upload P90 is 42-43ms — improved from 49ms baseline but NOT below the 15ms target. PIL bypass reduced avg from 13.4ms to 13-14ms and max from 67ms to 48-61ms, but P90 remains in the 42-43ms range. ursina_renderer P90 is 9-10ms — within the 12ms budget but increased from 7.6ms baseline due to world-space Text/Entity additions. Avg FPS 24.8-26.0 with 20 heroes (probe spawned 20 via warrior guild), below 30.8 baseline with 10 heroes — expected given doubled hero count. Phase 3 (dirty-region upload) IS recommended. All 307 unit tests pass. Visual: building labels visible, hero names visible, HUD correct orientation.",
-            "summary_bullets": [
-              "hud_texture_upload: avg=13.0-14.1ms P90=42.8-43.3ms max=48.0-60.8ms — P90 NOT below 15ms target; partial improvement from 49ms baseline.",
-              "ursina_renderer: avg=7.9-8.4ms P90=9.0-10.5ms max=22.8-24.6ms — within 12ms P90 budget.",
-              "tick_simulation: avg=2.4-2.8ms P90=5.2-5.4ms max=30.3-31.3ms — slight increase from 1.7ms avg baseline, expected with more entities.",
-              "pygame_hud_render: avg=2.6-2.7ms P90=3.0-3.2ms max=4.9-6.1ms — stable vs 2.0ms baseline.",
-              "Overall FPS: avg 24.8-26.0 with 20 heroes (probe spawns 20 via warrior guild); p50=28-31.",
-              "Phase 3 (dirty-region upload) RECOMMENDED: hud_texture_upload P90 still 42-43ms, well above 10ms threshold.",
-              "Visual: building labels, hero names, HUD all rendering correctly; text correctly oriented.",
-              "Unit tests: 307 passed."
-            ],
-            "what_i_changed": [],
-            "how_to_test": [
-              "python tools/run_ursina_capture_once.py --seconds 20 --subdir r5_final_perf --stem final --no-llm --fps-probe --hero-fps-probe-count 10 --fps-warmup-sec 10",
-              "python -m pytest tests/ -x -q --tb=short"
-            ],
-            "evidence": {
-              "capture_run1": {
-                "command": "python tools/run_ursina_capture_once.py --seconds 20 --subdir r5_final_perf --stem final --no-llm --fps-probe --hero-fps-probe-count 10 --fps-warmup-sec 10",
-                "exit_code": 0,
-                "screenshot_path": "docs/screenshots/r5_final_perf/final_20260517_220223_799.png",
-                "fps_probe": {
-                  "heroes": 20,
-                  "frames": 205,
-                  "avg_fps": 24.8,
-                  "min_fps": 8.6,
-                  "p10_fps": 11.7,
-                  "p50_fps": 28.2,
-                  "p90_fps": 34.3,
-                  "max_fps": 36.1
-                },
-                "probe_stages_ms": {
-                  "hud_texture_upload_avg_ms": 14.082,
-                  "hud_texture_upload_p90_ms": 43.33,
-                  "hud_texture_upload_max_ms": 60.771,
-                  "pygame_hud_render_avg_ms": 2.721,
-                  "pygame_hud_render_p90_ms": 3.231,
-                  "pygame_hud_render_max_ms": 6.1,
-                  "tick_simulation_avg_ms": 2.763,
-                  "tick_simulation_p90_ms": 5.368,
-                  "tick_simulation_max_ms": 31.304,
-                  "ursina_renderer_avg_ms": 8.394,
-                  "ursina_renderer_p90_ms": 10.488,
-                  "ursina_renderer_max_ms": 22.847
-                },
-                "note": "First run had OBJ-to-BAM cache writes for several environment models during session."
-              },
-              "capture_run2": {
-                "command": "python tools/run_ursina_capture_once.py --seconds 20 --subdir r5_final_perf --stem final_run2 --no-llm --fps-probe --hero-fps-probe-count 10 --fps-warmup-sec 10",
-                "exit_code": 0,
-                "screenshot_path": "docs/screenshots/r5_final_perf/final_run2_20260517_220337_855.png",
-                "fps_probe": {
-                  "heroes": 20,
-                  "frames": 217,
-                  "avg_fps": 26.0,
-                  "min_fps": 8.9,
-                  "p10_fps": 12.2,
-                  "p50_fps": 30.6,
-                  "p90_fps": 34.8,
-                  "max_fps": 36.6
-                },
-                "probe_stages_ms": {
-                  "hud_texture_upload_avg_ms": 13.012,
-                  "hud_texture_upload_p90_ms": 42.803,
-                  "hud_texture_upload_max_ms": 48.017,
-                  "pygame_hud_render_avg_ms": 2.591,
-                  "pygame_hud_render_p90_ms": 2.98,
-                  "pygame_hud_render_max_ms": 4.871,
-                  "tick_simulation_avg_ms": 2.387,
-                  "tick_simulation_p90_ms": 5.176,
-                  "tick_simulation_max_ms": 30.328,
-                  "ursina_renderer_avg_ms": 7.883,
-                  "ursina_renderer_p90_ms": 9.013,
-                  "ursina_renderer_max_ms": 24.593
-                },
-                "note": "Second run (BAM cache warm for most models; still had some OBJ-to-BAM writes)."
-              },
-              "unit_tests": {
-                "command": "python -m pytest tests/ -x -q --tb=short",
-                "exit_code": 0,
-                "passed": 307,
-                "failed": 0
-              },
-              "visual_quality": {
-                "building_labels": "Visible as white text above buildings (CASTLE, INN, WARRIORS, etc. observed in screenshots).",
-                "hero_names": "Hero name labels visible below hero sprites in the scene.",
-                "hud_top_bar": "Top bar renders correctly: gold, heroes count, wave counter visible in correct position.",
-                "hud_bottom_bar": "Bottom bar renders correctly: Build, Hire, Bounty buttons visible.",
-                "text_orientation": "All text correctly oriented — not upside-down or mirrored.",
-                "perf_overlay": "F2 performance overlay visible in lower-left with stage timings."
-              },
-              "phase3_recommendation": "IMPLEMENT Phase 3 (dirty-region upload). hud_texture_upload P90 is 42-43ms, well above the 10ms threshold. The PIL bypass reduced max from 67ms to 48-61ms and brought slight avg improvement, but the core cost of uploading the full 8MB RGBA surface remains dominant. The byte-level vertical flip saved the PIL object construction overhead but the raw data transfer (pygame.tobytes + memoryview reversal + setRamImageAs for 8MB) is still expensive. Dirty-region upload would reduce the upload payload from 8MB (full surface) to typically <500KB (changed region), which should bring P90 well below 10ms."
-            }
-          }
-        }
-      }
-    },
     "wk58_ursina_entities_overload": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/Ursina Entities Overload Solution.md",
@@ -1300,16 +985,56 @@
             ]
           },
           "commands_run": [
-            {"cmd": "python -m pytest tests/test_wk125_walltime_freeze.py -q -s", "exit_code": 0, "result": "1 passed. now_before_jump=510 now_after_jump=527 (NOT 3.6M); net_disp all 6 heroes 171-408px; moved_gt_50px=6/6; all_idle_no_target=False; hunger_urgent all False."},
-            {"cmd": "python -m pytest tests/test_wk125_walltime_freeze.py -q -s  (after TEMPORARY local revert of T1+T2 to confirm it catches the bug)", "exit_code": 1, "result": "FAILED as designed: now_after_jump=3601383 -> assert 3601383 < 60000 FAILS. Restored the fix immediately after."},
-            {"cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q", "exit_code": 0, "result": "10 passed -- WK67 AI-decision digest BYTE-IDENTICAL (the test pins _AI_DECISION_DIGEST internally; not re-baselined). DET=1 already used this accumulator clock, so unchanged."},
-            {"cmd": "python -m pytest tests/test_wk124_ranger_idle_soak.py -q", "exit_code": 0, "result": "1 passed -- ranger fog/idle soak still green."},
-            {"cmd": "python -m pytest tests/test_wk123_dead_hero_ttl.py -q", "exit_code": 0, "result": "3 passed -- after fixing the death-stamp to read through timebase.now_ms() (single-clock contract) the WK123-C2 TTL test is green."},
-            {"cmd": "python -m pytest tests/test_engine.py -q", "exit_code": 0, "result": "10 passed -- after updating test_engine_headless_tick_simulation_advances_sim_time to the new WK125 contract (clock advances in both modes)."},
-            {"cmd": "python tools/determinism_guard.py", "exit_code": 0, "result": "[determinism_guard] PASS: no violations found"},
-            {"cmd": "python -m pytest tests/ -q", "exit_code": 0, "result": "1538 passed, 5 skipped, 0 failed in 335.34s"},
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "result": "determinism_guard PASS + full pytest green (see evidence)."},
-            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json > NUL", "exit_code": 0, "result": "valid JSON"}
+            {
+              "cmd": "python -m pytest tests/test_wk125_walltime_freeze.py -q -s",
+              "exit_code": 0,
+              "result": "1 passed. now_before_jump=510 now_after_jump=527 (NOT 3.6M); net_disp all 6 heroes 171-408px; moved_gt_50px=6/6; all_idle_no_target=False; hunger_urgent all False."
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk125_walltime_freeze.py -q -s  (after TEMPORARY local revert of T1+T2 to confirm it catches the bug)",
+              "exit_code": 1,
+              "result": "FAILED as designed: now_after_jump=3601383 -> assert 3601383 < 60000 FAILS. Restored the fix immediately after."
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "result": "10 passed -- WK67 AI-decision digest BYTE-IDENTICAL (the test pins _AI_DECISION_DIGEST internally; not re-baselined). DET=1 already used this accumulator clock, so unchanged."
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk124_ranger_idle_soak.py -q",
+              "exit_code": 0,
+              "result": "1 passed -- ranger fog/idle soak still green."
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk123_dead_hero_ttl.py -q",
+              "exit_code": 0,
+              "result": "3 passed -- after fixing the death-stamp to read through timebase.now_ms() (single-clock contract) the WK123-C2 TTL test is green."
+            },
+            {
+              "cmd": "python -m pytest tests/test_engine.py -q",
+              "exit_code": 0,
+              "result": "10 passed -- after updating test_engine_headless_tick_simulation_advances_sim_time to the new WK125 contract (clock advances in both modes)."
+            },
+            {
+              "cmd": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "result": "[determinism_guard] PASS: no violations found"
+            },
+            {
+              "cmd": "python -m pytest tests/ -q",
+              "exit_code": 0,
+              "result": "1538 passed, 5 skipped, 0 failed in 335.34s"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "result": "determinism_guard PASS + full pytest green (see evidence)."
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json > NUL",
+              "exit_code": 0,
+              "result": "valid JSON"
+            }
           ],
           "evidence": {
             "now_ms_before_after_jump": "Test (shipped DET=0 path): now_before_jump=510 ms; after a +3_600_000 ms pygame.time.get_ticks jump + 1 tick, now_after_jump=527 ms (sim-time, NOT the wall jump). PRE-FIX (local revert) the same point read now_after_jump=3601383 ms -> the load-bearing assert (< 60_000) FAILS. This is the exact wall-clock-leak the bug depends on.",
@@ -1322,6 +1047,106 @@
             "Cross-domain: tests/test_engine.py (Agent 03/11) updated to the new WK125 clock contract -- please review the one-line assertion change in test_engine_headless_tick_simulation_advances_sim_time.",
             "PM/live: ask Jaimie to run the exact repro -- `python main.py` -> pause a few min (or leave open ~1hr) -> hit play -> heroes should resume moving normally. The deterministic test is the authoritative gate; this is the human confirmation.",
             "Honest residual (from plan): if heroes STILL freeze under the live repro after this lands, a residual geometric/deadlock vector (a hero that cannot displace enough to self-heal) would be next, chased with per-hero live logging. The timebase fix removes the divergence that made ALL heroes trip staleness gates at once (matches the paused-counts / all-heroes / ~1hr-onset clues)."
+          ]
+        }
+      }
+    },
+    "wk137_initial_goblin_wave": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk137_initial_goblin_wave.plan.md",
+        "owner_agent": "10_PerformanceStability_Lead",
+        "notes": "R5 perf regression triage: Sovereign reported current WK137 feels less smooth than accepted v1.6.0/Mythos state. First pass was measurement/triage only; no game code edits."
+      },
+      "rounds": {
+        "r5_perf_regression_triage": {
+          "sprint_id": "wk137_initial_goblin_wave",
+          "round_id": "r5_perf_regression_triage",
+          "status": "blocked_env_live_fps",
+          "what_i_changed": "No game code edits. Ran the assigned live Mythos FPS soak attempt, headless Mythos tick bench, qa_smoke attempt, and narrow smoke-error diagnostics. Wrote Agent 10 log entry only; diagnostic outputs were produced under tmp/mythos and tmp/pytest.",
+          "commands_run": [
+            {
+              "shell": "PowerShell",
+              "commands": "python tools/mythos_fps_soak.py --zoom out --speed fast --window windowed --minutes 2 --window-start 1 --window-end 2 --heroes 24 --buildings 24 --enemies 80 --label wk137_regression_probe",
+              "exit_code": 1,
+              "result": "Live Ursina soak failed before frame 1. No CSV written. Panda/Ursina could not load built-in ursina/textures/cog.png after reporting it could not create /c/Users/Jaimie Montague/OneDrive/Documents/Kingdom/Panda3D-1.10 cache directory; traceback ends in AttributeError: 'NoneType' object has no attribute 'setMagfilter'."
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "python tools/mythos_tick_bench.py --ticks 900 --warmup 180 --heroes 24 --buildings 24 --enemies 80",
+              "exit_code": 0,
+              "result": "PASS: RESULT ticks=720 mean=3.215ms p50=2.402ms p95=8.279ms p99=14.001ms max=50.624ms; total=2.9s; sim_cpu_per_wall_sec_at_FAST=64.3ms."
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "python tools/qa_smoke.py --quick",
+              "exit_code": 124,
+              "result": "Timed out after 300s on first attempt. determinism_guard PASS; pytest reached 44% and had already shown temp-dir setup errors."
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "python tools/qa_smoke.py --quick",
+              "exit_code": 124,
+              "result": "Timed out after 900s on second attempt. determinism_guard PASS; pytest reached 87% and had already shown temp-dir setup errors."
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "python -m pytest tests/test_pygame_loaders.py tests/test_roll_agent_logs.py tests/test_wk102_hud_messages.py tests/test_wk65_tooling.py -q --tb=short",
+              "exit_code": 1,
+              "result": "25 setup errors, all from PermissionError [WinError 5] accessing C:\\Users\\Jaimie Montague\\AppData\\Local\\Temp\\pytest-of-Jaimie Montague."
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "New-Item -ItemType Directory -Force tmp\\pytest | Out-Null; $env:TMP=(Resolve-Path tmp\\pytest).Path; $env:TEMP=$env:TMP; python -m pytest tests/test_pygame_loaders.py tests/test_roll_agent_logs.py tests/test_wk102_hud_messages.py tests/test_wk65_tooling.py -q --tb=short",
+              "exit_code": 1,
+              "result": "Temp permission errors disappeared, confirming environment involvement, but 2 wk65 path-contract tests failed because placing pytest temp under the repo makes outside-repo path expectations invalid."
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "New-Item -ItemType Directory -Force C:\\tmp\\pytest | Out-Null; $env:TMP='C:\\tmp\\pytest'; $env:TEMP=$env:TMP; python -m pytest tests/test_pygame_loaders.py tests/test_roll_agent_logs.py tests/test_wk102_hud_messages.py tests/test_wk65_tooling.py -q --tb=short",
+              "exit_code": 1,
+              "result": "C:\\tmp directory creation was denied in this sandbox, so pytest fell back to the blocked AppData temp root and reproduced the same 25 PermissionError setup errors."
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "python -m json.tool .cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json",
+              "exit_code": 0,
+              "result": "Valid JSON after writing sprints[\"wk137_initial_goblin_wave\"].rounds[\"r5_perf_regression_triage\"]."
+            }
+          ],
+          "evidence": {
+            "live_fps_soak": {
+              "status": "blocked before frame 1",
+              "fps_summary": "No avg/min/p10/p50/p90 available because no CSV was written.",
+              "stage_attribution": "No tick/rend/hudR/hudU/untracked attribution available because the Ursina window died during startup before sampling began.",
+              "log_path": "tmp/mythos/soak_out_fast_windowed_wk137_regression_probe.log",
+              "csv_path": "tmp/mythos/soak_out_fast_windowed_wk137_regression_probe.csv (not created)",
+              "patch_path": "tmp/mythos/_soak_patch_out_fast_windowed_wk137_regression_probe.py",
+              "screenshots_path": "docs/screenshots/mythos_soak/out_fast_windowed_wk137_regression_probe (no screenshots captured)",
+              "failure_signature": "Unable to make directory /c/Users/Jaimie Montague/OneDrive/Documents/Kingdom/Panda3D-1.10, caching disabled; Texture::read() could not read ursina/textures/cog.png; AttributeError in ursina.texture.filtering_setter because self._texture is None."
+            },
+            "headless_tick_bench": {
+              "scenario": "24 heroes / requested 24 buildings / 80 enemies, fast-equivalent tick load",
+              "build_state": "tool reported scenario buildings=66 at setup; end-state buildings=46, trees=2078, heroes_alive=24, enemies_alive=80",
+              "result": "mean=3.215ms p50=2.402ms p95=8.279ms p99=14.001ms max=50.624ms",
+              "comparison_to_pm_triage": "Current run is faster than PM's v1.6.0 clean mean 4.820ms, v1.6.1 clean mean 4.449ms, and PM's earlier current WK137 mean 3.532ms. This clears Agent 05/sim tick as the likely primary regression source."
+            },
+            "qa_smoke": {
+              "status": "inconclusive in this sandbox",
+              "determinism_guard": "PASS on both qa_smoke attempts before pytest started.",
+              "first_attempt": "Timed out at 300s around 44% with PermissionError setup errors already visible.",
+              "second_attempt": "Timed out at 900s around 87% with PermissionError setup errors already visible.",
+              "narrow_repro": "Targeted errored files reproduced 25 setup errors from pytest tmp_path failing to scan C:\\Users\\Jaimie Montague\\AppData\\Local\\Temp\\pytest-of-Jaimie Montague.",
+              "environment_inference": "This is likely sandbox/temp-folder permission state, not WK137 game logic. Redirecting TEMP/TMP into repo tmp removed those permission errors but invalidated two tests that intentionally assert outside-repo absolute paths."
+            }
+          },
+          "blockers": [
+            "Live FPS soak cannot attribute the reported smoothness regression in this environment because Ursina/Panda fails before frame 1 while loading its own cog.png texture and cache path.",
+            "qa_smoke.py --quick could not complete in this environment: the full suite timed out and pytest tmp_path setup cannot access the default AppData temp root."
+          ],
+          "recommended_next_actions": [
+            "Jaimie should run this exact PowerShell command from repo root in the normal local game environment: python tools/mythos_fps_soak.py --zoom out --speed fast --window windowed --minutes 2 --window-start 1 --window-end 2 --heroes 24 --buildings 24 --enemies 80 --label wk137_regression_probe",
+            "Return these files if produced: tmp/mythos/soak_out_fast_windowed_wk137_regression_probe.log, tmp/mythos/soak_out_fast_windowed_wk137_regression_probe.csv, and docs/screenshots/mythos_soak/out_fast_windowed_wk137_regression_probe/*.png.",
+            "If the live CSV/slowlog shows rend, HUD, unit labels/atlas, or untracked GPU/camera/pointer cost, route the implementation round to Agent 09. If it shows snapshot/frame orchestration cost, route to Agent 03. Do not route to Agent 05 unless a future live run contradicts the healthy tick bench."
           ]
         }
       }

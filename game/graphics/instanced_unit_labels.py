@@ -299,7 +299,11 @@ class InstancedUnitLabelPool:
         if kind == "hero":
             return str(getattr(dto, "name", "") or "")
         if kind == "enemy":
-            return str(getattr(dto, "enemy_type", "enemy") or "enemy").replace("_", " ").title()
+            # WK137: prefer the instance name (boss "The Goblin Warchief") over
+            # the title-cased enemy_type key (parity with ursina_unit_sync).
+            return str(getattr(dto, "name", "") or "") or str(
+                getattr(dto, "enemy_type", "enemy") or "enemy"
+            ).replace("_", " ").title()
         if kind == "peasant":
             return str(
                 getattr(dto, "render_worker_type", "peasant") or "peasant"

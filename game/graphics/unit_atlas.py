@@ -87,7 +87,14 @@ class UnitAtlasBuilder:
                     self._pack_frame(surf, ("hero", hc, action, fi), cursor)
 
         # Enemies
-        for et in ("goblin", "wolf", "skeleton", "skeleton_archer", "spider", "bandit"):
+        # WK137: pack boss types too — previously unpacked, so lookup_uv returned
+        # the fallback UV (warrior idle frame 0) and bosses rendered the wrong
+        # sprite. goblin_warchief reuses goblin PNG art via the enemy_sprites
+        # alias; the three legacy bosses pack their colored procedural frames.
+        for et in (
+            "goblin", "wolf", "skeleton", "skeleton_archer", "spider", "bandit",
+            "goblin_warchief", "bandit_lord", "demon_overlord", "dragon",
+        ):
             clips = EnemySpriteLibrary.clips_for(et, size=FRAME_SIZE)
             for action, clip in clips.items():
                 for fi, surf in enumerate(clip.frames):

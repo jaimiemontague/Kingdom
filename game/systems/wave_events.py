@@ -23,9 +23,11 @@ from config import (
     MAX_ALIVE_ENEMIES,
     TILE_SIZE,
     WAVE_EVENT as _wave_cfg,
+    INITIAL_WAVE as _initial_cfg,
 )
 from game.entities.enemy import (
     Goblin,
+    GoblinWarchief,
     Wolf,
     Skeleton,
     SkeletonArcher,
@@ -90,6 +92,86 @@ def _edge_position(rng, edge: str) -> tuple[float, float]:
     return (gx * TILE_SIZE + TILE_SIZE // 2, gy * TILE_SIZE + TILE_SIZE // 2)
 
 
+def _jitter_around_anchor(rng, agx: int, agy: int, count: int,
+                          jitter_tiles: int) -> list[tuple[float, float]]:
+    """``count`` world positions in a +/- ``jitter_tiles`` box around a tile anchor.
+
+    Shared core of both clustered placements: each enemy is the ``(agx, agy)`` tile
+    anchor plus a small deterministic per-axis jitter (``rng.randint``), clamped to
+    the playable interior, then converted to world coords. The RNG draw pattern (two
+    ``randint`` per enemy when jitter > 0) is identical for the edge and the near
+    variant — only the anchor differs.
+    """
+    j = max(0, int(jitter_tiles))
+    out: list[tuple[float, float]] = []
+    for _ in range(count):
+        jx = rng.randint(-j, j) if j else 0
+        jy = rng.randint(-j, j) if j else 0
+        gx = max(1, min(MAP_WIDTH - 2, agx + jx))
+        gy = max(1, min(MAP_HEIGHT - 2, agy + jy))
+        out.append((gx * TILE_SIZE + TILE_SIZE // 2, gy * TILE_SIZE + TILE_SIZE // 2))
+    return out
+
+
+def _clustered_positions(rng, edge: str, count: int, jitter_tiles: int) -> list[tuple[float, float]]:
+    """WK137 r2: ``count`` spawn positions tightly clustered around ONE edge anchor.
+
+    One ``_edge_position`` anchor is drawn, then each enemy is jittered around it
+    (+/- ``jitter_tiles``), so the whole wave arrives as a pack from the same edge and
+    focus-fires the hero line — instead of the strung-out trickle a per-enemy edge
+    draw produced (diagnosed at 222t initial spread, heroes mopped up at full HP).
+    Used ONLY by the scripted initial wave's ``direction="clustered_edge"``; table
+    waves never reach here, so their RNG draw order is untouched.
+    """
+    ax, ay = _edge_position(rng, edge)
+    agx = int(round((ax - TILE_SIZE // 2) / TILE_SIZE))
+    agy = int(round((ay - TILE_SIZE // 2) / TILE_SIZE))
+    return _jitter_around_anchor(rng, agx, agy, count, jitter_tiles)
+
+
+def _near_anchor_tile(rng, castle_gx: int, castle_gy: int,
+                      dist_tiles: int) -> tuple[int, int]:
+    """WK137 r3: a tile anchor ``dist_tiles`` from the castle along a random bearing.
+
+    Draws ONE continuous bearing ``theta`` in [0, 2*pi) via ``rng.uniform`` (one RNG
+    draw — continuous so the 10-seed matrix gets varied approach directions, not just
+    4/8 compass picks), places the anchor at ``castle + dist*(cos, sin)``, then clamps
+    the tile inside the playable interior leaving a 2-tile margin so the +/- jitter box
+    still lands in-bounds. Spawning a short distance from the castle (instead of the map
+    edge) makes the pack engage while heroes are still level 1 — the regime the plan's
+    balance math assumed.
+    """
+    theta = rng.uniform(0.0, 2.0 * math.pi)
+    d = max(1, int(dist_tiles))
+    agx = int(round(castle_gx + d * math.cos(theta)))
+    agy = int(round(castle_gy + d * math.sin(theta)))
+    agx = max(2, min(MAP_WIDTH - 3, agx))
+    agy = max(2, min(MAP_HEIGHT - 3, agy))
+    return agx, agy
+
+
+def _castle_center_tile(ctx) -> tuple[int, int]:
+    """Locate the castle centre as a tile coordinate (mirrors the spawner lookup).
+
+    Prefers ``ctx.castle`` (already resolved by the sim's context builder), falls back
+    to scanning ``ctx.buildings`` for a ``building_type == "castle"``, and finally to
+    the map centre if no castle exists (matches ``EnemySpawner._get_first_wave_spawn_position``).
+    """
+    castle = getattr(ctx, "castle", None)
+    if castle is None:
+        castle = next(
+            (b for b in getattr(ctx, "buildings", []) or []
+             if getattr(b, "building_type", None) == "castle"),
+            None,
+        )
+    if castle is not None:
+        cx = getattr(castle, "center_x", None)
+        cy = getattr(castle, "center_y", None)
+        if cx is not None and cy is not None:
+            return (int(round(cx / TILE_SIZE)), int(round(cy / TILE_SIZE)))
+    return (MAP_WIDTH // 2, MAP_HEIGHT // 2)
+
+
 # ---------------------------------------------------------------------------
 # WaveEventSystem
 # ---------------------------------------------------------------------------
@@ -114,6 +196,9 @@ class WaveEventSystem(GameSystem):
         # few constructions per tick (cap 0 = legacy single-tick burst).
         self.stagger_cap: int = spawn_stagger_cap()
         self._pending_spawns: list[tuple] = []
+        # WK137: scripted initial assault (fires once, before the scheduled table).
+        self._initial_wave_done: bool = False
+        self._initial_warning_emitted: bool = False
 
     # ------------------------------------------------------------------
     # Protocol
@@ -126,6 +211,9 @@ class WaveEventSystem(GameSystem):
         # WK128: release queued wave spawns a few per tick.
         if self._pending_spawns:
             self._drain_pending_spawns(ctx)
+
+        # WK137: one-shot scripted initial assault (independent of the WK60 table).
+        self._update_initial_wave(ctx)
 
         event_def = self._current_event_def()
         if event_def is None:
@@ -175,6 +263,40 @@ class WaveEventSystem(GameSystem):
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
+
+    def _update_initial_wave(self, ctx: SystemContext) -> None:
+        """WK137: one-shot scripted wave at INITIAL_WAVE.trigger_sec (sim-seconds).
+
+        Digest guard: before the warning moment this does float compares only —
+        no RNG draws, no state writes (WK67 window is ticks 0-300 = 5 sim-sec;
+        warning fires at trigger-10s=20s, spawn at 30s, both outside it).
+        """
+        if self._initial_wave_done or not _initial_cfg.enabled:
+            return
+        trigger = _initial_cfg.trigger_sec
+        if (not self._initial_warning_emitted
+                and self.elapsed_sec >= trigger - _wave_cfg.warning_seconds):
+            self._initial_warning_emitted = True
+            ctx.event_bus.emit({
+                "type": "wave_incoming",
+                "name": _initial_cfg.name,
+                "seconds": _wave_cfg.warning_seconds,
+            })
+        if self.elapsed_sec >= trigger and self._active_wave_def is None:
+            event_def = WaveEventDef(
+                name=_initial_cfg.name,
+                minute=trigger / 60.0,
+                composition=[(Goblin, _initial_cfg.goblin_count), (GoblinWarchief, 1)],
+                direction="clustered_near",
+                reward_gold=_initial_cfg.reward_gold,
+            )
+            self._spawn_wave(event_def, ctx, advance_table=False)
+            self._initial_wave_done = True
+            ctx.event_bus.emit({
+                "type": "hud_message",
+                "text": "The Goblin Warchief leads the assault!",
+                "color": (255, 80, 80),
+            })
 
     def _current_event_def(self) -> WaveEventDef | None:
         """Return the next wave event definition, cycling with escalation after the table ends."""
@@ -239,7 +361,7 @@ class WaveEventSystem(GameSystem):
             ctx.enemies.append(enemy)
             self._active_wave_enemies.append(enemy)
 
-    def _spawn_wave(self, event_def: WaveEventDef, ctx: SystemContext) -> None:
+    def _spawn_wave(self, event_def: WaveEventDef, ctx: SystemContext, *, advance_table: bool = True) -> None:
         """Plan and register enemies for a wave event (construction staggered)."""
         self._active_wave_def = event_def
         self._wave_clear_checked = False
@@ -251,24 +373,65 @@ class WaveEventSystem(GameSystem):
 
         # Determine spawn positions based on direction
         edges = ["top", "bottom", "left", "right"]
-        if event_def.direction == "random_edge":
-            chosen_edge = self.rng.choice(edges)
-            spawn_edges = [chosen_edge]
-        elif event_def.direction == "all_edges":
-            spawn_edges = list(edges)
-        else:
-            # nearest_lair fallback to random_edge
-            spawn_edges = [self.rng.choice(edges)]
-
-        # WK128: plan the full wave now (RNG draws in legacy order so positions and
-        # composition are identical to the single-tick burst); construct staggered.
         plan: list[tuple] = []
-        for enemy_cls, base_count in event_def.composition:
-            adjusted_count = max(1, int(round(base_count * count_mult)))
-            for i in range(adjusted_count):
-                edge = spawn_edges[i % len(spawn_edges)]
-                wx, wy = _edge_position(self.rng, edge)
-                plan.append((enemy_cls, wx, wy))
+        if event_def.direction == "clustered_near":
+            # WK137 r3: scripted-initial-wave-only path — the cluster spawns a short
+            # DISTANCE (spawn_dist_tiles) from the castle along a random bearing, then
+            # jitters each enemy around that near-anchor. This makes the pack engage
+            # the hero line ~35-40 s in, while heroes are still level 1 (the regime the
+            # plan's balance math assumed) instead of after a ~30 s edge-to-town march
+            # that lets rangers level up to 140-160 hp. Separate branch so the
+            # random_edge/all_edges RNG draw order below is byte-identical for table
+            # waves. RNG draw order here: ONE uniform (bearing) then two randint per
+            # enemy (the cluster jitter).
+            castle_gx, castle_gy = _castle_center_tile(ctx)
+            agx, agy = _near_anchor_tile(
+                self.rng, castle_gx, castle_gy, _initial_cfg.spawn_dist_tiles)
+            total = sum(max(1, int(round(bc * count_mult)))
+                        for _, bc in event_def.composition)
+            cluster = _jitter_around_anchor(
+                self.rng, agx, agy, total, _initial_cfg.cluster_jitter_tiles)
+            idx = 0
+            for enemy_cls, base_count in event_def.composition:
+                adjusted_count = max(1, int(round(base_count * count_mult)))
+                for _ in range(adjusted_count):
+                    wx, wy = cluster[idx]
+                    idx += 1
+                    plan.append((enemy_cls, wx, wy))
+        elif event_def.direction == "clustered_edge":
+            # WK137 r2: scripted-initial-wave-only path — ONE edge anchor, all enemies
+            # jittered tightly around it so the wave engages as a pack. Separate branch
+            # so the random_edge/all_edges RNG draw order below is byte-identical.
+            chosen_edge = self.rng.choice(edges)
+            total = sum(max(1, int(round(bc * count_mult)))
+                        for _, bc in event_def.composition)
+            cluster = _clustered_positions(
+                self.rng, chosen_edge, total, _initial_cfg.cluster_jitter_tiles)
+            idx = 0
+            for enemy_cls, base_count in event_def.composition:
+                adjusted_count = max(1, int(round(base_count * count_mult)))
+                for _ in range(adjusted_count):
+                    wx, wy = cluster[idx]
+                    idx += 1
+                    plan.append((enemy_cls, wx, wy))
+        else:
+            if event_def.direction == "random_edge":
+                chosen_edge = self.rng.choice(edges)
+                spawn_edges = [chosen_edge]
+            elif event_def.direction == "all_edges":
+                spawn_edges = list(edges)
+            else:
+                # nearest_lair fallback to random_edge
+                spawn_edges = [self.rng.choice(edges)]
+
+            # WK128: plan the full wave now (RNG draws in legacy order so positions and
+            # composition are identical to the single-tick burst); construct staggered.
+            for enemy_cls, base_count in event_def.composition:
+                adjusted_count = max(1, int(round(base_count * count_mult)))
+                for i in range(adjusted_count):
+                    edge = spawn_edges[i % len(spawn_edges)]
+                    wx, wy = _edge_position(self.rng, edge)
+                    plan.append((enemy_cls, wx, wy))
 
         # Add to shared enemy list (wave events can exceed normal cap by overflow factor).
         # WK61-R11: reserve slots so themed compositions (e.g. Wolf Pack) are not dropped.
@@ -286,9 +449,10 @@ class WaveEventSystem(GameSystem):
         # Release the first batch on the fire tick (all of it in burst mode).
         self._drain_pending_spawns(ctx)
 
-        # Advance index for next wave
-        self._next_table_index += 1
-        self._warning_emitted = False
+        if advance_table:
+            # Advance index for next wave
+            self._next_table_index += 1
+            self._warning_emitted = False
 
         # Emit HUD toast
         ctx.event_bus.emit({

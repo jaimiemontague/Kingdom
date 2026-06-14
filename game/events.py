@@ -35,6 +35,12 @@ class GameEventType(str, Enum):
     QUEST_OFFERED = "quest_offered"    # player funds + arms a quest on a giver
     QUEST_DECLINED = "quest_declined"  # LLM/hero declines at the NPC (15-min cooldown)
     QUEST_FAILED = "quest_failed"      # target gone / accepting hero died (escrow consumed)
+    QUEST_CHAIN_OFFERED = "quest_chain_offered"
+    QUEST_CHAIN_ACCEPTED = "quest_chain_accepted"
+    QUEST_CHAIN_PHASE_STARTED = "quest_chain_phase_started"
+    QUEST_CHAIN_PHASE_COMPLETED = "quest_chain_phase_completed"
+    QUEST_CHAIN_COMPLETED = "quest_chain_completed"
+    QUEST_CHAIN_FAILED = "quest_chain_failed"
     # wk18: AI/LLM monitoring dev tools — capture prompts and responses for Dev Overlay
     LLM_PROMPT_SENT = "llm_prompt_sent"
     LLM_RESPONSE_RECEIVED = "llm_response_received"
