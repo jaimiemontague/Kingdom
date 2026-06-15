@@ -777,6 +777,85 @@
           ]
         }
       }
+    },
+    "wk142_dynamic_rescue_revenge": {
+      "sprint_meta": {
+        "created_utc": "2026-06-15T19:29:44Z",
+        "plan_ref": ".cursor/plans/wk142_dynamic_rescue_revenge.plan.md",
+        "role": "Agent 06 AIBehaviorDirector_LLM",
+        "sprint_id": "wk142_dynamic_rescue_revenge",
+        "title": "WK142 Dynamic Rescue & Revenge - structured rescue/revenge facts plus world-scale daily-life behavior"
+      },
+      "rounds": {
+        "r2_wave1_gate_wave2_kickoff": {
+          "round_id": "r2_wave1_gate_wave2_kickoff",
+          "sprint_id": "wk142_dynamic_rescue_revenge",
+          "status": "done",
+          "round_meta": {
+            "role": "Agent 06 AIBehaviorDirector_LLM",
+            "reports_to": "Agent 01 (PM)",
+            "launched_by": "PM Wave 2 kickoff",
+            "completed_utc": "2026-06-15T19:29:44Z",
+            "phase": "Expose structured captured/rescue/boss-kill/revenge facts to AI prompt context; expand deterministic daily-life choices to roam/explore/seek/rescue/revenge/rest/castle without breaking survival gates or captured-hero unavailability."
+          },
+          "what_i_changed": {
+            "ai/rescue_revenge_context.py": [
+              "NEW structured-only summarizers for captured hero, rescue opportunity, boss kill memory, and revenge opportunity facts.",
+              "Limits the prompt payload to the newest few facts per category so context stays bounded and deterministic."
+            ],
+            "ai/behaviors/view_compat.py": [
+              "Exposed captured_heroes, rescue_opportunities, boss_kill_memories, and revenge_opportunities through the AI view bridge."
+            ],
+            "ai/context_builder.py": [
+              "Threaded story_facts into hero/autonomous context only when the structured view provides them."
+            ],
+            "ai/profile_context_adapter.py": [
+              "Carried the same bounded story facts into compact situation snapshots for the prompt adapters."
+            ],
+            "ai/prompt_packs.py": [
+              "Added nested story_facts to the direct prompt payload and fixed the direct-path blob injection order."
+            ],
+            "ai/decision_moments.py": [
+              "Captured heroes now skip ordinary decision moments so they do not route into ambient tasks."
+            ],
+            "ai/task_router.py": [
+              "Preserved urgent survival/retreat ordering while keeping captured heroes out of ordinary active routing."
+            ],
+            "ai/behaviors/daily_life.py": [
+              "Expanded deterministic ambient behavior to roam kingdom, explore POIs, seek monsters/bosses, consider rescue/revenge offers, rest home/safe, and visit castle or Herald's Post.",
+              "Added deterministic class bias, recent-target cooldowns, commit windows, and crowding pressure so heroes do not all stampede the same rescue/revenge."
+            ],
+            "tests/test_wk142_rescue_prompt_context.py": [
+              "NEW structured prompt-context coverage proving rescue/revenge facts flow only from the structured view into the AI context layers."
+            ],
+            "tests/test_wk142_rescue_ai_policy.py": [
+              "NEW policy coverage proving captured heroes stay unavailable, rescue/revenge opportunities are visible, and selection stays varied rather than clumped."
+            ]
+          },
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_wk142_rescue_ai_policy.py tests/test_wk142_rescue_prompt_context.py tests/test_wk140_hero_daily_life_ai.py tests/test_wk140_hero_ambient_distribution.py -q",
+              "exit_code": 0,
+              "result": "12 passed"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "result": "Valid JSON"
+            }
+          ],
+          "evidence": {
+            "world_scale_behavior": "Same-seed deterministic replay keeps the motive/target summary stable, and the 10-hero distribution splits across roam/explore/patrol/rescue/revenge/rest/castle instead of collapsing into one local loop.",
+            "captured_unavailable": "Captured heroes do not choose ordinary active tasks; the policy path returns them to non-ambient handling instead.",
+            "structured_prompt_context": "Story facts appear only when the structured view exposes them, and the prompt layers keep the payload bounded.",
+            "anti_stampede": "Rescue/revenge offers are capped and scored with cooldown/crowding pressure so heroes do not all chase the same opportunity."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "PM will run the final integrated qa_smoke gate for the sprint."
+          ]
+        }
+      }
     }
   }
 }

@@ -17,6 +17,10 @@ INTERCEPT_TOLL_TAKER = "intercept_toll_taker"
 ASSAULT_GATE = "assault_gate"
 SLAY_BLACKBANNER = "slay_blackbanner"
 CLAIM_REWARD = "claim_reward"
+RESCUE_HERO = "rescue_hero"
+SLAY_NAMED_BOSS = "slay_named_boss"
+REACH_FORTRESS = "reach_fortress"
+AVENGE_FALLEN_HERO = "avenge_fallen_hero"
 
 BLACKBANNER_TOLL_TAKER_NAME = "Blackbanner Toll-Taker"
 BLACKBANNER_TOLL_TAKER_STORY_NAME = "Blackbanner Toll-Taker"
@@ -121,9 +125,45 @@ BLACKBANNERS_TOLL = QuestChainDef(
 )
 
 
+BLACKBANNER_RESCUE = QuestChainDef(
+    chain_type="blackbanner_rescue",
+    display_name="Break the Blackbanner Cells",
+    difficulty_tier=5,
+    phases=(
+        QuestPhaseDef(
+            phase_id=REACH_FORTRESS,
+            title="Reach the Bandit Fortress",
+            objective_type=RESCUE_HERO,
+            target_ref="origin_target",
+        ),
+    ),
+    reward_profile=QuestRewardProfile(gold=180),
+    tags=("bandit", "rescue", "blackbanner"),
+)
+
+
+BLACKBANNER_REVENGE = QuestChainDef(
+    chain_type="blackbanner_revenge",
+    display_name="Avenge the Fallen",
+    difficulty_tier=5,
+    phases=(
+        QuestPhaseDef(
+            phase_id=AVENGE_FALLEN_HERO,
+            title="Avenge the Fallen",
+            objective_type=SLAY_NAMED_BOSS,
+            target_ref="boss_target",
+        ),
+    ),
+    reward_profile=QuestRewardProfile(gold=220),
+    tags=("blackbanner", "revenge", "vengeance"),
+)
+
+
 QUEST_CHAIN_DEFS: dict[str, QuestChainDef] = {
     RELIC_OF_THE_OLD_SHRINE.chain_type: RELIC_OF_THE_OLD_SHRINE,
     BLACKBANNERS_TOLL.chain_type: BLACKBANNERS_TOLL,
+    BLACKBANNER_RESCUE.chain_type: BLACKBANNER_RESCUE,
+    BLACKBANNER_REVENGE.chain_type: BLACKBANNER_REVENGE,
 }
 
 

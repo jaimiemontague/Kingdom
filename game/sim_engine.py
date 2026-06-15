@@ -625,10 +625,11 @@ class SimEngine:
         )
         # WK126-T4 / WK138 / WK139 populate: plain-data quest, quest-giver, chain,
         # boss, and elite snapshots for the AI (no live object refs the AI could
-        # mutate). Each tuple defaults to () on a no-content engine, which keeps
-        # the digest-safe no-op path intact. Passed conditionally so this populate
-        # code lands cleanly even if one of the read-model fields ships in a
-        # parallel wave.
+        # mutate). WK142 adds capture/rescue/revenge facts on the same primitive
+        # read-model path. Each tuple defaults to () on a no-content engine, which
+        # keeps the digest-safe no-op path intact. Passed conditionally so this
+        # populate code lands cleanly even if one of the read-model fields ships
+        # in a parallel wave.
         _read_model_kwargs = {}
         _view_fields = getattr(AiGameView, "__dataclass_fields__", {})
         if "quests" in _view_fields:
@@ -639,6 +640,14 @@ class SimEngine:
             _read_model_kwargs["quest_givers"] = tuple(g.to_ai_info() for g in self.quest_givers)
         if "quest_chains" in _view_fields:
             _read_model_kwargs["quest_chains"] = self._active_quest_chain_views()
+        if "captured_heroes" in _view_fields:
+            _read_model_kwargs["captured_heroes"] = self._active_captured_hero_views()
+        if "rescue_opportunities" in _view_fields:
+            _read_model_kwargs["rescue_opportunities"] = self._active_rescue_opportunity_views()
+        if "boss_kill_memories" in _view_fields:
+            _read_model_kwargs["boss_kill_memories"] = self._active_boss_kill_memory_views()
+        if "revenge_opportunities" in _view_fields:
+            _read_model_kwargs["revenge_opportunities"] = self._active_revenge_opportunity_views()
         _boss_views = self._active_boss_encounter_views()
         _elite_views = self._active_elite_views()
         if "boss_encounters" in _view_fields:
@@ -675,6 +684,23 @@ class SimEngine:
                 return () if values is None else tuple(values)
         return ()
 
+    def _active_read_model_views_from_systems(
+        self,
+        system_attrs: tuple[str, ...],
+        *getter_names: str,
+    ) -> tuple:
+        """Return a read-model tuple from the first system exposing a getter."""
+        for system_attr in system_attrs:
+            system = getattr(self, system_attr, None)
+            if system is None:
+                continue
+            for getter_name in getter_names:
+                getter = getattr(system, getter_name, None)
+                if callable(getter):
+                    values = getter()
+                    return () if values is None else tuple(values)
+        return ()
+
     def _active_quest_chain_views(self) -> tuple:
         """Return read-only quest-chain snapshots, or () when no chains are live."""
         return self._active_read_model_views(
@@ -700,6 +726,42 @@ class SimEngine:
             "get_active_elite_snapshots",
             "get_active_elite_views",
             "get_active_elites",
+        )
+
+    def _active_captured_hero_views(self) -> tuple:
+        """Return read-only captured-hero snapshots, or () when no captures are live."""
+        return self._active_read_model_views_from_systems(
+            ("quest_chain_system", "capture_system", "rescue_system", "rescue_revenge_system"),
+            "get_active_captured_hero_snapshots",
+            "get_active_captured_heroes",
+            "get_active_capture_snapshots",
+        )
+
+    def _active_rescue_opportunity_views(self) -> tuple:
+        """Return read-only rescue-opportunity snapshots, or () when none are live."""
+        return self._active_read_model_views_from_systems(
+            ("quest_chain_system", "capture_system", "rescue_system", "rescue_revenge_system"),
+            "get_active_rescue_opportunity_snapshots",
+            "get_active_rescue_opportunities",
+            "get_active_rescue_views",
+        )
+
+    def _active_boss_kill_memory_views(self) -> tuple:
+        """Return read-only boss-kill memories, or () when none are live."""
+        return self._active_read_model_views_from_systems(
+            ("boss_encounter_system", "revenge_system", "rescue_revenge_system"),
+            "get_active_boss_kill_memory_snapshots",
+            "get_active_boss_kill_memories",
+            "get_active_boss_kill_memory_views",
+        )
+
+    def _active_revenge_opportunity_views(self) -> tuple:
+        """Return read-only revenge-opportunity snapshots, or () when none are live."""
+        return self._active_read_model_views_from_systems(
+            ("boss_encounter_system", "revenge_system", "rescue_revenge_system"),
+            "get_active_revenge_opportunity_snapshots",
+            "get_active_revenge_opportunities",
+            "get_active_revenge_views",
         )
 
     @property
@@ -810,6 +872,10 @@ class SimEngine:
         _world_vis = getattr(_world, "is_tile_visible_at", None)
         _bounties = self.bounty_system.get_unclaimed_bounties()
         _tax = getattr(self, "tax_collector", None)
+        _captured_views = self._active_captured_hero_views()
+        _rescue_views = self._active_rescue_opportunity_views()
+        _boss_kill_memory_views = self._active_boss_kill_memory_views()
+        _revenge_views = self._active_revenge_opportunity_views()
         _boss_views = self._active_boss_encounter_views()
         _elite_views = self._active_elite_views()
         return RenderSnapshot(
@@ -855,6 +921,10 @@ class SimEngine:
             ),
             bounty_dtos=tuple(bounty_dto_from(b) for b in _bounties),
             quest_chains=self._active_quest_chain_views(),
+            captured_heroes=_captured_views,
+            rescue_opportunities=_rescue_views,
+            boss_kill_memories=_boss_kill_memory_views,
+            revenge_opportunities=_revenge_views,
             boss_encounters=_boss_views,
             elite_enemies=_elite_views,
             elite_encounters=_elite_views,

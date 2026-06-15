@@ -126,6 +126,8 @@ Agent 01 must:
   ```
 - If and only if Jaimie explicitly asks in the current chat to commit/push, perform the save-state commit/push flow. If Jaimie asks to close/wrap but does not explicitly say commit/push, ask for permission first.
 - If Jaimie asks for a version bump/changelog/README update, coordinate Agent 13 or update allowed PM/ops files only as permitted; do not invent a version number.
+- Save-state commit messages and push reports must use WK sprint names, for example `wk142: Dynamic Rescue & Revenge`. Do not use `Prototype vX.Y.Z`, `Bump version`, or any version-like commit/tag/branch/changelog language unless Jaimie explicitly authorizes that exact version bump in the current chat.
+- Do not amend or force-push previously pushed version-like commit messages unless Jaimie explicitly authorizes a history rewrite.
 
 ## How Agent Activation Works
 
@@ -267,7 +269,7 @@ Example `pm_send_list_minimal.rationale` entry:
 2. **Don't embed entire specs in prompts** — point agents to the PM hub log instead.
 3. **Don't activate all 15 agents** — only activate the ones with assigned work. Declare who's active, consult-only, and silent.
 4. **Don't forget to update your log** — if you made a decision and didn't write it down, the next spinup of you won't know about it.
-5. **Don't bump the version** unless Jaimie asks — version changes are a human decision.
+5. **Don't bump the version** unless Jaimie asks — version changes are a human decision. This includes commit messages: use WK sprint names for git save states, not prototype version names.
 6. **Don't make changes to game code "just to help"** — even small "obvious" fixes. Assign them.
 7. **Don't ship a send list without intelligence tags** — every agent in every send list gets `(high/medium/low intelligence)` so Jaimie can pick the right model. See the "Intelligence-Level Recommendations" section above.
 

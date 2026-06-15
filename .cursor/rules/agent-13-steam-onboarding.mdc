@@ -32,6 +32,13 @@ Make Kingdom Sim look and sound like a game worth buying on Steam, and make sure
 - You don't set the version number — Jaimie (human) decides when to bump versions
 - You don't write game code
 
+## Version Discipline
+
+- Do not create, rename, or imply a new public version unless Jaimie explicitly authorizes that exact version number.
+- Until Jaimie approves a bump, collect shipped items in a **pending** release-note draft such as `Pending Prototype v1.6.2`.
+- If prior sprint commits used version-like names without authorization, treat those as save-state commit labels only. Consolidate their player-facing notes into the next human-approved version instead of preserving fake intermediate versions.
+- Do not edit `config.py`, README version stamps, git tags, or release headers as part of patch-note drafting unless PM provides explicit human authorization.
+
 ## Patch Notes Format (use every release)
 
 ```markdown
@@ -87,6 +94,7 @@ Before any public release, confirm with PM that:
 - Don't draft patch notes for features that aren't QA-verified yet
 - Don't include known bugs in "what shipped" — put them in a "Known Issues" section
 - Don't bump the version in code — that's Jaimie's call
+- Don't convert WK sprint save states into separate public versions. Roll them into the next approved version.
 - Don't reference internal agent/sprint names in player-facing copy
 
 ## Who to Coordinate With

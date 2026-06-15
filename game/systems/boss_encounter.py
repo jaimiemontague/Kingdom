@@ -10,7 +10,13 @@ from game.content.bosses import BossAbilityDef, BossDef, BossPhaseDef, BOSS_DEFS
 from game.content.elite_affixes import apply_elite_affixes, spawn_elite_enemy
 from game.entities.enemy import Goblin
 from game.events import GameEventType
-from game.sim.contracts import BossEncounterSnapshot, BossMemorySummary, EliteEncounterSnapshot
+from game.sim.contracts import (
+    BossEncounterSnapshot,
+    BossKillMemory,
+    BossMemorySummary,
+    EliteEncounterSnapshot,
+    RevengeOpportunitySnapshot,
+)
 from game.sim.determinism import get_rng
 from game.sim.timebase import now_ms as sim_now_ms
 from game.systems.protocol import GameSystem, SystemContext
@@ -51,6 +57,7 @@ class BossEncounterSystem(GameSystem):
         self.definitions = dict(BOSS_DEFS if definitions is None else definitions)
         self._boss_states: dict[str, _BossEncounterState] = {}
         self._elite_states: dict[str, _EliteEncounterState] = {}
+        self._hooked_boss_ids: set[str] = set()
         self.bosses: list[object] = []
         self.elites: list[object] = []
         self.defeated_bosses: list[object] = []
@@ -90,6 +97,7 @@ class BossEncounterSystem(GameSystem):
         self.bosses.append(boss)
 
         self._prepare_boss_object(boss, definition, state)
+        self._attach_boss_kill_hook(boss)
         self._emit(
             event_bus,
             GameEventType.BOSS_ENCOUNTER_STARTED,
@@ -187,13 +195,14 @@ class BossEncounterSystem(GameSystem):
     # ------------------------------------------------------------------
 
     def update(self, ctx: SystemContext, dt: float) -> None:
+        _ = dt
         if not self._boss_states and not self._elite_states:
             return
-
-        _ = dt
         now = int(sim_now_ms())
         event_bus = getattr(ctx, "event_bus", None)
         enemies = list(getattr(ctx, "enemies", None) or [])
+        if enemies:
+            self._sync_live_encounters(enemies, event_bus=event_bus, now_ms=now)
 
         for state in list(self._boss_states.values()):
             boss = state.boss
@@ -311,6 +320,7 @@ class BossEncounterSystem(GameSystem):
             now_ms=now_ms,
         )
         self._append_boss_memory(boss, state, record, bucket="killed_hero")
+        self._maybe_prime_blackbanner_revenge_state(boss, hero, record)
         return record
 
     # ------------------------------------------------------------------
@@ -340,6 +350,38 @@ class BossEncounterSystem(GameSystem):
     def get_active_boss_encounters(self) -> tuple[BossEncounterSnapshot, ...]:
         return self.get_active_boss_snapshots()
 
+    def get_active_boss_kill_memory_snapshots(self) -> tuple[BossKillMemory, ...]:
+        if not self._boss_states:
+            return ()
+        memories: list[BossKillMemory] = []
+        for state in self._boss_states.values():
+            memory = getattr(state.boss, "_wk142_blackbanner_kill_memory", None)
+            if isinstance(memory, BossKillMemory) and str(getattr(memory, "status", "")) == "remembered":
+                memories.append(memory)
+        return tuple(memories)
+
+    def get_active_boss_kill_memories(self) -> tuple[BossKillMemory, ...]:
+        return self.get_active_boss_kill_memory_snapshots()
+
+    def get_active_boss_kill_memory_views(self) -> tuple[BossKillMemory, ...]:
+        return self.get_active_boss_kill_memory_snapshots()
+
+    def get_active_revenge_opportunity_snapshots(self) -> tuple[RevengeOpportunitySnapshot, ...]:
+        if not self._boss_states:
+            return ()
+        revenge: list[RevengeOpportunitySnapshot] = []
+        for state in self._boss_states.values():
+            snapshot = getattr(state.boss, "_wk142_blackbanner_revenge_snapshot", None)
+            if isinstance(snapshot, RevengeOpportunitySnapshot) and str(getattr(snapshot, "status", "")) == "active":
+                revenge.append(snapshot)
+        return tuple(revenge)
+
+    def get_active_revenge_opportunities(self) -> tuple[RevengeOpportunitySnapshot, ...]:
+        return self.get_active_revenge_opportunity_snapshots()
+
+    def get_active_revenge_views(self) -> tuple[RevengeOpportunitySnapshot, ...]:
+        return self.get_active_revenge_opportunity_snapshots()
+
     def get_active_elite_snapshots(self) -> tuple[EliteEncounterSnapshot, ...]:
         if not self._elite_states:
             return ()
@@ -350,6 +392,189 @@ class BossEncounterSystem(GameSystem):
 
     def get_active_elites(self) -> tuple[EliteEncounterSnapshot, ...]:
         return self.get_active_elite_snapshots()
+
+    # ------------------------------------------------------------------
+    # WK142 hook/read-model helpers
+    # ------------------------------------------------------------------
+
+    def _sync_live_encounters(self, enemies: list[object], *, event_bus: object | None, now_ms: int) -> None:
+        for enemy in enemies:
+            if not self._is_alive(enemy):
+                continue
+            if getattr(enemy, "is_boss", False) or boss_def_for_enemy_type(str(getattr(enemy, "enemy_type", "") or "")) is not None:
+                self.register_boss(enemy, event_bus=event_bus, now_ms=now_ms)
+                continue
+            if getattr(enemy, "is_elite", False) or getattr(enemy, "elite_affix_ids", None):
+                self.register_elite(enemy, event_bus=event_bus, now_ms=now_ms)
+
+    def _attach_boss_kill_hook(self, boss: object) -> None:
+        boss_id = self._entity_id(boss)
+        if not boss_id or boss_id in self._hooked_boss_ids:
+            return
+
+        add_hook = getattr(boss, "add_hero_killed_hook", None)
+        if not callable(add_hook):
+            self._hooked_boss_ids.add(boss_id)
+            return
+
+        def _on_hero_killed(hero: object, *, killer: object | None = None, now_ms: int | None = None) -> None:
+            _ = killer
+            self._record_boss_kill_memory(boss, hero, now_ms=now_ms)
+
+        try:
+            add_hook(_on_hero_killed)
+        finally:
+            self._hooked_boss_ids.add(boss_id)
+
+    def _record_boss_kill_memory(self, boss: object, hero: object, *, now_ms: int | None = None) -> None:
+        if getattr(hero, "is_captured", False):
+            return
+        record = self.record_killed_hero(
+            boss,
+            hero,
+            hero_id=self._hero_id(hero),
+            hero_name=self._hero_name(hero),
+            detail="blackbanner_revenge" if self._is_blackbanner_revenge_boss(boss) else "boss_killed_hero",
+            now_ms=now_ms,
+        )
+        if record is None or not self._is_blackbanner_revenge_boss(boss):
+            return
+
+        boss_id = self._entity_id(boss)
+        if not boss_id:
+            return
+        if getattr(boss, "_wk142_blackbanner_revenge_snapshot", None) is not None:
+            return
+
+        fallen_hero_id = str(record.get("hero_id", "") or "")
+        fallen_hero_name = str(record.get("hero_name", "") or "")
+        at_ms = int(record.get("time_ms", 0) or 0)
+        location_id = str(getattr(boss, "blackbanner_revenge_location_id", "") or "")
+        location_name = str(getattr(boss, "blackbanner_revenge_location_name", "") or "")
+        revenge_chain_id = str(getattr(boss, "blackbanner_revenge_chain_id", "") or "")
+        memory = BossKillMemory(
+            boss_id=str(boss_id),
+            boss_name=str(getattr(boss, "name", "") or self._definition_for_boss(boss).display_name_template),
+            boss_type=str(getattr(boss, "enemy_type", "") or self._definition_for_boss(boss).boss_type),
+            fallen_hero_id=fallen_hero_id,
+            fallen_hero_name=fallen_hero_name,
+            location_id=location_id,
+            location_name=location_name,
+            killed_at_ms=at_ms,
+            revenge_chain_id=revenge_chain_id,
+            status="remembered",
+        )
+        setattr(boss, "_wk142_blackbanner_kill_memory", memory)
+
+        phase_id = str(getattr(boss, "blackbanner_revenge_current_phase_id", "avenge_fallen_hero") or "avenge_fallen_hero")
+        phase_title = str(getattr(boss, "blackbanner_revenge_current_phase_title", "Avenge the Fallen") or "Avenge the Fallen")
+        revenge = RevengeOpportunitySnapshot(
+            revenge_id=revenge_chain_id or f"revenge_{boss_id}_{fallen_hero_id}",
+            boss_id=str(boss_id),
+            boss_name=memory.boss_name,
+            boss_type=memory.boss_type,
+            fallen_hero_id=fallen_hero_id,
+            fallen_hero_name=fallen_hero_name,
+            target_location_id=location_id,
+            target_location_name=location_name,
+            current_phase_id=phase_id,
+            current_phase_title=phase_title,
+            revenge_chain_id=revenge_chain_id or f"revenge_{boss_id}_{fallen_hero_id}",
+            status="active",
+            offered_at_ms=at_ms,
+        )
+        setattr(boss, "_wk142_blackbanner_revenge_snapshot", revenge)
+
+    @staticmethod
+    def _is_blackbanner_revenge_boss(boss: object) -> bool:
+        boss_type = str(getattr(boss, "enemy_type", "") or "")
+        boss_name = str(getattr(boss, "name", "") or "")
+        return boss_type == "bandit_lord" and boss_name == "Rusk Blackbanner"
+
+    def _clear_blackbanner_revenge_state(self, boss: object) -> None:
+        for attr in (
+            "_wk142_blackbanner_kill_memory",
+            "_wk142_blackbanner_revenge_snapshot",
+            "blackbanner_revenge_chain_id",
+            "blackbanner_revenge_chain_status",
+            "blackbanner_revenge_boss_id",
+            "blackbanner_revenge_boss_name",
+            "blackbanner_revenge_boss_type",
+            "blackbanner_revenge_fallen_hero_id",
+            "blackbanner_revenge_fallen_hero_name",
+            "blackbanner_revenge_location_id",
+            "blackbanner_revenge_location_name",
+            "blackbanner_revenge_current_phase_id",
+            "blackbanner_revenge_current_phase_title",
+            "blackbanner_revenge_offered_at_ms",
+        ):
+            if hasattr(boss, attr):
+                try:
+                    delattr(boss, attr)
+                except Exception:
+                    try:
+                        setattr(boss, attr, "")
+                    except Exception:
+                        pass
+
+    def _maybe_prime_blackbanner_revenge_state(
+        self,
+        boss: object,
+        hero: object,
+        record: dict[str, object],
+    ) -> None:
+        if getattr(hero, "is_captured", False):
+            return
+        if not self._is_blackbanner_revenge_boss(boss):
+            return
+        if getattr(boss, "_wk142_blackbanner_kill_memory", None) is not None:
+            return
+
+        boss_id = self._entity_id(boss)
+        if not boss_id:
+            return
+
+        fallen_hero_id = str(record.get("hero_id", "") or "")
+        fallen_hero_name = str(record.get("hero_name", "") or "")
+        at_ms = int(record.get("time_ms", 0) or 0)
+        boss_name = str(getattr(boss, "name", "") or self._definition_for_boss(boss).display_name_template)
+        boss_type = str(getattr(boss, "enemy_type", "") or self._definition_for_boss(boss).boss_type)
+        location_id = str(getattr(boss, "blackbanner_revenge_location_id", "") or "")
+        location_name = str(getattr(boss, "blackbanner_revenge_location_name", "") or "")
+        revenge_chain_id = str(getattr(boss, "blackbanner_revenge_chain_id", "") or "")
+
+        memory = BossKillMemory(
+            boss_id=str(boss_id),
+            boss_name=boss_name,
+            boss_type=boss_type,
+            fallen_hero_id=fallen_hero_id,
+            fallen_hero_name=fallen_hero_name,
+            location_id=location_id,
+            location_name=location_name,
+            killed_at_ms=at_ms,
+            revenge_chain_id=revenge_chain_id,
+            status="remembered",
+        )
+        setattr(boss, "_wk142_blackbanner_kill_memory", memory)
+
+        phase_id = str(getattr(boss, "blackbanner_revenge_current_phase_id", "avenge_fallen_hero") or "avenge_fallen_hero")
+        phase_title = str(getattr(boss, "blackbanner_revenge_current_phase_title", "Avenge the Fallen") or "Avenge the Fallen")
+        revenge = RevengeOpportunitySnapshot(
+            revenge_id=revenge_chain_id or f"revenge_{boss_id}_{fallen_hero_id}",
+            boss_id=str(boss_id),
+            boss_name=boss_name,
+            boss_type=boss_type,
+            fallen_hero_id=fallen_hero_id,
+            fallen_hero_name=fallen_hero_name,
+            target_location_id=location_id,
+            target_location_name=location_name,
+            current_phase_id=phase_id,
+            current_phase_title=phase_title,
+            revenge_chain_id=revenge_chain_id or f"revenge_{boss_id}_{fallen_hero_id}",
+            status="active",
+            offered_at_ms=at_ms,
+        )
+        setattr(boss, "_wk142_blackbanner_revenge_snapshot", revenge)
 
     # ------------------------------------------------------------------
     # Internals
@@ -737,6 +962,7 @@ class BossEncounterSystem(GameSystem):
             self._clear_war_banner(state, enemies)
         state.status = "defeated"
         self._prepare_boss_object(boss, state.boss_def, state)
+        self._clear_blackbanner_revenge_state(boss)
         setattr(boss, "boss_status", "defeated")
         setattr(boss, "defeated_at_ms", now_ms)
         if boss_id in self._boss_states:

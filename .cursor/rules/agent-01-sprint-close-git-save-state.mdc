@@ -8,6 +8,10 @@ alwaysApply: true
 ## Non-negotiable safety constraint
 
 - **Do not create git commits or push to remote unless the human explicitly asks for it in this chat.**
+- **Do not bump, imply, or invent a release version in git commit messages, tags, branch names, changelog entries, README text, `config.py`, or any other metadata unless the human explicitly authorizes that exact version bump in this chat.**
+- **Never use `Prototype vX.Y.Z` in a save-state commit message unless the human explicitly approved that exact version bump.**
+- Previously pushed version-like commit messages must not be amended, renamed, force-pushed, or rewritten unless the human explicitly authorizes a history rewrite.
+- A git push itself is not named; the required user-facing name is the commit message being pushed. Save-state commit messages must be named after the WK sprint, not after a prototype version.
 - If the human says “wrap/close the sprint” but does not explicitly request a commit/push, **ask for that permission** (one-line yes/no), then proceed immediately when granted.
 
 ## Standard sprint-close flow
@@ -24,7 +28,8 @@ When a sprint is marked `closed_success` (or otherwise wrapped):
 - **Step 2 — Propose the save-state commit**: recommend a single “save state” commit and push to capture the sprint end.
 - **Step 3 — If approved, execute immediately**:
   - Stage changes
-  - Commit with a clear message: `Sprint <id>: <short outcome>`
+  - Commit with a clear WK-sprint message: `wk###: <short outcome>`
+  - Do not include `Prototype vX.Y.Z`, `Bump version`, or release-note language unless Jaimie explicitly authorized that version bump
   - Push to the current branch’s remote tracking branch
 
 ## What to say to Jaimie (copy/paste prompt)
@@ -34,7 +39,7 @@ Use very explicit language and provide the exact commands. Example:
 ```powershell
 git status
 git add -A
-git commit -m "Sprint wkXX: <short outcome>"
+git commit -m "wk###: <short outcome>"
 git push
 ```
 

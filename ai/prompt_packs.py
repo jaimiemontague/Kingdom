@@ -89,6 +89,18 @@ def build_direct_prompt_messages(hero_context: dict[str, Any], conversation_hist
         "conversation_tail": conversation_tail,
         "output_schema": output_schema,
     }
+    story_facts = {
+        key: hero_context.get(key)
+        for key in (
+            "captured_heroes",
+            "rescue_opportunities",
+            "boss_kill_memories",
+            "revenge_opportunities",
+        )
+        if hero_context.get(key)
+    }
+    if story_facts:
+        blob["story_facts"] = story_facts
     # WK132: compact nearby-POI strings so the Sovereign can reference nearby
     # shrines/ruins in chat. hero_context["nearby_pois"] comes from
     # ContextBuilder.build_hero_context (read-only AiGameView plumbing — no live

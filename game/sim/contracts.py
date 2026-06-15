@@ -131,6 +131,91 @@ class QuestChainSnapshot:
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
+
+@dataclass(slots=True, frozen=True)
+class HeroCaptureState:
+    """Primitive capture state for one hero held by a named boss family."""
+
+    hero_id: str
+    hero_name: str
+    captor_boss_id: str = ""
+    captor_boss_name: str = ""
+    captor_boss_type: str = ""
+    location_id: str = ""
+    location_name: str = ""
+    source_chain_id: str = ""
+    source_chain_type: str = ""
+    captured_at_ms: int = 0
+    status: str = "captured"
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True, frozen=True)
+class RescueOpportunitySnapshot:
+    """Primitive read model for an active rescue opportunity."""
+
+    rescue_id: str
+    captured_hero_id: str
+    captured_hero_name: str
+    captor_boss_id: str = ""
+    captor_boss_name: str = ""
+    captor_boss_type: str = ""
+    target_location_id: str = ""
+    target_location_name: str = ""
+    current_phase_id: str = ""
+    current_phase_title: str = ""
+    source_chain_id: str = ""
+    source_chain_type: str = ""
+    status: str = "active"
+    offered_at_ms: int = 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True, frozen=True)
+class BossKillMemory:
+    """Primitive memory record for a named boss killing a hero."""
+
+    boss_id: str
+    boss_name: str
+    boss_type: str
+    fallen_hero_id: str
+    fallen_hero_name: str
+    location_id: str = ""
+    location_name: str = ""
+    killed_at_ms: int = 0
+    revenge_chain_id: str = ""
+    status: str = "remembered"
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True, frozen=True)
+class RevengeOpportunitySnapshot:
+    """Primitive read model for a revenge opportunity against a named boss."""
+
+    revenge_id: str
+    boss_id: str
+    boss_name: str
+    boss_type: str
+    fallen_hero_id: str
+    fallen_hero_name: str
+    target_location_id: str = ""
+    target_location_name: str = ""
+    current_phase_id: str = ""
+    current_phase_title: str = ""
+    revenge_chain_id: str = ""
+    status: str = "active"
+    offered_at_ms: int = 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
 @dataclass(slots=True, frozen=True)
 class BossMemorySummary:
     """Small immutable memory record for an active boss encounter."""

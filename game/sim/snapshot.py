@@ -91,6 +91,13 @@ class RenderSnapshot:
     # for render/UI consumers. Empty default keeps no-chain builds as a fast
     # no-op and preserves the WK67 digest path.
     quest_chains: tuple = ()
+    # WK142 (dynamic rescue & revenge): primitive capture/rescue/revenge tuples
+    # for render/UI consumers. Empty default keeps the no-content path a fast
+    # no-op and preserves the WK67 digest path.
+    captured_heroes: tuple = ()
+    rescue_opportunities: tuple = ()
+    boss_kill_memories: tuple = ()
+    revenge_opportunities: tuple = ()
     # WK139 (boss encounter core + elite affixes): read-only boss/elite snapshot
     # tuples for render/UI consumers. Empty default keeps no-boss/no-elite builds
     # as a fast no-op and preserves the WK67 digest path.

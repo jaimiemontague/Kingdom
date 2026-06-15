@@ -129,6 +129,14 @@ class AiGameView:
     # phase timeline, and small history summaries). Empty tuples are the no-chain
     # default and must remain a fast no-op for the WK67 digest path.
     quest_chains: tuple = ()
+    # WK142 (dynamic rescue & revenge): primitive capture/rescue/revenge views.
+    # These stay empty on a fresh engine, expose only primitive facts, and must
+    # remain a fast no-op for the WK67 digest path until gameplay systems fill
+    # them in.
+    captured_heroes: tuple = ()
+    rescue_opportunities: tuple = ()
+    boss_kill_memories: tuple = ()
+    revenge_opportunities: tuple = ()
     # WK139 (boss encounter core + elite affixes): read-only boss/elite snapshots
     # for the AI. Empty tuples are the no-boss/no-elite default and must remain a
     # fast no-op for the WK67 digest path.

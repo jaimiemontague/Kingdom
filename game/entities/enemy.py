@@ -202,6 +202,8 @@ class Enemy:
         
         # WK5: Ranged projectile event storage (for engine collection)
         self._last_ranged_event = None
+        self.on_hero_killed = None
+        self._hero_killed_hooks: list = []
         
         # Combat
         self.attack_cooldown = 0
@@ -304,6 +306,18 @@ class Enemy:
         if hasattr(self, "attackers"):
             self.attackers.add(hero.name)
 
+    def add_hero_killed_hook(self, callback) -> None:
+        """Register a callback that reacts when this enemy kills a hero."""
+        if not callable(callback):
+            return
+        hooks = getattr(self, "_hero_killed_hooks", None)
+        if hooks is None:
+            hooks = []
+            self._hero_killed_hooks = hooks
+        if callback in hooks:
+            return
+        hooks.append(callback)
+
     def set_attack_bonus(self, source: str, bonus: int) -> None:
         """Set or replace a named attack bonus source."""
         key = str(source).strip()
@@ -356,6 +370,8 @@ class Enemy:
             return True
         if hasattr(self.target, "is_alive") and not self.target.is_alive:
             return True
+        if getattr(self.target, "is_captured", False):
+            return True
         if self._is_inside_building_target(self.target):
             return True
         return False
@@ -400,7 +416,7 @@ class Enemy:
 
         # Check heroes that are NOT inside buildings (covers resting/shopping/etc).
         for hero in heroes:
-            if hero.is_alive and not bool(getattr(hero, "is_inside_building", False)):
+            if hero.is_alive and not bool(getattr(hero, "is_inside_building", False)) and not bool(getattr(hero, "is_captured", False)):
                 dist = self.distance_to(hero.x, hero.y)
                 if dist < best_dist:
                     best_dist = dist
@@ -543,6 +559,23 @@ class Enemy:
         if self.target and hasattr(self.target, 'take_damage'):
             self._queue_render_animation("attack")
             self.target.take_damage(self.effective_attack_power)
+            attack_now_ms = int(now_ms())
+
+            if killed := not getattr(self.target, "is_alive", True):
+                callbacks = list(getattr(self, "_hero_killed_hooks", None) or [])
+                callback = getattr(self, "on_hero_killed", None)
+                if callable(callback) and callback not in callbacks:
+                    callbacks.append(callback)
+                for callback in callbacks:
+                    try:
+                        callback(self.target, killer=self, now_ms=attack_now_ms)
+                    except TypeError:
+                        try:
+                            callback(self.target, self, attack_now_ms)
+                        except Exception:
+                            pass
+                    except Exception:
+                        pass
             
             # WK5: Emit ranged projectile event for ranged attackers
             if getattr(self, "is_ranged_attacker", False):

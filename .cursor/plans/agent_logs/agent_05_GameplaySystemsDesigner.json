@@ -796,6 +796,66 @@
           "follow_ups": []
         }
       }
+    },
+    "wk142_dynamic_rescue_revenge": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk142_dynamic_rescue_revenge.plan.md",
+        "created_utc": "2026-06-15T00:00:00Z",
+        "notes": "WK142 Dynamic Rescue & Revenge: bounded Blackbanner/Bandit Fortress capture-rescue loop, named-boss revenge loop, duplicate suppression, and cleanup coverage."
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "sprint_id": "wk142_dynamic_rescue_revenge",
+          "round_id": "r1_kickoff",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Implemented one bounded Blackbanner/Bandit Fortress rescue loop plus one named-boss revenge loop, with duplicate suppression, capture/release cleanup, and deterministic gameplay tests.",
+            "files_touched": [
+              "game/content/quest_chains.py",
+              "game/entities/hero.py",
+              "game/entities/enemy.py",
+              "game/systems/combat.py",
+              "game/systems/boss_encounter.py",
+              "game/systems/quest_chain.py",
+              "tests/test_wk142_dynamic_rescue_gameplay.py",
+              "tests/test_wk142_boss_revenge.py",
+              "tests/test_wk142_dynamic_cleanup.py"
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk142_dynamic_rescue_gameplay.py tests/test_wk142_boss_revenge.py tests/test_wk142_dynamic_cleanup.py -q",
+              "exit_code": 0,
+              "result": "4 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk138_quest_chain_core.py tests/test_wk139_boss_encounters.py tests/test_wk141_blackbanner_chain.py tests/test_wk141_blackbanner_boss.py -q",
+              "exit_code": 0,
+              "result": "7 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "result": "10 passed"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+              "exit_code": 0,
+              "result": "valid JSON"
+            }
+          ],
+          "evidence": {
+            "wk142_gameplay_slice": "4 passed locally on the new rescue and revenge gameplay tests.",
+            "wk142_pm_confirmed_gate": "PM reported 7 passed on the full WK142 Wave 1 slice, including the contract test, rescue gameplay, boss revenge, and cleanup coverage.",
+            "wk138_wk139_wk141_regressions": "7 passed on the retained quest-chain and boss regressions.",
+            "wk67_ai_boundary": "10 passed on the determinism boundary guard."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "PM will run the final QA smoke gate after this log cleanup."
+          ]
+        }
+      }
     }
   }
 }

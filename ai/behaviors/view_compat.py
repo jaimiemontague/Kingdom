@@ -103,6 +103,22 @@ class _DictGameStateView:
         return self._gs.get("quest_chains", []) or []
 
     @property
+    def captured_heroes(self):
+        return self._gs.get("captured_heroes", []) or []
+
+    @property
+    def rescue_opportunities(self):
+        return self._gs.get("rescue_opportunities", []) or []
+
+    @property
+    def boss_kill_memories(self):
+        return self._gs.get("boss_kill_memories", []) or []
+
+    @property
+    def revenge_opportunities(self):
+        return self._gs.get("revenge_opportunities", []) or []
+
+    @property
     def boss_encounters(self):
         return self._gs.get("boss_encounters", []) or []
 
@@ -150,6 +166,10 @@ def view_to_legacy_context(view: Any) -> dict:
         "bounties": view.bounties,
         "pois": view.pois,
         "quest_chains": getattr(view, "quest_chains", ()) or (),
+        "captured_heroes": getattr(view, "captured_heroes", ()) or (),
+        "rescue_opportunities": getattr(view, "rescue_opportunities", ()) or (),
+        "boss_kill_memories": getattr(view, "boss_kill_memories", ()) or (),
+        "revenge_opportunities": getattr(view, "revenge_opportunities", ()) or (),
         "boss_encounters": getattr(view, "boss_encounters", ()) or (),
         "elite_enemies": getattr(view, "elite_enemies", ()) or (),
         "elite_encounters": getattr(view, "elite_encounters", ()) or (),

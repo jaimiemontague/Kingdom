@@ -413,115 +413,188 @@
           "blockers": [],
           "follow_ups": [
             "PM can send final QA; the ui_panels scenario does not seed an active quest chain, so the deterministic test PNGs are the proof path for this round."
-        ]
-      }
-    },
-    "wk139_boss_encounter_core_elites": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk139_boss_encounter_core_elites.plan.md",
-        "created_utc": "2026-06-14T00:00:00Z",
-        "notes": "WK139 compact boss/elite HUD pass. Deterministic proof used because the scripted boss_encounter_showcase scenario is absent from tools/screenshot_scenarios.py."
-      },
-      "rounds": {
-        "r1_kickoff": {
-          "sprint_id": "wk139_boss_encounter_core_elites",
-          "round_id": "r1_kickoff",
-          "status": "done",
-          "task": "Add compact boss/elite status UI.",
-          "what_i_changed": [
-            "game/ui/top_bar.py: added a compact boss status strip beneath the existing top bar. It reads boss/elite snapshots from `game_state[\"sim\"].boss_encounter_system`, truncates long boss names to fit, and renders boss name, current phase, HP status, and telegraph/status text without covering the quit button or core HUD controls.",
-            "game/ui/top_bar.py: when elite snapshots are present, shows only a short hint line (`Elites: N | marker/affix hint`) using elite affix spawn markers where available, so the display stays compact and avoids clutter.",
-            "tests/test_wk139_boss_ui.py: NEW deterministic pygame coverage for boss name/phase/HP/telegraph fallback, elite hint compression, hidden-state behavior when no boss exists, and a full 1920x1080 screenshot proof test that writes `docs/screenshots/wk139_boss_ui/wk139_boss_ui_telegraph_1920x1080.png`.",
-            "docs/screenshots/wk139_boss_ui/wk139_boss_ui_telegraph_1920x1080.png: proof capture inspected and approved; panel is legible at 1920x1080 and does not obscure the command bar, minimap, or quit control."
-          ],
-          "commands_run": [
-            {
-              "cmd": "python -m py_compile game/ui/top_bar.py tests/test_wk139_boss_ui.py",
-              "exit_code": 0,
-              "result": "syntax check passed"
-            },
-            {
-              "cmd": "python -m pytest tests/test_wk139_boss_ui.py -q",
-              "exit_code": 0,
-              "result": "4 passed, 1 warning"
-            },
-            {
-              "cmd": "python tools/capture_screenshots.py --scenario boss_encounter_showcase --seed 3 --out docs/screenshots/wk139_boss_ui --size 1920x1080 --ticks 900",
-              "exit_code": 1,
-              "result": "ValueError: Unknown scenario: boss_encounter_showcase"
-            },
-            {
-              "cmd": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "result": "[qa_smoke] DONE: PASS (1904 passed, 5 skipped, 1 xfailed; determinism guard pass)"
-            },
-            {
-              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
-              "exit_code": 0,
-              "result": "validated after update"
-            }
-          ],
-          "evidence": {
-            "pytest": "python -m pytest tests/test_wk139_boss_ui.py -q -> 4 passed, 1 warning",
-            "qa_smoke_quick": "python tools/qa_smoke.py --quick -> PASS ([qa_smoke] DONE: PASS; 1904 passed, 5 skipped, 1 xfailed)",
-            "screenshot_paths_inspected": [
-              "docs/screenshots/wk139_boss_ui/wk139_boss_ui_telegraph_1920x1080.png"
-            ],
-            "screenshot_verdict": "PASS. The boss strip is readable and compact: The Goblin Warchief, Phase: Rally | HP: 50% | Tell: Rally, Elites: 1 | banner/shield. It stays clear of the top bar controls and does not hide core HUD elements.",
-            "scenario_gap": "The requested scripted `boss_encounter_showcase` capture scenario is not present in `tools/screenshot_scenarios.py`, so the deterministic UI proof path came from the test-driven render PNG instead."
-          },
-          "blockers": [
-            "No implementation blocker remains for the UI itself.",
-            "`boss_encounter_showcase` is missing from the screenshot scenario registry; Agent 12 should add it if PM wants the exact scripted capture command to work."
-          ],
-          "follow_ups": [
-            "Agent 12 / PM: add `boss_encounter_showcase` to `tools/screenshot_scenarios.py` so the requested capture command stops failing with Unknown scenario.",
-            "Agent 11: consume the existing proof PNG and the passing WK139 UI test as the integrated verification evidence."
-          ],
-          "recommended_next_actions": [
-            "PM can use the deterministic proof PNG and passing tests for final QA on the UI lane.",
-            "If the studio requires the exact showcase command to succeed, route a small scenario-creation ticket to Agent 12."
           ]
+        }
+      },
+      "wk139_boss_encounter_core_elites": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/wk139_boss_encounter_core_elites.plan.md",
+          "created_utc": "2026-06-14T00:00:00Z",
+          "notes": "WK139 compact boss/elite HUD pass. Deterministic proof used because the scripted boss_encounter_showcase scenario is absent from tools/screenshot_scenarios.py."
+        },
+        "rounds": {
+          "r1_kickoff": {
+            "sprint_id": "wk139_boss_encounter_core_elites",
+            "round_id": "r1_kickoff",
+            "status": "done",
+            "task": "Add compact boss/elite status UI.",
+            "what_i_changed": [
+              "game/ui/top_bar.py: added a compact boss status strip beneath the existing top bar. It reads boss/elite snapshots from `game_state[\"sim\"].boss_encounter_system`, truncates long boss names to fit, and renders boss name, current phase, HP status, and telegraph/status text without covering the quit button or core HUD controls.",
+              "game/ui/top_bar.py: when elite snapshots are present, shows only a short hint line (`Elites: N | marker/affix hint`) using elite affix spawn markers where available, so the display stays compact and avoids clutter.",
+              "tests/test_wk139_boss_ui.py: NEW deterministic pygame coverage for boss name/phase/HP/telegraph fallback, elite hint compression, hidden-state behavior when no boss exists, and a full 1920x1080 screenshot proof test that writes `docs/screenshots/wk139_boss_ui/wk139_boss_ui_telegraph_1920x1080.png`.",
+              "docs/screenshots/wk139_boss_ui/wk139_boss_ui_telegraph_1920x1080.png: proof capture inspected and approved; panel is legible at 1920x1080 and does not obscure the command bar, minimap, or quit control."
+            ],
+            "commands_run": [
+              {
+                "cmd": "python -m py_compile game/ui/top_bar.py tests/test_wk139_boss_ui.py",
+                "exit_code": 0,
+                "result": "syntax check passed"
+              },
+              {
+                "cmd": "python -m pytest tests/test_wk139_boss_ui.py -q",
+                "exit_code": 0,
+                "result": "4 passed, 1 warning"
+              },
+              {
+                "cmd": "python tools/capture_screenshots.py --scenario boss_encounter_showcase --seed 3 --out docs/screenshots/wk139_boss_ui --size 1920x1080 --ticks 900",
+                "exit_code": 1,
+                "result": "ValueError: Unknown scenario: boss_encounter_showcase"
+              },
+              {
+                "cmd": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "result": "[qa_smoke] DONE: PASS (1904 passed, 5 skipped, 1 xfailed; determinism guard pass)"
+              },
+              {
+                "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+                "exit_code": 0,
+                "result": "validated after update"
+              }
+            ],
+            "evidence": {
+              "pytest": "python -m pytest tests/test_wk139_boss_ui.py -q -> 4 passed, 1 warning",
+              "qa_smoke_quick": "python tools/qa_smoke.py --quick -> PASS ([qa_smoke] DONE: PASS; 1904 passed, 5 skipped, 1 xfailed)",
+              "screenshot_paths_inspected": [
+                "docs/screenshots/wk139_boss_ui/wk139_boss_ui_telegraph_1920x1080.png"
+              ],
+              "screenshot_verdict": "PASS. The boss strip is readable and compact: The Goblin Warchief, Phase: Rally | HP: 50% | Tell: Rally, Elites: 1 | banner/shield. It stays clear of the top bar controls and does not hide core HUD elements.",
+              "scenario_gap": "The requested scripted `boss_encounter_showcase` capture scenario is not present in `tools/screenshot_scenarios.py`, so the deterministic UI proof path came from the test-driven render PNG instead."
+            },
+            "blockers": [
+              "No implementation blocker remains for the UI itself.",
+              "`boss_encounter_showcase` is missing from the screenshot scenario registry; Agent 12 should add it if PM wants the exact scripted capture command to work."
+            ],
+            "follow_ups": [
+              "Agent 12 / PM: add `boss_encounter_showcase` to `tools/screenshot_scenarios.py` so the requested capture command stops failing with Unknown scenario.",
+              "Agent 11: consume the existing proof PNG and the passing WK139 UI test as the integrated verification evidence."
+            ],
+            "recommended_next_actions": [
+              "PM can use the deterministic proof PNG and passing tests for final QA on the UI lane.",
+              "If the studio requires the exact showcase command to succeed, route a small scenario-creation ticket to Agent 12."
+            ]
+          }
+        }
+      },
+      "wk141_blackbanners_toll_epic_boss_quest": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md",
+          "created_utc": "2026-06-15T00:00:00Z",
+          "notes": "WK141 Blackbanner's Toll Wave 2 UI readability. Deterministic test PNGs were used because the requested quest_chain_foundation capture scenario is not present in tools/screenshot_scenarios.py."
+        },
+        "rounds": {
+          "r2_wave1_gate_wave2_kickoff": {
+            "sprint_id": "wk141_blackbanners_toll_epic_boss_quest",
+            "round_id": "r2_wave1_gate_wave2_kickoff",
+            "status": "done",
+            "task": "Make Blackbanner's Toll readable in Adventure Ledger and boss UI using existing WK138 Adventure Ledger phase timeline and WK139 compact boss UI patterns.",
+            "what_i_changed": [
+              "game/ui/quest_view_panel.py: added _chain_live_facts(...) so the Adventure Ledger reads live quest_chain facts; compact active/offered chain rows now show the chain name, current phase as 'Now: ...', completed phase markers, assigned hero, revealed boss name when available, and reward/completion state without clipping in the small ledger slot.",
+              "tests/test_wk141_blackbanner_ui.py: NEW deterministic pygame coverage for full-size active ledger, compact active ledger, completed ledger, and compact boss strip render. The tests save proof PNGs under docs/screenshots/wk141_blackbanner_ui/.",
+              "tests/test_wk138_quest_chain_ui.py: updated the compact WK138 expectation to match the new compact timeline wording ('Now: ...') so the shared ledger pattern stays consistent."
+            ],
+            "files_touched": [
+              "game/ui/quest_view_panel.py",
+              "tests/test_wk141_blackbanner_ui.py",
+              "tests/test_wk138_quest_chain_ui.py",
+              "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_active_246x300.png",
+              "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_active_320x120.png",
+              "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_completed_320x120.png",
+              "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_boss_ui_1920x1080.png",
+              ".cursor/plans/agent_logs/agent_08_UX_UI_Director.json"
+            ],
+            "commands_run": [
+              {
+                "command": "python -m pytest tests/test_wk141_blackbanner_ui.py tests/test_wk138_quest_chain_ui.py tests/test_wk139_boss_ui.py -q",
+                "exit_code": 0,
+                "note": "12 passed, 1 warning"
+              },
+              {
+                "command": "python tools/capture_screenshots.py --scenario quest_chain_foundation --seed 3 --out docs/screenshots/wk141_blackbanner_ui --size 1920x1080 --ticks 900",
+                "exit_code": 1,
+                "note": "ValueError: Unknown scenario: quest_chain_foundation"
+              },
+              {
+                "command": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+                "exit_code": 0,
+                "note": "validated after update"
+              }
+            ],
+            "evidence": {
+              "pytest": "python -m pytest tests/test_wk141_blackbanner_ui.py tests/test_wk138_quest_chain_ui.py tests/test_wk139_boss_ui.py -q -> 12 passed, 1 warning",
+              "screenshot_paths_inspected": [
+                "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_active_246x300.png",
+                "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_active_320x120.png",
+                "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_completed_320x120.png",
+                "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_boss_ui_1920x1080.png"
+              ],
+              "screenshot_status": "PASS. Full-size ledger shows Blackbanner's Toll, current objective, target, boss reveal, and phase timeline; compact ledger shows 'Now: Intercept | Boss: Rusk Blackbanner' without clipping; completed ledger shows Outcome: Completed; boss strip shows Rusk Blackbanner, Phase: Toll Banner, HP 62%, telegraph, and elite hint cleanly.",
+              "scenario_gap": "The requested scripted quest_chain_foundation capture scenario is not present in tools/screenshot_scenarios.py, so the deterministic test-generated PNGs were used as the proof path."
+            },
+            "blockers": [
+              "No implementation blocker remains for the UI itself.",
+              "The requested capture_screenshots.py scenario name is missing from tools/screenshot_scenarios.py; the deterministic PNG proof path was used instead."
+            ],
+            "follow_ups": [
+              "PM / Agent 12 can add a quest_chain_foundation scenario if the exact scripted capture command needs to succeed later.",
+              "Agent 11 can use the passing focused tests and inspected PNGs as integrated verification evidence for the UI lane."
+            ]
+          }
         }
       }
     },
-    "wk141_blackbanners_toll_epic_boss_quest": {
+    "wk142_dynamic_rescue_revenge": {
       "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md",
+        "plan_ref": ".cursor/plans/wk142_dynamic_rescue_revenge.plan.md",
         "created_utc": "2026-06-15T00:00:00Z",
-        "notes": "WK141 Blackbanner's Toll Wave 2 UI readability. Deterministic test PNGs were used because the requested quest_chain_foundation capture scenario is not present in tools/screenshot_scenarios.py."
+        "notes": "WK142 Dynamic Rescue & Revenge Wave 2 UI readability. Deterministic test PNGs were used because the generic ui_panels capture scenario does not seed the rescue/revenge chain."
       },
       "rounds": {
         "r2_wave1_gate_wave2_kickoff": {
-          "sprint_id": "wk141_blackbanners_toll_epic_boss_quest",
+          "sprint_id": "wk142_dynamic_rescue_revenge",
           "round_id": "r2_wave1_gate_wave2_kickoff",
           "status": "done",
-          "task": "Make Blackbanner's Toll readable in Adventure Ledger and boss UI using existing WK138 Adventure Ledger phase timeline and WK139 compact boss UI patterns.",
+          "task": "Make active and completed Blackbanner rescue/revenge state readable in the Adventure Ledger/HUD.",
           "what_i_changed": [
-            "game/ui/quest_view_panel.py: added _chain_live_facts(...) so the Adventure Ledger reads live quest_chain facts; compact active/offered chain rows now show the chain name, current phase as 'Now: ...', completed phase markers, assigned hero, revealed boss name when available, and reward/completion state without clipping in the small ledger slot.",
-            "tests/test_wk141_blackbanner_ui.py: NEW deterministic pygame coverage for full-size active ledger, compact active ledger, completed ledger, and compact boss strip render. The tests save proof PNGs under docs/screenshots/wk141_blackbanner_ui/.",
-            "tests/test_wk138_quest_chain_ui.py: updated the compact WK138 expectation to match the new compact timeline wording ('Now: ...') so the shared ledger pattern stays consistent."
+            "game/ui/quest_view_panel.py: added a WK142 rescue/revenge story-line helper for Blackbanner chains so the Adventure Ledger now surfaces the captive hero or fallen hero, the captor or revenge boss, the target location when known, and the current rescued/avenged outcome state while preserving the existing phase timeline and completion footer.",
+            "tests/test_wk142_rescue_ui.py: NEW deterministic pygame coverage for active and completed rescue/revenge states in the compact ledger, the full ledger, and the quest-create modal; proof PNGs are written to docs/screenshots/wk142_rescue_revenge_ui/."
           ],
           "files_touched": [
             "game/ui/quest_view_panel.py",
-            "tests/test_wk141_blackbanner_ui.py",
-            "tests/test_wk138_quest_chain_ui.py",
-            "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_active_246x300.png",
-            "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_active_320x120.png",
-            "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_completed_320x120.png",
-            "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_boss_ui_1920x1080.png",
+            "tests/test_wk142_rescue_ui.py",
+            "docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_rescue_active_246x300.png",
+            "docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_rescue_completed_320x120.png",
+            "docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_rescue_modal_active_1920x1080.png",
+            "docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_revenge_active_246x300.png",
+            "docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_revenge_completed_320x120.png",
+            "docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_revenge_modal_active_1920x1080.png",
+            "docs/screenshots/wk142_rescue_revenge_ui/manifest.json",
             ".cursor/plans/agent_logs/agent_08_UX_UI_Director.json"
           ],
           "commands_run": [
             {
-              "command": "python -m pytest tests/test_wk141_blackbanner_ui.py tests/test_wk138_quest_chain_ui.py tests/test_wk139_boss_ui.py -q",
+              "command": "python -m pytest tests/test_wk142_rescue_ui.py tests/test_wk141_blackbanner_ui.py -q",
               "exit_code": 0,
-              "note": "12 passed, 1 warning"
+              "note": "8 passed, 1 warning"
             },
             {
-              "command": "python tools/capture_screenshots.py --scenario quest_chain_foundation --seed 3 --out docs/screenshots/wk141_blackbanner_ui --size 1920x1080 --ticks 900",
-              "exit_code": 1,
-              "note": "ValueError: Unknown scenario: quest_chain_foundation"
+              "command": "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk142_rescue_revenge_ui --size 1920x1080 --ticks 600",
+              "exit_code": 0,
+              "note": "Wrote 8 PNGs; the generic ui_panels scenario does not seed the WK142 rescue/revenge chain, so the deterministic test PNGs remain the proof path."
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "note": "DONE: PASS"
             },
             {
               "command": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
@@ -530,27 +603,26 @@
             }
           ],
           "evidence": {
-            "pytest": "python -m pytest tests/test_wk141_blackbanner_ui.py tests/test_wk138_quest_chain_ui.py tests/test_wk139_boss_ui.py -q -> 12 passed, 1 warning",
+            "pytest": "python -m pytest tests/test_wk142_rescue_ui.py tests/test_wk141_blackbanner_ui.py -q -> 8 passed, 1 warning",
+            "qa_smoke_quick": "python tools/qa_smoke.py --quick -> DONE: PASS",
             "screenshot_paths_inspected": [
-              "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_active_246x300.png",
-              "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_active_320x120.png",
-              "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_completed_320x120.png",
-              "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_boss_ui_1920x1080.png"
+              "docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_rescue_active_246x300.png",
+              "docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_revenge_active_246x300.png",
+              "docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_rescue_modal_active_1920x1080.png",
+              "docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_revenge_modal_active_1920x1080.png",
+              "docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_rescue_completed_320x120.png",
+              "docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_revenge_completed_320x120.png"
             ],
-            "screenshot_status": "PASS. Full-size ledger shows Blackbanner's Toll, current objective, target, boss reveal, and phase timeline; compact ledger shows 'Now: Intercept | Boss: Rusk Blackbanner' without clipping; completed ledger shows Outcome: Completed; boss strip shows Rusk Blackbanner, Phase: Toll Banner, HP 62%, telegraph, and elite hint cleanly.",
-            "scenario_gap": "The requested scripted quest_chain_foundation capture scenario is not present in tools/screenshot_scenarios.py, so the deterministic test-generated PNGs were used as the proof path."
+            "screenshot_verdict": "PASS. The compact ledger clearly shows Captive/Fallen, Captor/Boss, and Location for active rescue/revenge states; the completed compact ledger clearly shows Rescued/Avenged and Outcome: Completed; the full modal keeps the same facts readable without overlap.",
+            "scenario_gap": "The requested ui_panels capture command writes the generic HUD panels but does not seed the WK142 rescue/revenge chain, so the deterministic test-generated PNGs are the proof path for this round."
           },
-          "blockers": [
-            "No implementation blocker remains for the UI itself.",
-            "The requested capture_screenshots.py scenario name is missing from tools/screenshot_scenarios.py; the deterministic PNG proof path was used instead."
-          ],
+          "blockers": [],
           "follow_ups": [
-            "PM / Agent 12 can add a quest_chain_foundation scenario if the exact scripted capture command needs to succeed later.",
-            "Agent 11 can use the passing focused tests and inspected PNGs as integrated verification evidence for the UI lane."
+            "Agent 11 can use the passing focused tests and inspected PNGs as integrated verification evidence for the UI lane.",
+            "If PM wants a scripted rescue/revenge screenshot scenario later, Agent 12 would need to add one that seeds the WK142 chain."
           ]
         }
       }
     }
   }
-}
 }

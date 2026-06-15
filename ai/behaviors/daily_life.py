@@ -31,6 +31,8 @@ _RECENT_TARGET_COOLDOWN_MS = 45_000
 _CLASS_BIAS: dict[str, dict[str, float]] = {
     "warrior": {
         "monster_patrol": 8.0,
+        "rescue_hero": 2.0,
+        "revenge_hero": 6.0,
         "road_watch": 5.0,
         "safe_rest": 4.0,
         "home_or_guild_time": 3.0,
@@ -43,6 +45,8 @@ _CLASS_BIAS: dict[str, dict[str, float]] = {
     "ranger": {
         "wilderness_explore": 10.0,
         "poi_scout": 7.0,
+        "rescue_hero": 7.0,
+        "revenge_hero": 2.0,
         "road_watch": 4.0,
         "kingdom_roam": 4.0,
         "monster_patrol": 3.0,
@@ -54,6 +58,8 @@ _CLASS_BIAS: dict[str, dict[str, float]] = {
     "rogue": {
         "poi_scout": 9.0,
         "opportunity_check": 8.0,
+        "rescue_hero": 4.0,
+        "revenge_hero": 1.0,
         "kingdom_roam": 5.0,
         "social_linger": 3.0,
         "road_watch": 2.0,
@@ -66,6 +72,8 @@ _CLASS_BIAS: dict[str, dict[str, float]] = {
         "safe_rest": 9.0,
         "home_or_guild_time": 7.0,
         "social_linger": 6.0,
+        "rescue_hero": 7.0,
+        "revenge_hero": -4.0,
         "kingdom_roam": 2.0,
         "road_watch": 2.0,
         "opportunity_check": 1.0,
@@ -76,6 +84,8 @@ _CLASS_BIAS: dict[str, dict[str, float]] = {
     "wizard": {
         "poi_scout": 6.0,
         "opportunity_check": 5.0,
+        "rescue_hero": 2.0,
+        "revenge_hero": 5.0,
         "wilderness_explore": 4.0,
         "kingdom_roam": 3.0,
         "social_linger": 2.0,
@@ -91,12 +101,16 @@ _PERSONALITY_BIAS: dict[str, dict[str, float]] = {
         "monster_patrol": 6.0,
         "road_watch": 4.0,
         "wilderness_explore": 2.0,
+        "rescue_hero": 1.0,
+        "revenge_hero": 5.0,
         "safe_rest": -4.0,
     },
     "cautious and strategic": {
         "safe_rest": 6.0,
         "home_or_guild_time": 4.0,
         "social_linger": 3.0,
+        "rescue_hero": 4.0,
+        "revenge_hero": -8.0,
         "monster_patrol": -5.0,
         "wilderness_explore": -2.0,
     },
@@ -105,6 +119,8 @@ _PERSONALITY_BIAS: dict[str, dict[str, float]] = {
         "poi_scout": 5.0,
         "kingdom_roam": 3.0,
         "social_linger": 1.0,
+        "rescue_hero": 1.0,
+        "revenge_hero": -6.0,
         "monster_patrol": -2.0,
     },
     "balanced and reliable": {
@@ -112,6 +128,8 @@ _PERSONALITY_BIAS: dict[str, dict[str, float]] = {
         "social_linger": 3.0,
         "road_watch": 2.0,
         "opportunity_check": 1.0,
+        "rescue_hero": 3.0,
+        "revenge_hero": 2.0,
     },
 }
 
@@ -120,6 +138,8 @@ _MOTIVE_BASE_SCORE: dict[str, float] = {
     "wilderness_explore": 9.0,
     "poi_scout": 8.0,
     "monster_patrol": 8.5,
+    "rescue_hero": 11.5,
+    "revenge_hero": 12.5,
     "safe_rest": 6.0,
     "social_linger": 5.5,
     "opportunity_check": 6.5,
@@ -132,6 +152,8 @@ _MOTIVE_COMMIT_MS: dict[str, int] = {
     "wilderness_explore": 28_000,
     "poi_scout": 20_000,
     "monster_patrol": 20_000,
+    "rescue_hero": 24_000,
+    "revenge_hero": 26_000,
     "safe_rest": 24_000,
     "social_linger": 16_000,
     "opportunity_check": 16_000,
@@ -144,6 +166,8 @@ _MOTIVE_TARGET_COOLDOWN_MS: dict[str, int] = {
     "wilderness_explore": 90_000,
     "poi_scout": 75_000,
     "monster_patrol": 60_000,
+    "rescue_hero": 90_000,
+    "revenge_hero": 90_000,
     "safe_rest": 90_000,
     "social_linger": 45_000,
     "opportunity_check": 60_000,
@@ -270,11 +294,14 @@ def get_ambient_snapshot(hero: Any) -> dict[str, Any]:
 def build_daily_life_candidates(ai: Any, hero: Any, view: Any, *, now_ms: int | None = None) -> list[AmbientCandidate]:
     """Enumerate candidate ambient daily-life choices for ``hero``."""
     view = as_ai_view(view)
+    if getattr(hero, "is_captured", False) or getattr(hero, "state", None) == HeroState.CAPTURED:
+        return []
     now_ms = int(sim_now_ms() if now_ms is None else now_ms)
     buildings = list(getattr(view, "buildings", ()) or ())
     heroes = list(getattr(view, "heroes", ()) or ())
     pois = list(getattr(view, "pois", ()) or ())
     enemies = [e for e in (getattr(view, "enemies", ()) or ()) if getattr(e, "is_alive", False)]
+    boss_encounters = list(getattr(view, "boss_encounters", ()) or ())
     world = getattr(view, "world", None)
     castle = getattr(view, "castle", None)
     home = getattr(hero, "home_building", None)
@@ -332,7 +359,7 @@ def build_daily_life_candidates(ai: Any, hero: Any, view: Any, *, now_ms: int | 
             )
         )
 
-    monster = _pick_monster_patrol_target(hero, enemies, buildings)
+    monster = _pick_monster_patrol_target(hero, enemies, buildings, boss_encounters)
     if monster is not None:
         mx, my = _target_center(monster)
         d_tiles = _distance_tiles(hero, mx, my)
@@ -349,6 +376,67 @@ def build_daily_life_candidates(ai: Any, hero: Any, view: Any, *, now_ms: int | 
                 cooldown_ms=_MOTIVE_TARGET_COOLDOWN_MS["monster_patrol"],
                 cluster_key=_cluster_key(mx, my),
                 detail=str(getattr(monster, "name", getattr(monster, "building_type", "threat"))),
+            )
+        )
+
+    rescue_opportunities = list(getattr(view, "rescue_opportunities", ()) or ())
+    for rescue in rescue_opportunities:
+        rescue_dict = rescue if isinstance(rescue, dict) else getattr(rescue, "to_dict", lambda: None)()
+        if not isinstance(rescue_dict, dict):
+            continue
+        target_ref, target_xy, rescue_key, rescue_detail = _resolve_rescue_target(hero, rescue_dict, buildings, pois)
+        if target_ref is None or target_xy is None:
+            continue
+        rx, ry = target_xy
+        d_tiles = _distance_tiles(hero, rx, ry)
+        base = 11.0 + max(0.0, 14.0 - abs(d_tiles - 10.0))
+        candidates.append(
+            AmbientCandidate(
+                motive="rescue_hero",
+                target_key=rescue_key or _entity_key("rescue", target_ref),
+                target_xy=(rx, ry),
+                primitive="visit_poi",
+                target_ref=target_ref,
+                base_score=base,
+                commit_ms=_commit_ms(hero, "rescue_hero", rescue_key or _entity_key("rescue", target_ref)),
+                cooldown_ms=_MOTIVE_TARGET_COOLDOWN_MS["rescue_hero"],
+                cluster_key=_cluster_key(rx, ry),
+                detail=rescue_detail,
+            )
+        )
+
+    revenge_opportunities = list(getattr(view, "revenge_opportunities", ()) or ())
+    for revenge in revenge_opportunities:
+        revenge_dict = revenge if isinstance(revenge, dict) else getattr(revenge, "to_dict", lambda: None)()
+        if not isinstance(revenge_dict, dict):
+            continue
+        target_ref, target_xy, revenge_key, revenge_detail = _resolve_revenge_target(
+            hero,
+            revenge_dict,
+            boss_encounters,
+            enemies,
+        )
+        if target_ref is None or target_xy is None:
+            continue
+        rx, ry = target_xy
+        d_tiles = _distance_tiles(hero, rx, ry)
+        base = 24.0 + max(0.0, 18.0 - abs(d_tiles - 12.0))
+        if getattr(target_ref, "boss_id", None) or getattr(target_ref, "boss_name", None):
+            base += 4.0
+        if getattr(hero, "hero_class", "") == "warrior":
+            base += 2.0
+        candidates.append(
+            AmbientCandidate(
+                motive="revenge_hero",
+                target_key=revenge_key or _entity_key("revenge", target_ref),
+                target_xy=(rx, ry),
+                primitive="move_enemy",
+                target_ref=target_ref,
+                base_score=base,
+                commit_ms=_commit_ms(hero, "revenge_hero", revenge_key or _entity_key("revenge", target_ref)),
+                cooldown_ms=_MOTIVE_TARGET_COOLDOWN_MS["revenge_hero"],
+                cluster_key=_cluster_key(rx, ry),
+                detail=revenge_detail,
             )
         )
 
@@ -487,6 +575,20 @@ def score_daily_life_candidate(ai: Any, hero: Any, candidate: AmbientCandidate, 
             score -= 2.0
     elif candidate.motive in {"monster_patrol", "wilderness_explore"} and hp_pct < 0.50:
         score -= 8.0
+    elif candidate.motive == "rescue_hero":
+        if hp_pct < 0.45:
+            score -= 6.0
+        elif hp_pct < 0.75:
+            score += 4.0
+        else:
+            score += 10.0
+    elif candidate.motive == "revenge_hero":
+        if hp_pct < 0.60:
+            score -= 10.0
+        elif hp_pct < 0.80:
+            score += 2.0
+        else:
+            score += 8.0
     elif candidate.motive in {"opportunity_check", "social_linger"} and hp_pct < 0.40:
         score -= 4.0
 
@@ -505,12 +607,18 @@ def score_daily_life_candidate(ai: Any, hero: Any, candidate: AmbientCandidate, 
         score += max(0.0, 12.0 - abs(dist_tiles - 8.0))
     elif candidate.motive == "monster_patrol":
         score += max(0.0, 14.0 - abs(dist_tiles - 10.0))
+        if getattr(candidate.target_ref, "is_boss", False):
+            score += 6.0
     elif candidate.motive == "safe_rest":
         score += max(0.0, 16.0 - dist_tiles)
     elif candidate.motive == "social_linger":
         score += max(0.0, 12.0 - dist_tiles)
     elif candidate.motive == "opportunity_check":
         score += max(0.0, 13.0 - dist_tiles)
+    elif candidate.motive == "rescue_hero":
+        score += max(0.0, 14.0 - abs(dist_tiles - 10.0))
+    elif candidate.motive == "revenge_hero":
+        score += max(0.0, 16.0 - abs(dist_tiles - 12.0))
     elif candidate.motive == "home_or_guild_time":
         score += max(0.0, 14.0 - dist_tiles)
     elif candidate.motive == "road_watch":
@@ -534,6 +642,8 @@ def score_daily_life_candidate(ai: Any, hero: Any, candidate: AmbientCandidate, 
 def try_daily_life(ai: Any, hero: Any, view: Any) -> bool:
     """Choose or continue a deterministic ambient daily-life activity."""
     view = as_ai_view(view)
+    if getattr(hero, "is_captured", False) or getattr(hero, "state", None) == HeroState.CAPTURED:
+        return False
     now_ms = int(sim_now_ms())
 
     # Digest-safe activation gate: keep WK67's first few sim-seconds byte-stable
@@ -599,6 +709,24 @@ def _apply_ambient_candidate(ai: Any, hero: Any, view: Any, candidate: AmbientCa
         hero.target = target_ref
         hero.state = HeroState.MOVING
         _set_ambient_intent(ai, hero, "engaging_enemy" if getattr(target_ref, "is_alive", False) else "idle")
+    elif candidate.motive == "rescue_hero":
+        if target_ref is not None and _building_slug(target_ref) in {"castle", "inn", "house", "herald_post", "marketplace", "blacksmith", "trading_post"}:
+            route_to_building(hero, world, buildings, target_ref)
+        else:
+            hero.set_target_position(*candidate.target_xy)
+        hero.target = {
+            "type": "visit_poi",
+            "rescue_id": candidate.target_key,
+            "target_location": candidate.detail,
+            "target_ref": target_ref,
+        }
+        hero.state = HeroState.MOVING
+        _set_ambient_intent(ai, hero, "idle")
+    elif candidate.motive == "revenge_hero":
+        hero.target = target_ref
+        hero.set_target_position(*candidate.target_xy)
+        hero.state = HeroState.MOVING
+        _set_ambient_intent(ai, hero, "engaging_enemy")
     elif candidate.motive == "safe_rest":
         if target_ref is not None:
             route_to_building(hero, world, buildings, target_ref)
@@ -672,15 +800,42 @@ def _reapply_ambient_target(ai: Any, hero: Any, view: Any, mem: dict[str, Any], 
     primitive = str(mem.get("active_primitive", "") or "")
     if not motive or not isinstance(target_xy, (tuple, list)) or len(target_xy) != 2:
         return False
+    if motive == "revenge_hero" and target_ref is not None and not getattr(target_ref, "is_alive", False):
+        return False
     if primitive in {"going_home", "rest_inn", "get_drink", "patrol"} and target_ref is not None:
         buildings = list(getattr(view, "buildings", ()) or ())
         world = getattr(view, "world", None)
         route_to_building(hero, world, buildings, target_ref)
+    elif motive == "rescue_hero" and target_ref is not None:
+        buildings = list(getattr(view, "buildings", ()) or ())
+        world = getattr(view, "world", None)
+        if _building_slug(target_ref) in {"castle", "inn", "house", "herald_post", "marketplace", "blacksmith", "trading_post"}:
+            route_to_building(hero, world, buildings, target_ref)
+            hero.target = {
+                "type": "visit_poi",
+                "rescue_id": str(mem.get("active_target_key", "") or ""),
+                "target_location": str(getattr(target_ref, "name", "") or getattr(target_ref, "display_name", "") or ""),
+                "target_ref": target_ref,
+            }
+        else:
+            hero.set_target_position(float(target_xy[0]), float(target_xy[1]))
+            hero.target = {
+                "type": "visit_poi",
+                "rescue_id": str(mem.get("active_target_key", "") or ""),
+                "target_location": str(getattr(target_ref, "name", "") or getattr(target_ref, "display_name", "") or ""),
+                "target_ref": target_ref,
+            }
+    elif motive == "revenge_hero" and target_ref is not None:
+        hero.target = target_ref
+        hero.set_target_position(float(target_xy[0]), float(target_xy[1]))
     else:
         hero.set_target_position(float(target_xy[0]), float(target_xy[1]))
     if motive in {"safe_rest", "home_or_guild_time"}:
         hero.state = HeroState.MOVING
         _set_ambient_intent(ai, hero, "returning_to_safety")
+    elif motive == "revenge_hero":
+        hero.state = HeroState.MOVING
+        _set_ambient_intent(ai, hero, "engaging_enemy")
     else:
         hero.state = HeroState.MOVING
     ai._debug_log(f"{hero.name} -> continuing ambient {motive}")
@@ -710,6 +865,104 @@ def _write_ambient_memory(hero: Any, candidate: AmbientCandidate, *, now_ms: int
             "last_cluster_key": candidate.cluster_key,
         }
     )
+
+
+def _entity_identity_strings(entity: Any) -> set[str]:
+    values: set[str] = set()
+    for attr in (
+        "entity_id",
+        "hero_id",
+        "boss_id",
+        "rescue_id",
+        "revenge_id",
+        "target_location_id",
+        "captured_hero_id",
+        "fallen_hero_id",
+        "name",
+        "display_name",
+        "building_type",
+        "poi_type",
+        "captor_boss_id",
+        "captor_boss_name",
+        "captured_hero_name",
+        "boss_name",
+        "location_name",
+        "target_location_name",
+    ):
+        value = str(getattr(entity, attr, "") or "").strip()
+        if value:
+            values.add(value.lower())
+    poi_def = getattr(entity, "poi_def", None)
+    if poi_def is not None:
+        value = str(getattr(poi_def, "display_name", "") or "").strip()
+        if value:
+            values.add(value.lower())
+    return values
+
+
+def _pick_best_matching_entity(hero: Any, candidates: list[Any], labels: set[str]) -> Any | None:
+    scored: list[tuple[float, str, Any]] = []
+    for entity in candidates:
+        if entity is None:
+            continue
+        if not _entity_identity_strings(entity).intersection(labels):
+            continue
+        x, y = _target_center(entity)
+        scored.append((_distance_tiles(hero, x, y), _entity_key("story", entity), entity))
+    if not scored:
+        return None
+    scored.sort(key=lambda row: (row[0], row[1]))
+    return scored[0][2]
+
+
+def _resolve_rescue_target(
+    hero: Any,
+    rescue: dict[str, Any],
+    buildings: list[Any],
+    pois: list[Any],
+) -> tuple[Any | None, tuple[float, float] | None, str, str]:
+    labels = {
+        str(rescue.get("rescue_id", "")).strip().lower(),
+        str(rescue.get("captured_hero_id", "")).strip().lower(),
+        str(rescue.get("captured_hero_name", "")).strip().lower(),
+        str(rescue.get("captor_boss_id", "")).strip().lower(),
+        str(rescue.get("captor_boss_name", "")).strip().lower(),
+        str(rescue.get("target_location_id", "")).strip().lower(),
+        str(rescue.get("target_location_name", "")).strip().lower(),
+    }
+    labels.discard("")
+    target = _pick_best_matching_entity(hero, [*buildings, *pois], labels)
+    if target is None:
+        return (None, None, "", "")
+    tx, ty = _target_center(target)
+    rescue_id = str(rescue.get("rescue_id", "") or rescue.get("captured_hero_id", "") or rescue.get("target_location_id", "") or "")
+    detail = str(rescue.get("captured_hero_name", "") or rescue.get("target_location_name", "") or rescue_id or "rescue")
+    return (target, (tx, ty), rescue_id, detail)
+
+
+def _resolve_revenge_target(
+    hero: Any,
+    revenge: dict[str, Any],
+    boss_encounters: list[Any],
+    enemies: list[Any],
+) -> tuple[Any | None, tuple[float, float] | None, str, str]:
+    labels = {
+        str(revenge.get("revenge_id", "")).strip().lower(),
+        str(revenge.get("boss_id", "")).strip().lower(),
+        str(revenge.get("boss_name", "")).strip().lower(),
+        str(revenge.get("fallen_hero_id", "")).strip().lower(),
+        str(revenge.get("fallen_hero_name", "")).strip().lower(),
+        str(revenge.get("target_location_id", "")).strip().lower(),
+        str(revenge.get("target_location_name", "")).strip().lower(),
+    }
+    labels.discard("")
+    target = _pick_best_matching_entity(hero, [*boss_encounters, *enemies], labels)
+    if target is None or not getattr(target, "is_alive", False):
+        return (None, None, "", "")
+    tx, ty = _target_center(target)
+    revenge_id = str(revenge.get("revenge_id", "") or revenge.get("revenge_chain_id", "") or revenge.get("boss_id", "") or "")
+    detail = str(revenge.get("boss_name", "") or revenge.get("fallen_hero_name", "") or revenge_id or "revenge")
+    return (target, (tx, ty), revenge_id, detail)
 
 
 def _candidate_for_building(
@@ -814,7 +1067,12 @@ def _pick_poi(hero: Any, pois: list[Any]) -> Any | None:
     return scored[0][2]
 
 
-def _pick_monster_patrol_target(hero: Any, enemies: list[Any], buildings: list[Any]) -> Any | None:
+def _pick_monster_patrol_target(
+    hero: Any,
+    enemies: list[Any],
+    buildings: list[Any],
+    boss_encounters: list[Any],
+) -> Any | None:
     scored: list[tuple[float, str, Any]] = []
     for enemy in enemies:
         if not getattr(enemy, "is_alive", False):
@@ -832,6 +1090,15 @@ def _pick_monster_patrol_target(hero: Any, enemies: list[Any], buildings: list[A
         dist = _distance_tiles(hero, float(getattr(building, "center_x", 0.0)), float(getattr(building, "center_y", 0.0)))
         score = 18.0 + max(0.0, 16.0 - abs(dist - 10.0))
         scored.append((score, _entity_key("lair", building), building))
+    for boss in boss_encounters:
+        if str(getattr(boss, "status", "") or "").lower() not in {"active", "engaged"}:
+            continue
+        bx, by = _target_center(boss)
+        dist = _distance_tiles(hero, bx, by)
+        if dist < 3.0:
+            continue
+        score = 18.0 + max(0.0, 14.0 - abs(dist - 12.0))
+        scored.append((score, _entity_key("boss", boss), boss))
     if not scored:
         return None
     scored.sort(key=lambda row: (-row[0], row[1]))
@@ -891,7 +1158,7 @@ def _pick_opportunity_target(hero: Any, buildings: list[Any], view: Any) -> Any 
     candidates = []
     for building in buildings:
         slug = _building_slug(building)
-        if slug not in {"herald_post", "marketplace", "blacksmith", "trading_post"}:
+        if slug not in {"castle", "herald_post", "marketplace", "blacksmith", "trading_post"}:
             continue
         if getattr(building, "is_under_attack", False):
             continue
@@ -1031,6 +1298,9 @@ def _entity_key(prefix: str, entity: Any) -> str:
 def _target_center(entity: Any) -> tuple[float, float]:
     if entity is None:
         return (0.0, 0.0)
+    pos = getattr(entity, "position", None)
+    if isinstance(pos, (tuple, list)) and len(pos) == 2:
+        return (float(pos[0]), float(pos[1]))
     return (
         float(getattr(entity, "center_x", getattr(entity, "x", 0.0))),
         float(getattr(entity, "center_y", getattr(entity, "y", 0.0))),

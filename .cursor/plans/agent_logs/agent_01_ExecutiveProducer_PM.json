@@ -1445,7 +1445,7 @@
               "old mythos soak scratch scripts",
               "old screenshot PNGs"
             ],
-            "suggested_commit": "Prototype v1.6.4 - Hero Daily Life AI"
+            "suggested_commit": "wk140: Hero Daily Life AI"
           }
         }
       }
@@ -1690,11 +1690,303 @@
             "11_QA_TestEngineering_Lead": "Done."
           },
           "pm_commit_plan": {
-            "suggested_commit": "Prototype v1.6.5 - Blackbanner's Toll",
+            "suggested_commit": "wk141: Blackbanner's Toll",
             "leave_untracked_alone": [
               "old tmp/ and tmpqa_smoke_* scratch files",
               "old mythos soak scratch scripts",
               "old screenshot PNGs outside WK141"
+            ]
+          }
+        }
+      }
+    },
+    "wk142_dynamic_rescue_revenge": {
+      "rounds": {
+        "r1_kickoff": {
+          "pm_status_summary": "WK142 KICKOFF: Dynamic Situations - Rescue And Revenge. Mission: turn boss/POI failure into playable story hooks. This sprint builds one bounded Blackbanner/Bandit Fortress capture/rescue loop and one named-boss revenge loop, then exposes those facts to AI, Adventure Ledger/UI, and visual proof. It also continues the user's feedback that current heroes feel less alive than v1.4-era AI by giving heroes stronger world-scale reasons to roam, scout POIs, seek monsters/bosses, rest, visit castle/Herald's Post, and choose varied rescue/revenge behaviors. Prior work: WK138 QuestChainSystem, WK139 BossEncounterSystem, WK140 Daily Life AI, WK141 Blackbanner's Toll all shipped/pushed. Use gpt-5.4-mini with xhigh effort for active subagents.",
+          "pm_feature_requests": [
+            {
+              "id": "WK142-FEAT-001",
+              "title": "Blackbanner Captives rescue loop",
+              "owner_agents": [
+                "03_TechnicalDirector_Architecture",
+                "05_GameplaySystemsDesigner",
+                "06_AIBehaviorDirector_LLM",
+                "08_UX_UI_Director",
+                "09_ArtDirector_Pixel_Animation_VFX",
+                "11_QA_TestEngineering_Lead"
+              ],
+              "player_value": "When a hero is captured by Blackbanner/Bandit Fortress danger, the kingdom can post a real rescue opportunity and another hero can free them.",
+              "source_plan": ".cursor/plans/wk142_dynamic_rescue_revenge.plan.md",
+              "definition_of_done": [
+                "A deterministic test creates a captured Blackbanner captive and completes rescue.",
+                "Captured heroes are unavailable for normal AI/task routing until rescued.",
+                "Adventure Ledger/UI shows captive, captor, target, current phase, and rescued completion state.",
+                "AI sees rescue facts from structured view only and can choose varied rescue/rest/scout behaviors without all heroes stampeding.",
+                "Duplicate or stale rescue offers are suppressed."
+              ]
+            },
+            {
+              "id": "WK142-FEAT-002",
+              "title": "Named boss revenge loop",
+              "owner_agents": [
+                "03_TechnicalDirector_Architecture",
+                "05_GameplaySystemsDesigner",
+                "06_AIBehaviorDirector_LLM",
+                "08_UX_UI_Director",
+                "09_ArtDirector_Pixel_Animation_VFX",
+                "11_QA_TestEngineering_Lead"
+              ],
+              "player_value": "If a named boss kills a hero, the kingdom remembers it and can surface a revenge quest against the actual boss.",
+              "source_plan": ".cursor/plans/wk142_dynamic_rescue_revenge.plan.md",
+              "definition_of_done": [
+                "A deterministic test records named boss kills hero -> revenge situation/chain offer.",
+                "Revenge chain points to the real boss and fallen hero and completes or expires cleanly.",
+                "LLM/prompt context states boss kill memory only from structured facts.",
+                "UI/visuals make the revenge target readable enough for the player.",
+                "Duplicate revenge offers for the same boss/fallen hero pair are suppressed."
+              ]
+            },
+            {
+              "id": "WK142-FEAT-003",
+              "title": "More robust day-to-day hero AI around story hooks",
+              "owner_agents": [
+                "06_AIBehaviorDirector_LLM",
+                "11_QA_TestEngineering_Lead"
+              ],
+              "player_value": "At 10-hero startup and during active world events, heroes should no longer look like a cluster of tiny-loop wanderers near town.",
+              "source_plan": ".cursor/plans/wk142_dynamic_rescue_revenge.plan.md",
+              "definition_of_done": [
+                "Tests prove heroes distribute across safe roam, POI exploration, monster/boss pressure, rescue/revenge consideration, rest/home, and castle/Herald's Post visit intentions when facts support those choices.",
+                "Urgent survival/retreat gates remain higher priority than ambition.",
+                "Captured heroes do not choose ordinary daily-life tasks."
+              ]
+            }
+          ],
+          "pm_integration_order": [
+            "Wave 1 parallel: Agents 03 and 05.",
+            "PM Wave 1 gate: WK142 contract/gameplay/rescue/revenge/cleanup tests, WK138/WK139/WK141 regressions, WK67.",
+            "Wave 2 parallel after facts exist: Agents 06, 08, and 09.",
+            "PM Wave 2 gate: AI/prompt/UI/visual tests, WK140/WK141 regressions, WK67.",
+            "Wave 3 final: Agent 11 QA, screenshot inspection, logs, qa_smoke.",
+            "PM close: final gates, commit, push, continue roadmap with Dragon Hunt if green."
+          ],
+          "pm_next_actions_by_agent": {
+            "03_TechnicalDirector_Architecture": "Wave 1 active. Add or verify sim/view contracts for captured heroes, rescue opportunities, boss kill memories, and revenge opportunities. Use primitive facts, preserve empty-default behavior, and follow the Agent 03 section of .cursor/plans/wk142_dynamic_rescue_revenge.plan.md.",
+            "05_GameplaySystemsDesigner": "Wave 1 active. Implement the Blackbanner/Bandit Fortress capture/rescue loop, named-boss revenge loop, duplicate suppression, and cleanup. Follow the Agent 05 section of .cursor/plans/wk142_dynamic_rescue_revenge.plan.md.",
+            "06_AIBehaviorDirector_LLM": "Wave 2 pending after 03/05. Add AI/prompt context and daily-life variety around rescue/revenge facts while preserving WK140 urgent behavior gates.",
+            "08_UX_UI_Director": "Wave 2 pending after 03/05. Make rescue/revenge state readable in the Adventure Ledger/HUD and screenshot-verify visible changes.",
+            "09_ArtDirector_Pixel_Animation_VFX": "Wave 2 pending after 03/05. Verify existing WK139/WK141 visual language for captives/revenge bosses or add minimal markers with screenshot proof.",
+            "11_QA_TestEngineering_Lead": "Wave 3 pending after implementation. Run all WK142 tests, key WK138-WK141 regressions, WK67, qa_smoke, log validation, and screenshot inspection."
+          },
+          "pm_agent_prompts": {
+            "03": "Task: WK142 Wave 1 architecture/contracts for Dynamic Rescue & Revenge. Onboard as Agent 03 by reading AGENTS.md and your .cursor/rules role instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk142_dynamic_rescue_revenge\"].rounds[\"r1_kickoff\"] and .cursor/plans/wk142_dynamic_rescue_revenge.plan.md end-to-end. Your outcome: add or verify deterministic sim/view contracts for captured heroes, rescue opportunities, boss kill memories, and revenge opportunities. Stay in your lane: MAY edit game/sim/**, game/sim_engine.py, game/engine.py, game/game_commands.py, architecture-facing tests, and your own log; MUST NOT edit ai/**, game/ui/**, game/graphics/**, assets/**, or .cursor/plans/** except your log. Use primitive view facts, preserve empty-default behavior, avoid RNG consumption on empty/default paths, update your own agent log, validate it with python -m json.tool, and run the verification commands in the Agent 03 section of the plan.",
+            "05": "Task: WK142 Wave 1 gameplay for Dynamic Rescue & Revenge. Onboard as Agent 05 by reading AGENTS.md and your .cursor/rules role instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk142_dynamic_rescue_revenge\"].rounds[\"r1_kickoff\"] and .cursor/plans/wk142_dynamic_rescue_revenge.plan.md end-to-end. Your outcome: implement exactly one bounded Blackbanner/Bandit Fortress capture/rescue loop and one named-boss revenge loop, with deterministic tests and cleanup/duplicate suppression. Stay in your lane: MAY edit game/entities/**, game/systems/**, game/content/**, gameplay tests, and your own log; MUST NOT edit ai/**, game/ui/**, game/graphics/**, tools/**, or .cursor/plans/** except your log. Do not make every POI capture heroes, do not add a broad party system, do not use wall-clock/global RNG. Update your own agent log, validate it with python -m json.tool, and run the verification commands in the Agent 05 section of the plan.",
+            "06": "Task: WK142 Wave 2 AI behavior/prompt integration for Dynamic Rescue & Revenge. Wait until PM says Wave 1 is green. Then onboard as Agent 06, read AGENTS.md, your role rules, this PM round, and .cursor/plans/wk142_dynamic_rescue_revenge.plan.md. Your outcome: expose rescue/revenge/captured facts to prompt context from structured view only and expand deterministic daily-life behavior so heroes make varied world-scale choices (roam kingdom, explore POIs, seek monsters/bosses, rescue/revenge, rest/home, castle/Herald's Post) instead of tight town loops. Preserve WK140 urgent survival/retreat gates and captured-hero unavailability. Stay in ai/** plus AI tests and your own log.",
+            "08": "Task: WK142 Wave 2 UI readability for rescue/revenge. Wait until PM says Wave 1 is green. Then onboard as Agent 08, read AGENTS.md, your role rules, this PM round, and .cursor/plans/wk142_dynamic_rescue_revenge.plan.md. Your outcome: make captured hero, captor, revenge target, phase, and completion status readable in the Adventure Ledger/HUD, following WK138/WK141 patterns. Screenshot-verify any player-visible UI change and inspect the PNGs. Stay in game/ui/** plus UI tests/screenshots and your own log.",
+            "09": "Task: WK142 Wave 2 visual readability for captives/revenge bosses. Wait until PM says Wave 1 is green. Then onboard as Agent 09, read AGENTS.md, your role rules, this PM round, and .cursor/plans/wk142_dynamic_rescue_revenge.plan.md. First verify whether WK139/WK141 boss/elite visual language already covers the need; prefer proof/tests over new visuals. If minimal markers are needed, keep them deterministic and screenshot-verified. Stay in game/graphics/** plus graphics tests/screenshots and your own log.",
+            "11": "Task: WK142 final QA for Dynamic Rescue & Revenge. Wait until PM says implementation is ready. Onboard as Agent 11, read AGENTS.md, your role rules, this PM round, and .cursor/plans/wk142_dynamic_rescue_revenge.plan.md. Verify all WK142 focused tests, key WK138-WK141 regressions, WK67, qa_smoke, log JSON validity, and screenshot proof. Report PASS/FAIL with blockers and exact commands."
+          },
+          "pm_universal_prompt": "You are being activated for WK142 Dynamic Rescue & Revenge. First onboard as your assigned agent number by reading AGENTS.md and the relevant .cursor/rules instructions for your role. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk142_dynamic_rescue_revenge\"].rounds[\"r1_kickoff\"]. Your specific prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER]. Also read .cursor/plans/wk142_dynamic_rescue_revenge.plan.md end-to-end. Use gpt-5.4-mini with xhigh effort. You are not alone in this worktree: never revert files you did not intentionally edit, and adapt to prior WK138-WK141 work. Stay inside your ownership lane. Update your own agent log, validate it with python -m json.tool .cursor/plans/agent_logs/agent_NN_YourRole.json, and run the commands in your assignment. If your change is player-visible, capture and inspect screenshots before claiming done.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "03",
+                "05"
+              ],
+              [
+                "06",
+                "08",
+                "09"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "03": "gpt-5.4-mini",
+              "05": "gpt-5.4-mini",
+              "06": "gpt-5.4-mini",
+              "08": "gpt-5.4-mini",
+              "09": "gpt-5.4-mini",
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "03": "xhigh",
+              "05": "xhigh",
+              "06": "xhigh",
+              "08": "xhigh",
+              "09": "xhigh",
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "03": "high",
+              "05": "high",
+              "06": "high",
+              "08": "medium",
+              "09": "medium",
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "07",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Wave 1: 03 and 05 are high intelligence because capture/rescue/revenge cross sim contracts, quest-chain state, boss memory, cleanup, and determinism. Wave 2: 06 is high because the user's v1.4-style AI concern requires nuanced behavior policy; 08 and 09 are medium because they follow existing WK138-WK141 UI/visual patterns with screenshot proof. Wave 3: 11 is high because final QA must reconcile gameplay, AI, UI, visuals, screenshots, logs, WK67, and qa_smoke."
+          }
+        },
+        "r2_wave1_gate_wave2_kickoff": {
+          "pm_status_summary": "WK142 Wave 1 gate passed. Agent 03 added the primitive sim/view contract layer for captured heroes, rescue opportunities, boss kill memories, and revenge opportunities. Agent 05 added the bounded Blackbanner/Bandit Fortress capture/rescue gameplay loop, named-boss revenge loop, cleanup/duplicate suppression, and focused tests. PM-ran Wave 1 gate PASS: WK142 contract/gameplay/revenge/cleanup 7 passed; WK138/WK139/WK141 regressions 7 passed; WK67 10 passed. Full qa_smoke deferred to final integrated QA because Wave 2 will add AI/UI/visual work. Process note: git save states must use WK sprint names only; no Prototype vX.Y.Z naming without Jaimie authorization.",
+          "pm_wave1_evidence": [
+            "python -m pytest tests/test_wk142_dynamic_rescue_contract.py tests/test_wk142_dynamic_rescue_gameplay.py tests/test_wk142_boss_revenge.py tests/test_wk142_dynamic_cleanup.py -q -> 7 passed.",
+            "python -m pytest tests/test_wk138_quest_chain_core.py tests/test_wk139_boss_encounters.py tests/test_wk141_blackbanner_chain.py tests/test_wk141_blackbanner_boss.py -q -> 7 passed.",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed.",
+            "python -m json.tool passed for Agent 01, Agent 03, and Agent 05 logs."
+          ],
+          "pm_next_actions_by_agent": {
+            "06_AIBehaviorDirector_LLM": "Wave 2 active. Add AI/prompt context for captured heroes, rescue opportunities, boss kill memory, and revenge opportunities. Expand deterministic daily-life behavior so heroes roam kingdom-wide, explore POIs more liberally, seek monsters/bosses, rest at home/safe places, visit castle/Herald's Post, and answer rescue/revenge opportunities without all stampeding. Preserve WK140 urgent survival gates.",
+            "08_UX_UI_Director": "Wave 2 active. Make rescue/revenge state readable in the Adventure Ledger/HUD using existing WK138/WK141 patterns. Screenshot-verify visible UI changes and inspect PNGs.",
+            "09_ArtDirector_Pixel_Animation_VFX": "Wave 2 active. Verify existing WK139/WK141 boss/elite visual language covers captive/revenge target readability or add minimal deterministic markers with screenshot proof.",
+            "11_QA_TestEngineering_Lead": "Wave 3 pending after Wave 2. Final verification only."
+          },
+          "pm_agent_prompts": {
+            "06": "Task: WK142 Wave 2 AI behavior/prompt integration for Dynamic Rescue & Revenge. Onboard as Agent 06 by reading AGENTS.md and your .cursor/rules role instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk142_dynamic_rescue_revenge\"].rounds[\"r2_wave1_gate_wave2_kickoff\"] and .cursor/plans/wk142_dynamic_rescue_revenge.plan.md end-to-end. Wave 1 facts now exist in sim/view and gameplay. Your outcome: expose captured hero, rescue opportunity, boss kill memory, and revenge opportunity facts to AI/prompt context from structured view only; expand deterministic daily-life behavior so heroes make varied world-scale choices rather than local tight loops. Stay in your lane: MAY edit ai/**, AI tests under tests/**, and your own log; MUST NOT edit game/**, game/ui/**, game/graphics/**, tools/**, assets/**, config.py, README, CHANGELOG, or .cursor/plans/** except your own log. Preserve urgent survival/retreat/quest gates; captured heroes must not route to ordinary active tasks; do not let every hero stampede to rescue/revenge. Add/shape tests named in the plan: tests/test_wk142_rescue_ai_policy.py and tests/test_wk142_rescue_prompt_context.py, and update existing WK140 tests only if needed. Run the Agent 06 commands from the WK142 plan, validate your log, and report motive distribution/anti-loop evidence.",
+            "08": "Task: WK142 Wave 2 UI readability for rescue/revenge. Onboard as Agent 08 by reading AGENTS.md and your .cursor/rules role instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk142_dynamic_rescue_revenge\"].rounds[\"r2_wave1_gate_wave2_kickoff\"] and .cursor/plans/wk142_dynamic_rescue_revenge.plan.md end-to-end. Your outcome: make active/completed rescue and revenge state readable in the Adventure Ledger/HUD: captive hero, captor, fallen hero, revenge boss, target location if known, phase, and completion status. Stay in your lane: MAY edit game/ui/**, UI tests, docs/screenshots/wk142_*, and your own log; MUST NOT edit gameplay/AI/graphics source. Screenshot-verify visible changes and inspect the PNGs. Run the Agent 08 commands from the WK142 plan, validate your log, and report screenshot filenames that actually prove the state is visible.",
+            "09": "Task: WK142 Wave 2 visual readability for captives/revenge bosses. Onboard as Agent 09 by reading AGENTS.md and your .cursor/rules role instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk142_dynamic_rescue_revenge\"].rounds[\"r2_wave1_gate_wave2_kickoff\"] and .cursor/plans/wk142_dynamic_rescue_revenge.plan.md end-to-end. Your outcome: verify whether existing WK139/WK141 boss/elite visual language already makes captive/revenge targets readable. Prefer tests/screenshots over new visuals. If minimal markers are needed, keep them deterministic and renderer-only. Stay in your lane: MAY edit game/graphics/**, graphics tests, docs/screenshots/wk142_*, and your own log; MUST NOT edit gameplay/AI/UI source. Run the Agent 09 commands from the WK142 plan, validate your log, and report screenshot/visual evidence."
+          },
+          "pm_universal_prompt": "You are being activated for WK142 Dynamic Rescue & Revenge - Wave 2. First onboard as your assigned agent number by reading AGENTS.md and the relevant .cursor/rules instructions for your role. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk142_dynamic_rescue_revenge\"].rounds[\"r2_wave1_gate_wave2_kickoff\"]. Your specific prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER]. Also read .cursor/plans/wk142_dynamic_rescue_revenge.plan.md end-to-end. Use gpt-5.4-mini with xhigh effort. You are not alone in this worktree: preserve Wave 1 edits and never revert files you did not intentionally edit. Stay inside your ownership lane. Update your own agent log, validate it with python -m json.tool .cursor/plans/agent_logs/agent_NN_YourRole.json, and run the commands in your assignment. If your change is player-visible, capture and inspect screenshots before claiming done. Do not use Prototype vX.Y.Z naming anywhere; use WK sprint naming only.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "06",
+                "08",
+                "09"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "06": "gpt-5.4-mini",
+              "08": "gpt-5.4-mini",
+              "09": "gpt-5.4-mini",
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "06": "xhigh",
+              "08": "xhigh",
+              "09": "xhigh",
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "06": "high",
+              "08": "medium",
+              "09": "medium",
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "07",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "06 is high intelligence because it touches behavior policy and the user's core v1.4-style AI complaint. 08 and 09 are medium intelligence because they follow existing WK138-WK141 UI/visual patterns and must produce screenshot proof. 11 remains high for integrated final QA."
+          }
+        },
+        "r3_wave2_gate_qa_kickoff": {
+          "pm_status_summary": "WK142 Wave 2 integrated gate passed and final QA is ready. Agent 06 added structured rescue/revenge AI context plus broader deterministic daily-life choices (kingdom roam, POI exploration, monsters/bosses, rescue/revenge, rest/home, castle/Herald's Post) while preserving captured-hero unavailability and urgent gates. Agent 08 made rescue/revenge readable in the Adventure Ledger/HUD and produced deterministic proof PNGs. Agent 09 verified existing WK139/WK141 boss/elite visual language is sufficient and pinned it with tests/screenshots. PM-ran Wave 2 gate PASS: WK142 AI/UI/visual tests 10 passed; WK140/WK141 regressions 19 passed; WK67 10 passed; Agent 06/08/09 logs validate. Full qa_smoke now belongs to Agent 11 final QA. Git/version process note remains: save-state commit must be WK-named, not Prototype vX.Y.Z.",
+          "pm_wave2_evidence": [
+            "python -m pytest tests/test_wk142_rescue_ai_policy.py tests/test_wk142_rescue_prompt_context.py tests/test_wk142_rescue_ui.py tests/test_wk142_rescue_visuals.py -q -> 10 passed.",
+            "python -m pytest tests/test_wk140_hero_daily_life_ai.py tests/test_wk140_hero_ambient_distribution.py tests/test_wk141_blackbanner_ai_policy.py tests/test_wk141_blackbanner_ui.py tests/test_wk141_blackbanner_visuals.py -q -> 19 passed.",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed.",
+            "python -m json.tool passed for Agent 06, Agent 08, and Agent 09 logs.",
+            "Screenshot evidence exists under docs/screenshots/wk142_rescue_revenge_ui and docs/screenshots/wk142_rescue_revenge_boss."
+          ],
+          "pm_next_actions_by_agent": {
+            "11_QA_TestEngineering_Lead": "Wave 3 active. Verify the full WK142 rescue/revenge sprint: all focused tests, key WK138-WK141 regressions, WK67, qa_smoke, log JSON validity, and screenshot proof inspection. Report PASS/FAIL and any blockers.",
+            "01_ExecutiveProducer_PM": "After Agent 11 PASS, run any final PM spot checks, stage only intended files, commit with a WK sprint message such as 'wk142: Dynamic Rescue and Revenge', push, then continue roadmap with Sprint E Dragon Hunt."
+          },
+          "pm_agent_prompts": {
+            "11": "Task: WK142 final QA for Dynamic Rescue & Revenge. Onboard as Agent 11 by reading AGENTS.md and your .cursor/rules role instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk142_dynamic_rescue_revenge\"].rounds[\"r3_wave2_gate_qa_kickoff\"] and .cursor/plans/wk142_dynamic_rescue_revenge.plan.md end-to-end. Verify all WK142 focused tests, key WK138-WK141 regressions, WK67, full qa_smoke, Agent 03/05/06/08/09 logs, and screenshot proof under docs/screenshots/wk142_*. Inspect the PNGs: do not treat file existence as visual proof. You MAY edit tests/** only for QA-only assertions if necessary, docs/screenshots/wk142_* if producing evidence, and your own log. MUST NOT edit gameplay/AI/UI/graphics production source unless PM sends a separate repair prompt. Do not use Prototype vX.Y.Z naming anywhere. Report PASS/FAIL with exact commands and blockers."
+          },
+          "pm_universal_prompt": "You are being activated for WK142 Dynamic Rescue & Revenge final QA. First onboard as Agent 11 by reading AGENTS.md and the relevant .cursor/rules instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk142_dynamic_rescue_revenge\"].rounds[\"r3_wave2_gate_qa_kickoff\"]. Follow pm_agent_prompts[\"11\"] and .cursor/plans/wk142_dynamic_rescue_revenge.plan.md. Use gpt-5.4-mini with xhigh effort. Verification only unless PM gives a separate fix prompt. Update your own agent log, validate it with python -m json.tool, run the commands in the QA assignment, inspect screenshots, and report PASS/FAIL. Do not use Prototype vX.Y.Z naming anywhere.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "11 is high intelligence because final QA must reconcile gameplay, AI behavior, prompt context, UI, screenshot evidence, visual proof, logs, WK67, and full qa_smoke."
+          }
+        },
+        "r4_closeout_commit_ready": {
+          "pm_status_summary": "WK142 Dynamic Rescue & Revenge is COMPLETE and commit-ready. Final QA passed on actual product gates: all WK142 focused tests, key WK138-WK141 regressions, WK67, full qa_smoke, agent log validation, and screenshot inspection. The sprint delivered a bounded Blackbanner/Bandit Fortress capture/rescue loop, named-boss revenge loop, duplicate/stale cleanup, structured rescue/revenge AI prompt context, more robust daily-life hero behavior around kingdom roaming/POI exploration/monster pressure/rest/castle visits/rescue/revenge, Adventure Ledger readability, and visual proof using existing boss/elite language. Save-state commit must use WK naming only, e.g. 'wk142: Dynamic Rescue and Revenge'.",
+          "pm_final_evidence": [
+            "Agent 11 final QA: PASS overall.",
+            "WK142 focused tests: python -m pytest tests/test_wk142_dynamic_rescue_contract.py tests/test_wk142_dynamic_rescue_gameplay.py tests/test_wk142_boss_revenge.py tests/test_wk142_dynamic_cleanup.py tests/test_wk142_rescue_ai_policy.py tests/test_wk142_rescue_prompt_context.py tests/test_wk142_rescue_ui.py tests/test_wk142_rescue_visuals.py -q -> 17 passed, 1 warning.",
+            "WK138-WK141 regressions: python -m pytest tests/test_wk138_quest_chain_core.py tests/test_wk139_boss_encounters.py tests/test_wk140_hero_daily_life_ai.py tests/test_wk141_blackbanner_chain.py tests/test_wk141_blackbanner_boss.py -q -> 9 passed, 1 warning.",
+            "WK67: python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed, 1 warning.",
+            "python tools/qa_smoke.py --quick -> 1938 passed, 5 skipped, 1 xfailed, 1 warning.",
+            "Logs for Agents 03/05/06/08/09/11 validate as JSON and contain wk142_dynamic_rescue_revenge entries.",
+            "Screenshots inspected: docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_rescue_active_246x300.png, wk142_blackbanner_rescue_completed_320x120.png, wk142_blackbanner_rescue_modal_active_1920x1080.png, wk142_blackbanner_revenge_active_246x300.png, wk142_blackbanner_revenge_completed_320x120.png, wk142_blackbanner_revenge_modal_active_1920x1080.png, and docs/screenshots/wk142_rescue_revenge_boss/boss_encounter_showcase.png."
+          ],
+          "pm_known_process_gap": "Agent 11 could not run the exact orchestrator completion receipt command because this workspace did not expose the tokenized npx tsx tools\\ai_studio_orchestrator\\src\\cli.ts complete prompt token. This is a receipt/process gap only; all product gates are green.",
+          "pm_next_actions_by_agent": {
+            "01_ExecutiveProducer_PM": "Stage only intended WK142/process files, commit with 'wk142: Dynamic Rescue and Revenge', push, then continue roadmap with Sprint E Dragon Hunt.",
+            "03_TechnicalDirector_Architecture": "Done.",
+            "05_GameplaySystemsDesigner": "Done.",
+            "06_AIBehaviorDirector_LLM": "Done.",
+            "08_UX_UI_Director": "Done.",
+            "09_ArtDirector_Pixel_Animation_VFX": "Done.",
+            "11_QA_TestEngineering_Lead": "Done."
+          },
+          "pm_commit_plan": {
+            "suggested_commit": "wk142: Dynamic Rescue and Revenge",
+            "include": [
+              "WK142 plan and PM/agent logs",
+              "WK142 rescue/revenge gameplay, AI, UI, tests, and screenshots",
+              "Version-discipline process rule updates requested by Jaimie",
+              "Pending v1.6.2 changelog rollup plan"
+            ],
+            "leave_untracked_alone": [
+              "old tmp/ and tmpqa_smoke_* scratch files",
+              "old mythos soak scratch scripts",
+              "old screenshot PNGs outside WK142"
             ]
           }
         }

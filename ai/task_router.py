@@ -39,6 +39,10 @@ def update_hero(ai, hero, dt: float, view) -> None:
     ai.refresh_intent(hero, view)
     expire_direct_prompt_commit_if_timed_out(hero)
 
+    if getattr(hero, "is_captured", False) or hero.state == HeroState.CAPTURED:
+        hero.pending_llm_decision = False
+        return
+
     # WK2 Build A: stuck detection + deterministic recovery.
     ai.stuck_recovery_behavior._update_stuck_and_recover(ai, hero, view)
 

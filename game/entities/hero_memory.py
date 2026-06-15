@@ -179,6 +179,18 @@ class HeroMemoryMixin:
         t = getattr(self, "target", None)
         state = getattr(self, "state", HeroState.IDLE)
 
+        if state == HeroState.CAPTURED:
+            capture_state = getattr(self, "capture_state", None)
+            if capture_state is not None:
+                captor_name = str(getattr(capture_state, "captor_boss_name", "") or getattr(capture_state, "captor_boss_id", "") or "captured")
+                return "captured", f"captured by {captor_name}", {
+                    "captor_boss_id": getattr(capture_state, "captor_boss_id", ""),
+                    "captor_boss_name": getattr(capture_state, "captor_boss_name", ""),
+                    "location_id": getattr(capture_state, "location_id", ""),
+                    "location_name": getattr(capture_state, "location_name", ""),
+                }
+            return "captured", "captured", {}
+
         # Enemy engagement
         if state == HeroState.FIGHTING or (t is not None and hasattr(t, "is_alive") and getattr(t, "is_alive", False)):
             return "engaging_enemy", "engaging nearby enemy", {"target": "enemy", "enemy_type": getattr(t, "enemy_type", None)}

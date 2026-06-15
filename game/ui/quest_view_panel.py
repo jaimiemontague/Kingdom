@@ -15,6 +15,10 @@ panel's own render() also shows it so the QUEST view is correct if re-wired.
 WK138: the same board now also renders active multi-phase quest chains as a
 compact "Adventure Ledger" card with current objective, assigned hero, reward,
 status, and a completed/current/upcoming timeline.
+
+WK142: Blackbanner rescue/revenge chains now also surface captured/fallen hero
+facts, captor/boss names, target locations, and completion state on the same
+ledger card so the rescue hook reads clearly at a glance.
 """
 
 from __future__ import annotations
@@ -310,6 +314,43 @@ class QuestViewPanel:
             return {}
 
     @staticmethod
+    def _chain_story_line(chain: Any, live_facts: dict[str, Any], current_target: str) -> str:
+        def _fact(*names: str) -> str:
+            for name in names:
+                value = str(live_facts.get(name, "") or "").strip()
+                if value:
+                    return value
+            return ""
+
+        chain_type = str(getattr(chain, "chain_type", "") or "")
+        status_key = str(getattr(chain, "status", "") or "")
+        if chain_type == "blackbanner_rescue":
+            captive_name = _fact("captured_hero_name")
+            captor_name = _fact("captor_boss_name")
+            location_name = _fact("origin_target_name", "target_location_name", "location_name") or current_target
+            lead = "Rescued" if status_key == "completed" else "Captive"
+            relation = "From" if status_key == "completed" else "Captor"
+            parts = [f"{lead}: {captive_name or 'Unknown'}"]
+            if captor_name:
+                parts.append(f"{relation}: {captor_name}")
+            if location_name:
+                parts.append(f"Location: {location_name}")
+            return " | ".join(parts)
+        if chain_type == "blackbanner_revenge":
+            fallen_name = _fact("fallen_hero_name")
+            boss_name = _fact("boss_target_name")
+            location_name = _fact("target_location_name", "location_name", "origin_target_name")
+            lead = "Avenged" if status_key == "completed" else "Fallen"
+            relation = "Against" if status_key == "completed" else "Boss"
+            parts = [f"{lead}: {fallen_name or 'Unknown'}"]
+            if boss_name:
+                parts.append(f"{relation}: {boss_name}")
+            if location_name:
+                parts.append(f"Location: {location_name}")
+            return " | ".join(parts)
+        return ""
+
+    @staticmethod
     def _chain_current_phase(chain: Any) -> tuple[Any | None, int]:
         phases = tuple(getattr(chain, "phases", ()) or ())
         if not phases:
@@ -372,6 +413,7 @@ class QuestViewPanel:
             live_facts = self._chain_live_facts(game_state, chain)
             boss_revealed = bool(live_facts.get("boss_target_revealed", False))
             revealed_boss_name = str(live_facts.get("boss_target_name", "") or "").strip()
+            story_line = self._chain_story_line(chain, live_facts, current_target)
 
             compact_title_font = pygame.font.Font(None, 14)
             compact_font = pygame.font.Font(None, 11)
@@ -398,6 +440,8 @@ class QuestViewPanel:
             summary_line = " | ".join(summary_bits)
 
             detail_lines: list[str] = []
+            if story_line:
+                detail_lines.append(story_line)
             if status_key in {"active", "offered"} and current_title:
                 compact_title = current_title
                 if boss_revealed and " the " in current_title:
@@ -405,7 +449,9 @@ class QuestViewPanel:
                     if short_title:
                         compact_title = short_title
                 detail_bits = [f"Now: {compact_title}"]
-                if boss_revealed and revealed_boss_name and revealed_boss_name != current_target:
+                if boss_revealed and revealed_boss_name and (
+                    revealed_boss_name != current_target or str(getattr(chain, "chain_type", "") or "") == "blackbanner_revenge"
+                ):
                     detail_bits.append(f"Boss: {revealed_boss_name}")
                 detail_lines.append(" | ".join(detail_bits))
             elif status_key in {"completed", "failed"}:
@@ -473,6 +519,8 @@ class QuestViewPanel:
             live_facts = self._chain_live_facts(game_state, chain)
             boss_revealed = bool(live_facts.get("boss_target_revealed", False))
             revealed_boss_name = str(live_facts.get("boss_target_name", "") or "").strip()
+            story_line = self._chain_story_line(chain, live_facts, current_target)
+            has_objective_line = status_key in {"active", "offered"} and current_title
 
             card_lines: list[str] = []
             card_lines.append(str(getattr(chain, "name", "") or "Quest Chain"))
@@ -483,11 +531,15 @@ class QuestViewPanel:
             if phase_rows:
                 meta_bits.append(f"Phase: {min(current_index + 1, len(phase_rows))}/{len(phase_rows)}")
             card_lines.append(" | ".join(meta_bits))
-            if status_key in {"active", "offered"} and current_title:
+            if story_line:
+                card_lines.append(story_line)
+            if has_objective_line:
                 objective_bits = [f"Current objective: {current_title}"]
                 if current_target:
                     objective_bits.append(f"Target: {current_target}")
-                if boss_revealed and revealed_boss_name and revealed_boss_name != current_target:
+                if boss_revealed and revealed_boss_name and (
+                    revealed_boss_name != current_target or str(getattr(chain, "chain_type", "") or "") == "blackbanner_revenge"
+                ):
                     objective_bits.append(f"Boss: {revealed_boss_name}")
                 card_lines.append(" | ".join(objective_bits))
 
@@ -497,10 +549,11 @@ class QuestViewPanel:
                 phase_title = str(getattr(phase, "title", "") or getattr(phase, "phase_id", "") or "Phase")
                 card_lines.append(f"{phase_label} {phase_title}")
 
-            has_objective_line = status_key in {"active", "offered"} and current_title
             card_h = pad_y * 2
             card_h += title_h
             card_h += gap + body_h
+            if story_line:
+                card_h += gap + body_h
             if has_objective_line:
                 card_h += gap + body_h
             card_h += len(phase_rows) * (body_h + 4)
@@ -538,19 +591,33 @@ class QuestViewPanel:
             lines.append(card_lines[1])
             inner_y += body_h + gap
 
-            if len(card_lines) > 2 and status_key not in {"completed", "failed"}:
-                objective_color = (200, 210, 200) if status_key in {"active", "offered"} else (210, 180, 180)
+            start_index = 2
+            if len(card_lines) > 2 and story_line:
+                story_color = (205, 210, 220) if status_key in {"active", "offered"} else (190, 200, 190)
                 TextLabel.render(
                     surface,
                     body_font,
                     _truncate(card_lines[2], inner_w, body_font),
                     (inner_x, inner_y),
-                    objective_color,
+                    story_color,
                 )
                 lines.append(card_lines[2])
                 inner_y += body_h + gap
+                start_index += 1
 
-            start_index = 3 if len(card_lines) > 2 and status_key not in {"completed", "failed"} else 2
+            if len(card_lines) > start_index and status_key not in {"completed", "failed"}:
+                objective_color = (200, 210, 200) if status_key in {"active", "offered"} else (210, 180, 180)
+                TextLabel.render(
+                    surface,
+                    body_font,
+                    _truncate(card_lines[start_index], inner_w, body_font),
+                    (inner_x, inner_y),
+                    objective_color,
+                )
+                lines.append(card_lines[start_index])
+                inner_y += body_h + gap
+                start_index += 1
+
             for phase_line in card_lines[start_index:]:
                 phase_status = "upcoming"
                 if phase_line.startswith("OFFERED "):

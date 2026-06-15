@@ -15,6 +15,7 @@ from config import (
     WIZARD_ATTACK_RANGE_TILES, WIZARD_SPELL_COLOR, WIZARD_SPELL_SIZE_PX,
 )
 from game.sim.hero_guardrails_tunables import PATH_REPLAN_MIN_INTERVAL_MS
+from game.sim.contracts import HeroCaptureState
 
 if TYPE_CHECKING:
     from game.entities.buildings.base import Building
@@ -28,6 +29,7 @@ class HeroState(Enum):
     RETREATING = auto()
     RESTING = auto()
     DEAD = auto()
+    CAPTURED = auto()
 
 
 # Random hero names
@@ -210,6 +212,8 @@ class Hero(HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin):
         # -----------------------------
         self.can_attack: bool = True
         self.attack_blocked_reason: str = ""
+        self.is_captured: bool = False
+        self.capture_state: HeroCaptureState | None = None
 
         self.stuck_active: bool = False
         self.stuck_since_ms: int | None = None
@@ -481,6 +485,8 @@ class Hero(HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin):
     
     def take_damage(self, amount: int) -> bool:
         """Take damage, returns True if killed."""
+        if getattr(self, "is_captured", False):
+            return False
         actual_damage = max(1, amount - self.defense)
         self.hp = max(0, self.hp - actual_damage)
         self.damage_since_left_home += actual_damage
@@ -570,6 +576,14 @@ class Hero(HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin):
         """Update hero state and behavior."""
         if not self.is_alive:
             self.intent = "idle"
+            return
+        if getattr(self, "is_captured", False) or self.state == HeroState.CAPTURED:
+            try:
+                self._update_intent_and_decision(game_state)
+            except Exception:
+                pass
+            self.can_attack = False
+            self.attack_blocked_reason = "captured"
             return
 
         # Keep intent/decision data fresh even when AI is disabled (best-effort, non-blocking).
@@ -724,3 +738,137 @@ class Hero(HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin):
                 "size_px": WIZARD_SPELL_SIZE_PX,
             }
         return None
+
+    def begin_capture(
+        self,
+        *,
+        captor_boss_id: str = "",
+        captor_boss_name: str = "",
+        captor_boss_type: str = "",
+        location_id: str = "",
+        location_name: str = "",
+        source_chain_id: str = "",
+        source_chain_type: str = "",
+        captured_at_ms: int | None = None,
+    ) -> HeroCaptureState:
+        """Mark the hero as captured and keep them alive but unavailable."""
+        now_ms = int(sim_now_ms() if captured_at_ms is None else captured_at_ms)
+        capture = HeroCaptureState(
+            hero_id=str(self.hero_id),
+            hero_name=str(self.name),
+            captor_boss_id=str(captor_boss_id or ""),
+            captor_boss_name=str(captor_boss_name or ""),
+            captor_boss_type=str(captor_boss_type or ""),
+            location_id=str(location_id or ""),
+            location_name=str(location_name or ""),
+            source_chain_id=str(source_chain_id or ""),
+            source_chain_type=str(source_chain_type or ""),
+            captured_at_ms=now_ms,
+            status="captured",
+        )
+        self.capture_state = capture
+        self.is_captured = True
+        self.hp = max(1, int(self.hp) or 1)
+        self.state = HeroState.CAPTURED
+        self.can_attack = False
+        self.attack_blocked_reason = "captured"
+        self.target = None
+        self.target_position = None
+        self.path = []
+        self._path_goal = None
+        self._path_last_replan_ms = 0
+        self.pending_task = None
+        self.pending_task_building = None
+        self.llm_move_request = None
+        self.is_inside_building = False
+        self.inside_building = None
+        self.inside_timer = 0.0
+        self.intent = "captured"
+        try:
+            self.record_decision(
+                action="captured",
+                reason=f"captured by {capture.captor_boss_name or capture.captor_boss_id}",
+                now_ms=now_ms,
+                context={
+                    "captor_boss_id": capture.captor_boss_id,
+                    "captor_boss_name": capture.captor_boss_name,
+                    "captor_boss_type": capture.captor_boss_type,
+                    "location_id": capture.location_id,
+                    "location_name": capture.location_name,
+                    "source_chain_id": capture.source_chain_id,
+                    "source_chain_type": capture.source_chain_type,
+                },
+            )
+        except Exception:
+            pass
+        try:
+            self.record_profile_memory(
+                event_type="captured",
+                sim_time_ms=now_ms,
+                summary=f"Captured by {capture.captor_boss_name or capture.captor_boss_id}",
+                subject_type="boss",
+                subject_id=capture.captor_boss_id,
+                subject_name=capture.captor_boss_name,
+                world_pos=(float(self.x), float(self.y)),
+                importance=3,
+            )
+        except Exception:
+            pass
+        return capture
+
+    def release_capture(self, *, rescued_at_ms: int | None = None) -> HeroCaptureState | None:
+        """Clear capture state and nudge the hero toward recovery."""
+        capture = getattr(self, "capture_state", None)
+        if capture is None:
+            return None
+        now_ms = int(sim_now_ms() if rescued_at_ms is None else rescued_at_ms)
+        self.capture_state = None
+        self.is_captured = False
+        self.state = HeroState.IDLE
+        self.can_attack = True
+        self.attack_blocked_reason = ""
+        self.target = None
+        self.target_position = None
+        self.path = []
+        self._path_goal = None
+        self._path_last_replan_ms = 0
+        self.pending_task = None
+        self.pending_task_building = None
+        self.llm_move_request = None
+        self.is_inside_building = False
+        self.inside_building = None
+        self.inside_timer = 0.0
+        self.hp = max(int(self.hp), max(1, int(self.max_hp // 4)))
+        self.damage_since_left_home = max(int(self.damage_since_left_home), 10)
+        self.intent = "returning_to_safety"
+        try:
+            self.record_decision(
+                action="returning_to_safety",
+                reason=f"rescued from {capture.captor_boss_name or capture.captor_boss_id}",
+                now_ms=now_ms,
+                context={
+                    "captor_boss_id": capture.captor_boss_id,
+                    "captor_boss_name": capture.captor_boss_name,
+                    "captor_boss_type": capture.captor_boss_type,
+                    "location_id": capture.location_id,
+                    "location_name": capture.location_name,
+                    "source_chain_id": capture.source_chain_id,
+                    "source_chain_type": capture.source_chain_type,
+                },
+            )
+        except Exception:
+            pass
+        try:
+            self.record_profile_memory(
+                event_type="rescued",
+                sim_time_ms=now_ms,
+                summary=f"Rescued from {capture.captor_boss_name or capture.captor_boss_id}",
+                subject_type="boss",
+                subject_id=capture.captor_boss_id,
+                subject_name=capture.captor_boss_name,
+                world_pos=(float(self.x), float(self.y)),
+                importance=3,
+            )
+        except Exception:
+            pass
+        return capture

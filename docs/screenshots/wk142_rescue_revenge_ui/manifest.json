@@ -1,0 +1,192 @@
+{
+  "schema_version": "1.1",
+  "run": {
+    "scenario": "ui_panels",
+    "seed": 3,
+    "run_dir": "wk142_rescue_revenge_ui",
+    "size": {
+      "w": 1920,
+      "h": 1080
+    },
+    "ticks_per_shot": 600,
+    "dt": 0.016666666666666666
+  },
+  "outputs": [
+    {
+      "index": 0,
+      "filename": "ui_panels_hero.png",
+      "relpath": "ui_panels_hero.png",
+      "label": "UI Panels: Hero Selected (Right Panel)",
+      "scenario": "ui_panels",
+      "seed": 3,
+      "size": {
+        "w": 1920,
+        "h": 1080
+      },
+      "camera": {
+        "center_x": 4016.0,
+        "center_y": 4016.0,
+        "zoom": 1.4
+      },
+      "sha256": "a737a007dcc7f5d237feca4f018e996c328cfed658c76adbca6793640658365d",
+      "meta": {
+        "scenario": "ui_panels",
+        "mode": "hero"
+      }
+    },
+    {
+      "index": 1,
+      "filename": "ui_panels_hidden.png",
+      "relpath": "ui_panels_hidden.png",
+      "label": "UI Panels: Right Panel Hidden",
+      "scenario": "ui_panels",
+      "seed": 3,
+      "size": {
+        "w": 1920,
+        "h": 1080
+      },
+      "camera": {
+        "center_x": 4016.0,
+        "center_y": 4016.0,
+        "zoom": 1.4
+      },
+      "sha256": "df5fd1a2aa0515722b67a730ff3faeb67f8d1318609a43dabaa2b1d09d09f771",
+      "meta": {
+        "scenario": "ui_panels",
+        "mode": "hidden"
+      }
+    },
+    {
+      "index": 2,
+      "filename": "ui_panels_building.png",
+      "relpath": "ui_panels_building.png",
+      "label": "UI Panels: Building Selected (Right Panel)",
+      "scenario": "ui_panels",
+      "seed": 3,
+      "size": {
+        "w": 1920,
+        "h": 1080
+      },
+      "camera": {
+        "center_x": 4016.0,
+        "center_y": 4016.0,
+        "zoom": 1.4
+      },
+      "sha256": "ddfeda08f5f103b6fe88f902bc3d2c26a388c9d4da130148d414e47e54c5e153",
+      "meta": {
+        "scenario": "ui_panels",
+        "mode": "building"
+      }
+    },
+    {
+      "index": 3,
+      "filename": "ui_panels_debug.png",
+      "relpath": "ui_panels_debug.png",
+      "label": "UI Panels: Debug Panel Open",
+      "scenario": "ui_panels",
+      "seed": 3,
+      "size": {
+        "w": 1920,
+        "h": 1080
+      },
+      "camera": {
+        "center_x": 4016.0,
+        "center_y": 4016.0,
+        "zoom": 1.4
+      },
+      "sha256": "e28a076192ef7dccf95e622db4191d932687541eb488ef8faa7fbe0fd26862bf",
+      "meta": {
+        "scenario": "ui_panels",
+        "mode": "debug"
+      }
+    },
+    {
+      "index": 4,
+      "filename": "ui_panels_tax_collector.png",
+      "relpath": "ui_panels_tax_collector.png",
+      "label": "UI Panels: Tax Collector Selected (Left Panel)",
+      "scenario": "ui_panels",
+      "seed": 3,
+      "size": {
+        "w": 1920,
+        "h": 1080
+      },
+      "camera": {
+        "center_x": 4016.0,
+        "center_y": 4016.0,
+        "zoom": 1.4
+      },
+      "sha256": "a1eae8abd8ac39faf1cf8a944b967a3d2c2963d99880528f521469288fa0f1bb",
+      "meta": {
+        "scenario": "ui_panels",
+        "mode": "tax_collector"
+      }
+    },
+    {
+      "index": 5,
+      "filename": "ui_panels_sidebar_split.png",
+      "relpath": "ui_panels_sidebar_split.png",
+      "label": "UI Panels: Pinned Watch + Hero Split (WK61-R10)",
+      "scenario": "ui_panels",
+      "seed": 3,
+      "size": {
+        "w": 1920,
+        "h": 1080
+      },
+      "camera": {
+        "center_x": 4016.0,
+        "center_y": 4016.0,
+        "zoom": 1.4
+      },
+      "sha256": "95946431a203e5de89eaaa7b27b29b6b3348b3a483b45c22be25d86d866b1967",
+      "meta": {
+        "scenario": "ui_panels",
+        "mode": "sidebar_split"
+      }
+    },
+    {
+      "index": 6,
+      "filename": "ui_panels_marketplace_tax.png",
+      "relpath": "ui_panels_marketplace_tax.png",
+      "label": "UI Panels: Marketplace Taxable Gold $42 (WK61-R10)",
+      "scenario": "ui_panels",
+      "seed": 3,
+      "size": {
+        "w": 1920,
+        "h": 1080
+      },
+      "camera": {
+        "center_x": 4016.0,
+        "center_y": 4016.0,
+        "zoom": 1.4
+      },
+      "sha256": "5473141a57730cb9c79b7550aa73bd108be64aa00e876d56c60b8f6a24748cbc",
+      "meta": {
+        "scenario": "ui_panels",
+        "mode": "marketplace_tax"
+      }
+    },
+    {
+      "index": 7,
+      "filename": "ui_panels_pinned_chat.png",
+      "relpath": "ui_panels_pinned_chat.png",
+      "label": "UI Panels: Pinned Watch Hero + Chat Open (WK115 BUG 3)",
+      "scenario": "ui_panels",
+      "seed": 3,
+      "size": {
+        "w": 1920,
+        "h": 1080
+      },
+      "camera": {
+        "center_x": 4016.0,
+        "center_y": 4016.0,
+        "zoom": 1.4
+      },
+      "sha256": "48be27c3ef51f7a822b74a11b4ab8361a8a0b85faaa65327146d5574872fa7e9",
+      "meta": {
+        "scenario": "ui_panels",
+        "mode": "pinned_chat"
+      }
+    }
+  ]
+}

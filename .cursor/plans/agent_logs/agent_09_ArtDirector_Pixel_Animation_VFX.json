@@ -616,6 +616,76 @@
           ]
         }
       }
+    },
+    "wk142_dynamic_rescue_revenge": {
+      "sprint_meta": {
+        "created_utc": "2026-06-15T00:00:00Z",
+        "plan_ref": ".cursor/plans/wk142_dynamic_rescue_revenge.plan.md",
+        "notes": "Wave 2 visual readability verification. Existing WK139/WK141 boss/elite language already makes Blackbanner rescue/revenge targets readable, so no renderer changes were needed."
+      },
+      "rounds": {
+        "r2_wave1_gate_wave2_kickoff": {
+          "sprint_id": "wk142_dynamic_rescue_revenge",
+          "round_id": "r2_wave1_gate_wave2_kickoff",
+          "prompt_text": "Verify whether existing WK139/WK141 boss/elite visual language already makes captive/revenge targets readable. Prefer tests/screenshots over new visuals. If minimal markers are needed, keep them deterministic and renderer-only.",
+          "status": "done",
+          "what_i_changed": [
+            "Added tests/test_wk142_rescue_visuals.py to pin the existing boss crown/name/telegraph and elite badge language for Rusk Blackbanner and the Blackbanner Toll-Taker. The test proves no new renderer markers are needed for this wave.",
+            "Captured docs/screenshots/wk142_rescue_revenge_boss/boss_encounter_showcase.png with the existing deterministic boss showcase scenario and inspected the PNG. The same boss/elite language stays readable at gameplay zoom.",
+            "Left game/graphics/** unchanged; this wave was proof-first, not a visual rewrite."
+          ],
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk142_rescue_visuals.py tests/test_wk141_blackbanner_visuals.py -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/capture_screenshots.py --scenario boss_encounter_showcase --seed 3 --out docs/screenshots/wk142_rescue_revenge_boss --size 1920x1080 --ticks 900",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "note": "Completed in a hidden background run because the foreground shell timed out; final log tail ended with '[qa_smoke] DONE: PASS'."
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "visual_verdict": "Existing WK139/WK141 visuals are sufficient: the boss crown, name plate, elite badge, and telegraph badge remain readable, so no new renderer-only markers were needed.",
+            "screenshot_paths_inspected": [
+              "docs/screenshots/wk142_rescue_revenge_boss/boss_encounter_showcase.png",
+              "docs/screenshots/wk141_blackbanner_boss/rusk_toll_banner_showcase.png",
+              "docs/screenshots/wk141_blackbanner_boss/rusk_smoke_retreat_showcase.png"
+            ],
+            "pytest": {
+              "cmd": "python -m pytest tests/test_wk142_rescue_visuals.py tests/test_wk141_blackbanner_visuals.py -q",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "capture_screenshots": {
+              "cmd": "python tools/capture_screenshots.py --scenario boss_encounter_showcase --seed 3 --out docs/screenshots/wk142_rescue_revenge_boss --size 1920x1080 --ticks 900",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke": {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "evidence": "[qa_smoke] DONE: PASS"
+            },
+            "json_tool": {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": []
+        }
+      }
     }
   }
 }

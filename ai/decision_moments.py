@@ -435,6 +435,8 @@ def determine_decision_moment(hero: Any, game_state: dict, *, now_ms: int) -> De
     Ordering: low-health combat > quest offer (WK126) > quest chain (WK138) >
     post-combat injured > rested-and-ready > shopping > idle activity.
     """
+    if getattr(hero, "is_captured", False) or _hero_state(hero) == HeroState.CAPTURED:
+        return None
     m = moment_low_health_combat(hero)
     if m is not None:
         return m

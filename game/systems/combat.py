@@ -24,6 +24,8 @@ class CombatSystem(GameSystem):
         WK2 contract: combat must hard-gate attack execution when hero.can_attack is False.
         Fallback for older heroes: do not allow attacks while inside buildings.
         """
+        if getattr(hero, "is_captured", False):
+            return False
         if hasattr(hero, "can_attack"):
             try:
                 return bool(getattr(hero, "can_attack"))
@@ -47,6 +49,9 @@ class CombatSystem(GameSystem):
         # No state attribute means legacy/test hero — allow attacks (backwards compat).
         if state is None:
             return True
+
+        if state == HeroState.CAPTURED:
+            return False
 
         if state == HeroState.FIGHTING:
             return True

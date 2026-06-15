@@ -5,6 +5,7 @@ import math
 
 from config import FOOD_MEAL_COST_GOLD, TILE_SIZE
 from ai.quest_chain_context import attach_blackbanner_chain_facts, summarize_quest_chains
+from ai.rescue_revenge_context import summarize_story_facts
 from game.sim.timebase import now_ms as sim_now_ms
 
 
@@ -140,6 +141,15 @@ class ContextBuilder:
                     for chain in summarized_chains
                 ]
                 context["quest_chains"] = summarized_chains
+
+        story_facts = summarize_story_facts(
+            captured_heroes=game_state.get("captured_heroes") or (),
+            rescue_opportunities=game_state.get("rescue_opportunities") or (),
+            boss_kill_memories=game_state.get("boss_kill_memories") or (),
+            revenge_opportunities=game_state.get("revenge_opportunities") or (),
+        )
+        if story_facts:
+            context.update(story_facts)
         
         # Add nearby enemies with details
         for enemy in game_state.get("enemies", []):

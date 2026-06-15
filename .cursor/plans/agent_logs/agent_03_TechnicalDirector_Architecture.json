@@ -486,6 +486,65 @@
           "follow_ups": []
         }
       }
+    },
+    "wk142_dynamic_rescue_revenge": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk142_dynamic_rescue_revenge.plan.md",
+        "created_utc": "2026-06-15T00:00:00Z",
+        "notes": "WK142 Wave 1 contract pass: added primitive capture/rescue/revenge read-model surfaces and empty-default engine wiring for AI/render consumers."
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "sprint_id": "wk142_dynamic_rescue_revenge",
+          "round_id": "r1_kickoff",
+          "status": "complete",
+          "what_i_changed": {
+            "summary": "Added frozen primitive read-model dataclasses for HeroCaptureState, RescueOpportunitySnapshot, BossKillMemory, and RevengeOpportunitySnapshot; exposed captured_heroes/rescue_opportunities/boss_kill_memories/revenge_opportunities as empty-default tuples on AiGameView and RenderSnapshot; and wired SimEngine to pass those tuples through when future systems expose the relevant read-model getters. Added a focused WK142 contract test covering frozen dataclasses, empty-default engine state, and stub-fed flow-through.",
+            "files_touched": [
+              "game/sim/contracts.py",
+              "game/sim/ai_view.py",
+              "game/sim/snapshot.py",
+              "game/sim_engine.py",
+              "tests/test_wk142_dynamic_rescue_contract.py",
+              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk142_dynamic_rescue_contract.py -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 124
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 124
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "wk142_contract": "3 passed, 1 warning in 4.90s. The new read-model dataclasses are frozen, primitive-only, and the fresh-engine / stub-fed contract pins behave as expected.",
+            "wk67_digest": "10 passed, 1 warning in 21.39s; the WK67 AI boundary stayed green and the keystone digest remained b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded.",
+            "qa_smoke": "PASS on the third run after two shell timeout retries; determinism_guard passed and the quick smoke suite finished 1941 passed, 5 skipped, 1 xfailed.",
+            "log_validation": "PASS; the agent log JSON validates with python -m json.tool after appending the WK142 round."
+          },
+          "blockers": [],
+          "follow_ups": []
+        }
+      }
     }
   }
 }

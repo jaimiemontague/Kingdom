@@ -15,13 +15,18 @@ from game.content.quest_chains import (
     ASSAULT_GATE,
     BLACKBANNERS_TOLL,
     BLACKBANNER_TOLL_TAKER_STORY_NAME,
+    BLACKBANNER_RESCUE,
+    BLACKBANNER_REVENGE,
     CLAIM_REWARD,
     COLLECT_ITEM,
     DELIVER_ITEM,
+    AVENGE_FALLEN_HERO,
     QUEST_CHAIN_DEFS,
     RELIC_OF_THE_OLD_SHRINE,
     INTERCEPT_TOLL_TAKER,
     designate_blackbanner_toll_taker,
+    RESCUE_HERO,
+    SLAY_NAMED_BOSS,
     SCOUT_LOCATION,
     SCOUT_FORTRESS,
     SLAY_BLACKBANNER,
@@ -32,6 +37,10 @@ from game.content.quest_chains import (
 from game.events import GameEventType
 from game.entities.enemy import Bandit, BanditLord
 from game.sim.contracts import (
+    BossKillMemory,
+    HeroCaptureState,
+    RescueOpportunitySnapshot,
+    RevengeOpportunitySnapshot,
     QuestChainHistorySummary,
     QuestChainPhaseSnapshot,
     QuestChainSnapshot,
@@ -80,6 +89,9 @@ class QuestChainSystem(GameSystem):
         self.chains: list[QuestChainInstance] = []
         self.completed_chains: list[QuestChainInstance] = []
         self.failed_chains: list[QuestChainInstance] = []
+        self._captured_heroes: dict[str, HeroCaptureState] = {}
+        self._rescue_chain_by_hero_id: dict[str, int] = {}
+        self._revenge_chain_by_pair: dict[tuple[str, str], int] = {}
         self._next_chain_id = 1
         self._event_bus: object | None = None
 
@@ -237,6 +249,270 @@ class QuestChainSystem(GameSystem):
         )
         return chain
 
+    def capture_blackbanner_hero(
+        self,
+        hero: object,
+        *,
+        killer: object,
+        source_chain: QuestChainInstance | None = None,
+        location_target: object | str | None = None,
+        ctx: SystemContext | None = None,
+        event_bus: object | None = None,
+        now_ms: int | None = None,
+    ) -> HeroCaptureState | None:
+        if hero is None or killer is None or not self._is_blackbanner_family_killer(killer):
+            return None
+
+        hero_id = _hero_id(hero, None)
+        if not hero_id:
+            return None
+
+        existing = self._captured_heroes.get(hero_id)
+        if existing is not None and str(getattr(existing, "status", "")) == "captured":
+            rescue_chain_id = self._rescue_chain_by_hero_id.get(hero_id)
+            rescue_chain = (
+                self.get_chain(rescue_chain_id, include_archived=False)
+                if rescue_chain_id is not None
+                else None
+            )
+            if rescue_chain is None or rescue_chain.chain_type != BLACKBANNER_RESCUE.chain_type or rescue_chain.status not in _LIVE_CHAIN_STATUSES:
+                rescue_chain = self.offer_blackbanner_rescue(
+                    existing,
+                    location_target=location_target,
+                    source_chain=source_chain or self._active_blackbanner_chain_for_hero(hero_id),
+                    ctx=ctx,
+                    event_bus=event_bus,
+                    now_ms=now_ms,
+                )
+                if rescue_chain is not None:
+                    self._rescue_chain_by_hero_id[str(existing.hero_id)] = int(rescue_chain.chain_id)
+            return existing
+
+        active_chain = source_chain or self._active_blackbanner_chain_for_hero(hero_id)
+        if active_chain is None:
+            return None
+        if active_chain.assigned_hero_id and str(active_chain.assigned_hero_id) != str(hero_id):
+            return None
+
+        target_info = self._blackbanner_location_target(active_chain, location_target, ctx)
+        now = int(sim_now_ms() if now_ms is None else now_ms)
+        capture = hero.begin_capture(
+            captor_boss_id=str(getattr(killer, "entity_id", "") or ""),
+            captor_boss_name=str(getattr(killer, "name", "") or ""),
+            captor_boss_type=str(getattr(killer, "enemy_type", "") or ""),
+            location_id=target_info.entity_id,
+            location_name=target_info.name,
+            source_chain_id=str(active_chain.chain_id),
+            source_chain_type=str(active_chain.chain_type),
+            captured_at_ms=now,
+        )
+        self._captured_heroes[hero_id] = capture
+
+        if active_chain.chain_type == BLACKBANNERS_TOLL.chain_type and active_chain.status == "active":
+            self.fail_chain(
+                active_chain.chain_id,
+                ctx=ctx,
+                event_bus=event_bus,
+                now_ms=now,
+                reason="hero_captured",
+            )
+
+        rescue_chain = self.offer_blackbanner_rescue(
+            capture,
+            location_target=target_info,
+            source_chain=active_chain,
+            ctx=ctx,
+            event_bus=event_bus,
+            now_ms=now,
+        )
+        if rescue_chain is not None:
+            self._rescue_chain_by_hero_id[str(capture.hero_id)] = int(rescue_chain.chain_id)
+        return capture
+
+    def offer_blackbanner_rescue(
+        self,
+        capture: HeroCaptureState | None = None,
+        *,
+        location_target: object | str | None = None,
+        source_chain: QuestChainInstance | None = None,
+        ctx: SystemContext | None = None,
+        event_bus: object | None = None,
+        now_ms: int | None = None,
+    ) -> QuestChainInstance | None:
+        if capture is None:
+            return None
+        hero_id = str(capture.hero_id)
+        if not hero_id:
+            return None
+
+        existing_id = self._rescue_chain_by_hero_id.get(hero_id)
+        if existing_id is not None:
+            existing = self.get_chain(existing_id, include_archived=False)
+            if existing is not None and existing.chain_type == BLACKBANNER_RESCUE.chain_type and existing.status in _LIVE_CHAIN_STATUSES:
+                return existing
+
+        target_info = self._blackbanner_location_target(source_chain, location_target, ctx)
+        now = int(sim_now_ms() if now_ms is None else now_ms)
+        facts = {
+            "captured_hero_id": capture.hero_id,
+            "captured_hero_name": capture.hero_name,
+            "captor_boss_id": capture.captor_boss_id,
+            "captor_boss_name": capture.captor_boss_name,
+            "captor_boss_type": capture.captor_boss_type,
+            "source_chain_id": capture.source_chain_id,
+            "source_chain_type": capture.source_chain_type,
+            "rescue_id": f"rescue_{capture.hero_id}",
+            "origin_target_id": target_info.entity_id,
+            "origin_target_name": target_info.name,
+            "origin_target_position": target_info.position,
+        }
+        chain = self.create_chain(
+            BLACKBANNER_RESCUE.chain_type,
+            origin_target=location_target if location_target is not None else target_info,
+            facts=facts,
+            event_bus=event_bus,
+            now_ms=now,
+        )
+        self._rescue_chain_by_hero_id[hero_id] = int(chain.chain_id)
+        return chain
+
+    def record_blackbanner_revenge(
+        self,
+        *,
+        boss: object,
+        hero: object,
+        source_chain: QuestChainInstance | None = None,
+        location_target: object | str | None = None,
+        ctx: SystemContext | None = None,
+        event_bus: object | None = None,
+        now_ms: int | None = None,
+    ) -> QuestChainInstance | None:
+        if hero is None or boss is None or getattr(hero, "is_captured", False):
+            return None
+        if not self._is_blackbanner_revenge_boss(boss):
+            return None
+
+        hero_id = _hero_id(hero, None)
+        boss_id = _hero_id(boss, None) or str(getattr(boss, "entity_id", "") or "")
+        if not hero_id or not boss_id:
+            return None
+
+        pair_key = (str(boss_id), str(hero_id))
+        existing_id = self._revenge_chain_by_pair.get(pair_key)
+        if existing_id is not None:
+            existing = self.get_chain(existing_id, include_archived=False)
+            if existing is not None and existing.chain_type == BLACKBANNER_REVENGE.chain_type and existing.status in _LIVE_CHAIN_STATUSES:
+                return existing
+
+        target_info = self._blackbanner_location_target(source_chain, location_target, ctx, boss=boss)
+        now = int(sim_now_ms() if now_ms is None else now_ms)
+        boss_name = str(getattr(boss, "name", "") or "Rusk Blackbanner")
+        boss_type = str(getattr(boss, "enemy_type", "") or "bandit_lord")
+        fallen_hero_name = _hero_name(hero, "")
+        revenge_id = f"revenge_{boss_id}_{hero_id}"
+        facts = {
+            "boss_target_id": str(boss_id),
+            "boss_target_entity_id": str(boss_id),
+            "boss_target_name": boss_name,
+            "boss_target_position": target_info.position,
+            "boss_target_story_name": boss_name,
+            "boss_target_phase_id": AVENGE_FALLEN_HERO,
+            "boss_target_revealed": True,
+            "boss_target_defeated": False,
+            "fallen_hero_id": hero_id,
+            "fallen_hero_name": fallen_hero_name,
+            "revenge_id": revenge_id,
+            "revenge_chain_id": revenge_id,
+            "target_location_id": target_info.entity_id,
+            "target_location_name": target_info.name,
+            "target_location_position": target_info.position,
+            "source_chain_id": "" if source_chain is None else str(source_chain.chain_id),
+            "source_chain_type": "" if source_chain is None else str(source_chain.chain_type),
+        }
+        chain = self.create_chain(
+            BLACKBANNER_REVENGE.chain_type,
+            facts=facts,
+            event_bus=event_bus,
+            now_ms=now,
+        )
+        self._revenge_chain_by_pair[pair_key] = int(chain.chain_id)
+        self._prime_blackbanner_revenge_chain_state(
+            boss,
+            boss_id=str(boss_id),
+            boss_name=boss_name,
+            boss_type=boss_type,
+            fallen_hero_id=hero_id,
+            fallen_hero_name=fallen_hero_name,
+            location_target=target_info,
+            revenge_chain_id=str(chain.chain_id),
+            now_ms=now,
+        )
+        return chain
+
+    def offer_blackbanner_revenge(
+        self,
+        boss: object,
+        hero: object,
+        *,
+        source_chain: QuestChainInstance | None = None,
+        location_target: object | str | None = None,
+        ctx: SystemContext | None = None,
+        event_bus: object | None = None,
+        now_ms: int | None = None,
+    ) -> QuestChainInstance | None:
+        return self.record_blackbanner_revenge(
+            boss=boss,
+            hero=hero,
+            source_chain=source_chain,
+            location_target=location_target,
+            ctx=ctx,
+            event_bus=event_bus,
+            now_ms=now_ms,
+        )
+
+    def get_active_captured_hero_snapshots(self) -> tuple[HeroCaptureState, ...]:
+        if not self._captured_heroes:
+            return ()
+        return tuple(self._captured_heroes.values())
+
+    def get_active_captured_heroes(self) -> tuple[HeroCaptureState, ...]:
+        return self.get_active_captured_hero_snapshots()
+
+    def get_active_capture_snapshots(self) -> tuple[HeroCaptureState, ...]:
+        return self.get_active_captured_hero_snapshots()
+
+    def get_active_rescue_opportunity_snapshots(self) -> tuple[RescueOpportunitySnapshot, ...]:
+        if not self.chains:
+            return ()
+        opportunities: list[RescueOpportunitySnapshot] = []
+        for chain in self.chains:
+            if chain.chain_type != BLACKBANNER_RESCUE.chain_type or chain.status not in _LIVE_CHAIN_STATUSES:
+                continue
+            opportunities.append(self._rescue_snapshot(chain))
+        return tuple(opportunities)
+
+    def get_active_rescue_opportunities(self) -> tuple[RescueOpportunitySnapshot, ...]:
+        return self.get_active_rescue_opportunity_snapshots()
+
+    def get_active_rescue_views(self) -> tuple[RescueOpportunitySnapshot, ...]:
+        return self.get_active_rescue_opportunity_snapshots()
+
+    def get_active_revenge_opportunity_snapshots(self) -> tuple[RevengeOpportunitySnapshot, ...]:
+        if not self.chains:
+            return ()
+        opportunities: list[RevengeOpportunitySnapshot] = []
+        for chain in self.chains:
+            if chain.chain_type != BLACKBANNER_REVENGE.chain_type or chain.status not in _LIVE_CHAIN_STATUSES:
+                continue
+            opportunities.append(self._revenge_snapshot(chain))
+        return tuple(opportunities)
+
+    def get_active_revenge_opportunities(self) -> tuple[RevengeOpportunitySnapshot, ...]:
+        return self.get_active_revenge_opportunity_snapshots()
+
+    def get_active_revenge_views(self) -> tuple[RevengeOpportunitySnapshot, ...]:
+        return self.get_active_revenge_opportunity_snapshots()
+
     def offer_relic_of_the_old_shrine(
         self,
         *,
@@ -263,6 +539,7 @@ class QuestChainSystem(GameSystem):
     def accept_chain(
         self,
         chain_or_id: int | str | QuestChainInstance,
+        ctx: SystemContext | None = None,
         *,
         hero: object | None = None,
         hero_id: str | None = None,
@@ -276,6 +553,20 @@ class QuestChainSystem(GameSystem):
         resolved_hero_id = _hero_id(hero, hero_id)
         if chain.offered_to_hero_id and resolved_hero_id and chain.offered_to_hero_id != resolved_hero_id:
             return False
+        if chain.chain_type == BLACKBANNER_RESCUE.chain_type:
+            captured_hero_id = str(chain.facts.get("captured_hero_id", "") or "")
+            capture_state = self._captured_heroes.get(captured_hero_id)
+            if capture_state is None or str(getattr(capture_state, "status", "")) != "captured":
+                return False
+        if chain.chain_type == BLACKBANNER_REVENGE.chain_type and ctx is not None:
+            boss_target_id = str(
+                chain.facts.get("boss_target_entity_id", "")
+                or chain.facts.get("boss_target_id", "")
+                or ""
+            )
+            boss_target = self._find_target_by_id(ctx, boss_target_id) if boss_target_id else None
+            if boss_target is None or not bool(getattr(boss_target, "is_alive", True)):
+                return False
 
         now = int(sim_now_ms() if now_ms is None else now_ms)
         chain.status = "active"
@@ -360,6 +651,7 @@ class QuestChainSystem(GameSystem):
     def fail_chain(
         self,
         chain_or_id: int | str | QuestChainInstance,
+        ctx: SystemContext | None = None,
         *,
         event_bus: object | None = None,
         now_ms: int | None = None,
@@ -386,6 +678,7 @@ class QuestChainSystem(GameSystem):
             now_ms=now,
             reason=str(reason),
         )
+        self._cleanup_blackbanner_chain_runtime_state(chain, ctx=ctx, completed=False, reason=str(reason))
         if chain.chain_type == BLACKBANNERS_TOLL.chain_type:
             self._clear_blackbanner_runtime_refs(chain)
         self._archive_chain(chain, failed=True)
@@ -395,6 +688,7 @@ class QuestChainSystem(GameSystem):
         self,
         chain_or_id: int | str | QuestChainInstance,
         hero: object,
+        ctx: SystemContext | None = None,
         *,
         event_bus: object | None = None,
         now_ms: int | None = None,
@@ -430,6 +724,7 @@ class QuestChainSystem(GameSystem):
             reward_gold=reward,
             now_ms=now,
         )
+        self._cleanup_blackbanner_chain_runtime_state(chain, ctx=ctx, completed=True, reason="completed")
         if chain.chain_type == BLACKBANNERS_TOLL.chain_type:
             self._clear_blackbanner_runtime_refs(chain)
         self._archive_chain(chain, failed=False)
@@ -443,27 +738,74 @@ class QuestChainSystem(GameSystem):
         if not self.chains:
             return
         _ = dt
+        event_bus = getattr(ctx, "event_bus", None)
+        now = int(sim_now_ms())
 
         for chain in list(self.chains):
-            if chain.status != "active":
-                continue
-
-            hero = _find_hero(ctx.heroes or [], chain.assigned_hero_id)
-            if hero is None or not getattr(hero, "is_alive", True):
-                self.fail_chain(chain, event_bus=getattr(ctx, "event_bus", None), reason="hero_lost")
+            if chain.status not in _LIVE_CHAIN_STATUSES:
                 continue
 
             definition = self.get_definition(chain.chain_type)
             if chain.current_phase_index >= len(definition.phases):
-                self.complete_chain(chain, hero, event_bus=getattr(ctx, "event_bus", None))
+                hero = _find_hero(ctx.heroes or [], chain.assigned_hero_id)
+                if hero is None or not getattr(hero, "is_alive", True):
+                    self.fail_chain(chain, ctx=ctx, event_bus=event_bus, now_ms=now, reason="hero_lost")
+                else:
+                    self.complete_chain(chain, hero, ctx=ctx, event_bus=event_bus, now_ms=now)
                 continue
 
             phase = definition.phases[chain.current_phase_index]
             objective_type = str(phase.objective_type)
+
+            if chain.chain_type == BLACKBANNER_RESCUE.chain_type:
+                captured_hero_id = str(chain.facts.get("captured_hero_id", "") or "")
+                capture_state = self._captured_heroes.get(captured_hero_id)
+                if capture_state is None or str(getattr(capture_state, "status", "")) != "captured":
+                    self.fail_chain(chain, ctx=ctx, event_bus=event_bus, now_ms=now, reason="captured_target_missing")
+                    continue
+                target_info = self._resolve_live_target(chain, phase, ctx, allow_missing=False)
+                if target_info is None or target_info.position is None:
+                    self.fail_chain(chain, ctx=ctx, event_bus=event_bus, now_ms=now, reason="target_missing")
+                    continue
+                if chain.status == "offered":
+                    continue
+                hero = _find_hero(ctx.heroes or [], chain.assigned_hero_id)
+                if hero is None or not getattr(hero, "is_alive", True):
+                    self.fail_chain(chain, ctx=ctx, event_bus=event_bus, now_ms=now, reason="hero_lost")
+                    continue
+                if self._hero_reached_target(hero, target_info.position):
+                    self.complete_chain(chain, hero, ctx=ctx, event_bus=event_bus, now_ms=now)
+                continue
+
+            if chain.chain_type == BLACKBANNER_REVENGE.chain_type:
+                boss_target_id = str(
+                    chain.facts.get("boss_target_entity_id", "")
+                    or chain.facts.get("boss_target_id", "")
+                    or ""
+                )
+                boss_target = self._find_target_by_id(ctx, boss_target_id) if boss_target_id else None
+                boss_alive = boss_target is not None and bool(getattr(boss_target, "is_alive", True))
+                if chain.status == "offered":
+                    if not boss_alive:
+                        self.fail_chain(chain, ctx=ctx, event_bus=event_bus, now_ms=now, reason="target_missing")
+                    continue
+                hero = _find_hero(ctx.heroes or [], chain.assigned_hero_id)
+                if hero is None or not getattr(hero, "is_alive", True):
+                    self.fail_chain(chain, ctx=ctx, event_bus=event_bus, now_ms=now, reason="hero_lost")
+                    continue
+                if not boss_alive:
+                    self.complete_chain(chain, hero, ctx=ctx, event_bus=event_bus, now_ms=now)
+                continue
+
+            hero = _find_hero(ctx.heroes or [], chain.assigned_hero_id)
+            if hero is None or not getattr(hero, "is_alive", True):
+                self.fail_chain(chain, ctx=ctx, event_bus=event_bus, now_ms=now, reason="hero_lost")
+                continue
+
             allow_missing = objective_type in (INTERCEPT_TOLL_TAKER, ASSAULT_GATE, SLAY_BLACKBANNER)
             target_info = self._resolve_live_target(chain, phase, ctx, allow_missing=allow_missing)
             if target_info is None:
-                self.fail_chain(chain, event_bus=getattr(ctx, "event_bus", None), reason="target_missing")
+                self.fail_chain(chain, ctx=ctx, event_bus=event_bus, now_ms=now, reason="target_missing")
                 continue
 
             if objective_type == SCOUT_LOCATION:
@@ -828,6 +1170,320 @@ class QuestChainSystem(GameSystem):
             if hero_name:
                 chain.facts[f"{fact_prefix}_defeated_by_hero_name"] = hero_name
 
+    def _active_blackbanner_chain_for_hero(self, hero_id: str) -> QuestChainInstance | None:
+        if not hero_id:
+            return None
+        for chain in self.chains:
+            if chain.chain_type != BLACKBANNERS_TOLL.chain_type:
+                continue
+            if chain.status not in _LIVE_CHAIN_STATUSES:
+                continue
+            if str(chain.assigned_hero_id or "") == str(hero_id):
+                return chain
+        return None
+
+    @staticmethod
+    def _is_blackbanner_family_killer(killer: object) -> bool:
+        enemy_type = str(getattr(killer, "enemy_type", "") or "")
+        enemy_name = str(getattr(killer, "name", "") or "")
+        elite_story_name = str(getattr(killer, "elite_story_name", "") or "")
+        return (
+            (enemy_type == "bandit_lord" and enemy_name == "Rusk Blackbanner")
+            or elite_story_name == BLACKBANNER_TOLL_TAKER_STORY_NAME
+        )
+
+    @staticmethod
+    def _is_blackbanner_revenge_boss(boss: object) -> bool:
+        boss_type = str(getattr(boss, "enemy_type", "") or "")
+        boss_name = str(getattr(boss, "name", "") or "")
+        return boss_type == "bandit_lord" and boss_name == "Rusk Blackbanner"
+
+    def _blackbanner_location_target(
+        self,
+        source_chain: QuestChainInstance | None,
+        location_target: object | str | None,
+        ctx: SystemContext | None,
+        *,
+        boss: object | None = None,
+    ) -> _TargetInfo:
+        if location_target is not None:
+            return self._capture_target(location_target)
+
+        if source_chain is not None:
+            origin_info = _TargetInfo(
+                entity_id=str(source_chain.facts.get("fortress_target_entity_id", "") or ""),
+                name=str(source_chain.facts.get("fortress_target_name", "") or ""),
+                position=source_chain.facts.get("fortress_target_position", None),
+            )
+            if origin_info.entity_id or origin_info.name or origin_info.position is not None:
+                return origin_info
+
+        if boss is not None:
+            boss_pos = self._entity_position(boss)
+            return _TargetInfo(
+                entity_id=str(getattr(boss, "entity_id", "") or ""),
+                name=str(getattr(boss, "name", "") or ""),
+                position=boss_pos,
+            )
+
+        if ctx is not None:
+            target = self._find_blackbanner_fortress_target(ctx)
+            if target is not None:
+                return self._capture_target(target)
+
+        return _TargetInfo(
+            entity_id="poi_bandit_fortress",
+            name="Bandit Fortress",
+            position=None,
+        )
+
+    def _prime_blackbanner_revenge_chain_state(
+        self,
+        boss: object,
+        *,
+        boss_id: str,
+        boss_name: str,
+        boss_type: str,
+        fallen_hero_id: str,
+        fallen_hero_name: str,
+        location_target: _TargetInfo,
+        revenge_chain_id: str,
+        now_ms: int,
+    ) -> None:
+        memory = BossKillMemory(
+            boss_id=str(boss_id),
+            boss_name=str(boss_name),
+            boss_type=str(boss_type),
+            fallen_hero_id=str(fallen_hero_id),
+            fallen_hero_name=str(fallen_hero_name),
+            location_id=str(location_target.entity_id or ""),
+            location_name=str(location_target.name or ""),
+            killed_at_ms=int(now_ms),
+            revenge_chain_id=str(revenge_chain_id),
+            status="remembered",
+        )
+        snapshot = RevengeOpportunitySnapshot(
+            revenge_id=str(revenge_chain_id or f"revenge_{boss_id}_{fallen_hero_id}"),
+            boss_id=str(boss_id),
+            boss_name=str(boss_name),
+            boss_type=str(boss_type),
+            fallen_hero_id=str(fallen_hero_id),
+            fallen_hero_name=str(fallen_hero_name),
+            target_location_id=str(location_target.entity_id or ""),
+            target_location_name=str(location_target.name or ""),
+            current_phase_id=AVENGE_FALLEN_HERO,
+            current_phase_title="Avenge the Fallen",
+            revenge_chain_id=str(revenge_chain_id or f"revenge_{boss_id}_{fallen_hero_id}"),
+            status="active",
+            offered_at_ms=int(now_ms),
+        )
+        setattr(boss, "_wk142_blackbanner_kill_memory", memory)
+        setattr(boss, "_wk142_blackbanner_revenge_snapshot", snapshot)
+        setattr(boss, "blackbanner_revenge_chain_id", str(revenge_chain_id))
+        setattr(boss, "blackbanner_revenge_chain_status", "active")
+        setattr(boss, "blackbanner_revenge_boss_id", str(boss_id))
+        setattr(boss, "blackbanner_revenge_boss_name", str(boss_name))
+        setattr(boss, "blackbanner_revenge_boss_type", str(boss_type))
+        setattr(boss, "blackbanner_revenge_fallen_hero_id", str(fallen_hero_id))
+        setattr(boss, "blackbanner_revenge_fallen_hero_name", str(fallen_hero_name))
+        setattr(boss, "blackbanner_revenge_location_id", str(location_target.entity_id or ""))
+        setattr(boss, "blackbanner_revenge_location_name", str(location_target.name or ""))
+        setattr(boss, "blackbanner_revenge_current_phase_id", AVENGE_FALLEN_HERO)
+        setattr(boss, "blackbanner_revenge_current_phase_title", "Avenge the Fallen")
+        setattr(boss, "blackbanner_revenge_offered_at_ms", int(now_ms))
+
+    def _attach_blackbanner_kill_hook(
+        self,
+        enemy: object,
+        *,
+        ctx: SystemContext | None,
+        event_bus: object | None,
+    ) -> None:
+        add_hook = getattr(enemy, "add_hero_killed_hook", None)
+        if not callable(add_hook):
+            return
+        if bool(getattr(enemy, "_wk142_blackbanner_kill_hook_attached", False)):
+            return
+
+        def _on_hero_killed(hero: object, *, killer: object | None = None, now_ms: int | None = None) -> None:
+            self._on_blackbanner_hero_killed(
+                hero,
+                killer=killer or enemy,
+                ctx=ctx,
+                event_bus=event_bus,
+                now_ms=now_ms,
+            )
+
+        add_hook(_on_hero_killed)
+        setattr(enemy, "_wk142_blackbanner_kill_hook_attached", True)
+
+    def _on_blackbanner_hero_killed(
+        self,
+        hero: object,
+        *,
+        killer: object,
+        ctx: SystemContext | None,
+        event_bus: object | None,
+        now_ms: int | None = None,
+    ) -> None:
+        hero_id = _hero_id(hero, None)
+        if not hero_id:
+            return
+        killer_name = str(getattr(killer, "name", "") or "")
+        killer_type = str(getattr(killer, "enemy_type", "") or "")
+        if not self._is_blackbanner_family_killer(killer):
+            return
+
+        active_chain = self._active_blackbanner_chain_for_hero(hero_id)
+        if active_chain is not None and active_chain.assigned_hero_id == hero_id:
+            if killer_type == "bandit_lord" or killer_name == BLACKBANNER_TOLL_TAKER_STORY_NAME:
+                capture_target = self._blackbanner_location_target(active_chain, None, ctx)
+                self.capture_blackbanner_hero(
+                    hero,
+                    killer=killer,
+                    source_chain=active_chain,
+                    location_target=capture_target,
+                    ctx=ctx,
+                    event_bus=event_bus,
+                    now_ms=now_ms,
+                )
+                return
+
+        if killer_type == "bandit_lord" and killer_name == "Rusk Blackbanner":
+            self.record_blackbanner_revenge(
+                boss=killer,
+                hero=hero,
+                source_chain=active_chain,
+                location_target=self._blackbanner_location_target(active_chain, None, ctx, boss=killer),
+                ctx=ctx,
+                event_bus=event_bus,
+                now_ms=now_ms,
+            )
+
+    def _rescue_snapshot(self, chain: QuestChainInstance) -> RescueOpportunitySnapshot:
+        captured_hero_id = str(chain.facts.get("captured_hero_id", "") or "")
+        definition = self.get_definition(chain.chain_type)
+        phase = definition.phases[min(chain.current_phase_index, len(definition.phases) - 1)] if definition.phases else None
+        current_phase_title = str(phase.title if phase is not None else "")
+        return RescueOpportunitySnapshot(
+            rescue_id=str(chain.facts.get("rescue_id", "") or f"rescue_{captured_hero_id or chain.chain_id}"),
+            captured_hero_id=captured_hero_id,
+            captured_hero_name=str(chain.facts.get("captured_hero_name", "") or ""),
+            captor_boss_id=str(chain.facts.get("captor_boss_id", "") or ""),
+            captor_boss_name=str(chain.facts.get("captor_boss_name", "") or ""),
+            captor_boss_type=str(chain.facts.get("captor_boss_type", "") or ""),
+            target_location_id=str(chain.facts.get("origin_target_id", "") or ""),
+            target_location_name=str(chain.facts.get("origin_target_name", "") or ""),
+            current_phase_id=str(chain.current_phase_id or ""),
+            current_phase_title=current_phase_title,
+            source_chain_id=str(chain.facts.get("source_chain_id", "") or ""),
+            source_chain_type=str(chain.facts.get("source_chain_type", "") or ""),
+            status=str(chain.status),
+            offered_at_ms=int(chain.offered_at_ms or 0),
+        )
+
+    def _revenge_snapshot(self, chain: QuestChainInstance) -> RevengeOpportunitySnapshot:
+        boss_target_id = str(chain.facts.get("boss_target_id", "") or chain.facts.get("boss_target_entity_id", "") or "")
+        definition = self.get_definition(chain.chain_type)
+        phase = definition.phases[min(chain.current_phase_index, len(definition.phases) - 1)] if definition.phases else None
+        current_phase_title = str(phase.title if phase is not None else "")
+        return RevengeOpportunitySnapshot(
+            revenge_id=str(chain.facts.get("revenge_id", "") or chain.facts.get("revenge_chain_id", "") or f"revenge_{boss_target_id or chain.chain_id}"),
+            boss_id=boss_target_id,
+            boss_name=str(chain.facts.get("boss_target_name", "") or ""),
+            boss_type=str(chain.facts.get("boss_target_story_name", "") or chain.facts.get("boss_target_type", "") or ""),
+            fallen_hero_id=str(chain.facts.get("fallen_hero_id", "") or ""),
+            fallen_hero_name=str(chain.facts.get("fallen_hero_name", "") or ""),
+            target_location_id=str(chain.facts.get("target_location_id", "") or ""),
+            target_location_name=str(chain.facts.get("target_location_name", "") or ""),
+            current_phase_id=str(chain.current_phase_id or ""),
+            current_phase_title=current_phase_title,
+            revenge_chain_id=str(chain.facts.get("revenge_chain_id", "") or ""),
+            status=str(chain.status),
+            offered_at_ms=int(chain.offered_at_ms or 0),
+        )
+
+    def _clear_blackbanner_rescue_state(
+        self,
+        chain: QuestChainInstance,
+        *,
+        ctx: SystemContext | None,
+        release_captive: bool,
+    ) -> None:
+        hero_id = str(chain.facts.get("captured_hero_id", "") or "")
+        if hero_id:
+            self._rescue_chain_by_hero_id.pop(hero_id, None)
+        if not release_captive:
+            return
+        capture = self._captured_heroes.pop(hero_id, None)
+        if capture is None or ctx is None:
+            return
+        hero = _find_hero(ctx.heroes or [], hero_id)
+        if hero is None:
+            return
+        try:
+            hero.release_capture(rescued_at_ms=int(chain.completed_at_ms or chain.failed_at_ms or sim_now_ms()))
+        except Exception:
+            pass
+
+    def _clear_blackbanner_revenge_state_for_chain(
+        self,
+        chain: QuestChainInstance,
+        *,
+        ctx: SystemContext | None,
+    ) -> None:
+        boss_id = str(chain.facts.get("boss_target_entity_id", "") or chain.facts.get("boss_target_id", "") or "")
+        hero_id = str(chain.facts.get("fallen_hero_id", "") or "")
+        if boss_id and hero_id:
+            self._revenge_chain_by_pair.pop((boss_id, hero_id), None)
+        if ctx is None or not boss_id:
+            return
+        boss = self._find_target_by_id(ctx, boss_id)
+        if boss is None:
+            return
+        for attr in (
+            "_wk142_blackbanner_kill_memory",
+            "_wk142_blackbanner_revenge_snapshot",
+            "blackbanner_revenge_chain_id",
+            "blackbanner_revenge_chain_status",
+            "blackbanner_revenge_boss_id",
+            "blackbanner_revenge_boss_name",
+            "blackbanner_revenge_boss_type",
+            "blackbanner_revenge_fallen_hero_id",
+            "blackbanner_revenge_fallen_hero_name",
+            "blackbanner_revenge_location_id",
+            "blackbanner_revenge_location_name",
+            "blackbanner_revenge_current_phase_id",
+            "blackbanner_revenge_current_phase_title",
+            "blackbanner_revenge_offered_at_ms",
+        ):
+            if hasattr(boss, attr):
+                try:
+                    delattr(boss, attr)
+                except Exception:
+                    try:
+                        setattr(boss, attr, "")
+                    except Exception:
+                        pass
+
+    def _cleanup_blackbanner_chain_runtime_state(
+        self,
+        chain: QuestChainInstance,
+        *,
+        ctx: SystemContext | None,
+        completed: bool,
+        reason: str,
+    ) -> None:
+        if chain.chain_type == BLACKBANNER_RESCUE.chain_type:
+            release_captive = bool(completed or reason in {"target_missing", "captured_target_missing", "target_lost", "invalid_target"})
+            self._clear_blackbanner_rescue_state(chain, ctx=ctx, release_captive=release_captive)
+            return
+        if chain.chain_type == BLACKBANNER_REVENGE.chain_type:
+            self._clear_blackbanner_revenge_state_for_chain(chain, ctx=ctx)
+            return
+        if chain.chain_type == BLACKBANNERS_TOLL.chain_type:
+            self._clear_blackbanner_runtime_refs(chain)
+
     def _blackbanner_base_facts(
         self,
         *,
@@ -907,6 +1563,11 @@ class QuestChainSystem(GameSystem):
         if existing_id:
             existing = self._find_target_by_id(ctx, existing_id)
             if existing is not None:
+                self._attach_blackbanner_kill_hook(
+                    existing,
+                    ctx=ctx,
+                    event_bus=event_bus,
+                )
                 return existing
         fortress_position = chain.facts.get("fortress_target_position", None)
         if fortress_position is None:
@@ -927,6 +1588,7 @@ class QuestChainSystem(GameSystem):
         chain.facts["elite_target_name"] = str(getattr(elite, "elite_story_name", elite.name) or BLACKBANNER_TOLL_TAKER_STORY_NAME)
         chain.facts["elite_target_position"] = (float(elite.x), float(elite.y))
         chain.facts["elite_target_spawned_at_ms"] = int(sim_now_ms() if now_ms is None else now_ms)
+        self._attach_blackbanner_kill_hook(elite, ctx=ctx, event_bus=event_bus)
         return elite
 
     def _reveal_blackbanner_boss(
@@ -943,6 +1605,11 @@ class QuestChainSystem(GameSystem):
         if existing_id:
             existing = self._find_target_by_id(ctx, existing_id)
             if existing is not None:
+                self._attach_blackbanner_kill_hook(
+                    existing,
+                    ctx=ctx,
+                    event_bus=event_bus,
+                )
                 return existing
         boss_position = chain.facts.get("boss_target_position", None)
         if boss_position is None:
@@ -959,6 +1626,7 @@ class QuestChainSystem(GameSystem):
         chain.facts["boss_target_position"] = (float(boss.x), float(boss.y))
         chain.facts["boss_target_revealed"] = True
         chain.facts["boss_target_revealed_at_ms"] = now_ms
+        self._attach_blackbanner_kill_hook(boss, ctx=ctx, event_bus=event_bus)
         return boss
 
     def _blackbanner_enemy_defeated(self, chain: QuestChainInstance, *, kind: str, ctx: SystemContext) -> bool:
@@ -1013,6 +1681,8 @@ class QuestChainSystem(GameSystem):
     def _capture_target(self, target: object | str | None) -> _TargetInfo:
         if target is None:
             return _TargetInfo()
+        if isinstance(target, _TargetInfo):
+            return target
         if isinstance(target, str):
             readable = str(target).replace("poi_", "").replace("building_", "").replace("_", " ").title()
             return _TargetInfo(entity_id=str(target), name=readable, position=None)
@@ -1184,6 +1854,13 @@ def _hero_id(hero: object | None, hero_id: str | None) -> str | None:
         return None
     value = str(getattr(hero, "hero_id", "") or "").strip()
     return value or None
+
+
+def _hero_name(hero: object | None, fallback: str = "") -> str:
+    if hero is None:
+        return str(fallback or "")
+    value = str(getattr(hero, "name", "") or "").strip()
+    return value or str(fallback or "")
 
 
 def _find_hero(heroes: list, hero_id: str | None) -> object | None:

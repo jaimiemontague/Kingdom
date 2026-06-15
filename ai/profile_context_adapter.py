@@ -21,6 +21,7 @@ _MAX_ALLIES = 5
 _MAX_BOUNTIES = 5
 _MAX_POIS = 4
 _MAX_QUEST_CHAINS = 3
+_MAX_STORY_FACTS = 3
 
 
 def _compact_profile_dict(snapshot: HeroProfileSnapshot) -> dict[str, Any]:
@@ -119,6 +120,15 @@ def _compact_situation(hero: Any, game_state: dict) -> dict[str, Any]:
     quest_chains = list(full.get("quest_chains") or [])[:_MAX_QUEST_CHAINS]
     if quest_chains:
         out["quest_chains"] = quest_chains
+    for key in (
+        "captured_heroes",
+        "rescue_opportunities",
+        "boss_kill_memories",
+        "revenge_opportunities",
+    ):
+        items = list(full.get(key) or [])[:_MAX_STORY_FACTS]
+        if items:
+            out[key] = items
     # WK132: compact nearby-POI strings (<= _MAX_POIS). Key is OMITTED entirely
     # when no POIs are nearby — keeps the no-POI WK67 digest prompts unchanged.
     from ai.behaviors.poi_awareness import format_nearby_pois_compact
