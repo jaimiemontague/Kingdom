@@ -120,6 +120,9 @@ class Hero(HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin):
         self.accessory = None  # {"name","attack","defense","speed","max_hp","id"}
         self.backpack: list = []  # list[game.content.items.ItemDef] carried for selling
         self.backpack_capacity = 5
+        self.earned_titles: list[str] = []
+        self.current_title: str = ""
+        self.hero_title: str = ""
         # Shopping / purchase tracking (sim-time)
         self.last_purchase_ms: int | None = None
         self.last_purchase_type: str = ""
@@ -432,6 +435,52 @@ class Hero(HeroRestMixin, HeroEconomyMixin, HeroMemoryMixin):
         if self.add_to_backpack(item):
             return "stored"
         return "dropped"
+
+    def award_title(
+        self,
+        title: str,
+        *,
+        now_ms: int | None = None,
+        memory_summary: str = "",
+        subject_type: str = "boss",
+        subject_id: str = "",
+        subject_name: str = "",
+        tags: tuple[str, ...] = (),
+    ) -> str:
+        """Record an earned title and preserve it in profile memory."""
+        cleaned_title = str(title).strip()
+        if not cleaned_title:
+            return ""
+
+        earned_titles = getattr(self, "earned_titles", None)
+        if not isinstance(earned_titles, list):
+            earned_titles = [] if earned_titles is None else list(earned_titles)
+            self.earned_titles = earned_titles
+        if cleaned_title not in earned_titles:
+            earned_titles.append(cleaned_title)
+
+        self.current_title = cleaned_title
+        self.hero_title = cleaned_title
+
+        if now_ms is None:
+            now_ms = int(sim_now_ms())
+        summary = str(memory_summary or f"Earned title {cleaned_title}")
+        record_memory = getattr(self, "record_profile_memory", None)
+        if callable(record_memory):
+            try:
+                record_memory(
+                    event_type="title_awarded",
+                    sim_time_ms=int(now_ms),
+                    summary=summary,
+                    subject_type=str(subject_type),
+                    subject_id=str(subject_id),
+                    subject_name=str(subject_name),
+                    tags=tuple(tags),
+                    importance=3,
+                )
+            except Exception:
+                pass
+        return cleaned_title
 
     def sell_backpack_items(self, shop_building=None) -> int:
         """WK131: sell every carried backpack item at a shop.

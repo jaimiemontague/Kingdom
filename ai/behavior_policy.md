@@ -63,6 +63,14 @@ This can be extended later with an on-screen debug overlay or structured log sin
 - Survival gates still win. Critical health or low health with no potions can force `retreat_to_heal`.
 - A healthy but under-supplied hero may choose `prepare_supplies` before pressing on.
 
+## Ashwing's Hoard Policy
+
+- Use only structured dragon facts when they exist: chain phase, Dragon Cave / preparation target, Ashwing identity, boss phase, and the latest telegraph.
+- Do not invent a dragon weakness, kill result, or hoard reward. If the prompt does not provide a fact, the model must not claim it.
+- Preparation stays bounded: healthy stocked heroes can continue the hunt; under-supplied heroes may resupply; wounded or critically endangered heroes should retreat to heal.
+- Victory and revenge remain separate structured memories. Use `boss_kill_memories` and `revenge_opportunities` when they appear, but do not fabricate them.
+- The dragon hunt should read like a fair warning, not a prophecy: the prompt may describe the fire tell, but the model still has to choose from the allowed actions.
+
 
 
 

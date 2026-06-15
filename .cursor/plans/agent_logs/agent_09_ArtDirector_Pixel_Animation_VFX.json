@@ -686,6 +686,100 @@
           "follow_ups": []
         }
       }
+    },
+    "wk143_dragon_hunt_showcase": {
+      "sprint_meta": {
+        "created_utc": "2026-06-15T00:00:00Z",
+        "plan_ref": ".cursor/plans/wk143_dragon_hunt_showcase.plan.md",
+        "notes": "Wave 2 visual readability pass for Ashwing: dragon-specific sprite/aura markers, cone telegraph readability, resolved impact readability, and a render-only regression fix so the WK142 rescue visual pin still passes."
+      },
+      "rounds": {
+        "r2_wave1_gate_wave2_kickoff": {
+          "sprint_id": "wk143_dragon_hunt_showcase",
+          "round_id": "r2_wave1_gate_wave2_kickoff",
+          "prompt_text": "Make Ashwing, fire telegraph, impact, and hoard/phase visuals readable. Renderer must not mutate sim state. Screenshot loop is mandatory.",
+          "status": "partial",
+          "role": "WAVE W2 - render-only dragon readability pass: keep Ashwing distinct from WK142/Blackbanner visuals, make the fire telegraph and resolved impact easy to read, keep the dragon hoard/phase labels legible, and do not mutate sim state from the renderer.",
+          "what_i_changed": [
+            "game/graphics/enemy_sprites.py: added a procedural dragon sprite branch so Ashwing reads as a dragon body/wings/head/tail/flame silhouette instead of a generic enemy blob.",
+            "Repair: renamed the procedural sprite factory's local enemy-kind selector to `enemy_kind` / `body_kind` so the dragon path no longer depends on a shadow-prone `et` name, and added a direct regression pin for procedural dragon clip creation.",
+            "game/graphics/renderers/enemy_renderer.py: added dragon phase color mapping and a small dragon aura/phase label treatment so sleeping hoard / air and fire / wounded fury reads clearly without changing sim state.",
+            "game/graphics/vfx.py: added renderer-side dragon fire cone telegraph and impact overlays, including geometry inference from boss/hero positions, plus a render-only resolved-impact tint fix so the WK142 rescue telegraph regression stays green.",
+            "game/graphics/pygame_renderer.py: passed hero DTOs through to VFX rendering so cone direction can be inferred deterministically during captures.",
+            "tests/test_wk143_dragon_visuals.py: added proof renders for hoard phase, fire phase, telegraph, and impact plus a render-only mutation pin for the dragon DTO.",
+            "docs/screenshots/wk143_dragon_hunt_visuals/*.png and docs/screenshots/wk143_dragon_hunt_showcase/*.png: regenerated and inspected capture evidence for the dragon hunt showcase."
+          ],
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk143_dragon_visuals.py tests/test_wk142_rescue_visuals.py -q",
+              "exit_code": 0,
+              "result": "4 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk139_boss_visuals.py tests/test_wk142_rescue_visuals.py tests/test_wk143_dragon_visuals.py tests/test_wk143_dragon_capture_scenario.py -q",
+              "exit_code": 0,
+              "result": "8 passed, 1 warning"
+            },
+            {
+              "cmd": "python tools/capture_screenshots.py --scenario dragon_hunt_showcase --seed 3 --out docs/screenshots/wk143_dragon_hunt_showcase --size 1920x1080 --ticks 1200",
+              "exit_code": 0,
+              "result": "2 PNGs plus manifest written"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk143_dragon_visuals.py tests/test_wk142_rescue_visuals.py -q (repair rerun)",
+              "exit_code": 0,
+              "result": "5 passed, 1 warning"
+            },
+            {
+              "cmd": "python tools/capture_screenshots.py --scenario dragon_hunt_showcase --seed 3 --out docs/screenshots/wk143_dragon_hunt_visuals --size 1920x1080 --ticks 1200 (repair rerun)",
+              "exit_code": 0,
+              "result": "2 PNGs plus manifest written"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
+              "exit_code": 0,
+              "result": "JSON validation passed"
+            }
+          ],
+          "evidence": {
+            "visual_verdict": "Ashwing reads as a dragon boss, the fire cone telegraph is clearly visible before the hit, the resolved impact now reads as a deep red strike instead of another orange warning, the hoard/phase labels are legible at capture scale, and the procedural dragon clip path reran cleanly without the earlier NameError.",
+            "screenshot_paths_inspected": [
+              "docs/screenshots/wk143_dragon_hunt_showcase/dragon_hunt_showcase_world.png",
+              "docs/screenshots/wk143_dragon_hunt_showcase/dragon_hunt_showcase_ledger.png",
+              "docs/screenshots/wk143_dragon_hunt_visuals/wk143_dragon_hoard_phase.png",
+              "docs/screenshots/wk143_dragon_hunt_visuals/wk143_dragon_fire_phase.png",
+              "docs/screenshots/wk143_dragon_hunt_visuals/wk143_dragon_fire_telegraph.png",
+              "docs/screenshots/wk143_dragon_hunt_visuals/wk143_dragon_fire_impact.png"
+            ],
+            "pytest": {
+              "focused_gate": "python -m pytest tests/test_wk143_dragon_visuals.py tests/test_wk142_rescue_visuals.py -q -> 4 passed",
+              "broader_gate": "python -m pytest tests/test_wk139_boss_visuals.py tests/test_wk142_rescue_visuals.py tests/test_wk143_dragon_visuals.py tests/test_wk143_dragon_capture_scenario.py -q -> 8 passed, 1 warning"
+            },
+            "capture_screenshots": {
+              "cmd": "python tools/capture_screenshots.py --scenario dragon_hunt_showcase --seed 3 --out docs/screenshots/wk143_dragon_hunt_showcase --size 1920x1080 --ticks 1200",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "repair_capture": {
+              "cmd": "python tools/capture_screenshots.py --scenario dragon_hunt_showcase --seed 3 --out docs/screenshots/wk143_dragon_hunt_visuals --size 1920x1080 --ticks 1200",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "json_tool": {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [
+            "python tools/qa_smoke.py --quick was intentionally interrupted by PM before completion, so the long-running smoke gate was not finished in this turn."
+          ],
+          "follow_ups": [
+            "Resume qa_smoke only if PM re-asks for it; otherwise wait for the next QA pass.",
+            "No additional renderer edits are needed unless a later gate shows a new regression."
+          ]
+        }
+      }
     }
   }
 }

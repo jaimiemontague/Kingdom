@@ -11,7 +11,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from config import TILE_SIZE
+from game.content.bosses import ASHWING_BOSS_DEF
+from game.content.items import get_item
 from game.content.quest_chains import (
+    ASHWINGS_HOARD,
+    ASHWING_THE_RED_NAME,
+    ASHWINGS_HOARD_NAME,
+    CLAIM_HOARD,
     ASSAULT_GATE,
     BLACKBANNERS_TOLL,
     BLACKBANNER_TOLL_TAKER_STORY_NAME,
@@ -24,18 +30,21 @@ from game.content.quest_chains import (
     QUEST_CHAIN_DEFS,
     RELIC_OF_THE_OLD_SHRINE,
     INTERCEPT_TOLL_TAKER,
+    PREPARE_HUNT,
     designate_blackbanner_toll_taker,
     RESCUE_HERO,
     SLAY_NAMED_BOSS,
+    SCOUT_DRAGON_CAVE,
     SCOUT_LOCATION,
     SCOUT_FORTRESS,
     SLAY_BLACKBANNER,
+    SLAY_ASHWING,
     QuestChainDef,
     QuestPhaseDef,
     get_chain_def,
 )
 from game.events import GameEventType
-from game.entities.enemy import Bandit, BanditLord
+from game.entities.enemy import Bandit, BanditLord, Dragon
 from game.sim.contracts import (
     BossKillMemory,
     HeroCaptureState,
@@ -218,6 +227,38 @@ class QuestChainSystem(GameSystem):
             now_ms=now,
         )
 
+    def offer_ashwings_hoard(
+        self,
+        *,
+        ctx: SystemContext | None = None,
+        hero: object | None = None,
+        hero_id: str | None = None,
+        event_bus: object | None = None,
+        now_ms: int | None = None,
+    ) -> QuestChainInstance:
+        dragon_cave_target = self._find_first_target(ctx, preferred_ids=("poi_dragon_cave",))
+        prep_target = self._find_first_target(ctx, preferred_ids=("poi_shrine", "poi_ancient_ruins", "castle"))
+        if prep_target is None and ctx is not None:
+            prep_target = getattr(ctx, "castle", None) or dragon_cave_target
+        if dragon_cave_target is None and prep_target is not None:
+            dragon_cave_target = prep_target
+        now = int(sim_now_ms() if now_ms is None else now_ms)
+        facts = self._ashwing_base_facts(
+            chain_id=self._next_chain_id,
+            dragon_cave_target=dragon_cave_target,
+            prep_target=prep_target,
+            now_ms=now,
+        )
+        return self.create_chain(
+            ASHWINGS_HOARD.chain_type,
+            hero=hero,
+            hero_id=hero_id,
+            reward_gold=ASHWINGS_HOARD.reward_profile.gold,
+            facts=facts,
+            event_bus=event_bus if event_bus is not None else getattr(ctx, "event_bus", None),
+            now_ms=now,
+        )
+
     def start_blackbanners_toll(
         self,
         *,
@@ -245,6 +286,31 @@ class QuestChainSystem(GameSystem):
             chain,
             ctx=ctx,
             event_bus=event_bus if event_bus is not None else getattr(ctx, "event_bus", None),
+            now_ms=now_ms,
+        )
+        return chain
+
+    def start_ashwings_hoard(
+        self,
+        *,
+        ctx: SystemContext | None = None,
+        hero: object | None = None,
+        hero_id: str | None = None,
+        event_bus: object | None = None,
+        now_ms: int | None = None,
+    ) -> QuestChainInstance:
+        chain = self.offer_ashwings_hoard(
+            ctx=ctx,
+            hero=hero,
+            hero_id=hero_id,
+            event_bus=event_bus,
+            now_ms=now_ms,
+        )
+        self.accept_chain(
+            chain.chain_id,
+            hero=hero,
+            hero_id=hero_id,
+            event_bus=event_bus,
             now_ms=now_ms,
         )
         return chain
@@ -705,6 +771,70 @@ class QuestChainSystem(GameSystem):
                 add_gold(reward)
             else:
                 hero.gold = int(getattr(hero, "gold", 0) or 0) + int(reward)
+
+        reward_item_id = str(chain.facts.get("reward_item_id", "") or "")
+        if reward_item_id:
+            try:
+                reward_item = get_item(reward_item_id)
+            except Exception:
+                reward_item = None
+            if reward_item is not None:
+                receive_item = getattr(hero, "receive_item", None)
+                if callable(receive_item):
+                    try:
+                        receive_item(reward_item)
+                    except Exception:
+                        pass
+
+        reward_title = str(chain.facts.get("reward_title", "") or "")
+        if reward_title:
+            reward_summary = str(chain.facts.get("reward_memory_summary", "") or "")
+            subject_name = str(chain.facts.get("boss_target_name", "") or chain.name or "")
+            award_title = getattr(hero, "award_title", None)
+            if callable(award_title):
+                try:
+                    award_title(
+                        reward_title,
+                        now_ms=now,
+                        memory_summary=reward_summary,
+                        subject_type="boss",
+                        subject_id=str(chain.facts.get("boss_target_entity_id", "") or chain.facts.get("boss_target_id", "") or ""),
+                        subject_name=subject_name,
+                        tags=("title", "victory", "dragon"),
+                    )
+                except Exception:
+                    pass
+            else:
+                current_title = str(getattr(hero, "current_title", "") or "")
+                hero_title = str(getattr(hero, "hero_title", "") or "")
+                earned_titles = getattr(hero, "earned_titles", None)
+                if not isinstance(earned_titles, list):
+                    earned_titles = [] if earned_titles is None else list(earned_titles)
+                    try:
+                        setattr(hero, "earned_titles", earned_titles)
+                    except Exception:
+                        pass
+                if reward_title not in earned_titles:
+                    earned_titles.append(reward_title)
+                try:
+                    setattr(hero, "current_title", reward_title)
+                    setattr(hero, "hero_title", reward_title)
+                except Exception:
+                    pass
+                if callable(getattr(hero, "record_profile_memory", None)):
+                    try:
+                        hero.record_profile_memory(
+                            event_type="title_awarded",
+                            sim_time_ms=now,
+                            summary=reward_summary or f"Earned title {reward_title}",
+                            subject_type="boss",
+                            subject_id=str(chain.facts.get("boss_target_entity_id", "") or chain.facts.get("boss_target_id", "") or ""),
+                            subject_name=subject_name,
+                            tags=("title", "victory", "dragon"),
+                            importance=3,
+                        )
+                    except Exception:
+                        pass
         chain.status = "completed"
         chain.completed_at_ms = now
         self._record_history(
@@ -802,7 +932,7 @@ class QuestChainSystem(GameSystem):
                 self.fail_chain(chain, ctx=ctx, event_bus=event_bus, now_ms=now, reason="hero_lost")
                 continue
 
-            allow_missing = objective_type in (INTERCEPT_TOLL_TAKER, ASSAULT_GATE, SLAY_BLACKBANNER)
+            allow_missing = objective_type in (INTERCEPT_TOLL_TAKER, ASSAULT_GATE, SLAY_BLACKBANNER, SLAY_NAMED_BOSS)
             target_info = self._resolve_live_target(chain, phase, ctx, allow_missing=allow_missing)
             if target_info is None:
                 self.fail_chain(chain, ctx=ctx, event_bus=event_bus, now_ms=now, reason="target_missing")
@@ -833,7 +963,16 @@ class QuestChainSystem(GameSystem):
             elif objective_type == SLAY_BLACKBANNER:
                 if self._blackbanner_enemy_defeated(chain, kind="boss", ctx=ctx):
                     self._complete_phase(chain, phase, hero, target_info, ctx)
+            elif objective_type == PREPARE_HUNT:
+                if self._hero_reached_target(hero, target_info.position):
+                    self._complete_phase(chain, phase, hero, target_info, ctx)
+            elif objective_type == SLAY_NAMED_BOSS:
+                if chain.chain_type == ASHWINGS_HOARD.chain_type and self._ashwing_enemy_defeated(chain, ctx=ctx):
+                    self._complete_phase(chain, phase, hero, target_info, ctx)
             elif objective_type == CLAIM_REWARD:
+                if chain.facts.get("boss_target_defeated", False) and self._hero_reached_target(hero, target_info.position):
+                    self._complete_phase(chain, phase, hero, target_info, ctx)
+            elif objective_type == CLAIM_HOARD:
                 if chain.facts.get("boss_target_defeated", False) and self._hero_reached_target(hero, target_info.position):
                     self._complete_phase(chain, phase, hero, target_info, ctx)
 
@@ -890,8 +1029,14 @@ class QuestChainSystem(GameSystem):
     ) -> None:
         now = int(sim_now_ms())
         if phase.objective_type == SCOUT_LOCATION:
-            chain.facts["relic_scouted"] = True
-            chain.facts["relic_scouted_at_ms"] = now
+            if chain.chain_type == RELIC_OF_THE_OLD_SHRINE.chain_type:
+                chain.facts["relic_scouted"] = True
+                chain.facts["relic_scouted_at_ms"] = now
+            elif chain.chain_type == ASHWINGS_HOARD.chain_type:
+                chain.facts["dragon_cave_scouted"] = True
+                chain.facts["dragon_cave_scouted_at_ms"] = now
+                chain.facts["boss_target_revealed"] = True
+                self._reveal_ashwing(chain, ctx, event_bus=getattr(ctx, "event_bus", None), now_ms=now)
         elif phase.objective_type == COLLECT_ITEM:
             chain.facts["relic_collected"] = True
             chain.facts["relic_carried"] = True
@@ -900,6 +1045,10 @@ class QuestChainSystem(GameSystem):
         elif phase.objective_type == DELIVER_ITEM:
             chain.facts["relic_delivered"] = True
             chain.facts["relic_delivered_at_ms"] = now
+        elif phase.objective_type == PREPARE_HUNT:
+            chain.facts["prep_target_prepared"] = True
+            chain.facts["prep_target_prepared_at_ms"] = now
+            chain.facts["boss_target_weakness_known"] = True
 
         self._record_history(
             chain,
@@ -920,6 +1069,13 @@ class QuestChainSystem(GameSystem):
             chain.facts["elite_target_defeated"] = True
         elif phase.objective_type == SLAY_BLACKBANNER:
             chain.facts["boss_target_defeated"] = True
+        elif phase.objective_type == SLAY_NAMED_BOSS and chain.chain_type == ASHWINGS_HOARD.chain_type:
+            chain.facts["boss_target_defeated"] = True
+            chain.facts["boss_target_defeated_at_ms"] = now
+            chain.facts["boss_target_defeated_by_hero_id"] = chain.assigned_hero_id
+        elif phase.objective_type == CLAIM_HOARD and chain.chain_type == ASHWINGS_HOARD.chain_type:
+            chain.facts["hoard_target_claimed"] = True
+            chain.facts["hoard_target_claimed_at_ms"] = now
         self._emit(
             getattr(ctx, "event_bus", None),
             GameEventType.QUEST_CHAIN_PHASE_COMPLETED,
@@ -930,7 +1086,7 @@ class QuestChainSystem(GameSystem):
             now_ms=now,
         )
 
-        if phase.objective_type in (DELIVER_ITEM, CLAIM_REWARD):
+        if phase.objective_type in (DELIVER_ITEM, CLAIM_REWARD, CLAIM_HOARD):
             self.complete_chain(chain, hero, event_bus=getattr(ctx, "event_bus", None), now_ms=now)
             return
 
@@ -1074,6 +1230,8 @@ class QuestChainSystem(GameSystem):
         if lookup_id:
             found = self._find_target_by_id(ctx, lookup_id)
             if found is None:
+                if chain.chain_type == ASHWINGS_HOARD.chain_type and phase.objective_type == CLAIM_HOARD and snapshot_target.position is not None:
+                    return snapshot_target
                 return snapshot_target if allow_missing else None
             return self._capture_target(found)
         if snapshot_target.position is not None:
@@ -1534,6 +1692,66 @@ class QuestChainSystem(GameSystem):
             "reward_target_story_name": reward_info.name or "Castle",
         }
 
+    def _ashwing_base_facts(
+        self,
+        *,
+        chain_id: int,
+        dragon_cave_target: object | None,
+        prep_target: object | None,
+        now_ms: int,
+    ) -> dict[str, object]:
+        cave_info = self._capture_target(dragon_cave_target)
+        cave_position = cave_info.position
+        prep_info = self._capture_target(prep_target)
+        prep_position = prep_info.position
+        if prep_position is None and cave_position is not None:
+            prep_position = self._offset_position(cave_position, 1.5, -0.5)
+        hoard_position = cave_position if cave_position is not None else prep_position
+        if hoard_position is None:
+            hoard_position = (0.0, 0.0)
+        boss_position = cave_position if cave_position is not None else hoard_position
+        return {
+            "dragon_cave_target_id": cave_info.entity_id or "poi_dragon_cave",
+            "dragon_cave_target_entity_id": cave_info.entity_id,
+            "dragon_cave_target_name": cave_info.name or "Dragon Cave",
+            "dragon_cave_target_position": cave_position,
+            "dragon_cave_target_story_name": cave_info.name or "Dragon Cave",
+            "dragon_cave_scouted": False,
+            "dragon_cave_scouted_at_ms": 0,
+            "prep_target_id": prep_info.entity_id or "prep_ashwing_fire",
+            "prep_target_entity_id": prep_info.entity_id,
+            "prep_target_name": prep_info.name or "Prepare at the Shrine",
+            "prep_target_position": prep_position,
+            "prep_target_story_name": prep_info.name or "Prepare at the Shrine",
+            "prep_target_prepared": False,
+            "prep_target_prepared_at_ms": 0,
+            "boss_target_id": "boss_ashwing",
+            "boss_target_entity_id": "",
+            "boss_target_name": "",
+            "boss_target_position": boss_position,
+            "boss_target_story_name": ASHWING_THE_RED_NAME,
+            "boss_target_phase_id": SLAY_ASHWING,
+            "boss_target_spawn_key": f"ashwing_hoard:{int(chain_id)}:ashwing",
+            "boss_target_revealed": False,
+            "boss_target_revealed_at_ms": 0,
+            "boss_target_defeated": False,
+            "boss_target_defeated_at_ms": 0,
+            "hoard_target_id": "hoard_ashwing",
+            "hoard_target_entity_id": "",
+            "hoard_target_name": ASHWINGS_HOARD_NAME,
+            "hoard_target_position": hoard_position,
+            "hoard_target_story_name": ASHWINGS_HOARD_NAME,
+            "hoard_target_claimed": False,
+            "hoard_target_claimed_at_ms": 0,
+            "reward_item_id": "dragonscale_armor",
+            "reward_item_name": "Dragonscale Armor",
+            "reward_title": "Ashwing-Bane",
+            "reward_memory_summary": f"Claimed {ASHWINGS_HOARD_NAME}",
+            "boss_target_weakness_name": "Ashwing's fire",
+            "boss_target_weakness_detail": "Prepare at the shrine before the hunt",
+            "ashwing_revealed_at_ms": now_ms,
+        }
+
     def _find_blackbanner_fortress_target(self, ctx: SystemContext | None) -> object | None:
         if ctx is None:
             return None
@@ -1629,6 +1847,57 @@ class QuestChainSystem(GameSystem):
         self._attach_blackbanner_kill_hook(boss, ctx=ctx, event_bus=event_bus)
         return boss
 
+    def _reveal_ashwing(
+        self,
+        chain: QuestChainInstance,
+        ctx: SystemContext | None,
+        *,
+        event_bus: object | None,
+        now_ms: int,
+    ) -> object | None:
+        _ = event_bus
+        if ctx is None:
+            return None
+        existing_id = str(chain.facts.get("boss_target_entity_id", "") or "")
+        if existing_id:
+            existing = self._find_target_by_id(ctx, existing_id)
+            if existing is not None:
+                try:
+                    setattr(existing, "name", ASHWING_THE_RED_NAME)
+                    setattr(existing, "boss_name", ASHWING_THE_RED_NAME)
+                    setattr(existing, "boss_display_name", ASHWING_THE_RED_NAME)
+                    setattr(existing, "boss_def", ASHWING_BOSS_DEF)
+                except Exception:
+                    pass
+                chain.facts["boss_target_revealed"] = True
+                chain.facts["boss_target_revealed_at_ms"] = now_ms
+                return existing
+
+        boss_position = chain.facts.get("boss_target_position", None)
+        if boss_position is None:
+            boss_position = chain.facts.get("dragon_cave_target_position", None)
+        if boss_position is None:
+            boss_position = chain.facts.get("hoard_target_position", None)
+        if boss_position is None:
+            boss_position = (0.0, 0.0)
+
+        ashwing = Dragon(float(boss_position[0]), float(boss_position[1]))
+        try:
+            ashwing.name = ASHWING_THE_RED_NAME
+            ashwing.boss_name = ASHWING_THE_RED_NAME
+            ashwing.boss_display_name = ASHWING_THE_RED_NAME
+            ashwing.boss_def = ASHWING_BOSS_DEF
+        except Exception:
+            pass
+        ctx.enemies.append(ashwing)
+        chain.facts["boss_target_id"] = "boss_ashwing"
+        chain.facts["boss_target_entity_id"] = str(ashwing.entity_id)
+        chain.facts["boss_target_name"] = ASHWING_THE_RED_NAME
+        chain.facts["boss_target_position"] = (float(ashwing.x), float(ashwing.y))
+        chain.facts["boss_target_revealed"] = True
+        chain.facts["boss_target_revealed_at_ms"] = now_ms
+        return ashwing
+
     def _blackbanner_enemy_defeated(self, chain: QuestChainInstance, *, kind: str, ctx: SystemContext) -> bool:
         if chain.chain_type != BLACKBANNERS_TOLL.chain_type:
             return False
@@ -1638,6 +1907,19 @@ class QuestChainSystem(GameSystem):
         if bool(chain.facts.get(f"{fact_prefix}_defeated", False)):
             return True
         live_entity_id = str(chain.facts.get(f"{fact_prefix}_entity_id", "") or "")
+        if not live_entity_id:
+            return False
+        live = self._find_target_by_id(ctx, live_entity_id)
+        if live is None:
+            return False
+        return not bool(getattr(live, "is_alive", True))
+
+    def _ashwing_enemy_defeated(self, chain: QuestChainInstance, *, ctx: SystemContext) -> bool:
+        if chain.chain_type != ASHWINGS_HOARD.chain_type:
+            return False
+        if bool(chain.facts.get("boss_target_defeated", False)):
+            return True
+        live_entity_id = str(chain.facts.get("boss_target_entity_id", "") or "")
         if not live_entity_id:
             return False
         live = self._find_target_by_id(ctx, live_entity_id)

@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple
 
 import pygame
 
+from config import TILE_SIZE
 from game.graphics.font_cache import render_text_shadowed_cached
 
 
@@ -70,6 +71,112 @@ class BossTelegraphVFX:
     telegraph_ms: int
     resolve_at_ms: int
     started_at_ms: int
+    warning_event: str = ""
+    impact_event: str = ""
+    shape: str = ""
+    range_tiles: float = 0.0
+    angle_degrees: float = 0.0
+    origin_position: tuple[float, float] | None = None
+    target_position: tuple[float, float] | None = None
+    direction: tuple[float, float] | None = None
+    target_hero_id: str = ""
+    target_hero_name: str = ""
+    life_sec: float = 0.0
+    age_sec: float = 0.0
+
+
+@dataclass
+class BossImpactVFX:
+    boss_id: str
+    boss_type: str
+    boss_name: str
+    ability_id: str
+    ability_name: str
+    current_phase_title: str
+    impact_event: str
+    shape: str
+    range_tiles: float
+    angle_degrees: float
+    origin_position: tuple[float, float] | None
+    target_position: tuple[float, float] | None
+    direction: tuple[float, float] | None
+    life_sec: float
+    age_sec: float = 0.0
+
+
+def _point_from_value(value: object) -> tuple[float, float] | None:
+    try:
+        if value is None:
+            return None
+        x, y = value[:2]
+        return float(x), float(y)
+    except Exception:
+        return None
+
+
+def _normalize_vector(dx: float, dy: float) -> tuple[float, float]:
+    length = math.hypot(dx, dy)
+    if length <= 1e-6:
+        return (1.0, 0.0)
+    return (dx / length, dy / length)
+
+
+def _rotate_vector(dx: float, dy: float, angle_degrees: float) -> tuple[float, float]:
+    radians = math.radians(float(angle_degrees))
+    cos_a = math.cos(radians)
+    sin_a = math.sin(radians)
+    return (dx * cos_a - dy * sin_a, dx * sin_a + dy * cos_a)
+
+
+def _point_add(point: tuple[float, float], vec: tuple[float, float], scale: float) -> tuple[float, float]:
+    return (point[0] + vec[0] * scale, point[1] + vec[1] * scale)
+
+
+def _cone_points(
+    origin: tuple[float, float],
+    direction: tuple[float, float],
+    *,
+    length: float,
+    angle_degrees: float,
+    steps: int = 7,
+) -> list[tuple[int, int]]:
+    points = [(int(round(origin[0])), int(round(origin[1])))]
+    half_angle = max(4.0, min(85.0, float(angle_degrees) / 2.0))
+    if steps < 3:
+        steps = 3
+    for idx in range(steps + 1):
+        frac = idx / float(steps)
+        ang = -half_angle + (2.0 * half_angle * frac)
+        vec = _rotate_vector(direction[0], direction[1], ang)
+        px, py = _point_add(origin, vec, length)
+        points.append((int(round(px)), int(round(py))))
+    return points
+
+
+def _blit_polygon_overlay(
+    surface: pygame.Surface,
+    points: list[tuple[int, int]],
+    *,
+    fill_color: tuple[int, int, int, int],
+    edge_color: tuple[int, int, int, int],
+    extra_pad: int = 6,
+) -> None:
+    if len(points) < 3:
+        return
+    xs = [pt[0] for pt in points]
+    ys = [pt[1] for pt in points]
+    left = max(0, min(xs) - extra_pad)
+    top = max(0, min(ys) - extra_pad)
+    right = min(surface.get_width(), max(xs) + extra_pad + 1)
+    bottom = min(surface.get_height(), max(ys) + extra_pad + 1)
+    if right <= left or bottom <= top:
+        return
+
+    overlay = pygame.Surface((right - left, bottom - top), pygame.SRCALPHA)
+    shifted = [(x - left, y - top) for x, y in points]
+    pygame.draw.polygon(overlay, fill_color, shifted)
+    pygame.draw.polygon(overlay, edge_color, shifted, 2)
+    surface.blit(overlay, (left, top))
 
 
 class VFXSystem:
@@ -87,6 +194,7 @@ class VFXSystem:
         self._projectiles: List[ProjectileVFX] = []
         self._debris: List[DebrisDecal] = []  # WK5 Build B: building debris decals
         self._boss_telegraphs: dict[str, BossTelegraphVFX] = {}
+        self._boss_impacts: dict[str, BossImpactVFX] = {}
         self.enabled = True
 
     def get_active_projectiles(self) -> List[ProjectileVFX]:
@@ -113,6 +221,7 @@ class VFXSystem:
             boss_id = str(event.get("boss_id", "") or "").strip()
             if boss_id:
                 if et == "boss_ability_telegraphed":
+                    telegraph_ms = int(event.get("telegraph_ms", 0) or 0)
                     self._boss_telegraphs[boss_id] = BossTelegraphVFX(
                         boss_id=boss_id,
                         boss_type=str(event.get("boss_type", "") or ""),
@@ -125,16 +234,60 @@ class VFXSystem:
                             or ""
                         ),
                         current_phase_title=str(event.get("current_phase_title", "") or ""),
-                        telegraph_ms=int(event.get("telegraph_ms", 0) or 0),
+                        telegraph_ms=telegraph_ms,
                         resolve_at_ms=int(event.get("resolve_at_ms", 0) or 0),
                         started_at_ms=int(event.get("time_ms", 0) or 0),
+                        warning_event=str(event.get("warning_event", "") or event.get("detail", "") or ""),
+                        impact_event=str(event.get("impact_event", "") or ""),
+                        shape=str(event.get("shape", "") or ""),
+                        range_tiles=float(event.get("range_tiles", event.get("range", 0.0)) or 0.0),
+                        angle_degrees=float(event.get("angle_degrees", 0.0) or 0.0),
+                        origin_position=_point_from_value(event.get("origin_position")),
+                        target_position=_point_from_value(event.get("target_position")),
+                        direction=_point_from_value(event.get("direction")),
+                        target_hero_id=str(event.get("target_hero_id", "") or ""),
+                        target_hero_name=str(event.get("target_hero_name", "") or ""),
+                        life_sec=max(0.35, float(telegraph_ms) / 1000.0 if telegraph_ms > 0 else 0.4),
+                    )
+                elif et == "boss_ability_resolved":
+                    telegraph = self._boss_telegraphs.pop(boss_id, None)
+                    telegraph_ms = int(event.get("telegraph_ms", 0) or getattr(telegraph, "telegraph_ms", 0) or 0)
+                    self._boss_impacts[boss_id] = BossImpactVFX(
+                        boss_id=boss_id,
+                        boss_type=str(event.get("boss_type", "") or getattr(telegraph, "boss_type", "") or ""),
+                        boss_name=str(event.get("name", "") or getattr(telegraph, "boss_name", "") or ""),
+                        ability_id=str(event.get("ability_id", "") or getattr(telegraph, "ability_id", "") or ""),
+                        ability_name=str(
+                            event.get("ability_name", "")
+                            or getattr(telegraph, "ability_name", "")
+                            or event.get("detail", "")
+                            or ""
+                        ),
+                        current_phase_title=str(
+                            event.get("current_phase_title", "")
+                            or getattr(telegraph, "current_phase_title", "")
+                            or ""
+                        ),
+                        impact_event=str(event.get("impact_event", "") or event.get("detail", "") or getattr(telegraph, "impact_event", "") or ""),
+                        shape=str(event.get("shape", "") or getattr(telegraph, "shape", "") or ""),
+                        range_tiles=float(event.get("range_tiles", event.get("range", getattr(telegraph, "range_tiles", 0.0))) or getattr(telegraph, "range_tiles", 0.0) or 0.0),
+                        angle_degrees=float(event.get("angle_degrees", getattr(telegraph, "angle_degrees", 0.0)) or getattr(telegraph, "angle_degrees", 0.0) or 0.0),
+                        origin_position=_point_from_value(event.get("origin_position"))
+                        or getattr(telegraph, "origin_position", None),
+                        target_position=_point_from_value(event.get("target_position"))
+                        or getattr(telegraph, "target_position", None),
+                        direction=_point_from_value(event.get("direction"))
+                        or getattr(telegraph, "direction", None),
+                        life_sec=max(0.28, min(0.60, float(telegraph_ms) / 3000.0 if telegraph_ms > 0 else 0.42)),
                     )
                 elif et == "boss_phase_changed":
                     current_phase = str(event.get("current_phase", "") or "")
                     if current_phase and current_phase != "rally":
                         self._boss_telegraphs.pop(boss_id, None)
+                    self._boss_impacts.pop(boss_id, None)
                 else:
                     self._boss_telegraphs.pop(boss_id, None)
+                    self._boss_impacts.pop(boss_id, None)
             return
         if et == "ranged_projectile":
             # WK5: Handle ranged projectile events (these do not use generic x/y fields)
@@ -371,8 +524,9 @@ class VFXSystem:
         boss_encounters: tuple | list | None = None,
         visible_enemy_ids: set[str] | None = None,
         visible_enemy_dtos: dict[str, object] | None = None,
+        hero_dtos: tuple | list | None = None,
     ) -> None:
-        if not self._boss_telegraphs or not boss_encounters:
+        if not (self._boss_telegraphs or self._boss_impacts) or not boss_encounters:
             return
 
         cam_x, cam_y = camera_offset
@@ -385,48 +539,281 @@ class VFXSystem:
             return
 
         visible_dtos = visible_enemy_dtos or {}
-        for boss_id, telegraph in self._boss_telegraphs.items():
-            if visible_enemy_ids is not None and boss_id not in visible_enemy_ids:
+        hero_views: dict[str, tuple[float, float]] = {}
+        for hero in hero_dtos or ():
+            hero_id = str(getattr(hero, "hero_id", "") or getattr(hero, "entity_id", "") or "").strip()
+            if not hero_id:
                 continue
+            try:
+                hero_views[hero_id] = (float(getattr(hero, "x", 0.0)), float(getattr(hero, "y", 0.0)))
+            except Exception:
+                continue
+
+        def _nearest_hero_position(origin: tuple[float, float] | None) -> tuple[float, float] | None:
+            if not hero_views:
+                return None
+            if origin is None:
+                return next(iter(hero_views.values()))
+            ox, oy = origin
+            return min(
+                hero_views.values(),
+                key=lambda pos: (pos[0] - ox) ** 2 + (pos[1] - oy) ** 2,
+            )
+
+        def _resolve_geometry(
+            boss_id: str,
+            *,
+            telegraph: BossTelegraphVFX | None = None,
+            impact: BossImpactVFX | None = None,
+        ) -> dict[str, object] | None:
             boss_snapshot = boss_views.get(boss_id)
-            if boss_snapshot is None:
-                continue
-            position = getattr(boss_snapshot, "position", None)
-            if not position or len(position) < 2:
-                continue
-
             dto = visible_dtos.get(boss_id)
-            boss_size = int(getattr(dto, "size", 18) or 18)
-            screen_x = int(float(position[0]) - cam_x)
-            screen_y = int(float(position[1]) - cam_y)
+            if boss_snapshot is None and dto is None:
+                return None
 
-            badge_color = (255, 146, 56)
-            badge_fill = (38, 18, 10)
-            badge_radius = 10
-            badge_center_y = screen_y - (boss_size // 2) - 42
-            center = (screen_x, badge_center_y)
+            payload = getattr(dto, "current_boss_ability_payload", None) or getattr(dto, "boss_ability_payload", None) or {}
+            if not isinstance(payload, dict):
+                try:
+                    payload = dict(payload or {})
+                except Exception:
+                    payload = {}
+
+            phase_title = str(
+                (telegraph.current_phase_title if telegraph is not None else "")
+                or (impact.current_phase_title if impact is not None else "")
+                or getattr(boss_snapshot, "current_phase_title", "")
+                or getattr(dto, "current_boss_phase_title", "")
+                or getattr(dto, "boss_phase_title", "")
+                or ""
+            ).strip()
+
+            boss_name = str(
+                (telegraph.boss_name if telegraph is not None else "")
+                or (impact.boss_name if impact is not None else "")
+                or getattr(boss_snapshot, "name", "")
+                or getattr(dto, "name", "")
+                or ""
+            ).strip()
+
+            ability_name = str(
+                (telegraph.ability_name if telegraph is not None else "")
+                or (impact.ability_name if impact is not None else "")
+                or payload.get("ability_name", "")
+                or getattr(dto, "current_boss_ability_name", "")
+                or ""
+            ).strip()
+
+            ability_id = str(
+                (telegraph.ability_id if telegraph is not None else "")
+                or (impact.ability_id if impact is not None else "")
+                or payload.get("telegraph_id", "")
+                or payload.get("ability_id", "")
+                or getattr(dto, "current_boss_ability_id", "")
+                or ""
+            ).strip()
+
+            shape = str(
+                (telegraph.shape if telegraph is not None else "")
+                or (impact.shape if impact is not None else "")
+                or payload.get("shape", "")
+                or ""
+            ).strip().lower()
+
+            try:
+                range_tiles = float(
+                    (telegraph.range_tiles if telegraph is not None else 0.0)
+                    or (impact.range_tiles if impact is not None else 0.0)
+                    or payload.get("range", 0.0)
+                    or payload.get("range_tiles", 0.0)
+                    or getattr(dto, "current_boss_ability_payload", {}).get("range", 0.0)
+                    or 0.0
+                )
+            except Exception:
+                range_tiles = 0.0
+
+            try:
+                angle_degrees = float(
+                    (telegraph.angle_degrees if telegraph is not None else 0.0)
+                    or (impact.angle_degrees if impact is not None else 0.0)
+                    or payload.get("angle_degrees", 0.0)
+                    or 0.0
+                )
+            except Exception:
+                angle_degrees = 0.0
+
+            origin = (
+                (telegraph.origin_position if telegraph is not None else None)
+                or (impact.origin_position if impact is not None else None)
+                or _point_from_value(payload.get("origin_position"))
+                or _point_from_value(getattr(boss_snapshot, "position", None))
+                or _point_from_value(getattr(dto, "boss_ability_origin_position", None))
+                or _point_from_value(getattr(dto, "position", None))
+            )
+
+            target = (
+                (telegraph.target_position if telegraph is not None else None)
+                or (impact.target_position if impact is not None else None)
+                or _point_from_value(payload.get("target_position"))
+            )
+
+            target_hero_id = str(
+                (telegraph.target_hero_id if telegraph is not None else "")
+                or payload.get("target_hero_id", "")
+                or getattr(boss_snapshot, "target_hero_id", "")
+                or getattr(dto, "boss_ability_target_hero_id", "")
+                or ""
+            ).strip()
+
+            if target is None and target_hero_id:
+                target = hero_views.get(target_hero_id)
+            if target is None:
+                target = _nearest_hero_position(origin)
+
+            direction = (
+                (telegraph.direction if telegraph is not None else None)
+                or (impact.direction if impact is not None else None)
+                or _point_from_value(payload.get("direction"))
+                or _point_from_value(getattr(dto, "boss_ability_direction", None))
+            )
+            if direction is None and origin is not None and target is not None:
+                direction = _normalize_vector(target[0] - origin[0], target[1] - origin[1])
+            if direction is None:
+                direction = (1.0, 0.0)
+            if origin is None:
+                origin = (0.0, 0.0)
+
+            if not range_tiles and target is not None:
+                range_tiles = max(1.0, math.hypot(target[0] - origin[0], target[1] - origin[1]) / float(TILE_SIZE))
+            if not angle_degrees and shape == "cone":
+                angle_degrees = 60.0
+
+            boss_size = int(getattr(dto, "size", 18) or 18)
+            screen_x = int(round(float(origin[0]) - cam_x))
+            screen_y = int(round(float(origin[1]) - cam_y))
+            target_screen = None if target is None else (int(round(target[0] - cam_x)), int(round(target[1] - cam_y)))
+            range_px = float(range_tiles) * float(TILE_SIZE)
+            if range_px <= 0.0 and target_screen is not None:
+                range_px = math.hypot(target_screen[0] - screen_x, target_screen[1] - screen_y)
+
+            return {
+                "boss_snapshot": boss_snapshot,
+                "dto": dto,
+                "phase_title": phase_title,
+                "boss_name": boss_name,
+                "ability_name": ability_name,
+                "ability_id": ability_id,
+                "shape": shape,
+                "range_px": range_px,
+                "angle_degrees": angle_degrees,
+                "origin": origin,
+                "origin_screen": (screen_x, screen_y),
+                "target": target,
+                "target_screen": target_screen,
+                "direction": direction,
+                "boss_size": boss_size,
+            }
+
+        def _render_attack(
+            geometry: dict[str, object] | None,
+            *,
+            resolved: bool,
+            telegraph: BossTelegraphVFX | None = None,
+            impact: BossImpactVFX | None = None,
+        ) -> None:
+            if geometry is None:
+                return
+            origin_screen = geometry["origin_screen"]  # type: ignore[index]
+            target_screen = geometry["target_screen"]  # type: ignore[index]
+            direction = geometry["direction"]  # type: ignore[index]
+            range_px = float(geometry["range_px"] or 0.0)
+            shape = str(geometry["shape"] or "").strip().lower()
+            boss_size = int(geometry["boss_size"] or 18)
+            boss_status = str(getattr(geometry["boss_snapshot"], "status", "active") or "active")  # type: ignore[index]
+            if boss_status == "defeated":
+                return
+
+            badge_color = (255, 146, 56) if not resolved else (220, 54, 34)
+            badge_fill = (38, 18, 10) if not resolved else (54, 20, 12)
+            badge_radius = 10 if not resolved else 11
+            badge_center_y = origin_screen[1] - (boss_size // 2) - 42
+            center = (origin_screen[0], badge_center_y)
             pygame.draw.circle(surface, badge_fill, center, badge_radius)
             pygame.draw.circle(surface, badge_color, center, badge_radius, 2)
 
-            icon = render_text_shadowed_cached(13, "!", (255, 245, 210))
+            icon = render_text_shadowed_cached(13 if not resolved else 14, "!", (255, 245, 210))
             icon_rect = icon.get_rect(center=center)
             surface.blit(icon, icon_rect)
 
+            if shape == "cone" and range_px > 0.0:
+                points = _cone_points(origin_screen, direction, length=range_px, angle_degrees=float(geometry["angle_degrees"] or 60.0))
+                if resolved:
+                    fill_color = (255, 74, 48, 84)
+                    edge_color = (255, 246, 220, 220)
+                else:
+                    fill_color = (255, 146, 56, 58)
+                    edge_color = (255, 236, 190, 200)
+                _blit_polygon_overlay(
+                    surface,
+                    points,
+                    fill_color=fill_color,
+                    edge_color=edge_color,
+                    extra_pad=10,
+                )
+                tip = target_screen if target_screen is not None else (points[-1][0], points[-1][1])
+                pygame.draw.line(surface, edge_color[:3], origin_screen, tip, 2)
+                pygame.draw.circle(surface, edge_color[:3], tip, 4 if not resolved else 5, 1)
+                if resolved and target_screen is not None:
+                    tx, ty = target_screen
+                    burst_color = (220, 54, 34)
+                    burst_hi = (255, 244, 210)
+                    for radius, width in ((15, 2), (9, 2), (5, 0)):
+                        pygame.draw.circle(surface, burst_color, (tx, ty), radius, width or 1)
+                    pygame.draw.circle(surface, burst_hi, (tx, ty), 3)
+                    pygame.draw.line(surface, burst_color, (tx - 16, ty), (tx + 16, ty), 1)
+                    pygame.draw.line(surface, burst_color, (tx, ty - 16), (tx, ty + 16), 1)
+            elif resolved and target_screen is not None:
+                tx, ty = target_screen
+                burst_color = (220, 54, 34)
+                burst_hi = (255, 244, 210)
+                for radius, width in ((14, 2), (8, 2), (4, 0)):
+                    pygame.draw.circle(surface, burst_color, (tx, ty), radius, width or 1)
+                pygame.draw.circle(surface, burst_hi, (tx, ty), 3)
+
             label_text = (
-                telegraph.ability_name
-                or telegraph.ability_id
-                or telegraph.current_phase_title
+                (impact.ability_name if impact is not None else "")
+                or (telegraph.ability_name if telegraph is not None else "")
+                or geometry["ability_name"]  # type: ignore[index]
+                or geometry["ability_id"]  # type: ignore[index]
+                or geometry["phase_title"]  # type: ignore[index]
                 or "TELEGRAPH"
             ).upper()
-            label = render_text_shadowed_cached(11, label_text, badge_color)
-            label_rect = label.get_rect(midtop=(screen_x, center[1] + badge_radius + 2))
+            label = render_text_shadowed_cached(11 if not resolved else 12, label_text, badge_color)
+            label_rect = label.get_rect(midtop=(origin_screen[0], center[1] + badge_radius + 2))
             surface.blit(label, label_rect)
+
+        for boss_id, telegraph in self._boss_telegraphs.items():
+            if visible_enemy_ids is not None and boss_id not in visible_enemy_ids:
+                continue
+            geometry = _resolve_geometry(boss_id, telegraph=telegraph)
+            if geometry is None:
+                continue
+            _render_attack(geometry, resolved=False, telegraph=telegraph)
+
+        for boss_id, impact in self._boss_impacts.items():
+            if visible_enemy_ids is not None and boss_id not in visible_enemy_ids:
+                continue
+            geometry = _resolve_geometry(boss_id, impact=impact)
+            if geometry is None:
+                continue
+            _render_attack(geometry, resolved=True, impact=impact)
 
     def update(self, dt: float):
         if not self.enabled:
             self._particles.clear()
             self._projectiles.clear()
             self._debris.clear()
+            self._boss_telegraphs.clear()
+            self._boss_impacts.clear()
             return
         dt = float(dt)
         if dt <= 0:
@@ -457,6 +844,22 @@ class VFXSystem:
             active_projectiles.append(proj)
         self._projectiles = active_projectiles
 
+        active_telegraphs: dict[str, BossTelegraphVFX] = {}
+        for boss_id, telegraph in self._boss_telegraphs.items():
+            telegraph.age_sec += dt
+            if telegraph.life_sec > 0.0 and telegraph.age_sec >= telegraph.life_sec:
+                continue
+            active_telegraphs[boss_id] = telegraph
+        self._boss_telegraphs = active_telegraphs
+
+        active_impacts: dict[str, BossImpactVFX] = {}
+        for boss_id, impact in self._boss_impacts.items():
+            impact.age_sec += dt
+            if impact.life_sec > 0.0 and impact.age_sec >= impact.life_sec:
+                continue
+            active_impacts[boss_id] = impact
+        self._boss_impacts = active_impacts
+
     def render(
         self,
         surface: pygame.Surface,
@@ -465,6 +868,7 @@ class VFXSystem:
         boss_encounters: tuple | list | None = None,
         visible_enemy_ids: set[str] | None = None,
         visible_enemy_dtos: dict[str, object] | None = None,
+        hero_dtos: tuple | list | None = None,
     ):
         if not self.enabled:
             return
@@ -585,6 +989,7 @@ class VFXSystem:
             boss_encounters=boss_encounters,
             visible_enemy_ids=visible_enemy_ids,
             visible_enemy_dtos=visible_enemy_dtos,
+            hero_dtos=hero_dtos,
         )
 
 

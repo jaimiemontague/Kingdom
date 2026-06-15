@@ -4,7 +4,11 @@ Builds context dictionaries for LLM decision making.
 import math
 
 from config import FOOD_MEAL_COST_GOLD, TILE_SIZE
-from ai.quest_chain_context import attach_blackbanner_chain_facts, summarize_quest_chains
+from ai.quest_chain_context import (
+    attach_ashwing_chain_facts,
+    attach_blackbanner_chain_facts,
+    summarize_quest_chains,
+)
 from ai.rescue_revenge_context import summarize_story_facts
 from game.sim.timebase import now_ms as sim_now_ms
 
@@ -137,6 +141,13 @@ class ContextBuilder:
                         chain,
                         boss_encounters=boss_encounters,
                         elite_enemies=elite_enemies,
+                    )
+                    for chain in summarized_chains
+                ]
+                summarized_chains = [
+                    attach_ashwing_chain_facts(
+                        chain,
+                        boss_encounters=boss_encounters,
                     )
                     for chain in summarized_chains
                 ]

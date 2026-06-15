@@ -1150,6 +1150,82 @@
           ]
         }
       }
+    },
+    "wk143_dragon_hunt_showcase": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk143_dragon_hunt_showcase.plan.md",
+        "owner_agent": "10_PerformanceStability_Lead",
+        "notes": "Wave 3 perf sanity and screenshot stability verification only; no production code edits."
+      },
+      "rounds": {
+        "r3_wave2_gate_perf_kickoff": {
+          "sprint_id": "wk143_dragon_hunt_showcase",
+          "round_id": "r3_wave2_gate_perf_kickoff",
+          "round_meta": {
+            "prompt_set_id": "wk143_r3_wave2_gate_perf_kickoff",
+            "model": "gpt-5.4-mini",
+            "effort": "xhigh",
+            "scope": "Verification/diagnosis only; no production edits."
+          },
+          "status": "done",
+          "what_i_changed": "No production code edits. Verified the WK143 dragon visuals/audio lane stayed green for the focused perf sanity slice, refreshed the dragon_hunt_showcase capture, inspected the PNGs, and confirmed the capture is deterministic across two runs. Per PM instruction, the long qa_smoke path was not chased further; final integrated smoke is deferred to Agent 11.",
+          "commands_run": [
+            {
+              "shell": "PowerShell",
+              "cmd": "python -m pytest tests/test_wk143_dragon_visuals.py tests/test_wk143_dragon_hunt.py -q",
+              "exit_code": 0,
+              "result": "4 passed, 1 warning."
+            },
+            {
+              "shell": "PowerShell",
+              "cmd": "python tools/capture_screenshots.py --scenario dragon_hunt_showcase --seed 3 --out docs/screenshots/wk143_dragon_hunt_showcase --size 1920x1080 --ticks 1200",
+              "exit_code": 0,
+              "result": "Wrote 2 PNGs plus manifest to docs/screenshots/wk143_dragon_hunt_showcase."
+            },
+            {
+              "shell": "PowerShell",
+              "cmd": "python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk143_dragon_audio.py tests/test_wk143_dragon_capture_scenario.py -q",
+              "exit_code": 0,
+              "result": "8 passed, 1 warning."
+            },
+            {
+              "shell": "PowerShell",
+              "cmd": "python tools/capture_screenshots.py --scenario dragon_hunt_showcase --seed 3 --out tmp/wk143_dragon_hunt_showcase_repeat --size 1920x1080 --ticks 1200",
+              "exit_code": 0,
+              "result": "Repeat capture matched the first run."
+            },
+            {
+              "shell": "PowerShell",
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json",
+              "exit_code": 0,
+              "result": "Valid JSON after writing sprints[\"wk143_dragon_hunt_showcase\"].rounds[\"r3_wave2_gate_perf_kickoff\"]."
+            }
+          ],
+          "evidence": {
+            "focused_tests": "PASS: tests/test_wk143_dragon_visuals.py and tests/test_wk143_dragon_hunt.py passed 4/4.",
+            "empty_path_guard": "PASS: tests/test_wk139_boss_encounters.py confirms BossEncounterSystem.update() is a true no-op when no boss/elite/enemy context exists, so the dragon runtime does not add obvious idle work when no encounter is active.",
+            "audio_gating": "PASS: tests/test_wk143_dragon_audio.py confirms dragon-only cues and visibility gating.",
+            "capture_outputs": [
+              "docs/screenshots/wk143_dragon_hunt_showcase/dragon_hunt_showcase_world.png",
+              "docs/screenshots/wk143_dragon_hunt_showcase/dragon_hunt_showcase_ledger.png",
+              "docs/screenshots/wk143_dragon_hunt_showcase/manifest.json"
+            ],
+            "visual_verdict": "PASS: the world PNG shows Ashwing, the fire telegraph, and the boss HUD; the ledger PNG shows readable Ashwing's Hoard quest/modal text with no blank frame.",
+            "determinism_check": "PASS: repeat capture hashes matched for both PNGs (manifest comparison MATCH, 2 files).",
+            "qa_smoke_note": "A longer qa_smoke.py --quick attempt was started earlier, but PM interrupted and explicitly asked not to keep chasing it; final integrated smoke is owned by Agent 11.",
+            "perf_risk_ticket": "None filed. No real perf blocker surfaced in this Wave 3 sanity pass."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11 owns the final qa_smoke / full-suite smoke gate.",
+            "If a future live frame-time probe shows dragon-free idle cost or capture instability, route first to the owner of the hot stage rather than reopening this verification round."
+          ],
+          "recommended_next_actions": [
+            "Use Agent 11 for the final integrated smoke and screenshot QA gate.",
+            "No production fix is requested from Agent 10 on this round."
+          ]
+        }
+      }
     }
   }
 }

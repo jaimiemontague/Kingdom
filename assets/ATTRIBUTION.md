@@ -208,8 +208,8 @@ Use this exact bullet structure (one bullet per pack):
 - **License**: CC0 1.0 Universal
 - **Source**: `https://opengameart.org/content/100-cc0-sfx` (and related RPG Sound Pack collections)
 - **Retrieved**: 2026-01-27
-- **Modifications**: Curated subset (ranged weapon sounds, building destruction, bounty placement, combat sounds, celebration sounds, enemy-type-specific sounds); normalized volume levels
-- **Used for**: Ranged weapon attack sounds (bow release), building destruction, bounty placement/claim, combat sounds (melee hit, enemy death), celebration sounds (lair cleared), hero hire/purchase confirmations, enemy-type-specific attack/death/ambient sounds (WK61)
+- **Modifications**: Curated subset (ranged weapon sounds, building destruction, bounty placement, combat sounds, celebration sounds, enemy-type-specific sounds, dragon boss cues); normalized volume levels
+- **Used for**: Ranged weapon attack sounds (bow release), building destruction, bounty placement/claim, combat sounds (melee hit, enemy death), celebration sounds (lair cleared), hero hire/purchase confirmations, enemy-type-specific attack/death/ambient sounds (WK61), dragon boss cues for Ashwing's Hoard (WK143)
 - **File locations**:
   - `assets/audio/sfx/bow_release.ogg`
   - `assets/audio/sfx/building_destroy.ogg`
@@ -219,6 +219,10 @@ Use this exact bullet structure (one bullet per pack):
   - `assets/audio/sfx/melee_hit.ogg`
   - `assets/audio/sfx/enemy_death.ogg`
   - `assets/audio/sfx/lair_cleared.ogg`
+  - `assets/audio/sfx/dragon_roar.ogg` (WK143: from `weird_04.ogg`)
+  - `assets/audio/sfx/dragon_phase.ogg` (WK143: from `gong_02.ogg`)
+  - `assets/audio/sfx/dragon_fire_telegraph.ogg` (WK143: from `machine_03.ogg`)
+  - `assets/audio/sfx/dragon_fire_impact.ogg` (WK143: from `explosion.ogg`)
   - `assets/audio/sfx/purchase.ogg`
   - `assets/audio/sfx/goblin_attack.ogg` (WK61: from hit_03.ogg)
   - `assets/audio/sfx/goblin_death.ogg` (WK61: from other_01.ogg)
@@ -262,5 +266,4 @@ Use this exact bullet structure (one bullet per pack):
 ### wk14: Interior ambient and building-under-attack (optional)
 
 Interior ambient loops (per building type) and the building-under-attack rumble SFX are **optional**. When CC0 assets are added, they will be listed here with pack, license, and file locations. Until then, the game runs without these files (fail silently). Required filenames: see `game/audio/EVENT_CONTRACT.md` (Interior ambient + Interior building-under-attack sections).
-
 

@@ -575,6 +575,108 @@
           ]
         }
       }
+    },
+    "wk143_dragon_hunt_showcase": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk143_dragon_hunt_showcase.plan.md",
+        "notes": "WK143 Wave 1 Dragon Hunt showcase capture support."
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "sprint_id": "wk143_dragon_hunt_showcase",
+          "round_id": "r1_kickoff",
+          "status": "done",
+          "pm_ref": "sprints['wk143_dragon_hunt_showcase'].rounds['r1_kickoff']",
+          "what_i_changed": {
+            "files": [
+              "tools/screenshot_scenarios.py",
+              "tests/test_wk143_dragon_capture_scenario.py",
+              "docs/screenshots/wk143_dragon_hunt_showcase/dragon_hunt_showcase_world.png",
+              "docs/screenshots/wk143_dragon_hunt_showcase/dragon_hunt_showcase_ledger.png",
+              "docs/screenshots/wk143_dragon_hunt_showcase/manifest.json",
+              "docs/screenshots/wk143_dragon_hunt_showcase/wk143_dragon_ledger_246x300.png",
+              "docs/screenshots/wk143_dragon_hunt_showcase/wk143_dragon_ledger_320x120.png"
+            ],
+            "summary": "Added deterministic dragon_hunt_showcase capture support modeled on boss_encounter_showcase, seeding Ashwing the Red, Dragon Cave, fire telegraph state, and the Ashwing's Hoard ledger/modal proof path with focused scenario tests and PNG evidence."
+          },
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_wk143_dragon_capture_scenario.py -q",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m pytest tests/test_wk139_boss_showcase_scenario.py -q",
+              "exit_code": 0
+            },
+            {
+              "command": "python tools/capture_screenshots.py --scenario dragon_hunt_showcase --seed 3 --out docs/screenshots/wk143_dragon_hunt_showcase --size 1920x1080 --ticks 0",
+              "exit_code": 0
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 1
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "pytest_capture_scenario": {
+              "command": "python -m pytest tests/test_wk143_dragon_capture_scenario.py -q",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "2 passed; verifies Ashwing scene, telegraph state, quest ledger, and PNG save paths."
+            },
+            "pytest_boss_showcase_regression": {
+              "command": "python -m pytest tests/test_wk139_boss_showcase_scenario.py -q",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "Existing boss showcase stayed green after adding the new scenario dispatch."
+            },
+            "capture_screenshots": {
+              "command": "python tools/capture_screenshots.py --scenario dragon_hunt_showcase --seed 3 --out docs/screenshots/wk143_dragon_hunt_showcase --size 1920x1080 --ticks 0",
+              "exit_code": 0,
+              "status": "PASS",
+              "outputs": [
+                "docs/screenshots/wk143_dragon_hunt_showcase/dragon_hunt_showcase_world.png",
+                "docs/screenshots/wk143_dragon_hunt_showcase/dragon_hunt_showcase_ledger.png",
+                "docs/screenshots/wk143_dragon_hunt_showcase/manifest.json",
+                "docs/screenshots/wk143_dragon_hunt_showcase/wk143_dragon_ledger_246x300.png",
+                "docs/screenshots/wk143_dragon_hunt_showcase/wk143_dragon_ledger_320x120.png"
+              ],
+              "visual_note": "World capture shows Ashwing and fire telegraph; ledger capture shows the Dragon Hunt quest-create modal and Adventure Ledger state."
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 1,
+              "status": "FAIL",
+              "notes": "Blocked by ImportError while loading tests/conftest.py: game/systems/quest_chain.py imports ASHWING_BOSS_DEF from game/content/quest_chains.py, but that symbol is not exported there in the shared workspace state."
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "Report-only validation completed with existing asset warnings only; no errors."
+            },
+            "json_tool": {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [
+            "qa_smoke --quick is blocked by a shared-worktree ImportError in game/systems/quest_chain.py: it imports ASHWING_BOSS_DEF from game/content/quest_chains.py, and that symbol is missing in the current gameplay code state."
+          ],
+          "follow_ups": [
+            "Agent 05 or the shared gameplay owner needs to restore the missing ASHWING_BOSS_DEF export/import path so the repository-wide smoke gate can load tests/conftest.py again."
+          ]
+        }
+      }
     }
   },
   "wk18-llm-merger-and-mechanics": {

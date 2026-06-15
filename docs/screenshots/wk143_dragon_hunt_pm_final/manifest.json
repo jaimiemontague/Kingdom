@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.1",
+  "run": {
+    "scenario": "dragon_hunt_showcase",
+    "seed": 3,
+    "run_dir": "wk143_dragon_hunt_pm_final",
+    "size": {
+      "w": 1920,
+      "h": 1080
+    },
+    "ticks_per_shot": 1200,
+    "dt": 0.016666666666666666
+  },
+  "outputs": [
+    {
+      "index": 0,
+      "filename": "dragon_hunt_showcase_world.png",
+      "relpath": "dragon_hunt_showcase_world.png",
+      "label": "WK143: Ashwing by the Dragon Cave with fire telegraph",
+      "scenario": "dragon_hunt_showcase",
+      "seed": 3,
+      "size": {
+        "w": 1920,
+        "h": 1080
+      },
+      "camera": {
+        "center_x": 4432.0,
+        "center_y": 3952.0,
+        "zoom": 2.1
+      },
+      "sha256": "9a89d6db14dc324f3c9f9b3cd364e3cb9713ec2fce9deb3dfbcba19487f85aae",
+      "meta": {
+        "scenario": "dragon_hunt_showcase",
+        "seed": 3,
+        "shot": "world",
+        "boss": "Ashwing the Red",
+        "phase": "Air And Fire"
+      }
+    },
+    {
+      "index": 1,
+      "filename": "dragon_hunt_showcase_ledger.png",
+      "relpath": "dragon_hunt_showcase_ledger.png",
+      "label": "WK143: Dragon Hunt ledger and quest-create modal",
+      "scenario": "dragon_hunt_showcase",
+      "seed": 3,
+      "size": {
+        "w": 1920,
+        "h": 1080
+      },
+      "camera": {
+        "center_x": 4432.0,
+        "center_y": 3952.0,
+        "zoom": 1.8
+      },
+      "sha256": "67d19b0828e717d6c6da92a27c735d7ef2e702f6b867b5f3c41f9ddd37f8e081",
+      "meta": {
+        "scenario": "dragon_hunt_showcase",
+        "seed": 3,
+        "shot": "ledger",
+        "boss": "Ashwing the Red",
+        "chain": "Ashwing's Hoard"
+      }
+    }
+  ]
+}

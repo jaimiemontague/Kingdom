@@ -23,6 +23,12 @@ AUDIO_EVENT_MAP = {
     "enemy_killed": "enemy_death",
     "lair_cleared": "lair_cleared",
 
+    # Boss encounter events (dragon-only cues; non-dragon bosses stay silent)
+    "boss_encounter_started": "dragon_roar",
+    "boss_phase_changed": "dragon_phase",
+    "boss_ability_telegraphed": "dragon_fire_telegraph",
+    "boss_ability_resolved": "dragon_fire_impact",
+
     # Bounty events
     "bounty_placed": "bounty_place",
     "bounty_claimed": "bounty_claimed",
@@ -53,6 +59,10 @@ SOUND_COOLDOWNS_MS = {
     "melee_hit": 100,
     "enemy_death": 200,
     "lair_cleared": 500,
+    "dragon_roar": 2000,
+    "dragon_phase": 1200,
+    "dragon_fire_telegraph": 300,
+    "dragon_fire_impact": 500,
     "hero_hired": 300,
     "purchase": 150,
     "ui_click": 100,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -34,6 +35,12 @@ class _BossEncounterState:
     telegraph_started_at_ms: int = 0
     telegraph_resolves_at_ms: int = 0
     telegraph_resolved: bool = False
+    ability_next_ready_at_ms: int = 0
+    ability_target_hero_id: str = ""
+    ability_target_hero_name: str = ""
+    ability_target_position: tuple[float, float] | None = None
+    ability_origin_position: tuple[float, float] | None = None
+    ability_direction: tuple[float, float] | None = None
     war_banner_buffed_ids: set[str] = field(default_factory=set)
     memory_facts: list[dict[str, object]] = field(default_factory=list)
     defeated_by: list[dict[str, object]] = field(default_factory=list)
@@ -196,11 +203,11 @@ class BossEncounterSystem(GameSystem):
 
     def update(self, ctx: SystemContext, dt: float) -> None:
         _ = dt
-        if not self._boss_states and not self._elite_states:
+        enemies = self._context_enemies(ctx)
+        if not self._boss_states and not self._elite_states and not enemies:
             return
         now = int(sim_now_ms())
         event_bus = getattr(ctx, "event_bus", None)
-        enemies = list(getattr(ctx, "enemies", None) or [])
         if enemies:
             self._sync_live_encounters(enemies, event_bus=event_bus, now_ms=now)
 
@@ -227,6 +234,16 @@ class BossEncounterSystem(GameSystem):
                     self._clear_war_banner(state, enemies)
                 state.current_phase = str(phase.phase_id)
                 state.current_phase_title = str(phase.title)
+                state.latest_telegraph = ""
+                state.telegraph_started_at_ms = 0
+                state.telegraph_resolves_at_ms = 0
+                state.telegraph_resolved = False
+                state.ability_next_ready_at_ms = now
+                state.ability_target_hero_id = ""
+                state.ability_target_hero_name = ""
+                state.ability_target_position = None
+                state.ability_origin_position = None
+                state.ability_direction = None
                 self._prepare_boss_object(boss, state.boss_def, state)
                 self._emit(
                     event_bus,
@@ -250,6 +267,10 @@ class BossEncounterSystem(GameSystem):
                 if not state.telegraph_started_at_ms:
                     self._begin_rally(state, event_bus=event_bus, now_ms=now)
                 self._maybe_resolve_rally(state, ctx, event_bus=event_bus, now_ms=now)
+
+            phase_ability = self._ability_for_phase(state.boss_def, state.current_phase)
+            if phase_ability is not None and str(phase_ability.trigger) == "cooldown":
+                self._update_cooldown_ability(state, ctx, event_bus=event_bus, now_ms=now)
 
         for state in list(self._elite_states.values()):
             if not self._is_alive(state.enemy):
@@ -319,6 +340,19 @@ class BossEncounterSystem(GameSystem):
             detail=detail,
             now_ms=now_ms,
         )
+        generic_memory = BossKillMemory(
+            boss_id=self._entity_id(boss),
+            boss_name=str(getattr(boss, "name", "") or self._definition_for_boss(boss).display_name_template),
+            boss_type=str(getattr(boss, "enemy_type", "") or self._definition_for_boss(boss).boss_type),
+            fallen_hero_id=str(record.get("hero_id", "") or ""),
+            fallen_hero_name=str(record.get("hero_name", "") or ""),
+            location_id=str(getattr(boss, "blackbanner_revenge_location_id", "") or ""),
+            location_name=str(getattr(boss, "blackbanner_revenge_location_name", "") or ""),
+            killed_at_ms=int(record.get("time_ms", 0) or 0),
+            revenge_chain_id=str(getattr(boss, "blackbanner_revenge_chain_id", "") or ""),
+            status="remembered",
+        )
+        setattr(boss, "_wk142_boss_kill_memory", generic_memory)
         self._append_boss_memory(boss, state, record, bucket="killed_hero")
         self._maybe_prime_blackbanner_revenge_state(boss, hero, record)
         return record
@@ -355,7 +389,9 @@ class BossEncounterSystem(GameSystem):
             return ()
         memories: list[BossKillMemory] = []
         for state in self._boss_states.values():
-            memory = getattr(state.boss, "_wk142_blackbanner_kill_memory", None)
+            memory = getattr(state.boss, "_wk142_boss_kill_memory", None)
+            if not isinstance(memory, BossKillMemory):
+                memory = getattr(state.boss, "_wk142_blackbanner_kill_memory", None)
             if isinstance(memory, BossKillMemory) and str(getattr(memory, "status", "")) == "remembered":
                 memories.append(memory)
         return tuple(memories)
@@ -401,8 +437,16 @@ class BossEncounterSystem(GameSystem):
         for enemy in enemies:
             if not self._is_alive(enemy):
                 continue
-            if getattr(enemy, "is_boss", False) or boss_def_for_enemy_type(str(getattr(enemy, "enemy_type", "") or "")) is not None:
-                self.register_boss(enemy, event_bus=event_bus, now_ms=now_ms)
+            explicit_def = getattr(enemy, "boss_def", None)
+            if (
+                isinstance(explicit_def, BossDef)
+                or getattr(enemy, "is_boss", False)
+                or boss_def_for_enemy_type(str(getattr(enemy, "enemy_type", "") or "")) is not None
+            ):
+                kwargs: dict[str, object] = {"event_bus": event_bus, "now_ms": now_ms}
+                if isinstance(explicit_def, BossDef):
+                    kwargs["boss_def"] = explicit_def
+                self.register_boss(enemy, **kwargs)
                 continue
             if getattr(enemy, "is_elite", False) or getattr(enemy, "elite_affix_ids", None):
                 self.register_elite(enemy, event_bus=event_bus, now_ms=now_ms)
@@ -581,6 +625,9 @@ class BossEncounterSystem(GameSystem):
     # ------------------------------------------------------------------
 
     def _definition_for_boss(self, boss: object) -> BossDef:
+        explicit_def = getattr(boss, "boss_def", None)
+        if isinstance(explicit_def, BossDef):
+            return explicit_def
         boss_type = str(getattr(boss, "enemy_type", "") or "").strip()
         definition = self.definitions.get(boss_type)
         if definition is not None:
@@ -1008,6 +1055,312 @@ class BossEncounterSystem(GameSystem):
             return None
         ability_id = str(phase.abilities[0])
         return next((ability for ability in definition.abilities if str(ability.ability_id) == ability_id), None)
+
+    def _update_cooldown_ability(
+        self,
+        state: _BossEncounterState,
+        ctx: SystemContext,
+        *,
+        event_bus: object | None,
+        now_ms: int,
+    ) -> None:
+        ability = self._ability_for_phase(state.boss_def, state.current_phase)
+        if ability is None or str(ability.trigger) != "cooldown":
+            return
+
+        if state.telegraph_started_at_ms and not state.telegraph_resolved:
+            if now_ms < state.telegraph_resolves_at_ms:
+                return
+            self._resolve_cooldown_ability(state, ctx, ability, event_bus=event_bus, now_ms=now_ms)
+            return
+
+        if now_ms < state.ability_next_ready_at_ms:
+            return
+        self._begin_cooldown_ability(state, ctx, ability, event_bus=event_bus, now_ms=now_ms)
+
+    def _begin_cooldown_ability(
+        self,
+        state: _BossEncounterState,
+        ctx: SystemContext,
+        ability: BossAbilityDef,
+        *,
+        event_bus: object | None,
+        now_ms: int,
+    ) -> None:
+        boss = state.boss
+        target = self._select_cooldown_ability_target(state, ctx)
+        if target is None:
+            return
+
+        target_hero, target_position, origin_position, direction = target
+        target_hero_id = self._hero_id(target_hero) or ""
+        target_hero_name = self._hero_name(target_hero)
+        target_id_for_target = self._hero_id(getattr(boss, "target", None)) or ""
+        telegraph_id = str(ability.payload.get("telegraph_id", "") or ability.ability_id)
+        if target_hero_id and target_hero_id != target_id_for_target:
+            try:
+                setattr(boss, "target", target_hero)
+            except Exception:
+                pass
+
+        state.latest_telegraph = telegraph_id
+        state.telegraph_started_at_ms = now_ms
+        state.telegraph_resolves_at_ms = now_ms + int(ability.telegraph_ms)
+        state.telegraph_resolved = False
+        state.ability_target_hero_id = target_hero_id
+        state.ability_target_hero_name = target_hero_name
+        state.ability_target_position = target_position
+        state.ability_origin_position = origin_position
+        state.ability_direction = direction
+        self._prepare_boss_object(boss, state.boss_def, state)
+        setattr(boss, "latest_telegraph", state.latest_telegraph)
+        setattr(boss, "latest_boss_telegraph", state.latest_telegraph)
+        setattr(boss, "boss_ability_target_hero_id", target_hero_id)
+        setattr(boss, "boss_ability_target_hero_name", target_hero_name)
+        setattr(boss, "boss_ability_target_position", target_position)
+        setattr(boss, "boss_ability_origin_position", origin_position)
+        setattr(boss, "boss_ability_direction", direction)
+        self._emit(
+            event_bus,
+            GameEventType.BOSS_ABILITY_TELEGRAPHED,
+            boss_id=self._entity_id(boss),
+            boss_type=str(getattr(boss, "enemy_type", state.boss_def.boss_type)),
+            name=str(getattr(boss, "name", "") or state.boss_def.display_name_template),
+            ability_id=str(ability.ability_id),
+            ability_name=str(ability.display_name),
+            current_phase=state.current_phase,
+            current_phase_title=state.current_phase_title,
+            telegraph_ms=int(ability.telegraph_ms),
+            resolve_at_ms=int(state.telegraph_resolves_at_ms),
+            detail=str(ability.payload.get("warning_event", "") or ""),
+            warning_event=str(ability.payload.get("warning_event", "") or ""),
+            shape=str(ability.payload.get("shape", "") or ""),
+            range_tiles=float(ability.payload.get("range", 0.0) or 0.0),
+            angle_degrees=float(ability.payload.get("angle_degrees", 0.0) or 0.0),
+            target_hero_id=target_hero_id,
+            target_hero_name=target_hero_name,
+            target_position=target_position,
+            origin_position=origin_position,
+            direction=direction,
+            time_ms=now_ms,
+        )
+
+    def _resolve_cooldown_ability(
+        self,
+        state: _BossEncounterState,
+        ctx: SystemContext,
+        ability: BossAbilityDef,
+        *,
+        event_bus: object | None,
+        now_ms: int,
+    ) -> None:
+        boss = state.boss
+        origin_position = state.ability_origin_position or self._entity_xy(boss)
+        target_position = state.ability_target_position or origin_position
+        direction = state.ability_direction
+        if direction is None:
+            direction = self._direction_towards(origin_position, target_position, boss)
+
+        range_tiles = float(ability.payload.get("range", 0.0) or 0.0)
+        angle_degrees = float(ability.payload.get("angle_degrees", 0.0) or 0.0)
+        damage = int(ability.payload.get("damage", 0) or 0)
+        status = str(ability.payload.get("status", "") or "")
+        shape = str(ability.payload.get("shape", "") or "")
+        impact_event = str(ability.payload.get("impact_event", "") or "")
+
+        hit_heroes = self._heroes_in_cone(
+            ctx,
+            origin_position,
+            direction,
+            range_tiles * TILE_SIZE,
+            angle_degrees,
+        )
+        hit_hero_ids: list[str] = []
+        hit_hero_names: list[str] = []
+        killed_hero_ids: list[str] = []
+        killed_hero_names: list[str] = []
+        for _, _, _, hero, _ in hit_heroes:
+            hero_id = self._hero_id(hero) or ""
+            hero_name = self._hero_name(hero)
+            take_damage = getattr(hero, "take_damage", None)
+            killed = False
+            if callable(take_damage):
+                try:
+                    killed = bool(take_damage(damage))
+                except TypeError:
+                    killed = bool(take_damage(int(damage)))
+                except Exception:
+                    killed = False
+            else:
+                try:
+                    current_hp = int(getattr(hero, "hp", 0) or 0)
+                    setattr(hero, "hp", max(0, current_hp - max(1, int(damage))))
+                    killed = int(getattr(hero, "hp", 0) or 0) <= 0
+                except Exception:
+                    killed = False
+            if status:
+                try:
+                    setattr(hero, "scorched", True)
+                    setattr(hero, "scorched_at_ms", now_ms)
+                except Exception:
+                    pass
+            hit_hero_ids.append(hero_id)
+            hit_hero_names.append(hero_name)
+            if killed:
+                killed_hero_ids.append(hero_id)
+                killed_hero_names.append(hero_name)
+                self.record_killed_hero(
+                    boss,
+                    hero,
+                    hero_id=hero_id,
+                    hero_name=hero_name,
+                    detail=impact_event or str(ability.ability_id),
+                    now_ms=now_ms,
+                )
+
+        state.telegraph_resolved = True
+        state.telegraph_started_at_ms = 0
+        state.telegraph_resolves_at_ms = 0
+        state.ability_next_ready_at_ms = now_ms + int(ability.cooldown_ms)
+        state.ability_target_hero_id = ""
+        state.ability_target_hero_name = ""
+        state.ability_target_position = None
+        state.ability_origin_position = None
+        state.ability_direction = None
+        self._prepare_boss_object(boss, state.boss_def, state)
+        setattr(boss, "latest_telegraph", state.latest_telegraph)
+        setattr(boss, "latest_boss_telegraph", state.latest_telegraph)
+        self._emit(
+            event_bus,
+            GameEventType.BOSS_ABILITY_RESOLVED,
+            boss_id=self._entity_id(boss),
+            boss_type=str(getattr(boss, "enemy_type", state.boss_def.boss_type)),
+            name=str(getattr(boss, "name", "") or state.boss_def.display_name_template),
+            ability_id=str(ability.ability_id),
+            ability_name=str(ability.display_name),
+            current_phase=state.current_phase,
+            current_phase_title=state.current_phase_title,
+            detail=impact_event,
+            impact_event=impact_event,
+            shape=shape,
+            range_tiles=range_tiles,
+            angle_degrees=angle_degrees,
+            status=status,
+            damage=damage,
+            hit_count=len(hit_hero_ids),
+            hit_hero_ids=tuple(hit_hero_ids),
+            hit_hero_names=tuple(hit_hero_names),
+            killed_hero_ids=tuple(killed_hero_ids),
+            killed_hero_names=tuple(killed_hero_names),
+            target_hero_id=self._hero_id(getattr(boss, "target", None)) or "",
+            target_position=target_position,
+            origin_position=origin_position,
+            time_ms=now_ms,
+        )
+
+    def _select_cooldown_ability_target(
+        self,
+        state: _BossEncounterState,
+        ctx: SystemContext,
+    ) -> tuple[object, tuple[float, float], tuple[float, float], tuple[float, float]] | None:
+        boss = state.boss
+        boss_position = self._entity_xy(boss)
+        heroes = list(getattr(ctx, "heroes", None) or [])
+        living: list[tuple[float, str, int, object, tuple[float, float]]] = []
+        target_hero = getattr(boss, "target", None)
+        target_hero_id = self._hero_id(target_hero) or ""
+
+        for index, hero in enumerate(heroes):
+            if hero is None or not self._is_alive(hero) or getattr(hero, "is_captured", False):
+                continue
+            hero_position = self._entity_position(hero)
+            if hero_position is None:
+                continue
+            hero_id = self._hero_id(hero) or f"hero:{index:04d}"
+            distance = math.hypot(hero_position[0] - boss_position[0], hero_position[1] - boss_position[1])
+            living.append((distance, hero_id, index, hero, hero_position))
+
+        if not living:
+            return None
+
+        living.sort(key=lambda item: (0 if item[1] == target_hero_id else 1, item[0], item[1], item[2]))
+        target_distance, _, _, target_hero, target_position = living[0]
+        _ = target_distance
+        direction = self._direction_towards(boss_position, target_position, boss)
+        return target_hero, target_position, boss_position, direction
+
+    @staticmethod
+    def _direction_towards(
+        origin: tuple[float, float],
+        target: tuple[float, float],
+        boss: object,
+    ) -> tuple[float, float]:
+        dx = float(target[0]) - float(origin[0])
+        dy = float(target[1]) - float(origin[1])
+        length = math.hypot(dx, dy)
+        if length > 0:
+            return (dx / length, dy / length)
+        facing = float(getattr(boss, "facing", 1) or 1)
+        return (1.0, 0.0) if facing >= 0 else (-1.0, 0.0)
+
+    def _heroes_in_cone(
+        self,
+        ctx: SystemContext,
+        origin: tuple[float, float],
+        direction: tuple[float, float],
+        range_px: float,
+        angle_degrees: float,
+    ) -> list[tuple[float, str, int, object, tuple[float, float]]]:
+        if range_px <= 0:
+            return []
+        dir_x, dir_y = self._normalize_vector(direction)
+        cosine_threshold = math.cos(math.radians(max(0.0, float(angle_degrees)) / 2.0))
+        hits: list[tuple[float, str, int, object, tuple[float, float]]] = []
+        for index, hero in enumerate(getattr(ctx, "heroes", None) or []):
+            if hero is None or not self._is_alive(hero) or getattr(hero, "is_captured", False):
+                continue
+            hero_position = self._entity_position(hero)
+            if hero_position is None:
+                continue
+            dx = hero_position[0] - float(origin[0])
+            dy = hero_position[1] - float(origin[1])
+            distance = math.hypot(dx, dy)
+            if distance > range_px:
+                continue
+            if distance <= 0:
+                in_cone = True
+            else:
+                vec_x = dx / distance
+                vec_y = dy / distance
+                in_cone = (vec_x * dir_x + vec_y * dir_y) >= cosine_threshold
+            if not in_cone:
+                continue
+            hero_id = self._hero_id(hero) or f"hero:{index:04d}"
+            hits.append((distance, hero_id, index, hero, hero_position))
+        hits.sort(key=lambda item: (item[0], item[1], item[2]))
+        return hits
+
+    @staticmethod
+    def _normalize_vector(direction: tuple[float, float]) -> tuple[float, float]:
+        dx = float(direction[0])
+        dy = float(direction[1])
+        length = math.hypot(dx, dy)
+        if length <= 0:
+            return (1.0, 0.0)
+        return (dx / length, dy / length)
+
+    @staticmethod
+    def _context_enemies(ctx: SystemContext) -> list[object]:
+        try:
+            enemies = object.__getattribute__(ctx, "enemies")
+        except Exception:
+            try:
+                enemies = vars(ctx).get("enemies", None)
+            except Exception:
+                return []
+        if not enemies:
+            return []
+        return list(enemies)
 
     def _count_nearby_enemies(
         self,

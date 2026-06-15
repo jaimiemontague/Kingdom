@@ -157,6 +157,51 @@ RUSK_BLACKBANNER_BOSS_DEF = BossDef(
     memory_tags=("defeated_by", "killed_hero"),
 )
 
+ASHWING_FIRE_BREATH = BossAbilityDef(
+    ability_id="ashwing_fire_breath",
+    display_name="Fire Breath",
+    trigger="cooldown",
+    cooldown_ms=9_000,
+    telegraph_ms=1_400,
+    payload={
+        "shape": "cone",
+        "range": 9.0,
+        "damage": 24,
+        "angle_degrees": 60.0,
+        "status": "scorched",
+        "telegraph_id": "fire_breath",
+        "warning_event": "dragon_fire_telegraph",
+        "impact_event": "dragon_fire_impact",
+    },
+)
+
+ASHWING_SLEEPING_HOARD_PHASE = BossPhaseDef(
+    phase_id="sleeping_hoard",
+    starts_below_hp_pct=1.0,
+    title="Sleeping Hoard",
+    abilities=(),
+)
+
+ASHWING_AIR_AND_FIRE_PHASE = BossPhaseDef(
+    phase_id="air_and_fire",
+    starts_below_hp_pct=0.7,
+    title="Air and Fire",
+    abilities=("ashwing_fire_breath",),
+    on_enter_event="boss_phase_changed",
+)
+
+ASHWING_BOSS_DEF = BossDef(
+    boss_type="dragon",
+    display_name_template="Ashwing the Red",
+    base_enemy_type="dragon",
+    difficulty_tier=6,
+    phases=(ASHWING_SLEEPING_HOARD_PHASE, ASHWING_AIR_AND_FIRE_PHASE),
+    abilities=(ASHWING_FIRE_BREATH,),
+    loot_table_id="ashwing_hoard_loot",
+    weakness_tags=("preparation", "fire-warding", "burst"),
+    memory_tags=("defeated_by", "killed_hero"),
+)
+
 BOSS_DEFS: dict[str, BossDef] = {
     WARCHIEF_BOSS_DEF.boss_type: WARCHIEF_BOSS_DEF,
     RUSK_BLACKBANNER_BOSS_DEF.boss_type: RUSK_BLACKBANNER_BOSS_DEF,

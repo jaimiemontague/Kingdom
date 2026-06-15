@@ -856,6 +856,138 @@
           ]
         }
       }
+    },
+    "wk143_dragon_hunt_showcase": {
+      "sprint_meta": {
+        "title": "WK143 Dragon Hunt Showcase - Wave 1",
+        "plan_ref": ".cursor/plans/wk143_dragon_hunt_showcase.plan.md",
+        "created_utc": "2026-06-15T00:00:00Z",
+        "notes": "Wave 1 gameplay lane for Ashwing's Hoard: named dragon boss, deterministic fire telegraph, hoard reward, legendary loot, and title/memory."
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "sprint_id": "wk143_dragon_hunt_showcase",
+          "round_id": "r1_kickoff",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "Wave 1 (Ashwing's Hoard gameplay + boss telegraph/reward tests)",
+            "plan_ref": ".cursor/plans/wk143_dragon_hunt_showcase.plan.md",
+            "created_utc": "2026-06-15T00:00:00Z"
+          },
+          "what_i_changed": [
+            "game/content/quest_chains.py: added Ashwing's Hoard chain phases for scout the cave, prepare against Ashwing's fire, slay Ashwing the Red, and claim the hoard; wired the reward title, reward memory summary, and hoard reward facts.",
+            "game/content/bosses.py: added Ashwing the Red boss definition with the ashwing_fire_breath ability, deterministic telegraph/impact metadata, and the fire_breath telegraph id used by the showcase.",
+            "game/systems/quest_chain.py: fixed the Ashwing boss import wiring, reveal flow, and claim-hoard resolution so the quest can complete off the hoard location snapshot after the boss falls.",
+            "game/systems/boss_encounter.py: registered live bosses on first update, added deterministic Ashwing fire telegraph/resolve handling, and preserved the empty-context no-op contract.",
+            "game/entities/hero.py: added title tracking and title-award profile memory support used by the hoard reward.",
+            "tests/test_wk143_dragon_hunt.py: covered the full scout -> prepare -> slay -> claim progression and named boss spawn.",
+            "tests/test_wk143_dragon_fire_telegraph.py: covered the telegraph-before-impact contract and cone damage behavior.",
+            "tests/test_wk143_dragon_rewards.py: covered legendary loot, title, and memory on hoard completion."
+          ],
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk143_dragon_hunt.py tests/test_wk143_dragon_fire_telegraph.py tests/test_wk143_dragon_rewards.py -q",
+              "exit_code": 0,
+              "result": "3 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk141_blackbanner_boss.py tests/test_wk142_boss_revenge.py -q",
+              "exit_code": 0,
+              "result": "5 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk143_dragon_capture_scenario.py -q",
+              "exit_code": 0,
+              "result": "2 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "result": "10 passed"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+              "exit_code": 0,
+              "result": "valid JSON"
+            }
+          ],
+          "evidence": {
+            "focused_tests": "3 passed locally on the Ashwing gameplay slice.",
+            "regression_slice": "5 passed on the WK139/WK141/WK142 boss regression slice.",
+            "capture_scenario": "2 passed on tests/test_wk143_dragon_capture_scenario.py, confirming the showcase telegraph path stays readable.",
+            "wk67_ai_boundary": "10 passed, preserving the determinism boundary.",
+            "pm_gate": "PM reported the same Wave 1 product gates as green."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Final QA smoke gate is owned by PM; I did not rerun the long smoke after the interrupt."
+          ]
+        },
+        "r5_final_qa_raid_lair_repair": {
+          "sprint_id": "wk143_dragon_hunt_showcase",
+          "round_id": "r5_final_qa_raid_lair_repair",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Restored WK126 real-engine raid_lair soak completion without weakening the soak contract. Accepted lair raiders now resume a live lair quest from stale inside-building attack gates when fit, and explicit lair targets get priority once the hero is already in lair strike range.",
+            "files_touched": [
+              "game/systems/quest.py",
+              "game/systems/combat.py",
+              ".cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json"
+            ],
+            "root_cause": "The final accepted raid_lair hero was alive, adjacent to the 2 HP lair, and still targeting it, but a previous rest/shop transition left is_inside_building=True. Hero.update therefore kept can_attack=False, so CombatSystem blocked every lair strike and LAIR_CLEARED never fired. A secondary combat issue could also consume a committed raider's attack cooldown on incidental nearby enemies before the explicit lair target."
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk126_quest_soak.py::test_soak_all_four_quest_types_complete_and_pay -q",
+              "exit_code": 1,
+              "result": "Initial reproduction failed: completed types were explore_far/find_poi/slay_enemy_type; raid_lair failed twice with reason hero_died."
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk126_quest_soak.py::test_soak_all_four_quest_types_complete_and_pay -q",
+              "exit_code": 0,
+              "result": "1 passed; WK126 focused soak restored with raid_lair completing through LAIR_CLEARED -> QuestSystem.on_lair_cleared -> QuestSystem._complete."
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk143_dragon_hunt.py tests/test_wk143_dragon_fire_telegraph.py tests/test_wk143_dragon_rewards.py -q",
+              "exit_code": 0,
+              "result": "3 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk141_blackbanner_chain.py tests/test_wk141_blackbanner_boss.py tests/test_wk142_dynamic_rescue_gameplay.py tests/test_wk142_boss_revenge.py -q",
+              "exit_code": 0,
+              "result": "8 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "result": "10 passed"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "result": "DONE: PASS; 1973 passed, 5 skipped, 1 xfailed; determinism_guard PASS"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+              "exit_code": 0,
+              "result": "valid JSON"
+            }
+          ],
+          "evidence": {
+            "focused_soak": "PASS after repair. The WK126 test still uses a real engine run, real combat, LAIR_CLEARED routing, and QuestSystem._complete payout.",
+            "diagnosis": "Instrumentation showed the driven raider at the lair with hp 120/120, lair hp 2, target_same=True, strike=True, but inside=True and can_attack=False for the rest of the run.",
+            "wk143_regressions": "3 passed on the dragon hunt/fire/reward slice.",
+            "older_regressions": "8 passed on WK139 boss encounters, WK141 Blackbanner chain/boss, and WK142 dynamic rescue/revenge.",
+            "wk67_boundary": "10 passed; the quest path stays gated away from the no-quest digest scenario.",
+            "qa_smoke_quick": "PASS; full quick smoke green with 1973 passed, 5 skipped, 1 xfailed."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "No gameplay follow-up is required for this blocker. PM/QA may rerun final integrated screenshots if desired, but this repair did not change UI or visible graphics directly."
+          ]
+        }
+      }
     }
   }
 }

@@ -139,6 +139,11 @@ class AudioSystem:
             world_y = event.get("to_y")
 
         if world_x is None or world_y is None:
+            position = event.get("position")
+            if isinstance(position, (tuple, list)) and len(position) >= 2:
+                world_x, world_y = position[0], position[1]
+
+        if world_x is None or world_y is None:
             return True
 
         try:
@@ -186,6 +191,15 @@ class AudioSystem:
         # Map event type to sound key (flat contract)
         sound_key = AUDIO_EVENT_MAP.get(event_type)
         if not sound_key:
+            return
+
+        boss_type = str(event.get("boss_type", "") or "").lower().strip()
+        if event_type in {
+            "boss_encounter_started",
+            "boss_phase_changed",
+            "boss_ability_telegraphed",
+            "boss_ability_resolved",
+        } and boss_type != "dragon":
             return
 
         # WK6 Mid-Sprint: Check visibility gating (viewport + fog-of-war)

@@ -351,6 +351,94 @@ class QuestViewPanel:
         return ""
 
     @staticmethod
+    def _hero_title_from_id(game_state: dict[str, Any], hero_id: str | None) -> str:
+        if not hero_id:
+            return ""
+        sim = game_state.get("sim") or getattr(game_state.get("engine"), "sim", None)
+        heroes = game_state.get("heroes") or getattr(sim, "heroes", ()) or ()
+        for hero in heroes:
+            if str(getattr(hero, "hero_id", "") or "") != str(hero_id):
+                continue
+            title = str(getattr(hero, "current_title", "") or getattr(hero, "hero_title", "") or "").strip()
+            if title:
+                return title
+        return ""
+
+    @classmethod
+    def _ashwing_ledger_lines(
+        cls,
+        game_state: dict[str, Any],
+        chain: Any,
+        live_facts: dict[str, Any],
+        current_title: str,
+        current_target: str,
+        status_key: str,
+    ) -> list[str]:
+        if str(getattr(chain, "chain_type", "") or "") != "ashwings_hoard":
+            return []
+
+        def _fact(*names: str) -> str:
+            for name in names:
+                value = str(live_facts.get(name, "") or "").strip()
+                if value:
+                    return value
+            return ""
+
+        chain_type = str(getattr(chain, "chain_type", "") or "")
+        boss_name = _fact("boss_target_name") or current_target or "Ashwing the Red"
+        weakness = _fact("boss_target_weakness_name", "known_weakness", "boss_target_weakness_detail")
+        prep = _fact("prep_target_story_name", "prep_target_name", "preparation_note", "boss_target_weakness_detail")
+        reward_item = _fact("reward_item_name") or ("Dragonscale Armor" if chain_type == "ashwings_hoard" else "")
+        reward_title = _fact("reward_title") or ("Ashwing-Bane" if chain_type == "ashwings_hoard" else "")
+        reward_title = reward_title or cls._hero_title_from_id(game_state, getattr(chain, "assigned_hero_id", None))
+        reward_memory = _fact("reward_memory_summary") or (
+            "Claimed Ashwing's Hoard" if chain_type == "ashwings_hoard" and status_key in {"completed", "failed"} else ""
+        )
+
+        lines: list[str] = []
+        if status_key in {"active", "offered"}:
+            now_title = current_title or "Prepare for Ashwing"
+            lines.append(f"Now: {now_title} | Dragon: {boss_name}")
+            detail_bits: list[str] = []
+            if weakness:
+                detail_bits.append(f"Weakness: {weakness}")
+            if prep:
+                detail_bits.append(f"Prep: {prep}")
+            if detail_bits:
+                lines.append(" | ".join(detail_bits))
+            reward_bits: list[str] = []
+            if live_facts.get("boss_target_revealed", False):
+                reward_bits.append("Fire warning: exposed")
+            if reward_item:
+                reward_bits.append(f"Hoard reward: {reward_item}")
+            if reward_title:
+                reward_bits.append(f"Victory title: {reward_title}")
+            if reward_bits:
+                lines.append(" | ".join(reward_bits))
+            return lines
+
+        if status_key in {"completed", "failed"}:
+            lines.append(f"Dragon: {boss_name} | Victory title: {reward_title or 'Ashwing-Bane'}")
+            detail_bits: list[str] = []
+            if weakness:
+                detail_bits.append(f"Weakness: {weakness}")
+            if prep:
+                detail_bits.append(f"Prep: {prep}")
+            if detail_bits:
+                lines.append(" | ".join(detail_bits))
+            reward_bits: list[str] = []
+            if reward_item:
+                reward_bits.append(f"Hoard reward: {reward_item}")
+            if reward_memory:
+                reward_bits.append(f"Memory: {reward_memory}")
+            if not reward_bits and reward_title:
+                reward_bits.append(f"Victory title: {reward_title}")
+            if reward_bits:
+                lines.append(" | ".join(reward_bits))
+
+        return lines
+
+    @staticmethod
     def _chain_current_phase(chain: Any) -> tuple[Any | None, int]:
         phases = tuple(getattr(chain, "phases", ()) or ())
         if not phases:
@@ -405,6 +493,7 @@ class QuestViewPanel:
             phase_rows = tuple(getattr(chain, "phases", ()) or ())
             current_phase, current_index = self._chain_current_phase(chain)
             status_key = str(getattr(chain, "status", "") or "")
+            chain_type = str(getattr(chain, "chain_type", "") or "")
             status_label = _CHAIN_STATUS_LABELS.get(status_key, status_key.title() or "Unknown")
             hero_name = self._hero_name_from_id(game_state, getattr(chain, "assigned_hero_id", None))
             reward_gold = self._chain_reward_gold(game_state, chain)
@@ -414,6 +503,7 @@ class QuestViewPanel:
             boss_revealed = bool(live_facts.get("boss_target_revealed", False))
             revealed_boss_name = str(live_facts.get("boss_target_name", "") or "").strip()
             story_line = self._chain_story_line(chain, live_facts, current_target)
+            dragon_lines = self._ashwing_ledger_lines(game_state, chain, live_facts, current_title, current_target, status_key)
 
             compact_title_font = pygame.font.Font(None, 14)
             compact_font = pygame.font.Font(None, 11)
@@ -442,7 +532,11 @@ class QuestViewPanel:
             detail_lines: list[str] = []
             if story_line:
                 detail_lines.append(story_line)
-            if status_key in {"active", "offered"} and current_title:
+            if dragon_lines:
+                detail_lines.extend(dragon_lines)
+                if status_key in {"completed", "failed"}:
+                    detail_lines.append(f"Outcome: {status_label}")
+            elif status_key in {"active", "offered"} and current_title:
                 compact_title = current_title
                 if boss_revealed and " the " in current_title:
                     short_title = current_title.split(" the ", 1)[0].strip()
@@ -450,7 +544,7 @@ class QuestViewPanel:
                         compact_title = short_title
                 detail_bits = [f"Now: {compact_title}"]
                 if boss_revealed and revealed_boss_name and (
-                    revealed_boss_name != current_target or str(getattr(chain, "chain_type", "") or "") == "blackbanner_revenge"
+                    revealed_boss_name != current_target or chain_type == "blackbanner_revenge"
                 ):
                     detail_bits.append(f"Boss: {revealed_boss_name}")
                 detail_lines.append(" | ".join(detail_bits))
@@ -511,6 +605,7 @@ class QuestViewPanel:
 
             current_phase, current_index = self._chain_current_phase(chain)
             status_key = str(getattr(chain, "status", "") or "")
+            chain_type = str(getattr(chain, "chain_type", "") or "")
             status_label = _CHAIN_STATUS_LABELS.get(status_key, status_key.title() or "Unknown")
             hero_name = self._hero_name_from_id(game_state, getattr(chain, "assigned_hero_id", None))
             reward_gold = self._chain_reward_gold(game_state, chain)
@@ -520,7 +615,8 @@ class QuestViewPanel:
             boss_revealed = bool(live_facts.get("boss_target_revealed", False))
             revealed_boss_name = str(live_facts.get("boss_target_name", "") or "").strip()
             story_line = self._chain_story_line(chain, live_facts, current_target)
-            has_objective_line = status_key in {"active", "offered"} and current_title
+            dragon_lines = self._ashwing_ledger_lines(game_state, chain, live_facts, current_title, current_target, status_key)
+            has_objective_line = status_key in {"active", "offered"} and current_title and not dragon_lines
 
             card_lines: list[str] = []
             card_lines.append(str(getattr(chain, "name", "") or "Quest Chain"))
@@ -533,12 +629,14 @@ class QuestViewPanel:
             card_lines.append(" | ".join(meta_bits))
             if story_line:
                 card_lines.append(story_line)
-            if has_objective_line:
+            if dragon_lines:
+                card_lines.extend(dragon_lines)
+            elif has_objective_line:
                 objective_bits = [f"Current objective: {current_title}"]
                 if current_target:
                     objective_bits.append(f"Target: {current_target}")
                 if boss_revealed and revealed_boss_name and (
-                    revealed_boss_name != current_target or str(getattr(chain, "chain_type", "") or "") == "blackbanner_revenge"
+                    revealed_boss_name != current_target or chain_type == "blackbanner_revenge"
                 ):
                     objective_bits.append(f"Boss: {revealed_boss_name}")
                 card_lines.append(" | ".join(objective_bits))
@@ -554,7 +652,9 @@ class QuestViewPanel:
             card_h += gap + body_h
             if story_line:
                 card_h += gap + body_h
-            if has_objective_line:
+            if dragon_lines:
+                card_h += len(dragon_lines) * (gap + body_h)
+            elif has_objective_line:
                 card_h += gap + body_h
             card_h += len(phase_rows) * (body_h + 4)
             if status_key in {"completed", "failed"}:
@@ -605,7 +705,34 @@ class QuestViewPanel:
                 inner_y += body_h + gap
                 start_index += 1
 
-            if len(card_lines) > start_index and status_key not in {"completed", "failed"}:
+            if len(card_lines) > start_index and dragon_lines:
+                for line in card_lines[start_index : start_index + len(dragon_lines)]:
+                    line_color = (205, 210, 220)
+                    if line.startswith("Now:"):
+                        line_color = (200, 200, 210)
+                    elif line.startswith("Weakness:"):
+                        line_color = (190, 200, 190)
+                    elif line.startswith("Prep:"):
+                        line_color = (200, 210, 200)
+                    elif line.startswith("Fire warning:"):
+                        line_color = (230, 150, 80)
+                    elif line.startswith("Hoard reward:"):
+                        line_color = (200, 210, 200)
+                    elif line.startswith("Victory title:"):
+                        line_color = (220, 180, 110)
+                    elif line.startswith("Dragon:"):
+                        line_color = (220, 210, 170)
+                    TextLabel.render(
+                        surface,
+                        body_font,
+                        _truncate(line, inner_w, body_font),
+                        (inner_x, inner_y),
+                        line_color,
+                    )
+                    lines.append(line)
+                    inner_y += body_h + gap
+                start_index += len(dragon_lines)
+            elif len(card_lines) > start_index and status_key not in {"completed", "failed"}:
                 objective_color = (200, 210, 200) if status_key in {"active", "offered"} else (210, 180, 180)
                 TextLabel.render(
                     surface,

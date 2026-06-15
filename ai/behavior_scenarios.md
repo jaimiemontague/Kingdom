@@ -33,6 +33,27 @@ These scenarios are meant to be **reproducible**, **short**, and easy to validat
 - **Expected**:
   - Parser rejects unknown actions and falls back deterministically via `get_fallback_decision`.
 
+## Scenario 6: Ashwing hunt prep
+
+- **Setup**: Active `Ashwing's Hoard` chain, dragon revealed, hero healthy with supplies, boss telegraph visible in the structured context.
+- **Expected**:
+  - Prompt context keeps the dragon facts structured: chain phase, boss identity, boss phase, telegraph, and the current preparation target.
+  - A prepared hero can continue the hunt.
+
+## Scenario 7: Ashwing hunt resupply
+
+- **Setup**: Active `Ashwing's Hoard` chain, hero is healthy but has no potions, and the structured context exposes the hunt facts.
+- **Expected**:
+  - The deterministic policy may choose `prepare_supplies` before pressing on.
+  - The model must not invent a dragon weakness or claim the hoard is already claimed.
+
+## Scenario 8: Ashwing hunt retreat
+
+- **Setup**: Active `Ashwing's Hoard` chain, hero is wounded and has no potions.
+- **Expected**:
+  - Survival gates force `retreat_to_heal`.
+  - Rescue/revenge memories remain separate structured facts and are not overwritten by the dragon hunt context.
+
 
 
 

@@ -25,6 +25,19 @@ Uses flat contract keys for simplicity.
 | `enemy_killed` | `enemy_death` | `assets/audio/sfx/enemy_death.wav` or `.ogg` | `x`, `y` | Enemy death sound |
 | `lair_cleared` | `lair_cleared` | `assets/audio/sfx/lair_cleared.wav` or `.ogg` | (from lair_obj) | Lair cleared sound |
 
+### Boss Encounter Events
+
+Ashwing uses the existing boss lifecycle events with dragon-specific cue files.
+These cues play only when `boss_type == "dragon"`; other boss types stay silent.
+Boss events may provide a `position` tuple, which the audio gate treats as the world coordinate for visibility checks.
+
+| Event Type | Sound Key | File Path | Notes |
+|------------|-----------|-----------|-------|
+| `boss_encounter_started` | `dragon_roar` | `assets/audio/sfx/dragon_roar.ogg` | Dragon reveal / roar cue |
+| `boss_phase_changed` | `dragon_phase` | `assets/audio/sfx/dragon_phase.ogg` | Phase transition cue |
+| `boss_ability_telegraphed` | `dragon_fire_telegraph` | `assets/audio/sfx/dragon_fire_telegraph.ogg` | Fire warning before damage |
+| `boss_ability_resolved` | `dragon_fire_impact` | `assets/audio/sfx/dragon_fire_impact.ogg` | Fire impact / damage cue |
+
 ### Economy/Shop Events
 
 | Event Type | Sound Key | File Path | Position Field | Notes |

@@ -11,6 +11,8 @@ from game.sim.timebase import now_ms as sim_now_ms
 SCOUT_LOCATION = "scout_location"
 COLLECT_ITEM = "collect_item"
 DELIVER_ITEM = "deliver_item"
+PREPARE_HUNT = "prepare_hunt"
+CLAIM_HOARD = "claim_hoard"
 
 SCOUT_FORTRESS = "scout_fortress"
 INTERCEPT_TOLL_TAKER = "intercept_toll_taker"
@@ -21,6 +23,11 @@ RESCUE_HERO = "rescue_hero"
 SLAY_NAMED_BOSS = "slay_named_boss"
 REACH_FORTRESS = "reach_fortress"
 AVENGE_FALLEN_HERO = "avenge_fallen_hero"
+SCOUT_DRAGON_CAVE = "scout_dragon_cave"
+SLAY_ASHWING = "slay_ashwing"
+
+ASHWING_THE_RED_NAME = "Ashwing the Red"
+ASHWINGS_HOARD_NAME = "Ashwing's Hoard"
 
 BLACKBANNER_TOLL_TAKER_NAME = "Blackbanner Toll-Taker"
 BLACKBANNER_TOLL_TAKER_STORY_NAME = "Blackbanner Toll-Taker"
@@ -159,11 +166,47 @@ BLACKBANNER_REVENGE = QuestChainDef(
 )
 
 
+ASHWINGS_HOARD = QuestChainDef(
+    chain_type="ashwings_hoard",
+    display_name=ASHWINGS_HOARD_NAME,
+    difficulty_tier=6,
+    phases=(
+        QuestPhaseDef(
+            phase_id=SCOUT_DRAGON_CAVE,
+            title="Scout the Dragon Cave",
+            objective_type=SCOUT_LOCATION,
+            target_ref="dragon_cave_target",
+        ),
+        QuestPhaseDef(
+            phase_id=PREPARE_HUNT,
+            title="Prepare Against Ashwing's Fire",
+            objective_type=PREPARE_HUNT,
+            target_ref="prep_target",
+        ),
+        QuestPhaseDef(
+            phase_id=SLAY_ASHWING,
+            title=f"Slay {ASHWING_THE_RED_NAME}",
+            objective_type=SLAY_NAMED_BOSS,
+            target_ref="boss_target",
+        ),
+        QuestPhaseDef(
+            phase_id=CLAIM_HOARD,
+            title=f"Claim {ASHWINGS_HOARD_NAME}",
+            objective_type=CLAIM_HOARD,
+            target_ref="hoard_target",
+        ),
+    ),
+    reward_profile=QuestRewardProfile(gold=520),
+    tags=("dragon", "hoard", "ashwing"),
+)
+
+
 QUEST_CHAIN_DEFS: dict[str, QuestChainDef] = {
     RELIC_OF_THE_OLD_SHRINE.chain_type: RELIC_OF_THE_OLD_SHRINE,
     BLACKBANNERS_TOLL.chain_type: BLACKBANNERS_TOLL,
     BLACKBANNER_RESCUE.chain_type: BLACKBANNER_RESCUE,
     BLACKBANNER_REVENGE.chain_type: BLACKBANNER_REVENGE,
+    ASHWINGS_HOARD.chain_type: ASHWINGS_HOARD,
 }
 
 

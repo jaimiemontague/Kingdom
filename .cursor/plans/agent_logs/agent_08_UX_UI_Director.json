@@ -559,11 +559,11 @@
         "notes": "WK142 Dynamic Rescue & Revenge Wave 2 UI readability. Deterministic test PNGs were used because the generic ui_panels capture scenario does not seed the rescue/revenge chain."
       },
       "rounds": {
-        "r2_wave1_gate_wave2_kickoff": {
-          "sprint_id": "wk142_dynamic_rescue_revenge",
-          "round_id": "r2_wave1_gate_wave2_kickoff",
-          "status": "done",
-          "task": "Make active and completed Blackbanner rescue/revenge state readable in the Adventure Ledger/HUD.",
+      "r2_wave1_gate_wave2_kickoff": {
+        "sprint_id": "wk142_dynamic_rescue_revenge",
+        "round_id": "r2_wave1_gate_wave2_kickoff",
+        "status": "done",
+        "task": "Make active and completed Blackbanner rescue/revenge state readable in the Adventure Ledger/HUD.",
           "what_i_changed": [
             "game/ui/quest_view_panel.py: added a WK142 rescue/revenge story-line helper for Blackbanner chains so the Adventure Ledger now surfaces the captive hero or fallen hero, the captor or revenge boss, the target location when known, and the current rescued/avenged outcome state while preserving the existing phase timeline and completion footer.",
             "tests/test_wk142_rescue_ui.py: NEW deterministic pygame coverage for active and completed rescue/revenge states in the compact ledger, the full ledger, and the quest-create modal; proof PNGs are written to docs/screenshots/wk142_rescue_revenge_ui/."
@@ -620,6 +620,76 @@
           "follow_ups": [
             "Agent 11 can use the passing focused tests and inspected PNGs as integrated verification evidence for the UI lane.",
             "If PM wants a scripted rescue/revenge screenshot scenario later, Agent 12 would need to add one that seeds the WK142 chain."
+          ]
+        }
+      }
+    },
+    "wk143_dragon_hunt_showcase": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk143_dragon_hunt_showcase.plan.md",
+        "created_utc": "2026-06-15T00:00:00Z",
+        "notes": "WK143 Dragon Hunt Showcase Wave 2 UI readability. Deterministic test PNGs prove the Ashwing ledger states; the scripted dragon showcase capture currently trips an unrelated graphics bug in `game/graphics/enemy_sprites.py`."
+      },
+      "rounds": {
+        "r2_wave1_gate_wave2_kickoff": {
+          "sprint_id": "wk143_dragon_hunt_showcase",
+          "round_id": "r2_wave1_gate_wave2_kickoff",
+          "status": "done",
+          "task": "Make Ashwing's Hoard readable in Adventure Ledger/HUD: phase, Ashwing identity, weakness/prep, fire warning if exposed, hoard reward, victory title. Screenshot-verify active/completed states.",
+          "what_i_changed": [
+            "game/ui/quest_view_panel.py: added Ashwing-specific ledger rendering so active/offered rows show the phase, Ashwing identity, weakness, prep, exposed fire warning, hoard reward, and victory title; completed rows show the same Ashwing facts plus outcome/memory. The helper accepts both older and newer live-fact keys and preserves the existing Blackbanner rescue/revenge path.",
+            "tests/test_wk143_dragon_ui.py: NEW deterministic pygame coverage for active and completed Ashwing ledger snapshots at 246x300 and 320x120, writing proof PNGs under docs/screenshots/wk143_dragon_hunt_ui/.",
+            "tests/test_wk143_dragon_capture_scenario.py: seeded the Ashwing scenario facts and updated the expectations so the showcase path now asserts the readable Ashwing identity, weakness/prep, fire warning, hoard reward, and victory title."
+          ],
+          "files_touched": [
+            "game/ui/quest_view_panel.py",
+            "tests/test_wk143_dragon_ui.py",
+            "tests/test_wk143_dragon_capture_scenario.py",
+            "docs/screenshots/wk143_dragon_hunt_ui/wk143_dragon_ledger_active_246x300.png",
+            "docs/screenshots/wk143_dragon_hunt_ui/wk143_dragon_ledger_active_320x120.png",
+            "docs/screenshots/wk143_dragon_hunt_ui/wk143_dragon_ledger_completed_246x300.png",
+            "docs/screenshots/wk143_dragon_hunt_ui/wk143_dragon_ledger_completed_320x120.png",
+            ".cursor/plans/agent_logs/agent_08_UX_UI_Director.json"
+          ],
+          "commands_run": [
+            {
+              "command": "python -m py_compile game\\ui\\quest_view_panel.py tests\\test_wk143_dragon_ui.py tests\\test_wk143_dragon_capture_scenario.py",
+              "exit_code": 0,
+              "note": "syntax check passed"
+            },
+            {
+              "command": "python -m pytest tests/test_wk143_dragon_ui.py tests/test_wk143_dragon_capture_scenario.py tests/test_wk142_rescue_ui.py -q",
+              "exit_code": 0,
+              "note": "8 passed, 1 warning"
+            },
+            {
+              "command": "python tools/capture_screenshots.py --scenario dragon_hunt_showcase --seed 3 --out docs\\screenshots\\wk143_dragon_hunt_ui --size 1920x1080 --ticks 1200",
+              "exit_code": 1,
+              "note": "NameError: name 'et' is not defined in game/graphics/enemy_sprites.py:164 during world rendering; out of Agent 08 lane"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "note": "validated after update"
+            }
+          ],
+          "evidence": {
+            "pytest": "python -m pytest tests/test_wk143_dragon_ui.py tests/test_wk143_dragon_capture_scenario.py tests/test_wk142_rescue_ui.py -q -> 8 passed, 1 warning",
+            "screenshot_paths_inspected": [
+              "docs/screenshots/wk143_dragon_hunt_ui/wk143_dragon_ledger_active_246x300.png",
+              "docs/screenshots/wk143_dragon_hunt_ui/wk143_dragon_ledger_active_320x120.png",
+              "docs/screenshots/wk143_dragon_hunt_ui/wk143_dragon_ledger_completed_246x300.png",
+              "docs/screenshots/wk143_dragon_hunt_ui/wk143_dragon_ledger_completed_320x120.png"
+            ],
+            "screenshot_verdict": "PASS. Active Ashwing ledger is readable on both narrow and compact layouts: it shows the phase, 'Ashwing's Hoard', 'Now: Prepare for Ashwing | Dragon: Ashwing the Red', weakness/prep, the exposed fire warning, hoard reward, and victory title. Completed Ashwing ledger is also readable: it shows completion status, 'Dragon: Ashwing the Red | Victory title: Ashwing-Bane', weakness/prep, hoard reward, memory, and 'Outcome: Completed' without overlap."
+          },
+          "blockers": [
+            "The deterministic UI proof path is complete.",
+            "The scripted dragon_hunt_showcase capture still fails in game/graphics/enemy_sprites.py:164 with NameError: name 'et' is not defined, which is outside Agent 08's UI lane."
+          ],
+          "follow_ups": [
+            "PM can use the deterministic proof PNGs and passing focused tests for the UI gate.",
+            "If the studio wants the scripted capture command green later, route the enemy sprite bug to the graphics owner."
           ]
         }
       }

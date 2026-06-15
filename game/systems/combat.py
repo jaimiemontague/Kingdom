@@ -84,6 +84,18 @@ class CombatSystem(GameSystem):
         payload["type"] = event_type.value
         emit_event(payload)
 
+    @staticmethod
+    def _hero_has_lair_in_strike_range(hero) -> bool:
+        """True when the hero is explicitly close enough to hit their lair target."""
+        lair = getattr(hero, "target", None)
+        if not getattr(lair, "is_lair", False):
+            return False
+        if getattr(lair, "hp", 0) <= 0:
+            return False
+        lair_x = float(getattr(lair, "center_x", getattr(lair, "x", 0.0)))
+        lair_y = float(getattr(lair, "center_y", getattr(lair, "y", 0.0)))
+        return hero.distance_to(lair_x, lair_y) <= (float(getattr(hero, "attack_range", 0.0)) + TILE_SIZE)
+
     def update(self, ctx: SystemContext, dt: float) -> None:
         """
         Protocol entrypoint: process combat and emit events through EventBus.
@@ -133,6 +145,9 @@ class CombatSystem(GameSystem):
                     hero._inside_attack_blocks = int(getattr(hero, "_inside_attack_blocks", 0) or 0) + 1
                 except Exception:
                     pass
+                continue
+
+            if self._hero_has_lair_in_strike_range(hero):
                 continue
 
             # Find closest enemy in range

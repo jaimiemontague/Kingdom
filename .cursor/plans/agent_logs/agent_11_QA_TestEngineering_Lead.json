@@ -1030,23 +1030,124 @@
           "follow_ups": [
             "If PM wants the orchestrator receipt completed, provide the tokenized completion command or the run ledger/prompt that contains the token.",
             "No QA code follow-up is needed; the verification gates themselves are green."
-        ]
+          ]
+        }
+      },
+      "wk142_dynamic_rescue_revenge": {
+        "sprint_meta": {
+          "sprint_id": "wk142_dynamic_rescue_revenge",
+          "created_utc": "2026-06-15T00:00:00Z",
+          "plan_ref": ".cursor/plans/wk142_dynamic_rescue_revenge.plan.md",
+          "role": "Agent 11 QA_TestEngineering_Lead",
+          "title": "WK142 Dynamic Rescue & Revenge final QA"
+        },
+        "rounds": {
+          "r3_wave2_gate_qa_kickoff": {
+            "sprint_id": "wk142_dynamic_rescue_revenge",
+            "round_id": "r3_wave2_gate_qa_kickoff",
+            "status": "done",
+            "round_meta": {
+              "role": "Agent 11 QA_TestEngineering_Lead",
+              "reports_to": "Agent 01 (PM)",
+              "model": "gpt-5.4-mini",
+              "reasoning_effort": "xhigh",
+              "production_code_edited": false
+            },
+            "prompt_text": "Verify WK142 final QA gates, peer agent logs, and screenshot proof for Dynamic Rescue & Revenge; do not edit production source.",
+            "files_touched": [
+              ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+            ],
+            "what_i_changed": [
+              "Ran the requested WK142 focused pytest batch, the WK138-WK141 regression batch, WK67, and the full qa_smoke gate.",
+              "Validated Agent 03, 05, 06, 08, and 09 logs with python -m json.tool and confirmed the wk142_dynamic_rescue_revenge sprint entry is present in each.",
+              "Inspected the wk142 PNG proof set under docs/screenshots/wk142_rescue_revenge_ui and docs/screenshots/wk142_rescue_revenge_boss with image inspection, not file existence alone.",
+              "No production code edits; no test edits; no asset edits."
+            ],
+            "commands_run": [
+              {
+                "cmd": "python -m pytest tests/test_wk142_dynamic_rescue_contract.py tests/test_wk142_dynamic_rescue_gameplay.py tests/test_wk142_boss_revenge.py tests/test_wk142_dynamic_cleanup.py tests/test_wk142_rescue_ai_policy.py tests/test_wk142_rescue_prompt_context.py tests/test_wk142_rescue_ui.py tests/test_wk142_rescue_visuals.py -q",
+                "exit_code": 0,
+                "result": "17 passed, 1 warning"
+              },
+              {
+                "cmd": "python -m pytest tests/test_wk138_quest_chain_core.py tests/test_wk139_boss_encounters.py tests/test_wk140_hero_daily_life_ai.py tests/test_wk141_blackbanner_chain.py tests/test_wk141_blackbanner_boss.py -q",
+                "exit_code": 0,
+                "result": "9 passed, 1 warning"
+              },
+              {
+                "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+                "exit_code": 0,
+                "result": "10 passed, 1 warning"
+              },
+              {
+                "cmd": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "result": "1938 passed, 5 skipped, 1 xfailed, 1 warning"
+              },
+              {
+                "cmd": "python -m json.tool .cursor\\plans\\agent_logs\\agent_03_TechnicalDirector_Architecture.json",
+                "exit_code": 0,
+                "result": "Valid JSON; wk142_dynamic_rescue_revenge entry present."
+              },
+              {
+                "cmd": "python -m json.tool .cursor\\plans\\agent_logs\\agent_05_GameplaySystemsDesigner.json",
+                "exit_code": 0,
+                "result": "Valid JSON; wk142_dynamic_rescue_revenge entry present."
+              },
+              {
+                "cmd": "python -m json.tool .cursor\\plans\\agent_logs\\agent_06_AIBehaviorDirector_LLM.json",
+                "exit_code": 0,
+                "result": "Valid JSON; wk142_dynamic_rescue_revenge entry present."
+              },
+              {
+                "cmd": "python -m json.tool .cursor\\plans\\agent_logs\\agent_08_UX_UI_Director.json",
+                "exit_code": 0,
+                "result": "Valid JSON; wk142_dynamic_rescue_revenge entry present."
+              },
+              {
+                "cmd": "python -m json.tool .cursor\\plans\\agent_logs\\agent_09_ArtDirector_Pixel_Animation_VFX.json",
+                "exit_code": 0,
+                "result": "Valid JSON; wk142_dynamic_rescue_revenge entry present."
+              },
+              {
+                "cmd": "python -m json.tool .cursor\\plans\\agent_logs\\agent_11_QA_TestEngineering_Lead.json",
+                "exit_code": 0,
+                "result": "Valid JSON; self-validation after appending the WK142 entry."
+              }
+            ],
+            "evidence": {
+              "wk142_focused": "PASS: 17 passed, 1 warning across the WK142 contract/gameplay/boss/revenge/cleanup/AI/context/UI/visual batches.",
+              "wk138_wk141_regressions": "PASS: 9 passed, 1 warning across WK138-WK141 regressions.",
+              "wk67": "PASS: 10 passed, 1 warning.",
+              "qa_smoke": "PASS: 1938 passed, 5 skipped, 1 xfailed, 1 warning.",
+              "agent_logs": "PASS: Agent 03, 05, 06, 08, and 09 logs validate as JSON; each contains the wk142_dynamic_rescue_revenge sprint entry.",
+              "screenshots": "PASS: Inspected docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_rescue_active_246x300.png, wk142_blackbanner_rescue_completed_320x120.png, wk142_blackbanner_rescue_modal_active_1920x1080.png, wk142_blackbanner_revenge_active_246x300.png, wk142_blackbanner_revenge_completed_320x120.png, wk142_blackbanner_revenge_modal_active_1920x1080.png, and docs/screenshots/wk142_rescue_revenge_boss/boss_encounter_showcase.png; the ledgers, modal layouts, and boss HUD were readable and matched the expected rescue/revenge states.",
+              "visual_notes": "Rescue and revenge cards show the correct quest titles, Active/Completed states, hero/target/location fields, and compact layout; the 1920x1080 modals show the full Adventure Ledger without clipping; the boss showcase is nonblank with legible HUD text.",
+              "scenario_gap": "No gap for the requested WK142 proof set; existing PNG evidence was visually inspected and matched the plan."
+            },
+            "blockers": [
+              "The exact orchestrator completion receipt command could not be run because this workspace does not expose the tokenized npx tsx tools\\ai_studio_orchestrator\\src\\cli.ts complete prompt token. The CLI requires --token, --sprint, --round, --agent, and --status."
+            ],
+            "follow_ups": [
+              "If PM provides the tokenized receipt command or prompt token, run the orchestrator completion receipt for wk142_dynamic_rescue_revenge r3_wave2_gate_qa_kickoff.",
+              "No QA code follow-up is needed; all requested verification gates are green."
+            ]
+          }
+        }
       }
-    }
-    ,
-    "wk142_dynamic_rescue_revenge": {
+    },
+    "wk143_dragon_hunt_showcase": {
       "sprint_meta": {
-        "sprint_id": "wk142_dynamic_rescue_revenge",
+        "sprint_id": "wk143_dragon_hunt_showcase",
         "created_utc": "2026-06-15T00:00:00Z",
-        "plan_ref": ".cursor/plans/wk142_dynamic_rescue_revenge.plan.md",
-        "role": "Agent 11 QA_TestEngineering_Lead",
-        "title": "WK142 Dynamic Rescue & Revenge final QA"
+        "plan_ref": ".cursor/plans/wk143_dragon_hunt_showcase.plan.md",
+        "goal": "Final QA verification for WK143 Dragon Hunt Showcase. Validate focused WK143 tests, WK139/WK141/WK142 regressions, WK67, asset validation, full qa_smoke, peer agent logs, and screenshot proof."
       },
       "rounds": {
-        "r3_wave2_gate_qa_kickoff": {
-          "sprint_id": "wk142_dynamic_rescue_revenge",
-          "round_id": "r3_wave2_gate_qa_kickoff",
-          "status": "done",
+        "r4_perf_gate_qa_kickoff": {
+          "sprint_id": "wk143_dragon_hunt_showcase",
+          "round_id": "r4_perf_gate_qa_kickoff",
+          "status": "failed",
           "round_meta": {
             "role": "Agent 11 QA_TestEngineering_Lead",
             "reports_to": "Agent 01 (PM)",
@@ -1054,26 +1155,25 @@
             "reasoning_effort": "xhigh",
             "production_code_edited": false
           },
-          "prompt_text": "Verify WK142 final QA gates, peer agent logs, and screenshot proof for Dynamic Rescue & Revenge; do not edit production source.",
+          "prompt_text": "Verify WK143 final QA gates, peer agent logs, and screenshot proof for Dragon Hunt Showcase; do not edit production source.",
           "files_touched": [
             ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
           ],
           "what_i_changed": [
-            "Ran the requested WK142 focused pytest batch, the WK138-WK141 regression batch, WK67, and the full qa_smoke gate.",
-            "Validated Agent 03, 05, 06, 08, and 09 logs with python -m json.tool and confirmed the wk142_dynamic_rescue_revenge sprint entry is present in each.",
-            "Inspected the wk142 PNG proof set under docs/screenshots/wk142_rescue_revenge_ui and docs/screenshots/wk142_rescue_revenge_boss with image inspection, not file existence alone.",
-            "No production code edits; no test edits; no asset edits."
+            "Ran the WK143 focused pytest batch, the WK139/WK141/WK142 regression slice, WK67, validate_assets, and the full qa_smoke gate.",
+            "Validated Agent 05/06/08/09/10/12/14 logs as JSON and confirmed each contains the wk143_dragon_hunt_showcase sprint entry.",
+            "Inspected PNG proof under docs/screenshots/wk143_dragon_hunt_showcase, docs/screenshots/wk143_dragon_hunt_ui, docs/screenshots/wk143_dragon_hunt_visuals, and docs/screenshots/wk143_dragon_hunt_pm_gate; no production files changed."
           ],
           "commands_run": [
             {
-              "cmd": "python -m pytest tests/test_wk142_dynamic_rescue_contract.py tests/test_wk142_dynamic_rescue_gameplay.py tests/test_wk142_boss_revenge.py tests/test_wk142_dynamic_cleanup.py tests/test_wk142_rescue_ai_policy.py tests/test_wk142_rescue_prompt_context.py tests/test_wk142_rescue_ui.py tests/test_wk142_rescue_visuals.py -q",
+              "cmd": "python -m pytest tests/test_wk143_dragon_hunt.py tests/test_wk143_dragon_fire_telegraph.py tests/test_wk143_dragon_rewards.py tests/test_wk143_dragon_ai_policy.py tests/test_wk143_dragon_prompt_context.py tests/test_wk143_dragon_ui.py tests/test_wk143_dragon_visuals.py tests/test_wk143_dragon_audio.py tests/test_wk143_dragon_capture_scenario.py -q",
               "exit_code": 0,
-              "result": "17 passed, 1 warning"
+              "result": "18 passed, 1 warning"
             },
             {
-              "cmd": "python -m pytest tests/test_wk138_quest_chain_core.py tests/test_wk139_boss_encounters.py tests/test_wk140_hero_daily_life_ai.py tests/test_wk141_blackbanner_chain.py tests/test_wk141_blackbanner_boss.py -q",
+              "cmd": "python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk141_blackbanner_chain.py tests/test_wk142_dynamic_rescue_gameplay.py tests/test_wk142_rescue_ai_policy.py -q",
               "exit_code": 0,
-              "result": "9 passed, 1 warning"
+              "result": "8 passed, 1 warning"
             },
             {
               "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
@@ -1081,61 +1181,38 @@
               "result": "10 passed, 1 warning"
             },
             {
-              "cmd": "python tools/qa_smoke.py --quick",
+              "cmd": "python tools/validate_assets.py --report",
               "exit_code": 0,
-              "result": "1938 passed, 5 skipped, 1 xfailed, 1 warning"
+              "result": "SUMMARY errors=0 warns=46"
             },
             {
-              "cmd": "python -m json.tool .cursor\\plans\\agent_logs\\agent_03_TechnicalDirector_Architecture.json",
+              "cmd": "@'\nimport json\nfrom pathlib import Path\npaths = [\n    Path('.cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json'),\n    Path('.cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json'),\n    Path('.cursor/plans/agent_logs/agent_08_UX_UI_Director.json'),\n    Path('.cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json'),\n    Path('.cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json'),\n    Path('.cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json'),\n    Path('.cursor/plans/agent_logs/agent_14_SoundDirector_Audio.json'),\n]\nfor path in paths:\n    data = json.loads(path.read_text(encoding='utf-8'))\n    sprint = data['sprints'].get('wk143_dragon_hunt_showcase')\n    if sprint is None:\n        raise SystemExit(f'{path}: missing sprint entry')\n    print(f'{path.name}: OK rounds={list(sprint.get(\"rounds\", {}).keys())}')\n'@ | python -",
               "exit_code": 0,
-              "result": "Valid JSON; wk142_dynamic_rescue_revenge entry present."
+              "result": "Validated all seven peer logs; each parsed and contained the wk143_dragon_hunt_showcase sprint entry."
             },
             {
-              "cmd": "python -m json.tool .cursor\\plans\\agent_logs\\agent_05_GameplaySystemsDesigner.json",
-              "exit_code": 0,
-              "result": "Valid JSON; wk142_dynamic_rescue_revenge entry present."
-            },
-            {
-              "cmd": "python -m json.tool .cursor\\plans\\agent_logs\\agent_06_AIBehaviorDirector_LLM.json",
-              "exit_code": 0,
-              "result": "Valid JSON; wk142_dynamic_rescue_revenge entry present."
-            },
-            {
-              "cmd": "python -m json.tool .cursor\\plans\\agent_logs\\agent_08_UX_UI_Director.json",
-              "exit_code": 0,
-              "result": "Valid JSON; wk142_dynamic_rescue_revenge entry present."
-            },
-            {
-              "cmd": "python -m json.tool .cursor\\plans\\agent_logs\\agent_09_ArtDirector_Pixel_Animation_VFX.json",
-              "exit_code": 0,
-              "result": "Valid JSON; wk142_dynamic_rescue_revenge entry present."
-            },
-            {
-              "cmd": "python -m json.tool .cursor\\plans\\agent_logs\\agent_11_QA_TestEngineering_Lead.json",
-              "exit_code": 0,
-              "result": "Valid JSON; self-validation after appending the WK142 entry."
+              "cmd": "Start-Process -FilePath python -ArgumentList @('tools/qa_smoke.py','--quick') -WorkingDirectory $PWD -WindowStyle Hidden -RedirectStandardOutput 'tmpqa_smoke_full.log' -RedirectStandardError 'tmpqa_smoke_full.err' -PassThru",
+              "exit_code": 1,
+              "result": "1 failed, 1972 passed, 5 skipped, 1 xfailed, 1 warning in 924.03s (0:15:24); failing test: tests/test_wk126_quest_soak.py::test_soak_all_four_quest_types_complete_and_pay; [qa_smoke] DONE: FAIL (rc=1)"
             }
           ],
           "evidence": {
-            "wk142_focused": "PASS: 17 passed, 1 warning across the WK142 contract/gameplay/boss/revenge/cleanup/AI/context/UI/visual batches.",
-            "wk138_wk141_regressions": "PASS: 9 passed, 1 warning across WK138-WK141 regressions.",
+            "wk143_focused": "PASS: 18 passed, 1 warning.",
+            "wk139_wk141_wk142_regressions": "PASS: 8 passed, 1 warning.",
             "wk67": "PASS: 10 passed, 1 warning.",
-            "qa_smoke": "PASS: 1938 passed, 5 skipped, 1 xfailed, 1 warning.",
-            "agent_logs": "PASS: Agent 03, 05, 06, 08, and 09 logs validate as JSON; each contains the wk142_dynamic_rescue_revenge sprint entry.",
-            "screenshots": "PASS: Inspected docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_rescue_active_246x300.png, wk142_blackbanner_rescue_completed_320x120.png, wk142_blackbanner_rescue_modal_active_1920x1080.png, wk142_blackbanner_revenge_active_246x300.png, wk142_blackbanner_revenge_completed_320x120.png, wk142_blackbanner_revenge_modal_active_1920x1080.png, and docs/screenshots/wk142_rescue_revenge_boss/boss_encounter_showcase.png; the ledgers, modal layouts, and boss HUD were readable and matched the expected rescue/revenge states.",
-            "visual_notes": "Rescue and revenge cards show the correct quest titles, Active/Completed states, hero/target/location fields, and compact layout; the 1920x1080 modals show the full Adventure Ledger without clipping; the boss showcase is nonblank with legible HUD text.",
-            "scenario_gap": "No gap for the requested WK142 proof set; existing PNG evidence was visually inspected and matched the plan."
+            "validate_assets": "PASS: errors=0 warns=46.",
+            "agent_logs": "PASS: Agent 05/06/08/09/10/12/14 logs parsed and each contained the wk143_dragon_hunt_showcase sprint entry.",
+            "screenshots": "PASS: inspected docs/screenshots/wk143_dragon_hunt_showcase/dragon_hunt_showcase_world.png, docs/screenshots/wk143_dragon_hunt_showcase/dragon_hunt_showcase_ledger.png, docs/screenshots/wk143_dragon_hunt_ui/wk143_dragon_ledger_active_320x120.png, docs/screenshots/wk143_dragon_hunt_ui/wk143_dragon_ledger_completed_320x120.png, docs/screenshots/wk143_dragon_hunt_visuals/wk143_dragon_fire_telegraph.png, docs/screenshots/wk143_dragon_hunt_visuals/wk143_dragon_fire_impact.png, docs/screenshots/wk143_dragon_hunt_visuals/wk143_dragon_fire_phase.png, docs/screenshots/wk143_dragon_hunt_visuals/wk143_dragon_hoard_phase.png, and docs/screenshots/wk143_dragon_hunt_pm_gate/dragon_hunt_showcase_world.png / dragon_hunt_showcase_ledger.png; Ashwing, the telegraph cone, impact, phase, hoard state, and ledger text were visible and readable.",
+            "qa_smoke": "FAIL: 1 failed, 1972 passed, 5 skipped, 1 xfailed, 1 warning in 924.03s (0:15:24); failing test was tests/test_wk126_quest_soak.py::test_soak_all_four_quest_types_complete_and_pay."
           },
           "blockers": [
-            "The exact orchestrator completion receipt command could not be run because this workspace does not expose the tokenized npx tsx tools\\ai_studio_orchestrator\\src\\cli.ts complete prompt token. The CLI requires --token, --sprint, --round, --agent, and --status."
+            "Full qa_smoke is red because tests/test_wk126_quest_soak.py::test_soak_all_four_quest_types_complete_and_pay fails: completed types {'explore_far', 'find_poi', 'slay_enemy_type'} != all four, and two raid_lair quests failed with hero_died."
           ],
           "follow_ups": [
-            "If PM provides the tokenized receipt command or prompt token, run the orchestrator completion receipt for wk142_dynamic_rescue_revenge r3_wave2_gate_qa_kickoff.",
-            "No QA code follow-up is needed; all requested verification gates are green."
+            "Ask the WK126 owner to inspect the raid_lair soak boundary regression; WK143-specific gates are otherwise green."
           ]
         }
       }
     }
   }
-}
 }

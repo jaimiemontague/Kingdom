@@ -1991,6 +1991,404 @@
           }
         }
       }
+    },
+    "wk143_dragon_hunt_showcase": {
+      "rounds": {
+        "r1_kickoff": {
+          "pm_status_summary": "WK143 KICKOFF: Dragon Hunt Showcase. Mission: make Dragon Cave the first mythic encounter showcase via Ashwing's Hoard: scout/prep, named dragon boss, deterministic fire telegraph before damage, hoard reward, legendary loot/title, AI preparation/retreat policy, ledger readability, dragon/fire visuals, audio cues, capture tooling, performance sanity, and final QA. WK142 was committed/pushed as f6caf02 with full QA PASS. Use gpt-5.4-mini with xhigh effort for all active subagents. Version rule: no Prototype vX.Y.Z naming; save states use WK sprint names only.",
+          "pm_feature_requests": [
+            {
+              "id": "WK143-FEAT-001",
+              "title": "Ashwing's Hoard dragon hunt chain",
+              "owner_agents": [
+                "05_GameplaySystemsDesigner",
+                "06_AIBehaviorDirector_LLM",
+                "08_UX_UI_Director",
+                "09_ArtDirector_Pixel_Animation_VFX",
+                "11_QA_TestEngineering_Lead",
+                "12_ToolsDevEx"
+              ],
+              "player_value": "Turn Dragon Cave into a mythic hunt where preparation, danger, telegraphed fire, and legendary reward are all visible and meaningful.",
+              "source_plan": ".cursor/plans/wk143_dragon_hunt_showcase.plan.md",
+              "definition_of_done": [
+                "A deterministic test completes Ashwing's Hoard through scout/prep/slay/claim.",
+                "Ashwing is a named boss using BossEncounterSystem, not a one-off stat rename.",
+                "Dragon fire telegraphs before impact/damage.",
+                "Victory grants hoard reward, legendary loot, and a hero title/memory.",
+                "AI sees dragon/prep/danger facts from structured context only and preserves retreat/survival gates.",
+                "Adventure Ledger/HUD, visuals, audio, screenshots, WK67, validate_assets if applicable, and qa_smoke are green."
+              ]
+            },
+            {
+              "id": "WK143-FEAT-002",
+              "title": "Dragon Hunt showcase capture and proof",
+              "owner_agents": [
+                "12_ToolsDevEx",
+                "09_ArtDirector_Pixel_Animation_VFX",
+                "08_UX_UI_Director",
+                "11_QA_TestEngineering_Lead"
+              ],
+              "player_value": "Produce deterministic screenshots that actually show Ashwing, fire telegraph/readability, and Dragon Hunt ledger state.",
+              "source_plan": ".cursor/plans/wk143_dragon_hunt_showcase.plan.md",
+              "definition_of_done": [
+                "A `dragon_hunt_showcase` capture scenario exists or a documented fallback is used.",
+                "Screenshots under docs/screenshots/wk143_* are inspected, not merely generated.",
+                "Fire telegraph and boss identity are readable in proof captures."
+              ]
+            }
+          ],
+          "pm_integration_order": [
+            "Wave 1 parallel: Agents 05 and 12.",
+            "PM Wave 1 gate: dragon gameplay/capture tests, WK139/WK141/WK142 regressions, WK67.",
+            "Wave 2 parallel after facts/tooling exist: Agents 06, 08, 09, and 14.",
+            "PM Wave 2 gate: dragon AI/UI/visual/audio tests, screenshot capture, WK67.",
+            "Wave 3: Agent 10 performance sanity consult.",
+            "Wave 4: Agent 11 final QA with validate_assets and qa_smoke.",
+            "PM close: commit with 'wk143: Dragon Hunt Showcase', push, continue Sprint F Content Pack + Tuning."
+          ],
+          "pm_next_actions_by_agent": {
+            "05_GameplaySystemsDesigner": "Wave 1 active. Implement Ashwing's Hoard chain, Ashwing boss runtime, fire telegraph before damage, hoard/legendary loot/title reward, and gameplay tests. Follow Agent 05 section of .cursor/plans/wk143_dragon_hunt_showcase.plan.md.",
+            "12_ToolsDevEx": "Wave 1 active. Add deterministic dragon_hunt_showcase capture scenario if still missing, plus scenario tests and screenshot proof. Follow Agent 12 section of .cursor/plans/wk143_dragon_hunt_showcase.plan.md.",
+            "06_AIBehaviorDirector_LLM": "Wave 2 pending after 05/12. Add dragon prep/danger/retreat/victory prompt context and AI policy.",
+            "08_UX_UI_Director": "Wave 2 pending after 05/12. Make Ashwing's Hoard readable in Adventure Ledger/HUD.",
+            "09_ArtDirector_Pixel_Animation_VFX": "Wave 2 pending after 05/12. Add/verify Ashwing, fire telegraph, impact, and hoard visual readability.",
+            "14_SoundDirector_Audio": "Wave 2 pending after 05/12. Add/verify roar/fire/phase SFX cues.",
+            "10_PerformanceStability_Lead": "Wave 3 pending after Wave 2. Run perf sanity and no-idle-overhead consult.",
+            "11_QA_TestEngineering_Lead": "Wave 4 pending after implementation/perf. Run full final QA."
+          },
+          "pm_agent_prompts": {
+            "05": "Task: WK143 Wave 1 gameplay for Dragon Hunt Showcase. Onboard as Agent 05 by reading AGENTS.md and your .cursor/rules role instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk143_dragon_hunt_showcase\"].rounds[\"r1_kickoff\"] and .cursor/plans/wk143_dragon_hunt_showcase.plan.md end-to-end. Your outcome: implement Ashwing's Hoard chain, Ashwing the Red named boss through BossEncounterSystem, deterministic fire telegraph before fire impact/damage, hoard reward, legendary loot, title/memory, and focused tests. Stay in your lane: MAY edit game/entities/**, game/systems/**, game/content/**, gameplay tests, and your own log; MUST NOT edit ai/**, game/ui/**, game/graphics/**, game/audio/**, tools/**, or .cursor/plans/** except your log. Do not add general party formation or multiple dragons. Update your own log, validate it, and run the Agent 05 commands in the plan.",
+            "12": "Task: WK143 Wave 1 tooling for Dragon Hunt Showcase. Onboard as Agent 12 by reading AGENTS.md and your .cursor/rules role instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk143_dragon_hunt_showcase\"].rounds[\"r1_kickoff\"] and .cursor/plans/wk143_dragon_hunt_showcase.plan.md end-to-end. Current PM check found no dragon_hunt_showcase scenario. Your outcome: add deterministic screenshot/capture scenario support for Dragon Hunt if still missing, with scenario tests and proof output. Stay in your lane: MAY edit tools/**, tool/scenario tests, docs/screenshots/wk143_*, and your own log; MUST NOT edit gameplay/AI/UI/graphics/audio production source. Update your log, validate it, and run the Agent 12 commands in the plan.",
+            "06": "Task: WK143 Wave 2 AI policy after Wave 1. Onboard as Agent 06, read PM hub r1 and the WK143 plan. Add structured dragon hunt prompt context and deterministic AI policy for preparation, danger, retreat, victory/revenge memory. Stay in ai/** plus tests/log.",
+            "08": "Task: WK143 Wave 2 UI after Wave 1. Onboard as Agent 08, read PM hub r1 and the WK143 plan. Make Ashwing's Hoard readable in Adventure Ledger/HUD and screenshot-verify. Stay in game/ui/** plus tests/screenshots/log.",
+            "09": "Task: WK143 Wave 2 visuals after Wave 1. Onboard as Agent 09, read PM hub r1 and the WK143 plan. Make Ashwing, fire telegraph, impact, and hoard/phase visuals readable; screenshot-verify. Stay in game/graphics/** plus tests/screenshots/log.",
+            "14": "Task: WK143 Wave 2 audio after Wave 1. Onboard as Agent 14, read PM hub r1 and the WK143 plan. Add/verify dragon roar, fire telegraph/impact, and phase audio cues using existing assets/events where possible; validate assets if touched. Stay in game/audio/** plus tests/log.",
+            "10": "Task: WK143 Wave 3 performance consult after Wave 2. Onboard as Agent 10, read PM hub r1 and the WK143 plan. Verify Dragon Hunt visuals/audio do not add idle overhead and report exact perf risks/fix tickets. Verification only unless PM gives repair prompt.",
+            "11": "Task: WK143 Wave 4 final QA after implementation/perf. Onboard as Agent 11, read PM hub r1 and the WK143 plan. Run full final gate, validate logs, inspect screenshots, validate assets if needed, and report PASS/FAIL."
+          },
+          "pm_universal_prompt": "You are being activated for WK143 Dragon Hunt Showcase. First onboard as your assigned agent number by reading AGENTS.md and the relevant .cursor/rules instructions for your role. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk143_dragon_hunt_showcase\"].rounds[\"r1_kickoff\"]. Your specific prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER]. Also read .cursor/plans/wk143_dragon_hunt_showcase.plan.md end-to-end. Use gpt-5.4-mini with xhigh effort. You are not alone in this worktree: never revert files you did not intentionally edit and preserve WK142. Stay inside your ownership lane. Update your own agent log, validate it with python -m json.tool .cursor/plans/agent_logs/agent_NN_YourRole.json, and run the commands in your assignment. If your change is player-visible, capture and inspect screenshots before claiming done. Do not use Prototype vX.Y.Z naming anywhere; use WK sprint naming only.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "05",
+                "12"
+              ],
+              [
+                "06",
+                "08",
+                "09",
+                "14"
+              ],
+              [
+                "10"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "05": "gpt-5.4-mini",
+              "12": "gpt-5.4-mini",
+              "06": "gpt-5.4-mini",
+              "08": "gpt-5.4-mini",
+              "09": "gpt-5.4-mini",
+              "14": "gpt-5.4-mini",
+              "10": "gpt-5.4-mini",
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "05": "xhigh",
+              "12": "xhigh",
+              "06": "xhigh",
+              "08": "xhigh",
+              "09": "xhigh",
+              "14": "xhigh",
+              "10": "xhigh",
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "05": "high",
+              "12": "medium",
+              "06": "high",
+              "08": "medium",
+              "09": "high",
+              "14": "medium",
+              "10": "medium",
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "07",
+              "13",
+              "15"
+            ],
+            "rationale": "05 is high because dragon mechanics cross chain, boss, loot, and determinism. 12 is medium because scenario work follows existing screenshot patterns but is required. 06 and 09 are high due AI danger policy and visual telegraph risk. 08/14/10 are medium scoped specialists. 11 is high for final integrated QA."
+          }
+        },
+        "r2_wave1_gate_wave2_kickoff": {
+          "pm_status_summary": "WK143 Wave 1 gate passed. Agent 05 landed Ashwing's Hoard gameplay content: chain phases, Ashwing boss content/runtime wiring, deterministic fire telegraph before impact/damage, hoard reward, legendary loot/title/memory, and focused tests. Agent 12 landed the deterministic dragon_hunt_showcase capture scenario, scenario tests, and screenshot proof under docs/screenshots/wk143_dragon_hunt_showcase. PM-ran Wave 1 gate PASS: WK143 gameplay/capture 5 passed; WK139/WK141/WK142 regressions 5 passed; WK67 10 passed. Logs for Agent 05 and Agent 12 validate. Full qa_smoke deferred to final integrated QA.",
+          "pm_wave1_evidence": [
+            "python -m pytest tests/test_wk143_dragon_hunt.py tests/test_wk143_dragon_fire_telegraph.py tests/test_wk143_dragon_rewards.py tests/test_wk143_dragon_capture_scenario.py -q -> 5 passed.",
+            "python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk141_blackbanner_boss.py tests/test_wk142_boss_revenge.py -q -> 5 passed.",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed.",
+            "python -m pytest tests/test_wk143_dragon_capture_scenario.py -q -> 2 passed.",
+            "python tools/validate_assets.py --report -> exit 0, errors=0, warns=46 from Agent 12.",
+            "Agent 05 and Agent 12 logs validate as JSON."
+          ],
+          "pm_next_actions_by_agent": {
+            "06_AIBehaviorDirector_LLM": "Wave 2 active. Add structured dragon hunt prompt context and deterministic AI policy for preparation, danger, retreat, victory/revenge memory.",
+            "08_UX_UI_Director": "Wave 2 active. Make Ashwing's Hoard readable in Adventure Ledger/HUD and screenshot-verify.",
+            "09_ArtDirector_Pixel_Animation_VFX": "Wave 2 active. Make Ashwing, fire telegraph, impact, and hoard/phase visuals readable with screenshot proof.",
+            "14_SoundDirector_Audio": "Wave 2 active. Add/verify dragon roar, fire telegraph/impact, and phase audio cues using existing assets/events where possible.",
+            "10_PerformanceStability_Lead": "Wave 3 pending after Wave 2.",
+            "11_QA_TestEngineering_Lead": "Wave 4 pending after Wave 3."
+          },
+          "pm_agent_prompts": {
+            "06": "Task: WK143 Wave 2 AI policy for Dragon Hunt Showcase. Onboard as Agent 06 by reading AGENTS.md and your role rules. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk143_dragon_hunt_showcase\"].rounds[\"r2_wave1_gate_wave2_kickoff\"] and .cursor/plans/wk143_dragon_hunt_showcase.plan.md. Wave 1 facts now exist. Add structured dragon hunt prompt context and deterministic AI policy for preparation, danger, retreat, victory/revenge memory. MAY edit ai/**, AI tests, and your own log. MUST NOT edit game/**, tools/**, assets/**, config.py, README, CHANGELOG, or .cursor/plans/** except your log. Run Agent 06 commands in the plan and validate your log.",
+            "08": "Task: WK143 Wave 2 UI for Dragon Hunt Showcase. Onboard as Agent 08 by reading AGENTS.md and your role rules. Then read PM hub r2 and the WK143 plan. Make Ashwing's Hoard readable in Adventure Ledger/HUD: phase, Ashwing identity, weakness/prep, fire warning if exposed, hoard reward, victory title. Screenshot-verify active/completed states. MAY edit game/ui/**, UI tests, docs/screenshots/wk143_*, and your own log. MUST NOT edit gameplay/AI/graphics/audio/tools.",
+            "09": "Task: WK143 Wave 2 visuals for Dragon Hunt Showcase. Onboard as Agent 09 by reading AGENTS.md and your role rules. Then read PM hub r2 and the WK143 plan. Make Ashwing, fire telegraph, impact, and hoard/phase visuals readable. Renderer must not mutate sim state. Screenshot loop is mandatory. MAY edit game/graphics/**, graphics tests, docs/screenshots/wk143_*, and your own log. MUST NOT edit gameplay/AI/UI/audio/tools.",
+            "14": "Task: WK143 Wave 2 audio for Dragon Hunt Showcase. Onboard as Agent 14 by reading AGENTS.md and your role rules. Then read PM hub r2 and the WK143 plan. Add/verify dragon roar, fire telegraph/impact, and phase audio cues using existing assets/events where possible. MAY edit game/audio/**, audio tests, asset manifests only if license-clean assets are added, and your own log. MUST NOT edit gameplay/AI/UI/graphics/tools unless coordinated. Run validate_assets if assets/manifests change."
+          },
+          "pm_universal_prompt": "You are being activated for WK143 Dragon Hunt Showcase - Wave 2. First onboard as your assigned agent number by reading AGENTS.md and the relevant .cursor/rules instructions for your role. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk143_dragon_hunt_showcase\"].rounds[\"r2_wave1_gate_wave2_kickoff\"]. Your specific prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER]. Also read .cursor/plans/wk143_dragon_hunt_showcase.plan.md end-to-end. Use gpt-5.4-mini with xhigh effort. You are not alone in this worktree: preserve Wave 1 edits and never revert files you did not intentionally edit. Stay inside your ownership lane. Update your own agent log, validate it with python -m json.tool, and run the commands in your assignment. If your change is player-visible, capture and inspect screenshots before claiming done. Do not use Prototype vX.Y.Z naming anywhere.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "06",
+                "08",
+                "09",
+                "14"
+              ],
+              [
+                "10"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "06": "gpt-5.4-mini",
+              "08": "gpt-5.4-mini",
+              "09": "gpt-5.4-mini",
+              "14": "gpt-5.4-mini",
+              "10": "gpt-5.4-mini",
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "06": "xhigh",
+              "08": "xhigh",
+              "09": "xhigh",
+              "14": "xhigh",
+              "10": "xhigh",
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "06": "high",
+              "08": "medium",
+              "09": "high",
+              "14": "medium",
+              "10": "medium",
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "07",
+              "12",
+              "13",
+              "15"
+            ],
+            "rationale": "06 and 09 are high because dragon danger policy and fire telegraph readability require judgment. 08 and 14 follow established UI/audio patterns. 10 and 11 wait for integration."
+          }
+        },
+        "r3_wave2_gate_perf_kickoff": {
+          "pm_status_summary": "WK143 Wave 2 integrated gate passed and performance consult is ready. Agent 06 added dragon hunt AI/prompt policy; Agent 08 added Ashwing Ledger/HUD readability; Agent 09 added dragon/fire/hoard visual readability and repaired the enemy_sprites NameError so dragon_hunt_showcase captures run; Agent 14 added/verified dragon roar/fire/phase audio cues and assets. PM-ran Wave 2 gate PASS: WK143 AI/UI/visual/audio 13 passed; WK142 regressions 10 passed; WK67 10 passed; dragon_hunt_showcase capture wrote PNGs. validate_assets passed earlier with errors=0 warns=46.",
+          "pm_wave2_evidence": [
+            "python -m pytest tests/test_wk143_dragon_ai_policy.py tests/test_wk143_dragon_prompt_context.py tests/test_wk143_dragon_ui.py tests/test_wk143_dragon_visuals.py tests/test_wk143_dragon_audio.py -q -> 13 passed.",
+            "python -m pytest tests/test_wk142_rescue_ai_policy.py tests/test_wk142_rescue_prompt_context.py tests/test_wk142_rescue_ui.py tests/test_wk142_rescue_visuals.py -q -> 10 passed.",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed.",
+            "python tools/capture_screenshots.py --scenario dragon_hunt_showcase --seed 3 --out docs/screenshots/wk143_dragon_hunt_pm_gate --size 1920x1080 --ticks 1200 -> wrote 2 PNGs plus manifest.",
+            "python tools/validate_assets.py --report -> errors=0 warns=46."
+          ],
+          "pm_next_actions_by_agent": {
+            "10_PerformanceStability_Lead": "Wave 3 active. Run Dragon Hunt perf sanity and no-idle-overhead consult. Verification/diagnosis only unless PM sends a repair prompt.",
+            "11_QA_TestEngineering_Lead": "Wave 4 pending after Agent 10. Final QA with full smoke, assets, screenshots, logs."
+          },
+          "pm_agent_prompts": {
+            "10": "Task: WK143 Wave 3 performance sanity for Dragon Hunt Showcase. Onboard as Agent 10 by reading AGENTS.md and your .cursor/rules role instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk143_dragon_hunt_showcase\"].rounds[\"r3_wave2_gate_perf_kickoff\"] and .cursor/plans/wk143_dragon_hunt_showcase.plan.md. Verify dragon visuals/audio do not add obvious idle overhead when no dragon encounter is active and that the dragon_hunt_showcase capture is nonblank/stable. MAY edit performance tests/docs and your own log only; MUST NOT edit production source unless PM sends a repair prompt. Run the Agent 10 commands in the plan, validate your log, and report PASS/FAIL with any exact perf risks/fix tickets. Do not use Prototype vX.Y.Z naming."
+          },
+          "pm_universal_prompt": "You are being activated for WK143 Dragon Hunt Showcase - Wave 3 performance sanity. First onboard as Agent 10 by reading AGENTS.md and the relevant .cursor/rules instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk143_dragon_hunt_showcase\"].rounds[\"r3_wave2_gate_perf_kickoff\"]. Follow pm_agent_prompts[\"10\"] and .cursor/plans/wk143_dragon_hunt_showcase.plan.md. Use gpt-5.4-mini with xhigh effort. Verification/diagnosis only unless PM gives a repair prompt. Update your own log and validate it. Do not use Prototype vX.Y.Z naming anywhere.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "10"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "10": "gpt-5.4-mini",
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "10": "xhigh",
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "10": "medium",
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "10 is medium because this is a bounded perf sanity consult on existing gates; 11 remains high for final integrated QA."
+          }
+        },
+        "r4_perf_gate_qa_kickoff": {
+          "pm_status_summary": "WK143 Wave 3 performance sanity passed and final QA is ready. Agent 10 found no real perf blocker: focused dragon visual/hunt tests passed, broader boss/audio/capture slice passed, dragon_hunt_showcase capture is nonblank/readable, and repeat capture hashes matched exactly. Full qa_smoke remains assigned to final QA. Prior Wave 2 product gates are green and asset validation has errors=0 warns=46.",
+          "pm_perf_evidence": [
+            "Agent 10 PASS.",
+            "python -m pytest tests/test_wk143_dragon_visuals.py tests/test_wk143_dragon_hunt.py -q -> 4 passed.",
+            "python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk143_dragon_audio.py tests/test_wk143_dragon_capture_scenario.py -q -> 8 passed.",
+            "python tools/capture_screenshots.py --scenario dragon_hunt_showcase --seed 3 --out docs/screenshots/wk143_dragon_hunt_showcase --size 1920x1080 --ticks 1200 -> wrote 2 PNGs; repeat capture hashes matched exactly.",
+            "Agent 10 log validates as JSON."
+          ],
+          "pm_next_actions_by_agent": {
+            "11_QA_TestEngineering_Lead": "Wave 4 active. Run full WK143 final QA: all focused tests, regressions, WK67, validate_assets, qa_smoke, agent log validation, and screenshot inspection.",
+            "01_ExecutiveProducer_PM": "After Agent 11 PASS, PM closeout, stage intended files, commit with 'wk143: Dragon Hunt Showcase', push, then continue Sprint F Content Pack + Tuning."
+          },
+          "pm_agent_prompts": {
+            "11": "Task: WK143 final QA for Dragon Hunt Showcase. Onboard as Agent 11 by reading AGENTS.md and your .cursor/rules role instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk143_dragon_hunt_showcase\"].rounds[\"r4_perf_gate_qa_kickoff\"] and .cursor/plans/wk143_dragon_hunt_showcase.plan.md. Verify all WK143 focused tests, key WK139/WK141/WK142 regressions, WK67, validate_assets, full qa_smoke, Agent 05/06/08/09/10/12/14 logs, and screenshot proof under docs/screenshots/wk143_*. Inspect PNGs, not file existence alone. MAY edit tests/docs screenshots only for QA evidence and your own log; MUST NOT edit production source unless PM sends a separate repair prompt. Report PASS/FAIL with exact commands, screenshot notes, blockers, and risks. Do not use Prototype vX.Y.Z naming."
+          },
+          "pm_universal_prompt": "You are being activated for WK143 Dragon Hunt Showcase final QA. First onboard as Agent 11 by reading AGENTS.md and the relevant .cursor/rules instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk143_dragon_hunt_showcase\"].rounds[\"r4_perf_gate_qa_kickoff\"]. Follow pm_agent_prompts[\"11\"] and .cursor/plans/wk143_dragon_hunt_showcase.plan.md. Use gpt-5.4-mini with xhigh effort. Verification only unless PM gives a repair prompt. Update your own log, validate it, run the QA commands, inspect screenshots, and report PASS/FAIL. Do not use Prototype vX.Y.Z naming anywhere.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "11 is high intelligence because final QA must reconcile gameplay, AI, UI, graphics, audio/assets, capture tooling, perf sanity, screenshots, logs, WK67, validate_assets, and qa_smoke."
+          }
+        },
+        "r5_final_qa_raid_lair_repair": {
+          "pm_status_summary": "WK143 final QA found one blocking full-smoke regression outside the dragon feature surface: tests/test_wk126_quest_soak.py::test_soak_all_four_quest_types_complete_and_pay fails because raid_lair quests fail with reason hero_died before all four quest types complete. WK143 focused tests, WK139/WK141/WK142 regressions, WK67, validate_assets, peer log validation, and screenshot inspection were otherwise green. Repair is assigned to Agent 05 because raid_lair completion/survival lives in gameplay systems and entities.",
+          "pm_blocker_evidence": [
+            "Agent 11 final QA: python tools/qa_smoke.py --quick -> FAIL: 1 failed, 1972 passed, 5 skipped, 1 xfailed; failing test tests/test_wk126_quest_soak.py::test_soak_all_four_quest_types_complete_and_pay.",
+            "PM reproduced: python -m pytest tests/test_wk126_quest_soak.py::test_soak_all_four_quest_types_complete_and_pay -q -> FAIL with completed types {'explore_far', 'find_poi', 'slay_enemy_type'} and failed raid_lair quests with reason hero_died.",
+            "The WK126 soak intentionally drives raid_lair after acceptance by moving the accepting hero adjacent, setting the lair to low HP, topping the hero to max HP, weakening nearby defenders, and repinning the lair target when combat detours clear it. The desired fix is to restore the real-combat LAIR_CLEARED -> QuestSystem.on_lair_cleared completion path, not to weaken the test contract unless the production bug proves impossible."
+          ],
+          "pm_next_actions_by_agent": {
+            "05_GameplaySystemsDesigner": "Active repair. Diagnose and fix the raid_lair hero_died soak regression while preserving WK143 dragon hunt gameplay and all earlier boss/quest contracts.",
+            "11_QA_TestEngineering_Lead": "Pending after Agent 05 repair. Rerun final QA/full smoke if PM requests a second QA pass.",
+            "01_ExecutiveProducer_PM": "After repair, PM reruns the focused soak, WK143 focused tests, regressions, WK67, validate_assets, screenshots if touched, and full qa_smoke before committing."
+          },
+          "pm_agent_prompts": {
+            "05": "Task: WK143 final QA repair - restore WK126 raid_lair soak completion. Onboard as Agent 05 by reading AGENTS.md and your .cursor/rules role instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk143_dragon_hunt_showcase\"].rounds[\"r5_final_qa_raid_lair_repair\"], .cursor/plans/wk143_dragon_hunt_showcase.plan.md, and tests/test_wk126_quest_soak.py. Problem: WK143 is otherwise green, but full qa_smoke fails because tests/test_wk126_quest_soak.py::test_soak_all_four_quest_types_complete_and_pay no longer completes raid_lair; two raid_lair quests fail with reason hero_died. Preserve the soak's intent: a real engine run, real combat, lair cleared through LAIR_CLEARED -> QuestSystem.on_lair_cleared, and payout through QuestSystem._complete. Do not paper over the failure by deleting the raid_lair objective, relaxing the all-four-types assertion, force-completing quests in the test, or globally making heroes immortal. Diagnose why the existing raid_lair drive no longer keeps the accepting hero alive/targeting long enough to land the lair clear. Likely areas are game/systems/quest.py, game/systems/combat.py, game/entities/hero.py, and any WK143 gameplay changes in game/systems/quest_chain.py or game/systems/boss_encounter.py that accidentally affect ordinary lair raids. MAY edit game/entities/**, game/systems/**, game/content/** only if needed for gameplay data, gameplay tests, and your own log. MUST NOT edit ai/**, game/ui/**, game/graphics/**, game/audio/**, tools/**, assets/**, config.py, README, CHANGELOG, or .cursor/plans/** except your Agent 05 log. Verification required from repo root PowerShell: (1) python -m pytest tests/test_wk126_quest_soak.py::test_soak_all_four_quest_types_complete_and_pay -q, (2) python -m pytest tests/test_wk143_dragon_hunt.py tests/test_wk143_dragon_fire_telegraph.py tests/test_wk143_dragon_rewards.py -q, (3) python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk141_blackbanner_chain.py tests/test_wk141_blackbanner_boss.py tests/test_wk142_dynamic_rescue_gameplay.py tests/test_wk142_boss_revenge.py -q, (4) python -m pytest tests/test_wk67_ai_boundary.py -q. If your changes are visible, capture and inspect screenshots. Update .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json with sprint_id wk143_dragon_hunt_showcase, round_id r5_final_qa_raid_lair_repair, status, what_i_changed, commands_run, evidence, blockers, and follow_ups/recommended_next_actions; validate it with python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json. Do not use Prototype vX.Y.Z naming anywhere."
+          },
+          "pm_universal_prompt": "You are being activated for WK143 final QA repair. First onboard as Agent 05 by reading AGENTS.md and your relevant .cursor/rules instructions. Then follow pm_agent_prompts[\"05\"] under .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk143_dragon_hunt_showcase\"].rounds[\"r5_final_qa_raid_lair_repair\"]. Use gpt-5.5 with xhigh effort. You are not alone in this worktree: preserve all WK143 peer edits, never revert files you did not intentionally edit, and stay inside Agent 05 ownership. Report exact files touched, commands, exit codes, and remaining risks.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "05"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "05": "gpt-5.5",
+              "11": "gpt-5.5"
+            },
+            "reasoning_effort_by_agent": {
+              "05": "xhigh",
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "05": "high",
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "05 owns gameplay systems/entities and can make the minimal production repair. 11 waits for PM's post-repair gate or a second final QA pass."
+          }
+        },
+        "r6_pm_closeout": {
+          "pm_status_summary": "WK143 Dragon Hunt Showcase is green after the Agent 05 raid_lair repair. The full quick smoke blocker from Agent 11 final QA was fixed without weakening the WK126 soak contract: accepted raid_lair heroes now clear stale inside-building attack gates when resuming a fit lair raid, and explicit in-range lair targets are not preempted by incidental nearby enemies. PM reran the focused WK126 soak, all WK143 focused tests, key WK139/WK141/WK142 regressions, WK67, asset validation, log validation, and a fresh dragon_hunt_showcase screenshot capture/inspection. Agent 05 also reran full qa_smoke after the repair and got PASS.",
+          "pm_closeout_evidence": [
+            "Agent 05 repair: python tools/qa_smoke.py --quick -> PASS; 1973 passed, 5 skipped, 1 xfailed; determinism_guard PASS.",
+            "PM rerun: python -m pytest tests/test_wk126_quest_soak.py::test_soak_all_four_quest_types_complete_and_pay -q -> 1 passed.",
+            "PM rerun: python -m pytest tests/test_wk143_dragon_hunt.py tests/test_wk143_dragon_fire_telegraph.py tests/test_wk143_dragon_rewards.py tests/test_wk143_dragon_ai_policy.py tests/test_wk143_dragon_prompt_context.py tests/test_wk143_dragon_ui.py tests/test_wk143_dragon_visuals.py tests/test_wk143_dragon_audio.py tests/test_wk143_dragon_capture_scenario.py -q -> 18 passed.",
+            "PM rerun: python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk141_blackbanner_chain.py tests/test_wk141_blackbanner_boss.py tests/test_wk142_dynamic_rescue_gameplay.py tests/test_wk142_boss_revenge.py tests/test_wk142_rescue_ai_policy.py -q -> 10 passed.",
+            "PM rerun: python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed.",
+            "PM rerun: python tools/validate_assets.py --report -> errors=0 warns=46.",
+            "PM rerun: python -m json.tool validated Agent 01/05/06/08/09/10/11/12/14 logs.",
+            "PM capture: python tools/capture_screenshots.py --scenario dragon_hunt_showcase --seed 3 --out docs/screenshots/wk143_dragon_hunt_pm_final --size 1920x1080 --ticks 1200 -> wrote 2 PNGs and manifest.",
+            "PM screenshot inspection: dragon_hunt_showcase_world.png shows Ashwing, fire telegraph/impact, boss strip, and world state readable; dragon_hunt_showcase_ledger.png shows phase, hero assignment, Ashwing identity, weakness, fire warning, hoard reward, victory title, and phase timeline readable."
+          ],
+          "pm_commit_plan": {
+            "commit_message": "wk143: Dragon Hunt Showcase",
+            "version_policy": "No version bump and no Prototype vX.Y.Z naming. Pending release notes remain rolled into pending v1.6.2 per Sovereign instruction.",
+            "push_naming": "Use WK sprint naming in commit/push report."
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Stage only WK143 source, tests, assets, screenshots, plan, and agent logs; leave old scratch/tmp files untracked.",
+            "Commit and push as wk143: Dragon Hunt Showcase.",
+            "Continue to the next roadmap sprint after the push."
+          ]
+        }
+      }
     }
   }
 }

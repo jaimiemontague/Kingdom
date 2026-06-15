@@ -8,18 +8,21 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
-from game.content.quest_chains import get_chain_def
+from game.content.quest_chains import ASHWING_THE_RED_NAME, get_chain_def
 from game.sim.timebase import now_ms as sim_now_ms
 
 _MAX_CHAIN_HISTORY = 8
 _MAX_PHASE_HISTORY = 4
 _MAX_QUEST_CHAINS = 3
-_BLACKBANNER_EXTRA_FIELDS = (
+# Extra boss-facing fields that should survive the quest-chain re-summarize
+# pass when they are present on a structured snapshot.
+_BOSS_EXTRA_FIELDS = (
     "known_boss_id",
     "known_boss_name",
     "known_boss_phase",
     "known_boss_hp_pct",
     "known_boss_position",
+    "known_boss_telegraph",
     "elite_target_id",
     "elite_target_name",
     "elite_target_status",
@@ -154,6 +157,55 @@ def attach_blackbanner_chain_facts(
     return summary
 
 
+def attach_ashwing_chain_facts(
+    chain: Any,
+    *,
+    boss_encounters: Iterable[Any] | None = None,
+) -> dict[str, Any]:
+    """Attach Ashwing-specific boss facts to a quest-chain summary.
+
+    Ashwing uses the same structured chain snapshot path as the other quest
+    chains. The boss snapshot carries the danger-facing facts the AI should see
+    once the dragon is revealed: identity, current boss phase, health, and the
+    latest telegraph. The hunt itself still comes from the quest phase target,
+    so we only enrich when a matching dragon snapshot is present.
+    """
+    summary = dict(chain)
+    if _norm_str(summary.get("chain_type", "")) != "ashwings_hoard":
+        return summary
+
+    selected = None
+    fallback = None
+    for boss in boss_encounters or ():
+        if boss is None:
+            continue
+        status = _norm_str(_value(boss, "status", "")).lower()
+        if status not in {"active", "revealed", "engaged"}:
+            if fallback is None:
+                fallback = boss
+            continue
+        boss_type = _norm_str(_value(boss, "boss_type", _value(boss, "base_enemy_type", ""))).lower()
+        boss_name = _norm_str(_value(boss, "name", "")).lower()
+        if boss_type == "dragon" or boss_name == ASHWING_THE_RED_NAME.lower():
+            selected = boss
+            break
+        if fallback is None:
+            fallback = boss
+    boss = selected or fallback
+    if boss is None:
+        return summary
+
+    summary["known_boss_id"] = _norm_str(_value(boss, "boss_id", ""))
+    summary["known_boss_name"] = _norm_str(_value(boss, "name", ""))
+    summary["known_boss_phase"] = _norm_str(
+        _value(boss, "current_phase_title", _value(boss, "current_phase", ""))
+    )
+    summary["known_boss_hp_pct"] = _snapshot_float(_value(boss, "hp_pct", 0.0), 0.0)
+    summary["known_boss_position"] = _snapshot_position_value(_value(boss, "position", None))
+    summary["known_boss_telegraph"] = _norm_str(_value(boss, "latest_telegraph", ""))
+    return summary
+
+
 def summarize_quest_chain(chain: Any) -> dict[str, Any]:
     """Return a primitive-only quest-chain snapshot for prompt use."""
     chain_type = _norm_str(_value(chain, "chain_type", ""))
@@ -210,7 +262,7 @@ def summarize_quest_chain(chain: Any) -> dict[str, Any]:
                 if key == "known_boss_hp_pct"
                 else _norm_str(_value(chain, key, ""))
             )
-            for key in _BLACKBANNER_EXTRA_FIELDS
+            for key in _BOSS_EXTRA_FIELDS
             if _value(chain, key, None) not in (None, "", (), [])
         },
     }
@@ -300,6 +352,8 @@ def quest_chain_action_meanings(chain: dict[str, Any], allowed_actions: Iterable
     target_name = _norm_str(chain.get("target_name", "")) or _norm_str(chain.get("target_id", ""))
     chain_name = _norm_str(chain.get("name", "")) or _norm_str(chain.get("chain_type", ""))
     boss_name = _norm_str(chain.get("known_boss_name", ""))
+    boss_phase = _norm_str(chain.get("known_boss_phase", ""))
+    boss_telegraph = _norm_str(chain.get("known_boss_telegraph", ""))
     elite_name = _norm_str(chain.get("elite_target_name", ""))
 
     for action in allowed:
@@ -309,6 +363,8 @@ def quest_chain_action_meanings(chain: dict[str, Any], allowed_actions: Iterable
                 + (f" ({phase_title})" if phase_title else "")
                 + (f" toward {target_name}" if target_name else "")
                 + (f"; boss known: {boss_name}" if boss_name else "")
+                + (f"; boss phase: {boss_phase}" if boss_phase else "")
+                + (f"; telegraph: {boss_telegraph}" if boss_telegraph else "")
                 + (f"; elite target: {elite_name}" if elite_name else "")
             )
         elif action == "prepare_supplies":
@@ -317,6 +373,8 @@ def quest_chain_action_meanings(chain: dict[str, Any], allowed_actions: Iterable
             )
             if boss_name:
                 out[action] += f" against {boss_name}"
+            if boss_phase:
+                out[action] += f" while it is in {boss_phase}"
         elif action == "retreat_to_heal":
             out[action] = "break off to safety, heal, and resupply before resuming the chain"
         elif action == "accept_chain":

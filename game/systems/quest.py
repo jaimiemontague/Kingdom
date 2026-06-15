@@ -332,19 +332,33 @@ class QuestSystem(GameSystem):
     @staticmethod
     def _repin_idle_raider(quest: Quest, hero) -> None:
         """WK133 QA gap 1: an accepted raider who finished an interrupting fight
-        sits IDLE with no target — re-point it at the (still-alive) lair. Only
-        fires for truly idle heroes (never hijacks fighting/resting/shopping)
-        and only when FIT (>= 60% HP): a wounded raider must keep its normal
-        retreat/rest cycle, not be thrown back at the lair to die (this exact
-        death-loop showed up in the WK126 raid soak while tuning)."""
+        or rest/shop detour can lose attack access before the lair dies. Re-point
+        a fit, accepted raider at the still-alive lair and clear stale
+        inside-building attack gates. Wounded raiders keep their normal
+        retreat/rest cycle instead of being thrown back at the lair to die."""
         from game.entities.hero import HeroState  # lazy: avoid entity import cycle
 
-        if getattr(hero, "state", None) != HeroState.IDLE:
-            return
-        if getattr(hero, "target", None) is not None:
-            return
         max_hp = float(getattr(hero, "max_hp", 0) or 0)
         if max_hp > 0 and float(getattr(hero, "hp", 0)) < 0.6 * max_hp:
+            return
+        if getattr(hero, "is_inside_building", False):
+            pop_out = getattr(hero, "pop_out_of_building", None)
+            if callable(pop_out):
+                try:
+                    pop_out()
+                except Exception:
+                    hero.is_inside_building = False
+                    hero.inside_building = None
+                    hero.inside_timer = 0.0
+            else:
+                hero.is_inside_building = False
+                hero.inside_building = None
+                hero.inside_timer = 0.0
+            hero.can_attack = True
+            hero.attack_blocked_reason = ""
+        if getattr(hero, "state", None) not in (HeroState.IDLE, HeroState.MOVING):
+            return
+        if getattr(hero, "target", None) not in (None, quest.target):
             return
         lair = quest.target
         hero.target = lair  # live-entity target: the MOVING/FIGHTING path raids it

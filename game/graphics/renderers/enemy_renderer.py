@@ -19,6 +19,9 @@ _BOSS_CROWN_EDGE = (28, 24, 16)
 _BOSS_PHASE_COLORS: dict[str, tuple[int, int, int]] = {
     "war_banner": (232, 188, 60),
     "rally": (232, 92, 78),
+    "sleeping hoard": (236, 200, 76),
+    "air and fire": (255, 128, 52),
+    "wounded fury": (236, 92, 78),
 }
 _ELITE_TITLE_COLORS: dict[str, tuple[int, int, int]] = {
     "banner_bearer": (248, 220, 96),
@@ -27,8 +30,12 @@ _ELITE_TITLE_COLORS: dict[str, tuple[int, int, int]] = {
 }
 
 
+def _normalize_phase_title(phase_title: str) -> str:
+    return " ".join(str(phase_title or "").strip().lower().split())
+
+
 def _boss_badge_color(phase_title: str) -> tuple[int, int, int]:
-    return _BOSS_PHASE_COLORS.get(str(phase_title or "").strip().lower(), (232, 188, 60))
+    return _BOSS_PHASE_COLORS.get(_normalize_phase_title(phase_title), (232, 188, 60))
 
 
 def _elite_title_color(affixes: tuple[str, ...]) -> tuple[int, int, int]:
@@ -96,6 +103,74 @@ def _draw_elite_badge(
     ]
     pygame.draw.polygon(surface, title_color, chip)
     pygame.draw.polygon(surface, _BOSS_CROWN_EDGE, chip, 1)
+
+
+def _draw_dragon_phase_aura(
+    surface: pygame.Surface,
+    center_x: float,
+    center_y: float,
+    *,
+    phase_title: str,
+    frame_w: int,
+    frame_h: int,
+) -> None:
+    phase_key = _normalize_phase_title(phase_title)
+    ring_color = _boss_badge_color(phase_key)
+    if "hoard" in phase_key:
+        accent = (112, 84, 26)
+        phase_label = "HOARD"
+    elif "fire" in phase_key:
+        accent = (108, 34, 16)
+        phase_label = "FIRE"
+    else:
+        accent = (92, 72, 30)
+        phase_label = str(phase_title or "BOSS").strip().upper() or "BOSS"
+
+    aura_w = max(int(frame_w * 1.5), frame_w + 20)
+    aura_h = max(int(frame_h * 1.45), frame_h + 18)
+    overlay = pygame.Surface((aura_w, aura_h), pygame.SRCALPHA)
+    outer = overlay.get_rect().inflate(-4, -4)
+    inner = outer.inflate(-12, -12)
+    pygame.draw.ellipse(overlay, (*ring_color, 60), outer, 4)
+    pygame.draw.ellipse(overlay, (*accent, 140), inner, 2)
+
+    if "hoard" in phase_key:
+        sparkle_points = [
+            (outer.centerx, outer.top + 6),
+            (outer.right - 9, outer.centery),
+            (outer.centerx, outer.bottom - 7),
+            (outer.left + 8, outer.centery),
+        ]
+        for px, py in sparkle_points:
+            diamond = [
+                (px, py - 3),
+                (px + 3, py),
+                (px, py + 3),
+                (px - 3, py),
+            ]
+            pygame.draw.polygon(overlay, ring_color, diamond)
+            pygame.draw.polygon(overlay, _BOSS_CROWN_EDGE, diamond, 1)
+    elif "fire" in phase_key:
+        flame_tips = [
+            (outer.centerx, outer.top + 5),
+            (outer.right - 10, outer.centery - 2),
+            (outer.right - 8, outer.centery + 7),
+        ]
+        for px, py in flame_tips:
+            flame = [
+                (px - 3, py + 2),
+                (px, py - 6),
+                (px + 4, py + 1),
+                (px + 1, py + 5),
+            ]
+            pygame.draw.polygon(overlay, ring_color, flame)
+            pygame.draw.polygon(overlay, accent, flame, 1)
+
+    phase_surf = render_text_shadowed_cached(11, phase_label, ring_color)
+    phase_rect = phase_surf.get_rect(center=(outer.centerx, outer.bottom - 4))
+    overlay.blit(phase_surf, phase_rect)
+
+    surface.blit(overlay, (int(center_x - aura_w / 2), int(center_y - aura_h / 2)))
 
 
 class EnemyRenderer:
@@ -192,17 +267,43 @@ class EnemyRenderer:
         y = float(_state_get(entity_state, "y", 0.0))
         screen_x = x - cam_x
         screen_y = y - cam_y
-
-        frame = self._anim.frame()
-        if int(_state_get(entity_state, "facing", self._facing)) < 0:
-            frame = pygame.transform.flip(frame, True, False)
-        fw, fh = frame.get_width(), frame.get_height()
-        surface.blit(frame, (int(screen_x - fw // 2), int(screen_y - fh // 2)))
-
         size = int(_state_get(entity_state, "size", 18))
         hp = float(_state_get(entity_state, "hp", 0.0))
         max_hp = max(1.0, float(_state_get(entity_state, "max_hp", 1.0)))
         health_percent = max(0.0, min(1.0, hp / max_hp))
+        enemy_id = str(_state_get(entity_state, "entity_id", "") or self.enemy_id)
+
+        boss_status = "active"
+        boss_type = ""
+        phase_title = ""
+        if boss_snapshot is not None and str(getattr(boss_snapshot, "boss_id", "")) == enemy_id:
+            boss_status = str(getattr(boss_snapshot, "status", "active") or "active")
+            phase_title = str(getattr(boss_snapshot, "current_phase_title", "") or "")
+            boss_type = str(getattr(boss_snapshot, "boss_type", "") or "").strip().lower()
+
+        frame = self._anim.frame()
+        display_scale = 1.0
+        if boss_type == "dragon" or self.enemy_type == "dragon":
+            display_scale = max(1.15, min(1.35, float(size) / 28.0))
+        if display_scale != 1.0:
+            fw = max(1, int(round(frame.get_width() * display_scale)))
+            fh = max(1, int(round(frame.get_height() * display_scale)))
+            frame = pygame.transform.scale(frame, (fw, fh))
+        if int(_state_get(entity_state, "facing", self._facing)) < 0:
+            frame = pygame.transform.flip(frame, True, False)
+        fw, fh = frame.get_width(), frame.get_height()
+
+        if boss_status != "defeated" and boss_type == "dragon":
+            _draw_dragon_phase_aura(
+                surface,
+                screen_x,
+                screen_y,
+                phase_title=phase_title,
+                frame_w=fw,
+                frame_h=fh,
+            )
+
+        surface.blit(frame, (int(screen_x - fw // 2), int(screen_y - fh // 2)))
 
         bar_width = size + 6
         bar_height = 3
@@ -221,12 +322,8 @@ class EnemyRenderer:
             pygame.draw.polygon(surface, (200, 0, 0), points)
             pygame.draw.polygon(surface, COLOR_WHITE, points, 1)
 
-        enemy_id = str(_state_get(entity_state, "entity_id", "") or self.enemy_id)
-
         if boss_snapshot is not None and str(getattr(boss_snapshot, "boss_id", "")) == enemy_id:
-            boss_status = str(getattr(boss_snapshot, "status", "active") or "active")
             if boss_status != "defeated":
-                phase_title = str(getattr(boss_snapshot, "current_phase_title", "") or "")
                 badge_color = _boss_badge_color(phase_title)
                 crown_y = screen_y - size // 2 - 22
                 _draw_crown_badge(surface, screen_x, crown_y, fill_color=badge_color)
@@ -235,6 +332,17 @@ class EnemyRenderer:
                     name_surf = render_text_shadowed_cached(12, boss_name, badge_color)
                     name_rect = name_surf.get_rect(center=(int(screen_x), int(screen_y + size // 2 + 9)))
                     surface.blit(name_surf, name_rect)
+                phase_key = _normalize_phase_title(phase_title)
+                if boss_type == "dragon":
+                    if "hoard" in phase_key:
+                        phase_label = "HOARD"
+                    elif "fire" in phase_key:
+                        phase_label = "FIRE"
+                    else:
+                        phase_label = phase_title.upper() or "BOSS"
+                    phase_surf = render_text_shadowed_cached(11, phase_label, badge_color)
+                    phase_rect = phase_surf.get_rect(center=(int(screen_x), int(screen_y + size // 2 + 22)))
+                    surface.blit(phase_surf, phase_rect)
 
         if elite_snapshot is not None and str(getattr(elite_snapshot, "elite_id", "")) == enemy_id:
             elite_status = str(getattr(elite_snapshot, "status", "active") or "active")

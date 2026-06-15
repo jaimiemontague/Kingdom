@@ -12,13 +12,18 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Callable
 
 from config import STARTING_BUILDINGS, TAX_STASH_BUILDING_TYPES, TILE_SIZE, MAP_WIDTH, MAP_HEIGHT
+from game.content.bosses import BossAbilityDef, BossDef, BossPhaseDef
 from game.entities.building import Building
 from game.entities.hero import Hero
 from game.entities.enemy import Enemy, Goblin, GoblinWarchief
+from game.entities.enemy import Dragon
+from game.entities.poi import POI_DEFINITIONS, PointOfInterest
 from game.sim.timebase import set_sim_now_ms
+from game.sim.contracts import QuestChainHistorySummary, QuestChainPhaseSnapshot, QuestChainSnapshot
 from game.systems.boss_encounter import BossEncounterSystem
 from game.systems.protocol import SystemContext
 from game.world import TileType
@@ -2153,6 +2158,364 @@ def scenario_boss_encounter_showcase(engine, *, seed: int) -> list[Shot]:
     ]
 
 
+ASHWING_FIRE_BREATH = BossAbilityDef(
+    ability_id="fire_breath",
+    display_name="Fire Breath",
+    trigger="cooldown",
+    cooldown_ms=9_000,
+    telegraph_ms=1_400,
+    payload={
+        "shape": "cone",
+        "range": 9.0,
+        "damage": 24,
+        "status": "scorched",
+        "warning_event": "dragon_fire_telegraph",
+        "impact_event": "dragon_fire_impact",
+    },
+)
+
+ASHWING_SLEEPING_HOARD = BossPhaseDef(
+    phase_id="sleeping_hoard",
+    starts_below_hp_pct=1.0,
+    title="Sleeping Hoard",
+    abilities=("fire_breath",),
+)
+
+ASHWING_AIR_AND_FIRE = BossPhaseDef(
+    phase_id="air_and_fire",
+    starts_below_hp_pct=0.55,
+    title="Air And Fire",
+    abilities=("fire_breath",),
+    on_enter_event="boss_phase_changed",
+)
+
+ASHWING_BOSS_DEF = BossDef(
+    boss_type="dragon",
+    display_name_template="Ashwing the Red",
+    base_enemy_type="dragon",
+    difficulty_tier=5,
+    phases=(ASHWING_SLEEPING_HOARD, ASHWING_AIR_AND_FIRE),
+    abilities=(ASHWING_FIRE_BREATH,),
+    loot_table_id="ashwing_hoard_loot",
+    weakness_tags=("fire-ward", "shrine-ember"),
+    memory_tags=("defeated_by", "killed_hero"),
+)
+
+
+def _build_ashwing_chain_snapshot(
+    *,
+    hero_id: str,
+    cave_position: tuple[float, float],
+) -> tuple[QuestChainSnapshot, SimpleNamespace]:
+    scout = QuestChainPhaseSnapshot(
+        phase_id="scout_dragon_cave",
+        title="Scout the Dragon Cave",
+        objective_type="scout_location",
+        status="completed",
+        assigned_hero_id=hero_id,
+        target_id="poi_dragon_cave",
+        target_name="Dragon Cave",
+        target_position=cave_position,
+        history=(
+            QuestChainHistorySummary(
+                event="phase_started",
+                phase_id="scout_dragon_cave",
+                phase_title="Scout the Dragon Cave",
+                status="completed",
+                hero_id=hero_id,
+                target_id="poi_dragon_cave",
+                target_name="Dragon Cave",
+                target_position=cave_position,
+                at_ms=9_000,
+            ),
+            QuestChainHistorySummary(
+                event="phase_completed",
+                phase_id="scout_dragon_cave",
+                phase_title="Scout the Dragon Cave",
+                status="completed",
+                hero_id=hero_id,
+                target_id="poi_dragon_cave",
+                target_name="Dragon Cave",
+                target_position=cave_position,
+                at_ms=10_000,
+            ),
+        ),
+    )
+    prepare = QuestChainPhaseSnapshot(
+        phase_id="prepare_hunt",
+        title="Prepare for Ashwing",
+        objective_type="prepare_hunt",
+        status="active",
+        assigned_hero_id=hero_id,
+        target_id="poi_dragon_cave",
+        target_name="Dragon Cave",
+        target_position=cave_position,
+        history=(
+            QuestChainHistorySummary(
+                event="phase_started",
+                phase_id="prepare_hunt",
+                phase_title="Prepare for Ashwing",
+                status="active",
+                hero_id=hero_id,
+                target_id="poi_dragon_cave",
+                target_name="Dragon Cave",
+                target_position=cave_position,
+                at_ms=11_000,
+            ),
+        ),
+    )
+    slay = QuestChainPhaseSnapshot(
+        phase_id="slay_ashwing",
+        title="Slay Ashwing the Red",
+        objective_type="slay_named_boss",
+        status="upcoming",
+        assigned_hero_id=hero_id,
+        target_id="ashwing_the_red",
+        target_name="Ashwing the Red",
+        target_position=cave_position,
+    )
+    claim = QuestChainPhaseSnapshot(
+        phase_id="claim_hoard",
+        title="Claim Ashwing's Hoard",
+        objective_type="claim_hoard",
+        status="upcoming",
+        assigned_hero_id=hero_id,
+        target_id="ashwing_hoard",
+        target_name="Ashwing's Hoard",
+        target_position=cave_position,
+    )
+    snapshot = QuestChainSnapshot(
+        chain_id=143,
+        chain_type="ashwings_hoard",
+        name="Ashwing's Hoard",
+        status="active",
+        assigned_hero_id=hero_id,
+        current_phase_id="prepare_hunt",
+        current_phase_title="Prepare for Ashwing",
+        current_objective_type="prepare_hunt",
+        target_id="poi_dragon_cave",
+        target_name="Dragon Cave",
+        target_position=cave_position,
+        phases=(scout, prepare, slay, claim),
+        history=(
+            QuestChainHistorySummary(
+                event="chain_offered",
+                status="offered",
+                hero_id=hero_id,
+                target_id="poi_dragon_cave",
+                target_name="Dragon Cave",
+                target_position=cave_position,
+                at_ms=8_500,
+            ),
+            QuestChainHistorySummary(
+                event="chain_accepted",
+                status="active",
+                hero_id=hero_id,
+                target_id="poi_dragon_cave",
+                target_name="Dragon Cave",
+                target_position=cave_position,
+                at_ms=9_500,
+            ),
+        ),
+    )
+    live_chain = SimpleNamespace(
+        chain_id=143,
+        chain_type="ashwings_hoard",
+        reward_gold=520,
+        facts={
+            "boss_target_revealed": True,
+            "boss_target_name": "Ashwing the Red",
+            "known_weakness": "shrine ember ward",
+            "target_location_name": "Dragon Cave",
+            "preparation_note": "Ward the shrine before the fire breath.",
+        },
+    )
+    return snapshot, live_chain
+
+
+def scenario_dragon_hunt_showcase(engine, *, seed: int) -> list[Shot]:
+    """WK143: Dragon Hunt showcase with Ashwing, Dragon Cave, fire telegraph, and ledger proof."""
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    _reveal_all(engine.world)
+
+    try:
+        engine.heroes = []
+        engine.enemies = []
+        engine.guards = []
+        engine.peasants = []
+    except Exception:
+        pass
+    try:
+        engine.sim.quest_system = SimpleNamespace(get_active_quests=lambda: ())
+    except Exception:
+        pass
+    try:
+        engine.sim.quest_chain_system = None
+    except Exception:
+        pass
+
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        gx = MAP_WIDTH // 2 - 1
+        gy = MAP_HEIGHT // 2 - 1
+        castle = _place_building(engine, "castle", gx, gy)
+
+    castle_gx = int(getattr(castle, "grid_x", MAP_WIDTH // 2))
+    castle_gy = int(getattr(castle, "grid_y", MAP_HEIGHT // 2))
+
+    post = _place_building(engine, "herald_post", castle_gx + 5, castle_gy + 1)
+    cave_def = POI_DEFINITIONS["poi_dragon_cave"]
+    cave = PointOfInterest(castle_gx + 13, castle_gy - 2, cave_def)
+    cave.is_discovered = True
+    cave.grants_vision = True
+    engine.buildings.append(cave)
+
+    hero_x, hero_y = _tile_center_px(castle_gx + 3, castle_gy + 1)
+    hero = _place_hero(engine, "warrior", hero_x, hero_y)
+    hero.name = "Astra"
+
+    dragon_x = float(cave.center_x)
+    dragon_y = float(cave.center_y)
+    dragon = Dragon(dragon_x, dragon_y)
+    dragon.name = "Ashwing the Red"
+    dragon.target = hero
+    dragon.hp = max(1, int(round(float(dragon.max_hp) * 0.48)))
+    engine.enemies = [dragon]
+
+    engine.sim.pois = [cave]
+    try:
+        engine.hud._session_start_ms = -100_000
+        engine.hud._poi_toasts = []
+        engine.hud._poi_toast_ids = {id(cave)}
+        engine.hud._wave_toast_text = None
+        engine.hud._wave_toast_countdown_end_ms = 0
+        engine.hud._wave_toast_start_ms = 0
+        engine.hud._pin_slot.unpin()
+        engine.hud._watch_card_expanded = False
+        engine.hud._chat_visible = False
+    except Exception:
+        pass
+    try:
+        engine.show_perf = False
+        engine.screenshot_hide_ui = False
+        engine.selected_hero = None
+        engine.selected_building = None
+        engine.selected_enemy = None
+        engine.selected_peasant = None
+        if hasattr(engine, "debug_panel"):
+            engine.debug_panel.visible = False
+        if hasattr(engine, "building_panel"):
+            engine.building_panel.deselect()
+        if hasattr(engine, "pause_menu") and hasattr(engine.pause_menu, "visible"):
+            engine.pause_menu.visible = False
+    except Exception:
+        pass
+
+    boss_system = BossEncounterSystem(definitions={"dragon": ASHWING_BOSS_DEF})
+    engine.sim.boss_encounter_system = boss_system
+    now_ms = 15_000
+    set_sim_now_ms(now_ms)
+    boss_system.register_boss(dragon, boss_def=ASHWING_BOSS_DEF, event_bus=engine.event_bus, now_ms=now_ms)
+    dragon.latest_telegraph = "fire_breath"
+    dragon.latest_boss_telegraph = "fire_breath"
+    dragon.current_boss_phase_title = "Air And Fire"
+    dragon.boss_phase_title = "Air And Fire"
+    dragon.current_boss_ability_id = "fire_breath"
+    dragon.current_boss_ability_name = "Fire Breath"
+    dragon.current_boss_ability_trigger = "cooldown"
+    dragon.current_boss_ability_cooldown_ms = 9_000
+    dragon.current_boss_ability_telegraph_ms = 1_400
+    dragon.current_boss_ability_payload = dict(ASHWING_FIRE_BREATH.payload)
+    try:
+        engine.vfx_system.on_event(
+            {
+                "type": "boss_ability_telegraphed",
+                "boss_id": str(getattr(dragon, "entity_id", "") or ""),
+                "boss_type": "dragon",
+                "name": "Ashwing the Red",
+                "ability_id": "fire_breath",
+                "ability_name": "Fire Breath",
+                "current_phase_title": "Air And Fire",
+                "telegraph_ms": 1_400,
+                "resolve_at_ms": now_ms + 1_400,
+                "detail": "dragon_fire_telegraph",
+                "time_ms": now_ms,
+            }
+        )
+    except Exception:
+        pass
+
+    chain_snapshot, live_chain = _build_ashwing_chain_snapshot(
+        hero_id=str(getattr(hero, "hero_id", "") or ""),
+        cave_position=(float(cave.center_x), float(cave.center_y)),
+    )
+    quest_chain_system = SimpleNamespace(
+        get_active_chain_snapshots=lambda: (chain_snapshot,),
+        get_active_chain_views=lambda: (chain_snapshot,),
+        get_active_chains=lambda: (chain_snapshot,),
+        get_chain=lambda chain_id, include_archived=True: live_chain if int(chain_id) == int(live_chain.chain_id) else None,
+        get_definition=lambda chain_type: SimpleNamespace(reward_profile=SimpleNamespace(gold=520)),
+    )
+    engine.sim.quest_chain_system = quest_chain_system
+
+    def _show_world(eng: Any) -> None:
+        eng.screenshot_hide_ui = False
+        eng.selected_hero = None
+        eng.selected_building = None
+        eng.selected_enemy = None
+        eng.selected_peasant = None
+        if hasattr(eng, "building_panel"):
+            eng.building_panel.deselect()
+            eng.building_panel.visible = False
+
+    def _show_ledger_modal(eng: Any) -> None:
+        eng.screenshot_hide_ui = False
+        eng.selected_hero = None
+        eng.selected_enemy = None
+        eng.selected_peasant = None
+        if hasattr(eng, "building_panel"):
+            eng.building_panel.select_building(post, getattr(eng, "heroes", []))
+            eng.building_panel.quest_create_panel.open(post, eng.get_game_state())
+
+    cave_cx = float(cave.center_x)
+    cave_cy = float(cave.center_y)
+    return [
+        Shot(
+            filename="dragon_hunt_showcase_world.png",
+            label="WK143: Ashwing by the Dragon Cave with fire telegraph",
+            center_x=cave_cx,
+            center_y=cave_cy,
+            zoom=2.1,
+            ticks=0,
+            apply=_show_world,
+            meta={
+                "scenario": "dragon_hunt_showcase",
+                "seed": int(seed),
+                "shot": "world",
+                "boss": "Ashwing the Red",
+                "phase": "Air And Fire",
+            },
+        ),
+        Shot(
+            filename="dragon_hunt_showcase_ledger.png",
+            label="WK143: Dragon Hunt ledger and quest-create modal",
+            center_x=cave_cx,
+            center_y=cave_cy,
+            zoom=1.8,
+            ticks=0,
+            apply=_show_ledger_modal,
+            meta={
+                "scenario": "dragon_hunt_showcase",
+                "seed": int(seed),
+                "shot": "ledger",
+                "boss": "Ashwing the Red",
+                "chain": "Ashwing's Hoard",
+            },
+        ),
+    ]
+
+
 def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
     scenario_name = str(scenario_name).strip()
     if scenario_name == "building_catalog":
@@ -2195,6 +2558,8 @@ def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
         return scenario_ursina_melee_combat(engine, seed=int(seed))
     if scenario_name == "boss_encounter_showcase":
         return scenario_boss_encounter_showcase(engine, seed=int(seed))
+    if scenario_name == "dragon_hunt_showcase":
+        return scenario_dragon_hunt_showcase(engine, seed=int(seed))
     if scenario_name == "wk133_quest_ui":
         return scenario_wk133_quest_ui(engine, seed=int(seed))
     if scenario_name == "wk135_inventory_ui":

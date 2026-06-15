@@ -176,6 +176,7 @@ class PygameRenderer:
                     boss_encounters=boss_views,
                     visible_enemy_ids=visible_enemy_ids,
                     visible_enemy_dtos=visible_enemy_dtos,
+                    hero_dtos=snapshot.hero_dtos,
                 )
             except Exception:
                 # WK65 Round 0: behavior unchanged (still swallow) — now observable.
