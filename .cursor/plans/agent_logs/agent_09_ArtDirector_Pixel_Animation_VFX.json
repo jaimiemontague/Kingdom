@@ -215,7 +215,7 @@
             "game/graphics/instanced_unit_renderer.py": [
               "_ensure_initialized (outside geom): deleted self._geom_node_outside.set_shader_input(\"unitAtlas\", panda_atlas) and replaced with self._geom_node_outside.set_texture(panda_atlas, 1) so Panda auto-binds stage-0 tex to the shader p3d_Texture0 (mirrors legacy Entity.texture path). Added explanatory comment.",
               "_ensure_initialized (inside geom): deleted self._geom_node_inside.set_shader_input(\"unitAtlas\", panda_atlas) and replaced with self._geom_node_inside.set_texture(panda_atlas, 1).",
-              "KEPT both set_shader_input(\"instanceData\", ...) binds (samplerBuffer position source — binds fine, units were already positioned correctly).",
+              "KEPT both set_shader_input(\"instanceData\", ...) binds (samplerBuffer position source \u2014 binds fine, units were already positioned correctly).",
               "Shadow shader / shadow geom NOT touched (it does not sample the atlas)."
             ]
           },
@@ -297,10 +297,10 @@
               "update() instancing gate (~L589): changed default from enabled to OPT-IN.",
               "Before: if os.environ.get(\"KINGDOM_URSINA_INSTANCING\", \"1\") != \"0\":",
               "After:  if os.environ.get(\"KINGDOM_URSINA_INSTANCING\", \"0\") == \"1\":",
-              "Updated comment: instancing is OPT-IN (default OFF) — set KINGDOM_URSINA_INSTANCING=1 to enable; known unresolved texture-binding bug (units invisible) pending interactive GPU debugging; default legacy per-Entity billboard path renders units correctly."
+              "Updated comment: instancing is OPT-IN (default OFF) \u2014 set KINGDOM_URSINA_INSTANCING=1 to enable; known unresolved texture-binding bug (units invisible) pending interactive GPU debugging; default legacy per-Entity billboard path renders units correctly."
             ]
           },
-          "why": "The instanced path still renders units transparent/invisible (w1-w3 attempts: atlas sampler rename, texture-stage-0 reserved-input avoidance, V-flip atlas source — none resolved it). Needs interactive GPU debugging. Default must be the legacy per-Entity billboard path, which renders units correctly.",
+          "why": "The instanced path still renders units transparent/invisible (w1-w3 attempts: atlas sampler rename, texture-stage-0 reserved-input avoidance, V-flip atlas source \u2014 none resolved it). Needs interactive GPU debugging. Default must be the legacy per-Entity billboard path, which renders units correctly.",
           "left_in_place": "instanced_unit_renderer.py / instanced_unit_shader.py edits and the bounties/rubble sync remain (only reached when KINGDOM_URSINA_INSTANCING=1; starting point for future debugging; harmless when not reached).",
           "how_to_test": [
             "python -c \"import game.graphics.ursina_renderer; print(IMPORT_OK)\" (SDL_VIDEODRIVER=dummy)",
@@ -475,14 +475,14 @@
           "ticket": "WK126-T8 (executed in WK133 wave 2): yellow ! overhead quest-giver marker, Ursina + pygame",
           "what_i_changed": [
             "game/graphics/ursina_unit_overlays.py: new sync_quest_giver_marker(ent, is_open) modeled EXACTLY on sync_hero_rest_label (lazy Text(!), color.rgb(1.0,0.85,0.15), y=0.8, scale=14, configure_ks_overlay -> fixed,110 WK124 bin fix; .enabled toggled per frame, text/transform set only at creation = zero per-frame re-raster). Registered _ks_quest_marker in _OVERLAY_CHILD_ATTRS (WK123 C1 leak fix). NOT added to _HERO_OVERLAY_ATTRS: giver is stationary, no facing un-mirror applies.",
-            "game/graphics/ursina_unit_sync.py: new sync_snapshot_quest_givers(r, snapshot, active_ids) modeled on sync_snapshot_tax_collector — classic (non-instanced) Entity quad billboard per WK133 PM decision; herald-gold COLOR_QUEST_GIVER, keyed quest_giver:<giver_id> (stable, never id()), underground layer gate, position/color/scale/shader dirty-gated via UrsinaEntityRenderCollab.sync_billboard_entity (_ks_last_* pattern), Herald name label, marker via sync_quest_giver_marker(ent, qg.is_open). Reads snapshot_quest_giver_states(): quest_giver_dtos first, quest_givers fallback, () when absent.",
-            "game/graphics/ursina_renderer.py: HOOKS — new _sync_snapshot_quest_givers wrapper (delegates to ursina_unit_sync, same pattern as _sync_snapshot_tax_collector); called in BOTH update branches: instanced branch right before _sync_snapshot_bounties (~:630, like bounties — Entity-based survives instancing) and legacy branch after _sync_snapshot_tax_collector (stage tag 16b). Removal path _destroy_removed_entities already frees the marker via free_entity_overlays + _OVERLAY_CHILD_ATTRS.",
-            "game/graphics/renderers/quest_giver_renderer.py (NEW): pygame QuestGiverRenderer — herald-gold diamond + white outline + H glyph (tax-collector procedural pattern), yellow ! above the sprite when is_open via render_text_cached(20,!,(255,215,0)) (cached Surface, Zzz-block precedent hero_renderer.py:197-200).",
+            "game/graphics/ursina_unit_sync.py: new sync_snapshot_quest_givers(r, snapshot, active_ids) modeled on sync_snapshot_tax_collector \u2014 classic (non-instanced) Entity quad billboard per WK133 PM decision; herald-gold COLOR_QUEST_GIVER, keyed quest_giver:<giver_id> (stable, never id()), underground layer gate, position/color/scale/shader dirty-gated via UrsinaEntityRenderCollab.sync_billboard_entity (_ks_last_* pattern), Herald name label, marker via sync_quest_giver_marker(ent, qg.is_open). Reads snapshot_quest_giver_states(): quest_giver_dtos first, quest_givers fallback, () when absent.",
+            "game/graphics/ursina_renderer.py: HOOKS \u2014 new _sync_snapshot_quest_givers wrapper (delegates to ursina_unit_sync, same pattern as _sync_snapshot_tax_collector); called in BOTH update branches: instanced branch right before _sync_snapshot_bounties (~:630, like bounties \u2014 Entity-based survives instancing) and legacy branch after _sync_snapshot_tax_collector (stage tag 16b). Removal path _destroy_removed_entities already frees the marker via free_entity_overlays + _OVERLAY_CHILD_ATTRS.",
+            "game/graphics/renderers/quest_giver_renderer.py (NEW): pygame QuestGiverRenderer \u2014 herald-gold diamond + white outline + H glyph (tax-collector procedural pattern), yellow ! above the sprite when is_open via render_text_cached(20,!,(255,215,0)) (cached Surface, Zzz-block precedent hero_renderer.py:197-200).",
             "game/graphics/renderers/registry.py: one shared QuestGiverRenderer instance (stateless, like GuardRenderer) + render_quest_giver().",
-            "game/graphics/pygame_renderer.py: minimal call-site hook in _draw_world_layers after tax collector — iterates snapshot.quest_giver_dtos (tolerated-absent -> no-op).",
-            "tests/test_wk126_quest_marker_overlay.py (NEW): 9 tests — _OVERLAY_CHILD_ATTRS registration; fake-Text layer (never skips): lazy single create, is_open toggle without re-create, NO per-frame text/bin mutation over 50 frames, final bin (fixed,110) after always_on_top clobber (WK124 pattern); real offscreen-Ursina layer: getBinDrawOrder()==110 + 3-cycle scene.entities leak proof via free_entity_overlays; pygame layer: ! pixels appear only when is_open + render_text_cached identity."
+            "game/graphics/pygame_renderer.py: minimal call-site hook in _draw_world_layers after tax collector \u2014 iterates snapshot.quest_giver_dtos (tolerated-absent -> no-op).",
+            "tests/test_wk126_quest_marker_overlay.py (NEW): 9 tests \u2014 _OVERLAY_CHILD_ATTRS registration; fake-Text layer (never skips): lazy single create, is_open toggle without re-create, NO per-frame text/bin mutation over 50 frames, final bin (fixed,110) after always_on_top clobber (WK124 pattern); real offscreen-Ursina layer: getBinDrawOrder()==110 + 3-cycle scene.entities leak proof via free_entity_overlays; pygame layer: ! pixels appear only when is_open + render_text_cached identity."
           ],
-          "contract_gap_flagged": "WAVE-1 GAP: the render snapshot does NOT carry quest givers. SimEngine.quest_givers exists and build_ai_view exports them, but RenderSnapshot (game/sim/snapshot.py) has no quest_giver_dtos field and SimEngine.build_snapshot does not populate one. Both files are sim/ (out of T8 lane: Agent 03 / Agent 05). All T8 render code is live and reads getattr(snapshot, quest_giver_dtos, ())/(quest_givers) tolerantly — empty today, zero-cost no-op, digest-safe. BEFORE the PM live capture, Agent 05 (or 03) must add: (1) quest_giver_dtos: tuple = () on RenderSnapshot, (2) in SimEngine.build_snapshot: quest_giver_dtos=tuple(g.to_ai_info() for g in self.quest_givers). build_snapshot is render-prep only (never runs in the headless digest), so this is digest-safe.",
+          "contract_gap_flagged": "WAVE-1 GAP: the render snapshot does NOT carry quest givers. SimEngine.quest_givers exists and build_ai_view exports them, but RenderSnapshot (game/sim/snapshot.py) has no quest_giver_dtos field and SimEngine.build_snapshot does not populate one. Both files are sim/ (out of T8 lane: Agent 03 / Agent 05). All T8 render code is live and reads getattr(snapshot, quest_giver_dtos, ())/(quest_givers) tolerantly \u2014 empty today, zero-cost no-op, digest-safe. BEFORE the PM live capture, Agent 05 (or 03) must add: (1) quest_giver_dtos: tuple = () on RenderSnapshot, (2) in SimEngine.build_snapshot: quest_giver_dtos=tuple(g.to_ai_info() for g in self.quest_givers). build_snapshot is render-prep only (never runs in the headless digest), so this is digest-safe.",
           "how_to_test": [
             "python -m pytest tests/test_wk126_quest_marker_overlay.py -q",
             "python -m pytest tests/test_mythos_instanced_overlays.py tests/test_mythos_prefab_swap_leak.py tests/test_wk124_overlay_bin.py tests/test_wk123_scene_entity_leak.py tests/test_wk61_r4_ursina_regressions.py -q",
@@ -499,17 +499,17 @@
         "r2_t8_quest_giver_render_fix": {
           "status": "done",
           "ticket": "WK133 T8 fix round: quest-giver NPC + '!' marker not rendering in Ursina (PM live-capture FAIL)",
-          "root_cause": "RenderSnapshot (game/sim/snapshot.py) has no quest-giver field and SimEngine.build_snapshot never exports self.quest_givers (the r1 handoff to Agent 05/03 was never executed). snapshot_quest_giver_states() is tolerated-absent by design, so it ALWAYS returned () and sync_snapshot_quest_givers — correctly hooked in BOTH renderer branches since r1 — iterated nothing. The QuestGiver existed sim-side with is_open=True; the data simply never crossed the render boundary.",
-          "hook_point": "game/graphics/ursina_app_frame.py run_frame(): immediately after snapshot = owner.engine.build_snapshot(), call ursina_unit_sync.attach_quest_giver_states(snapshot, owner.engine). This file is graphics-lane and is the render-boundary owner of the snapshot handoff, so the export lives render-side (sim lane untouched, WK67 digest byte-safe — the headless digest never builds render snapshots nor runs ursina_app_frame). The helper value-copies each live giver into a frozen QuestGiverRenderState NamedTuple (giver_id/x/y/is_open/is_alive — L1 no-live-object rule preserved) and object.__setattr__s the tuple as snapshot.quest_givers — the exact fallback field snapshot_quest_giver_states already reads; the sim's own quest_giver_dtos field still wins if a later wave adds it. No-op (1 getattr) when no givers exist.",
+          "root_cause": "RenderSnapshot (game/sim/snapshot.py) has no quest-giver field and SimEngine.build_snapshot never exports self.quest_givers (the r1 handoff to Agent 05/03 was never executed). snapshot_quest_giver_states() is tolerated-absent by design, so it ALWAYS returned () and sync_snapshot_quest_givers \u2014 correctly hooked in BOTH renderer branches since r1 \u2014 iterated nothing. The QuestGiver existed sim-side with is_open=True; the data simply never crossed the render boundary.",
+          "hook_point": "game/graphics/ursina_app_frame.py run_frame(): immediately after snapshot = owner.engine.build_snapshot(), call ursina_unit_sync.attach_quest_giver_states(snapshot, owner.engine). This file is graphics-lane and is the render-boundary owner of the snapshot handoff, so the export lives render-side (sim lane untouched, WK67 digest byte-safe \u2014 the headless digest never builds render snapshots nor runs ursina_app_frame). The helper value-copies each live giver into a frozen QuestGiverRenderState NamedTuple (giver_id/x/y/is_open/is_alive \u2014 L1 no-live-object rule preserved) and object.__setattr__s the tuple as snapshot.quest_givers \u2014 the exact fallback field snapshot_quest_giver_states already reads; the sim's own quest_giver_dtos field still wins if a later wave adds it. No-op (1 getattr) when no givers exist.",
           "what_i_changed": [
             "game/graphics/ursina_unit_sync.py: new QuestGiverRenderState NamedTuple + attach_quest_giver_states(snapshot, engine) (render-boundary export, see hook_point).",
             "game/graphics/ursina_unit_sync.py sync_snapshot_quest_givers(): NPC body switched from the untextured herald-gold quad to the tax-collector atlas-UV billboard (PM-designated humanoid stand-in): r._sync_unit_atlas_billboard(ent, obj_id, qg, 'worker', 'tax_collector', ...) at PEASANT_SCALE_XZ/Y (the exact sync_snapshot_tax_collector call shape); QuestGiverRenderState carries no state/anim fields so base_clip_from_dto resolves to the looping 'idle' clip; Herald label now at TAX_COLLECTOR_SPEC.label_y/scale. Marker call (sync_quest_giver_marker(ent, qg.is_open)) + quest_giver:<giver_id> keying + underground gate + _OVERLAY_CHILD_ATTRS teardown all unchanged.",
             "game/graphics/ursina_app_frame.py: 2-line hook after build_snapshot (lazy import + attach call).",
-            "tests/test_wk126_quest_marker_overlay.py: +3 boundary tests — attach populates the REAL frozen RenderSnapshot under the field the sync reads (and is a value copy: post-attach sim mutation does not bleed); no-givers/no-sim engines are no-ops; is_open=False crosses the boundary False (ARM_QUEST=0 contract)."
+            "tests/test_wk126_quest_marker_overlay.py: +3 boundary tests \u2014 attach populates the REAL frozen RenderSnapshot under the field the sync reads (and is a value copy: post-attach sim mutation does not bleed); no-givers/no-sim engines are no-ops; is_open=False crosses the boundary False (ARM_QUEST=0 contract)."
           ],
           "evidence": {
-            "live_capture_on": "docs/screenshots/wk133_quest_giver/fix1_20260610_031522_246.png — PASS: tax-collector-sprite NPC standing beside the Herald's Post, 'Herald' label, yellow '!' floating above the head on top of the scene (sim log: quest armed=True giver_open=True). Verified full frame + PIL crop/upscale.",
-            "live_capture_off": "docs/screenshots/wk133_quest_giver/fix1_off_20260610_031610_928.png — PASS: KINGDOM_WK133_ARM_QUEST=0 — NPC + label render, NO '!' anywhere. Verified full frame + PIL crop/upscale.",
+            "live_capture_on": "docs/screenshots/wk133_quest_giver/fix1_20260610_031522_246.png \u2014 PASS: tax-collector-sprite NPC standing beside the Herald's Post, 'Herald' label, yellow '!' floating above the head on top of the scene (sim log: quest armed=True giver_open=True). Verified full frame + PIL crop/upscale.",
+            "live_capture_off": "docs/screenshots/wk133_quest_giver/fix1_off_20260610_031610_928.png \u2014 PASS: KINGDOM_WK133_ARM_QUEST=0 \u2014 NPC + label render, NO '!' anywhere. Verified full frame + PIL crop/upscale.",
             "gates": "python -m pytest tests/test_wk126_quest_marker_overlay.py tests/test_mythos_instanced_overlays.py -q -> 28 passed (r1's 9 + 3 new + instanced overlays)."
           },
           "fps_rails": "attach: zero-cost (single getattr) when no givers; ~1 NamedTuple/giver/frame otherwise. NPC billboard: dirty-gated by _sync_unit_atlas_billboard (_ks_last_appearance_key / pos compares); stationary idle NPC = compare-only steady state. Marker unchanged (lazy-once, enabled-toggle).",
@@ -546,6 +546,74 @@
             "hook sanity: font.quit and pygame.quit both bump generation + flush caches; render after quit/re-init cycle works (pygame.quit may bump twice via font autoquit - harmless over-invalidation)"
           ],
           "handoff": "FULL SUITE MUST BE RE-RUN BY THE PM (not run here per lane). No commits made (DO NOT COMMIT honored). quest_giver_renderer.py unchanged - it uses the cache correctly; the cache itself was the hazard."
+        }
+      }
+    },
+    "wk141_blackbanners_toll_epic_boss_quest": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md",
+        "notes": "Wave 2 visual readability check; no production graphics change was needed."
+      },
+      "rounds": {
+        "r2_wave1_gate_wave2_kickoff": {
+          "sprint_id": "wk141_blackbanners_toll_epic_boss_quest",
+          "round_id": "r2_wave1_gate_wave2_kickoff",
+          "prompt_text": "Verify or add readable Rusk Blackbanner, toll-taker elite, and boss phase visual markers using WK139 visual language.",
+          "status": "partial",
+          "what_i_changed": [
+            "Added tests/test_wk141_blackbanner_visuals.py to pin the existing WK139 boss/elite language for Blackbanner: Rusk Blackbanner crown/name readability, Blackbanner Toll-Taker elite badge readability, and Toll Banner/Smoke Retreat telegraph clear-state behavior.",
+            "No production graphics changes were needed. The current WK139 renderer already makes the bandit_lord boss and bandit elite readable with crown/name/badge/telegraph markers.",
+            "Captured the requested boss showcase output in docs/screenshots/wk141_blackbanner_boss/boss_encounter_showcase.png and added focused Rusk proof renders in docs/screenshots/wk141_blackbanner_boss/rusk_toll_banner_showcase.png and docs/screenshots/wk141_blackbanner_boss/rusk_smoke_retreat_showcase.png."
+          ],
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk141_blackbanner_visuals.py tests/test_wk139_boss_visuals.py tests/test_wk139_elite_visuals.py -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/capture_screenshots.py --scenario boss_encounter_showcase --seed 3 --out docs/screenshots/wk141_blackbanner_boss --size 1920x1080 --ticks 900",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": "running in background; foreground attempts timed out at 120s and 600s",
+              "note": "background output at %TEMP%\\wk141_qa_smoke.out.txt"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
+              "exit_code": 0,
+              "note": "JSON validation passed."
+            }
+          ],
+          "evidence": {
+            "visual_verdict": "Existing WK139 visuals are sufficient for Rusk and the toll-taker; the new test and focused renders show the same crown/name/badge/telegraph language clearly.",
+            "screenshot_paths_inspected": [
+              "docs/screenshots/wk141_blackbanner_boss/boss_encounter_showcase.png",
+              "docs/screenshots/wk141_blackbanner_boss/rusk_toll_banner_showcase.png",
+              "docs/screenshots/wk141_blackbanner_boss/rusk_smoke_retreat_showcase.png"
+            ],
+            "pytest": {
+              "cmd": "python -m pytest tests/test_wk141_blackbanner_visuals.py tests/test_wk139_boss_visuals.py tests/test_wk139_elite_visuals.py -q",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "capture_screenshots": {
+              "cmd": "python tools/capture_screenshots.py --scenario boss_encounter_showcase --seed 3 --out docs/screenshots/wk141_blackbanner_boss --size 1920x1080 --ticks 900",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "json_tool": {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [
+            "python tools/qa_smoke.py --quick is still running in the background; final exit code is pending."
+          ],
+          "follow_ups": [
+            "Poll the background qa_smoke process and record the final exit code once it finishes."
+          ]
         }
       }
     }

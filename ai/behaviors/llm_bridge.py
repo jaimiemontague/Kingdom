@@ -286,7 +286,7 @@ def apply_llm_decision(
     if _quest_offer.maybe_apply_quest_offer_decision(ai, hero, decision, view, source=source):
         return
 
-    if action in {"accept_chain", "continue_phase", "decline_chain", "retreat_to_heal"}:
+    if action in {"accept_chain", "continue_phase", "decline_chain", "retreat_to_heal", "prepare_supplies"}:
         focus = _quest_chain_focus_from_context(context, hero, target)
         if focus is None:
             ai._debug_log(
@@ -309,6 +309,25 @@ def apply_llm_decision(
                 source=source,
             )
             ai.defense_behavior.start_retreat(ai, hero, view)
+            return
+
+        if action == "prepare_supplies":
+            ai.set_intent(hero, "shopping")
+            ai.record_decision(
+                hero,
+                action="prepare_supplies",
+                reason=reason or f"Preparing supplies for {chain_name}",
+                intent="shopping",
+                inputs_summary=inputs_summary,
+                source=source,
+            )
+            supply_target = str(target or "").strip()
+            if supply_target.lower() in {"", "marketplace", "market"}:
+                supply_target = "Health Potion"
+            ai.shopping_behavior.go_shopping(ai, hero, supply_target or "Health Potion", view)
+            if getattr(hero, "state", None) != HeroState.MOVING or getattr(hero, "target_position", None) is None:
+                ai.set_intent(hero, "returning_to_safety")
+                ai.defense_behavior.start_retreat(ai, hero, view)
             return
 
         if action == "decline_chain":

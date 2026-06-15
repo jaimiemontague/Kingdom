@@ -435,9 +435,13 @@ class BossEncounterSystem(GameSystem):
     def _prepare_boss_object(self, boss: object, definition: BossDef, state: _BossEncounterState | None) -> None:
         phase_id = state.current_phase if state is not None else ""
         phase_title = state.current_phase_title if state is not None else ""
+        desired_name = str(definition.display_name_template or getattr(boss, "name", "") or definition.boss_type.replace("_", " ").title())
         setattr(boss, "is_boss", True)
         setattr(boss, "boss_def", definition)
         setattr(boss, "boss_type", str(getattr(boss, "enemy_type", definition.boss_type)))
+        setattr(boss, "name", desired_name)
+        setattr(boss, "boss_name", desired_name)
+        setattr(boss, "boss_display_name", desired_name)
         setattr(boss, "boss_status", "active" if self._is_alive(boss) else "defeated")
         setattr(boss, "current_boss_phase", phase_id)
         setattr(boss, "current_boss_phase_title", phase_title)
@@ -464,6 +468,38 @@ class BossEncounterSystem(GameSystem):
         setattr(boss, "rally_nearby_limit", int(getattr(boss, "rally_nearby_limit", 0) or 0))
         setattr(boss, "rally_telegraph_ms", int(getattr(boss, "rally_telegraph_ms", 0) or 0))
         setattr(boss, "rally_resolve_at_ms", int(getattr(boss, "rally_resolve_at_ms", 0) or 0))
+        self._apply_phase_ability_facts(boss, definition, phase_id)
+
+    def _apply_phase_ability_facts(self, boss: object, definition: BossDef, phase_id: str) -> None:
+        phase = next((item for item in definition.phases if str(item.phase_id) == str(phase_id)), None)
+        if phase is None or not phase.abilities:
+            setattr(boss, "current_boss_ability_id", "")
+            setattr(boss, "current_boss_ability_name", "")
+            setattr(boss, "current_boss_ability_trigger", "")
+            setattr(boss, "current_boss_ability_cooldown_ms", 0)
+            setattr(boss, "current_boss_ability_telegraph_ms", 0)
+            setattr(boss, "current_boss_ability_payload", {})
+            setattr(boss, "boss_phase_ability_ids", tuple())
+            return
+
+        ability_id = str(phase.abilities[0])
+        ability = next((item for item in definition.abilities if str(item.ability_id) == ability_id), None)
+        setattr(boss, "boss_phase_ability_ids", tuple(str(item) for item in phase.abilities))
+        if ability is None:
+            setattr(boss, "current_boss_ability_id", ability_id)
+            setattr(boss, "current_boss_ability_name", "")
+            setattr(boss, "current_boss_ability_trigger", "")
+            setattr(boss, "current_boss_ability_cooldown_ms", 0)
+            setattr(boss, "current_boss_ability_telegraph_ms", 0)
+            setattr(boss, "current_boss_ability_payload", {})
+            return
+
+        setattr(boss, "current_boss_ability_id", str(ability.ability_id))
+        setattr(boss, "current_boss_ability_name", str(ability.display_name))
+        setattr(boss, "current_boss_ability_trigger", str(ability.trigger))
+        setattr(boss, "current_boss_ability_cooldown_ms", int(ability.cooldown_ms))
+        setattr(boss, "current_boss_ability_telegraph_ms", int(ability.telegraph_ms))
+        setattr(boss, "current_boss_ability_payload", dict(ability.payload))
 
     def _prepare_elite_object(self, enemy: object, state: _EliteEncounterState) -> None:
         setattr(enemy, "is_elite", True)

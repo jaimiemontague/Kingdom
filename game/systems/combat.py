@@ -218,7 +218,11 @@ class CombatSystem(GameSystem):
 
                         self._emit_event(emit_event, GameEventType.ENEMY_KILLED, {
                             "hero": hero.name,
+                            "hero_id": str(getattr(hero, "hero_id", "") or ""),
                             "enemy": self._normalize_enemy_type(getattr(closest_enemy, "enemy_type", "")),
+                            "enemy_type": self._normalize_enemy_type(getattr(closest_enemy, "enemy_type", "")),
+                            "enemy_id": str(getattr(closest_enemy, "entity_id", "") or ""),
+                            "enemy_name": str(getattr(closest_enemy, "name", "") or self._normalize_enemy_type(getattr(closest_enemy, "enemy_type", ""))),
                             "gold": closest_enemy.gold_reward,
                             "xp": closest_enemy.xp_reward,
                             "gold_split": len(gold_recipients),

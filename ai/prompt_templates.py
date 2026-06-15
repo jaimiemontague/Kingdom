@@ -25,6 +25,7 @@ AUTONOMOUS_ONLY_ACTIONS = frozenset({
     "accept_chain",
     "decline_chain",
     "continue_phase",
+    "prepare_supplies",
     "retreat_to_heal",
 })
 
@@ -70,6 +71,11 @@ FALLBACK_DECISIONS = {
         "action": "continue_phase",
         "target": "",
         "reasoning": "Fallback: continue the current quest-chain phase",
+    },
+    "quest_chain_prepare_supplies": {
+        "action": "prepare_supplies",
+        "target": "Health Potion",
+        "reasoning": "Fallback: quest chain needs supplies before pressing on",
     },
     "quest_chain_retreat_to_heal": {
         "action": "retreat_to_heal",
@@ -126,6 +132,8 @@ def get_fallback_decision(context: dict) -> dict:
             or ""
         )
         chain_id = str(focus.get("chain_id", "") or "")
+        boss_name = str(focus.get("known_boss_name", "") or "")
+        elite_name = str(focus.get("elite_target_name", "") or "")
         forced_retreat = bool(
             sit.get("critical_health")
             or (
@@ -134,10 +142,31 @@ def get_fallback_decision(context: dict) -> dict:
                 and (sit.get("enemies_nearby") or not sit.get("near_safety"))
             )
         )
-        allowed = quest_chain_status_allowed_actions(focus, survival_forced=forced_retreat)
+        allowed = quest_chain_status_allowed_actions(
+            focus,
+            survival_forced=forced_retreat,
+            needs_supplies=int(inv.get("potions", 0) or 0) <= 0,
+        )
         if "retreat_to_heal" in allowed and forced_retreat:
             decision = dict(FALLBACK_DECISIONS["quest_chain_retreat_to_heal"])
             decision["target"] = "castle"
+            return decision
+        if (
+            status == "active"
+            and "prepare_supplies" in allowed
+            and int(inv.get("potions", 0) or 0) <= 0
+        ):
+            decision = dict(FALLBACK_DECISIONS["quest_chain_prepare_supplies"])
+            potion_available = False
+            for item in list(context.get("shop_items") or []) + list(context.get("market_catalog_items") or []):
+                if str(item.get("type", "")).strip().lower() == "potion" and bool(item.get("can_afford", False)):
+                    potion_available = True
+                    break
+            decision["target"] = "Health Potion" if potion_available else "blacksmith"
+            if boss_name:
+                decision["reasoning"] = f"Fallback: resupply before facing {boss_name}"
+            elif elite_name:
+                decision["reasoning"] = f"Fallback: resupply before intercepting {elite_name}"
             return decision
         if status == "active" and "continue_phase" in allowed:
             decision = dict(FALLBACK_DECISIONS["quest_chain_continue_phase"])

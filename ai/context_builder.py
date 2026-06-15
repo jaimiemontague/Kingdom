@@ -4,7 +4,7 @@ Builds context dictionaries for LLM decision making.
 import math
 
 from config import FOOD_MEAL_COST_GOLD, TILE_SIZE
-from ai.quest_chain_context import summarize_quest_chains
+from ai.quest_chain_context import attach_blackbanner_chain_facts, summarize_quest_chains
 from game.sim.timebase import now_ms as sim_now_ms
 
 
@@ -129,6 +129,16 @@ class ContextBuilder:
         if quest_chains:
             summarized_chains = summarize_quest_chains(quest_chains)
             if summarized_chains:
+                boss_encounters = game_state.get("boss_encounters") or ()
+                elite_enemies = game_state.get("elite_enemies") or game_state.get("elite_encounters") or ()
+                summarized_chains = [
+                    attach_blackbanner_chain_facts(
+                        chain,
+                        boss_encounters=boss_encounters,
+                        elite_enemies=elite_enemies,
+                    )
+                    for chain in summarized_chains
+                ]
                 context["quest_chains"] = summarized_chains
         
         # Add nearby enemies with details

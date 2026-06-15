@@ -687,9 +687,97 @@
             "Hand the WK126 soak regression to the owning agent, then rerun qa_smoke.",
             "If the orchestrator receipt token becomes available, append the exact complete command and receipt artifact."
           ],
-          "ai_archaeology_note": "Inspected c701973, 0df555a, c67f3fc, plus the v1.3.3-v1.4.4 changelog notes and the old AI files referenced by the sprint plan; recovered conviction, ranger/frontier exploration, downtime and social rest, and bounty stickiness without widening the sim or using wall-clock or global RNG."
+        "ai_archaeology_note": "Inspected c701973, 0df555a, c67f3fc, plus the v1.3.3-v1.4.4 changelog notes and the old AI files referenced by the sprint plan; recovered conviction, ranger/frontier exploration, downtime and social rest, and bounty stickiness without widening the sim or using wall-clock or global RNG."
+      }
+    },
+    "wk141_blackbanners_toll_epic_boss_quest": {
+      "sprint_meta": {
+        "created_utc": "2026-06-15T00:00:00Z",
+        "plan_ref": ".cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md",
+        "role": "Agent 06 AIBehaviorDirector_LLM",
+        "sprint_id": "wk141_blackbanners_toll_epic_boss_quest",
+        "title": "WK141 Blackbanner's Toll - phase policy, Rusk risk, elite interception, and press-on/retreat"
+      },
+      "rounds": {
+        "r2_wave1_gate_wave2_kickoff": {
+          "round_id": "r2_wave1_gate_wave2_kickoff",
+          "sprint_id": "wk141_blackbanners_toll_epic_boss_quest",
+          "status": "done",
+          "round_meta": {
+            "role": "Agent 06 AIBehaviorDirector_LLM",
+            "reports_to": "Agent 01 (PM)",
+            "launched_by": "PM hard stop checkpoint",
+            "completed_utc": "2026-06-15T00:00:00Z",
+            "phase": "Blackbanner quest-chain policy/prompt context support: active phases outrank ambient daily-life motives, survival gates still win, and prompt context now carries chain name/phase/objective/boss/elite/reward/stakes/history."
+          },
+          "what_i_changed": {
+            "ai/quest_chain_context.py": [
+              "Added Blackbanner-specific quest-chain enrichment so summarized chains can carry known boss and elite facts, and extended active-chain allowlists to include prepare_supplies when heroes are simply out of potions."
+            ],
+            "ai/context_builder.py": [
+              "Enriched quest_chain prompt summaries with boss_encounters / elite_enemies so Blackbanner context survives into the autonomous prompt layer."
+            ],
+            "ai/behaviors/view_compat.py": [
+              "Exposed boss_encounters, elite_enemies, and elite_encounters through the AI view bridge for read-only prompt/context assembly."
+            ],
+            "ai/decision_moments.py": [
+              "Quest-chain moments now surface boss/elite context and offer prepare_supplies for active Blackbanner phases when the hero is healthy but out of potions; survival retreat still overrides flavor."
+            ],
+            "ai/prompt_templates.py": [
+              "Expanded autonomous-only verbs and fallback decisions to include prepare_supplies, with Blackbanner-aware fallback reasoning for boss/elite pressure."
+            ],
+            "ai/behaviors/llm_bridge.py": [
+              "Added prepare_supplies application so quest-chain decisions can route to shopping before resuming the chain, with a retreat fallback if movement never starts."
+            ],
+            "ai/providers/mock/autonomous.py": [
+              "Mock quest-chain decisions now stay bounded across continue_phase, prepare_supplies, retreat_to_heal, accept_chain, and decline_chain."
+            ],
+            "ai/behavior_policy.md": [
+              "Documented the Blackbanner phase policy: active chain pressure outranks ambient daily-life motives, survival gates still win, and prompt context must include the structured boss/elite chain facts."
+            ],
+            "tests/test_wk141_blackbanner_ai_policy.py (NEW)": [
+              "Pins the Blackbanner active-phase ladder: continue_phase on healthy heroes, prepare_supplies when out of potions, and retreat_to_heal when wounded/no-supplies survival gates trip."
+            ],
+            "tests/test_wk141_blackbanner_prompt_context.py (NEW)": [
+              "Pins the structured prompt payload: chain name, phase, objective, known boss, elite target, reward/stakes, phase history, and the action meanings for continue/prepare/retreat."
+            ]
+          },
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_wk141_blackbanner_ai_policy.py tests/test_wk141_blackbanner_prompt_context.py -q",
+              "exit_code": 0,
+              "result": "4 passed, 1 warning in 1.98s"
+            },
+            {
+              "command": "python -m pytest tests/test_wk138_quest_chain_ai_policy.py tests/test_wk140_hero_daily_life_ai.py -q",
+              "exit_code": 0,
+              "result": "7 passed, 1 warning in 2.56s"
+            },
+            {
+              "command": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "result": "10 passed, 1 warning in 30.01s"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "result": "JSON valid"
+            }
+          ],
+          "evidence": {
+            "wk141_policy": "Blackbanner active phases now select the bounded quest-chain verbs, including prepare_supplies when healthy-but-out-of-potions and retreat_to_heal when survival gates trip.",
+            "wk141_prompt_context": "Autonomous prompt context includes structured Blackbanner chain name, phase, objective, known boss name, elite target, reward, stakes, and phase history; action meanings expose continue/prepare/retreat.",
+            "wk67_digest": "WK67 boundary stayed green at 10 passed; the AI-focused change did not disturb the digest guardrail."
+          },
+          "blockers": [
+            "The broader qa_smoke gate was started earlier in the turn but was interrupted by the hard stop before it could complete, so only the focused AI/WK138/WK140/WK67 checks are recorded here."
+          ],
+          "follow_ups": [
+            "Re-run python tools/qa_smoke.py --quick once the checkpoint is lifted so the wider smoke gate has a fresh pass/fail after the Blackbanner AI update."
+          ]
         }
       }
     }
   }
+}
 }

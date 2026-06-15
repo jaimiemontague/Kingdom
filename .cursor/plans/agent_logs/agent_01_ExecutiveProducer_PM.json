@@ -1449,6 +1449,256 @@
           }
         }
       }
+    },
+    "wk141_blackbanners_toll_epic_boss_quest": {
+      "rounds": {
+        "r1_kickoff": {
+          "pm_status_summary": "WK141 KICKOFF: First Epic Boss Quest from the quest/boss deepening roadmap. Mission: connect WK138 QuestChainSystem and WK139 BossEncounterSystem into the first complete multi-phase boss quest, Blackbanner's Toll. Player outcome: a hero can scout a bandit fortress, intercept a gold-thief elite, assault the gate, defeat named Bandit Lord Rusk Blackbanner, and claim a reward/completion record. Previous sprint WK140 was committed/pushed as 80daf2d with final qa_smoke PASS. Use gpt-5.4-mini with xhigh effort for all active subagents.",
+          "pm_feature_requests": [
+            {
+              "id": "WK141-FEAT-001",
+              "title": "Blackbanner's Toll epic boss quest",
+              "owner_agents": [
+                "03_TechnicalDirector_Architecture",
+                "05_GameplaySystemsDesigner",
+                "06_AIBehaviorDirector_LLM",
+                "08_UX_UI_Director",
+                "09_ArtDirector_Pixel_Animation_VFX",
+                "11_QA_TestEngineering_Lead"
+              ],
+              "player_value": "Turn the quest-chain and boss systems into a real adventure arc with phases, a named villain, an elite lieutenant, and a readable reward outcome.",
+              "source_plan": ".cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md",
+              "definition_of_done": [
+                "A deterministic test completes Blackbanner's Toll phases in order: scout -> intercept elite -> assault gate -> slay boss -> reward.",
+                "Rusk Blackbanner uses WK139 boss encounter infrastructure, not a one-off stat rename.",
+                "The gold-thief elite is deterministic and linked to the chain phase.",
+                "Hero AI sees chain/boss/elite facts and commits to the adventure while preserving survival retreat gates.",
+                "Adventure Ledger/UI shows chain name, current/completed phases, boss identity when revealed, and completion.",
+                "Boss/elite visuals are readable or explicitly verified as covered by WK139 visual language.",
+                "WK67 passes and qa_smoke passes."
+              ]
+            }
+          ],
+          "pm_integration_order": [
+            "Wave 1 parallel: Agents 03 and 05.",
+            "PM gate after Wave 1: targeted contract/gameplay tests, WK67, and smoke if feasible.",
+            "Wave 2 parallel: Agents 06, 08, and 09 after gameplay/contracts exist.",
+            "Wave 3: Agent 11 final verification.",
+            "PM close: final gates, screenshot evidence if applicable, commit, push, continue roadmap."
+          ],
+          "pm_next_actions_by_agent": {
+            "03_TechnicalDirector_Architecture": "Wave 1 active. Wire or verify missing sim/view contracts for a chain-linked boss/elite without changing empty-default behavior. Follow the Agent 03 section in the WK141 plan.",
+            "05_GameplaySystemsDesigner": "Wave 1 active. Implement Blackbanner chain content, phase detectors, toll-taker elite, Rusk boss encounter hook, and reward cleanup. Follow the Agent 05 section in the WK141 plan.",
+            "06_AIBehaviorDirector_LLM": "Wave 2 pending after 03/05. Add AI/prompt policy for Blackbanner phases, Rusk risk, elite interception, press-on/retreat.",
+            "08_UX_UI_Director": "Wave 2 pending after 03/05. Make Blackbanner readable in Adventure Ledger and boss UI.",
+            "09_ArtDirector_Pixel_Animation_VFX": "Wave 2 pending after 03/05. Verify/add readable Rusk, toll-taker, and boss phase visual markers.",
+            "11_QA_TestEngineering_Lead": "Wave 3 pending after implementation. Verify the full adventure loop."
+          },
+          "pm_agent_prompts": {
+            "03": "Task: WK141 Wave 1 architecture/contracts for Blackbanner's Toll. Onboard as Agent 03, read AGENTS.md, your role rules, this PM round, and .cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md. Follow the Agent 03 section exactly. Stay in your lane. Update your own log and run the commands listed there.",
+            "05": "Task: WK141 Wave 1 gameplay implementation for Blackbanner's Toll. Onboard as Agent 05, read AGENTS.md, your role rules, this PM round, and .cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md. Follow the Agent 05 section exactly. Stay in your lane. Update your own log and run the commands listed there.",
+            "06": "Task: WK141 Wave 2 AI/prompt policy for Blackbanner's Toll after 03/05 land. Onboard as Agent 06, read AGENTS.md, your role rules, this PM round, and the WK141 plan. Follow the Agent 06 section exactly.",
+            "08": "Task: WK141 Wave 2 UI readability for Blackbanner's Toll after 03/05 land. Onboard as Agent 08, read AGENTS.md, your role rules, this PM round, and the WK141 plan. Follow the Agent 08 section exactly.",
+            "09": "Task: WK141 Wave 2 visual readability for Rusk Blackbanner and the toll-taker elite after 03/05 land. Onboard as Agent 09, read AGENTS.md, your role rules, this PM round, and the WK141 plan. Follow the Agent 09 section exactly.",
+            "11": "Task: WK141 Wave 3 verification after implementation. Onboard as Agent 11, read AGENTS.md, your role rules, this PM round, and the WK141 plan. Follow the Agent 11 section exactly."
+          },
+          "pm_universal_prompt": "You are being activated for WK141 Blackbanner's Toll - First Epic Boss Quest. First onboard as your assigned agent number by reading AGENTS.md and the relevant .cursor/rules instructions for your role. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk141_blackbanners_toll_epic_boss_quest\"].rounds[\"r1_kickoff\"]. Your specific prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER]. Also read .cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md end-to-end. Use gpt-5.4-mini with xhigh effort. You are not alone in this worktree: never revert files you did not intentionally edit. Stay inside your ownership lane. Update your own agent log and run the commands in your assignment.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "03",
+                "05"
+              ],
+              [
+                "06",
+                "08",
+                "09"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "03": "gpt-5.4-mini",
+              "05": "gpt-5.4-mini",
+              "06": "gpt-5.4-mini",
+              "08": "gpt-5.4-mini",
+              "09": "gpt-5.4-mini",
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "03": "xhigh",
+              "05": "xhigh",
+              "06": "xhigh",
+              "08": "xhigh",
+              "09": "xhigh",
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "03": "high",
+              "05": "high",
+              "06": "high",
+              "08": "high",
+              "09": "high",
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "07",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "03/05 first because contracts/gameplay define the facts. 06/08/09 wait for facts to exist. 11 verifies last. All active agents are high intelligence because this is a multi-system vertical slice with determinism, UI, and boss/quest integration risk."
+          }
+        },
+        "r2_wave1_gate_wave2_kickoff": {
+          "pm_status_summary": "WK141 Wave 1 gate passed. Agent 03 found no architecture churn needed and added contract/AI-view tests proving existing WK138/WK139 contracts can carry Blackbanner chain/boss facts. Agent 05 landed Blackbanner gameplay content/runtime support: BLACKBANNERS_TOLL chain, Rusk Blackbanner boss content, toll-taker elite/runtime facts, quest-chain progression/cleanup support, and enemy kill event ids/names for hooks. PM-ran focused Wave 1 tests PASS: WK141 contract+gameplay 7 passed; WK138/WK139 gameplay regressions 7 passed; WK67 10 passed. Full qa_smoke deferred to integrated Wave 2/3 because Wave 2 will add AI/UI/visuals.",
+          "pm_wave1_evidence": [
+            "python -m pytest tests/test_wk141_blackbanner_contract.py tests/test_wk141_blackbanner_ai_view.py tests/test_wk141_blackbanner_chain.py tests/test_wk141_blackbanner_boss.py tests/test_wk141_blackbanner_elite.py -q -> 7 passed.",
+            "python -m pytest tests/test_wk138_quest_chain_core.py tests/test_wk139_boss_encounters.py tests/test_wk139_elite_affixes.py -q -> 7 passed.",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed.",
+            "Agent 03 and Agent 05 logs validate as JSON and contain WK141 r1 entries."
+          ],
+          "pm_next_actions_by_agent": {
+            "06_AIBehaviorDirector_LLM": "Wave 2 active. Add AI/prompt policy for Blackbanner phases, Rusk risk, elite interception, and press-on/retreat. Use Wave 1 landed facts.",
+            "08_UX_UI_Director": "Wave 2 active. Make Blackbanner readable in Adventure Ledger and boss UI using existing WK138/WK139 patterns.",
+            "09_ArtDirector_Pixel_Animation_VFX": "Wave 2 active. Verify/add readable visual markers for Rusk, toll-taker elite, and phase tells.",
+            "11_QA_TestEngineering_Lead": "Wave 3 pending after Wave 2."
+          },
+          "pm_agent_prompts": {
+            "06": "Task: WK141 Wave 2 AI/prompt policy for Blackbanner's Toll. Onboard as Agent 06, read AGENTS.md, your role rules, this PM round, and .cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md. Use the Wave 1 landed facts in game/content/quest_chains.py, game/content/bosses.py, game/systems/quest_chain.py, and boss/elite tests. Follow the Agent 06 section in the WK141 plan exactly. Stay in your lane, update your own log, and run the listed commands.",
+            "08": "Task: WK141 Wave 2 UI readability for Blackbanner's Toll. Onboard as Agent 08, read AGENTS.md, your role rules, this PM round, and .cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md. Use the Wave 1 landed chain/boss facts. Follow the Agent 08 section exactly, including screenshot capture/inspection if UI changes. Stay in your lane, update your own log, and run the listed commands.",
+            "09": "Task: WK141 Wave 2 visual readability for Rusk Blackbanner and the toll-taker elite. Onboard as Agent 09, read AGENTS.md, your role rules, this PM round, and .cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md. First verify whether WK139 visual language already covers this; only add minimal visuals if needed. Stay in your lane, update your own log, and run the listed commands."
+          },
+          "pm_universal_prompt": "You are being activated for WK141 Blackbanner's Toll - Wave 2. First onboard as your assigned agent number by reading AGENTS.md and the relevant .cursor/rules instructions for your role. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk141_blackbanners_toll_epic_boss_quest\"].rounds[\"r2_wave1_gate_wave2_kickoff\"]. Your prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER]. Also read .cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md end-to-end. Use gpt-5.4-mini with xhigh effort. You are not alone in this worktree: preserve Wave 1 edits and never revert files you did not intentionally edit. Stay inside your ownership lane. Update your own log and run the commands in your assignment.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "06",
+                "08",
+                "09"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "06": "gpt-5.4-mini",
+              "08": "gpt-5.4-mini",
+              "09": "gpt-5.4-mini",
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "06": "xhigh",
+              "08": "xhigh",
+              "09": "xhigh",
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "06": "high",
+              "08": "high",
+              "09": "high",
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "07",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "06/08/09 can now work in parallel because Wave 1 facts exist. 11 waits for integrated verification. All remain high intelligence due multi-system behavior/UI/visual integration risk."
+          }
+        },
+        "r3_wave2_gate_qa_kickoff": {
+          "pm_status_summary": "WK141 Wave 2 integrated gate passed and QA is ready. Agent 06 added Blackbanner AI/prompt context and bounded actions; Agent 08 updated the Adventure Ledger/Boss UI with inspected deterministic PNG evidence; Agent 09 verified existing WK139 boss/elite visual language is sufficient and added visual tests. PM-ran integrated WK141 suite PASS: 19 passed; key WK138/WK139/WK140 regressions PASS: 6 passed; WK67 PASS: 10 passed. Full qa_smoke deferred to Agent 11 final QA.",
+          "pm_wave2_evidence": [
+            "python -m pytest tests/test_wk141_blackbanner_contract.py tests/test_wk141_blackbanner_ai_view.py tests/test_wk141_blackbanner_chain.py tests/test_wk141_blackbanner_boss.py tests/test_wk141_blackbanner_elite.py tests/test_wk141_blackbanner_ai_policy.py tests/test_wk141_blackbanner_prompt_context.py tests/test_wk141_blackbanner_ui.py tests/test_wk141_blackbanner_visuals.py -q -> 19 passed.",
+            "python -m pytest tests/test_wk138_quest_chain_core.py tests/test_wk139_boss_encounters.py tests/test_wk140_hero_daily_life_ai.py -q -> 6 passed.",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed.",
+            "Agent 06, 08, and 09 logs validate as JSON."
+          ],
+          "pm_next_actions_by_agent": {
+            "11_QA_TestEngineering_Lead": "Wave 3 active. Verify the complete Blackbanner's Toll loop, screenshots/logs, WK67, qa_smoke, and readiness to commit."
+          },
+          "pm_agent_prompts": {
+            "11": "Task: WK141 final QA for Blackbanner's Toll. Onboard as Agent 11, read AGENTS.md, your role rules, this PM round, and .cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md. Verify all WK141 tests, key WK138/WK139/WK140 regressions, logs, screenshots, WK67, and qa_smoke. Update your own log and report a clear PASS/FAIL."
+          },
+          "pm_universal_prompt": "You are being activated for WK141 Blackbanner's Toll final QA. First onboard as Agent 11 by reading AGENTS.md and the relevant .cursor/rules instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk141_blackbanners_toll_epic_boss_quest\"].rounds[\"r3_wave2_gate_qa_kickoff\"]. Follow pm_agent_prompts[\"11\"] and .cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md. Use gpt-5.4-mini with xhigh effort. Verification only unless PM gives a separate fix prompt. Update your own log and run the commands in your assignment.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "11 is high intelligence because this final QA must reconcile gameplay, AI, UI, visuals, screenshots, logs, WK67, and full smoke."
+          }
+        },
+        "r4_closeout_commit_ready": {
+          "pm_status_summary": "WK141 Blackbanner's Toll is COMPLETE and commit-ready. Final QA passed on actual product gates: all WK141 focused tests, key WK138/WK139/WK140 regressions, WK67, qa_smoke, logs, and screenshot inspection. The sprint delivered a complete first epic boss quest vertical slice: Blackbanner chain content/runtime, Rusk boss facts, toll-taker elite, AI/prompt policy, Adventure Ledger/Boss UI readability, and visual verification using existing WK139 boss/elite language.",
+          "pm_final_evidence": [
+            "Agent 11 final QA: PASS.",
+            "WK141 contract/AI-view/chain/boss/elite tests: PASS.",
+            "WK141 AI policy/prompt/UI/visual tests: PASS.",
+            "WK138/WK139/WK140 regressions: PASS.",
+            "WK67: PASS.",
+            "python tools/qa_smoke.py --quick: PASS.",
+            "Logs for Agents 03/05/06/08/09/11 validate as JSON.",
+            "Screenshots inspected: docs/screenshots/wk141_blackbanner_boss/*.png and docs/screenshots/wk141_blackbanner_ui/*.png."
+          ],
+          "pm_scenario_gap": "tools/screenshot_scenarios.py has boss_encounter_showcase but no quest_chain_foundation scenario. UI proof uses deterministic test-generated PNGs under docs/screenshots/wk141_blackbanner_ui instead.",
+          "pm_next_actions_by_agent": {
+            "01_ExecutiveProducer_PM": "Stage only WK141 files, commit, push, then continue roadmap with Sprint D dynamic rescue/revenge.",
+            "03_TechnicalDirector_Architecture": "Done.",
+            "05_GameplaySystemsDesigner": "Done.",
+            "06_AIBehaviorDirector_LLM": "Done.",
+            "08_UX_UI_Director": "Done.",
+            "09_ArtDirector_Pixel_Animation_VFX": "Done.",
+            "11_QA_TestEngineering_Lead": "Done."
+          },
+          "pm_commit_plan": {
+            "suggested_commit": "Prototype v1.6.5 - Blackbanner's Toll",
+            "leave_untracked_alone": [
+              "old tmp/ and tmpqa_smoke_* scratch files",
+              "old mythos soak scratch scripts",
+              "old screenshot PNGs outside WK141"
+            ]
+          }
+        }
+      }
     }
   }
 }

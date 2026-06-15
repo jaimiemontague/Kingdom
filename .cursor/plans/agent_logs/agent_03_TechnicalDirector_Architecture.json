@@ -433,6 +433,59 @@
           ]
         }
       }
+    },
+    "wk141_blackbanners_toll_epic_boss_quest": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md",
+        "created_utc": "2026-06-15T00:00:00Z",
+        "notes": "WK141 Blackbanner's Toll: Agent 03 verified the existing WK138 quest-chain and WK139 boss/elite read-model surfaces already carry the primitive Blackbanner facts, so this round was tests-only."
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "sprint_id": "wk141_blackbanners_toll_epic_boss_quest",
+          "round_id": "r1_kickoff",
+          "status": "complete",
+          "what_i_changed": {
+            "summary": "Added Blackbanner-specific contract and engine pass-through tests proving the WK138 quest-chain and WK139 boss/elite read models already expose the needed primitive facts for Blackbanner's Toll without any sim code changes. The tests cover the chain timeline, Rusk Blackbanner boss snapshot, the Blackbanner Toll-Taker elite snapshot, empty-default engine behavior, and the AiGameView/RenderSnapshot passthrough path.",
+            "files_touched": [
+              "tests/test_wk141_blackbanner_contract.py",
+              "tests/test_wk141_blackbanner_ai_view.py",
+              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk141_blackbanner_contract.py tests/test_wk141_blackbanner_ai_view.py -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk138_quest_chain_ai_view.py tests/test_wk139_boss_ai_view.py -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "blackbanner_contract": "3 passed, 1 warning in 2.44s; the Blackbanner chain/boss/elite snapshots are frozen, primitive-only, and retain the expected names, phases, positions, and memory summaries.",
+            "blackbanner_ai_view": "2 passed in the WK141 file; a fresh engine stays empty/default, then stub systems return Blackbanner quest-chain, Rusk boss, and toll-taker elite snapshots through both AiGameView and RenderSnapshot with elite_enemies/elite_encounters alias parity.",
+            "wk138_wk139_regression": "8 passed, 1 warning in 10.54s for WK138/WK139 AI-view regressions.",
+            "wk67_digest": "10 passed, 1 warning in 18.48s; the keystone digest remained b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded.",
+            "qa_smoke": "PASS; determinism_guard passed and the quick smoke suite finished 1922 passed, 5 skipped, 1 xfailed."
+          },
+          "blockers": [],
+          "follow_ups": []
+        }
+      }
     }
   }
 }

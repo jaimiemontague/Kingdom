@@ -167,6 +167,14 @@ def _quest_chain_forced_retreat(hero: Any, game_state: dict) -> bool:
     return False
 
 
+def _quest_chain_needs_supplies(hero: Any) -> bool:
+    try:
+        pots = int(getattr(hero, "potions", 0) or 0)
+    except (TypeError, ValueError):
+        pots = 0
+    return pots <= 0
+
+
 def _near_marketplace(hero: Any, game_state: dict) -> bool:
     for b in game_state.get("buildings", []) or []:
         if getattr(b, "building_type", None) != "marketplace":
@@ -255,7 +263,12 @@ def moment_quest_chain(hero: Any, game_state: dict, now_ms: int) -> DecisionMome
         return None
 
     forced_retreat = _quest_chain_forced_retreat(hero, game_state)
-    allowed_actions = quest_chain_status_allowed_actions(focus, survival_forced=forced_retreat)
+    needs_supplies = _quest_chain_needs_supplies(hero)
+    allowed_actions = quest_chain_status_allowed_actions(
+        focus,
+        survival_forced=forced_retreat,
+        needs_supplies=needs_supplies,
+    )
     if not allowed_actions:
         return None
 
@@ -263,14 +276,23 @@ def moment_quest_chain(hero: Any, game_state: dict, now_ms: int) -> DecisionMome
     phase_title = str(focus.get("current_phase_title", "") or focus.get("current_phase_id", "") or "")
     reward_gold = int(focus.get("reward_gold", 0) or 0)
     target_name = str(focus.get("target_name", "") or "")
+    boss_name = str(focus.get("known_boss_name", "") or "")
+    elite_name = str(focus.get("elite_target_name", "") or "")
 
     if forced_retreat:
         reason = f"{chain_name}: survival gate requires retreat before pressing on"
         urgency = 2
     elif status == "active":
-        reason = f"{chain_name}: continue phase {phase_title or 'current phase'}"
+        if "prepare_supplies" in allowed_actions and needs_supplies:
+            reason = f"{chain_name}: resupply before continuing {phase_title or 'current phase'}"
+        else:
+            reason = f"{chain_name}: continue phase {phase_title or 'current phase'}"
         if target_name:
             reason += f" toward {target_name}"
+        if boss_name:
+            reason += f"; boss {boss_name}"
+        if elite_name and elite_name != target_name:
+            reason += f"; elite {elite_name}"
         urgency = 1
     else:
         reason = f"{chain_name} offered"
@@ -284,7 +306,7 @@ def moment_quest_chain(hero: Any, game_state: dict, now_ms: int) -> DecisionMome
         urgency=urgency,
         reason=reason,
         allowed_actions=allowed_actions,
-        context_focus=("quest_chains", "health", "supplies", "safety", "phase_history"),
+        context_focus=("quest_chains", "boss_encounters", "elite_enemies", "health", "supplies", "safety", "phase_history"),
         cooldown_ms=8_000,
     )
 

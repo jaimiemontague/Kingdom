@@ -749,6 +749,53 @@
           ]
         }
       }
+    },
+    "wk141_blackbanners_toll_epic_boss_quest": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md",
+        "created_utc": "2026-06-15T00:00:00Z",
+        "notes": "WK141 Blackbanner's Toll: Agent 05 added focused gameplay coverage and the smallest production fix needed for the landed quest-chain."
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "sprint_id": "wk141_blackbanners_toll_epic_boss_quest",
+          "round_id": "r1_kickoff",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Added focused WK141 gameplay tests for the real Blackbanner's Toll chain, elite designation, and Rusk boss encounter, and made the smallest quest-chain fix needed for the landed content to complete cleanly.",
+            "files_touched": [
+              "game/systems/quest_chain.py",
+              "tests/test_wk141_blackbanner_chain.py",
+              "tests/test_wk141_blackbanner_boss.py",
+              "tests/test_wk141_blackbanner_elite.py"
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk141_blackbanner_chain.py tests/test_wk141_blackbanner_boss.py tests/test_wk141_blackbanner_elite.py -q",
+              "exit_code": 0,
+              "result": "4 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk138_quest_chain_core.py tests/test_wk139_boss_encounters.py tests/test_wk139_elite_affixes.py -q",
+              "exit_code": 0,
+              "result": "7 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "result": "10 passed"
+            }
+          ],
+          "evidence": {
+            "wk141_blackbanner_tests": "4 passed; the live chain now advances scout -> intercept elite -> assault gate -> slay boss -> reward/complete, with cleanup clearing the elite and boss runtime refs at completion.",
+            "wk138_wk139_regressions": "7 passed on the retained WK138/WK139 regression set.",
+            "wk67_ai_boundary": "10 passed on the determinism keystone."
+          },
+          "blockers": [],
+          "follow_ups": []
+        }
+      }
     }
   }
 }

@@ -27,6 +27,7 @@ The LLM must respond with **only** a single JSON object:
   - `buy_item`
   - `use_potion`
   - `explore`
+  - quest-chain verbs surfaced in `allowed_actions` for the current moment, such as `accept_chain`, `decline_chain`, `continue_phase`, `prepare_supplies`, and `retreat_to_heal`
 - `target` (string): optional, depends on action
 - `reasoning` (string): short, for debugging/telemetry
 
@@ -53,6 +54,14 @@ When debugging hero decisions, we want:
 - the applied action in-engine
 
 This can be extended later with an on-screen debug overlay or structured log sink.
+
+## Quest-Chain Policy
+
+- Active quest chains outrank ambient daily-life motives.
+- Quest-chain prompts should stay structured: chain name, current phase, objective, reward/stakes, phase history, known boss, and elite target when revealed.
+- Blackbanner's Toll uses the same quest-chain commitment path as WK138 plus WK140-style conviction and retreat gates.
+- Survival gates still win. Critical health or low health with no potions can force `retreat_to_heal`.
+- A healthy but under-supplied hero may choose `prepare_supplies` before pressing on.
 
 
 

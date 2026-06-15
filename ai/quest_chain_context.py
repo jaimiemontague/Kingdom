@@ -14,6 +14,18 @@ from game.sim.timebase import now_ms as sim_now_ms
 _MAX_CHAIN_HISTORY = 8
 _MAX_PHASE_HISTORY = 4
 _MAX_QUEST_CHAINS = 3
+_BLACKBANNER_EXTRA_FIELDS = (
+    "known_boss_id",
+    "known_boss_name",
+    "known_boss_phase",
+    "known_boss_hp_pct",
+    "known_boss_position",
+    "elite_target_id",
+    "elite_target_name",
+    "elite_target_status",
+    "elite_target_position",
+    "elite_target_base_type",
+)
 
 
 def _value(obj: Any, key: str, default: Any = None) -> Any:
@@ -78,6 +90,70 @@ def _phase_summary(phase: Any) -> dict[str, Any]:
     }
 
 
+def _first_snapshot(items: Iterable[Any] | None) -> Any | None:
+    if not items:
+        return None
+    for item in items:
+        if item is None:
+            continue
+        status = _norm_str(_value(item, "status", "")).lower()
+        if status in {"active", "revealed"}:
+            return item
+    for item in items:
+        if item is not None:
+            return item
+    return None
+
+
+def _snapshot_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _snapshot_position_value(value: Any) -> tuple[float, float] | None:
+    return _target_position(value)
+
+
+def attach_blackbanner_chain_facts(
+    chain: Any,
+    *,
+    boss_encounters: Iterable[Any] | None = None,
+    elite_enemies: Iterable[Any] | None = None,
+) -> dict[str, Any]:
+    """Attach Blackbanner-specific boss / elite facts to a quest-chain summary.
+
+    The enrichment is only added for ``blackbanners_toll`` and only when the
+    corresponding boss / elite snapshots exist. Keeping this here lets the
+    prompt stack preserve the richer facts through the existing quest-chain
+    summarization passes without changing the generic WK138 relic path.
+    """
+    summary = dict(chain)
+    if _norm_str(summary.get("chain_type", "")) != "blackbanners_toll":
+        return summary
+
+    boss = _first_snapshot(boss_encounters)
+    if boss is not None:
+        summary["known_boss_id"] = _norm_str(_value(boss, "boss_id", ""))
+        summary["known_boss_name"] = _norm_str(_value(boss, "name", ""))
+        summary["known_boss_phase"] = _norm_str(
+            _value(boss, "current_phase_title", _value(boss, "current_phase", ""))
+        )
+        summary["known_boss_hp_pct"] = _snapshot_float(_value(boss, "hp_pct", 0.0), 0.0)
+        summary["known_boss_position"] = _snapshot_position_value(_value(boss, "position", None))
+
+    elite = _first_snapshot(elite_enemies)
+    if elite is not None:
+        summary["elite_target_id"] = _norm_str(_value(elite, "elite_id", ""))
+        summary["elite_target_name"] = _norm_str(_value(elite, "name", ""))
+        summary["elite_target_status"] = _norm_str(_value(elite, "status", ""))
+        summary["elite_target_position"] = _snapshot_position_value(_value(elite, "position", None))
+        summary["elite_target_base_type"] = _norm_str(_value(elite, "base_type", ""))
+
+    return summary
+
+
 def summarize_quest_chain(chain: Any) -> dict[str, Any]:
     """Return a primitive-only quest-chain snapshot for prompt use."""
     chain_type = _norm_str(_value(chain, "chain_type", ""))
@@ -126,6 +202,17 @@ def summarize_quest_chain(chain: Any) -> dict[str, Any]:
         },
         "phases": phases,
         "phase_history": phase_history,
+        **{
+            key: (
+                _target_position(_value(chain, key, None))
+                if key.endswith("_position")
+                else _snapshot_float(_value(chain, key, 0.0), 0.0)
+                if key == "known_boss_hp_pct"
+                else _norm_str(_value(chain, key, ""))
+            )
+            for key in _BLACKBANNER_EXTRA_FIELDS
+            if _value(chain, key, None) not in (None, "", (), [])
+        },
     }
 
 
@@ -185,13 +272,20 @@ def select_focus_quest_chain(hero: Any, chains: Iterable[Any] | None) -> dict[st
     return None
 
 
-def quest_chain_status_allowed_actions(chain: dict[str, Any], *, survival_forced: bool) -> tuple[str, ...]:
+def quest_chain_status_allowed_actions(
+    chain: dict[str, Any],
+    *,
+    survival_forced: bool,
+    needs_supplies: bool = False,
+) -> tuple[str, ...]:
     """Return the bounded verbs the model may use for a chain snapshot."""
     if survival_forced:
         return ("retreat_to_heal",)
 
     status = _norm_str(chain.get("status", ""))
     if status == "active":
+        if needs_supplies:
+            return ("continue_phase", "prepare_supplies", "retreat_to_heal")
         return ("continue_phase", "retreat_to_heal")
     if status == "offered":
         return ("accept_chain", "decline_chain")
@@ -205,6 +299,8 @@ def quest_chain_action_meanings(chain: dict[str, Any], allowed_actions: Iterable
     phase_title = _norm_str(chain.get("current_phase_title", "")) or _norm_str(chain.get("current_phase_id", ""))
     target_name = _norm_str(chain.get("target_name", "")) or _norm_str(chain.get("target_id", ""))
     chain_name = _norm_str(chain.get("name", "")) or _norm_str(chain.get("chain_type", ""))
+    boss_name = _norm_str(chain.get("known_boss_name", ""))
+    elite_name = _norm_str(chain.get("elite_target_name", ""))
 
     for action in allowed:
         if action == "continue_phase":
@@ -212,7 +308,15 @@ def quest_chain_action_meanings(chain: dict[str, Any], allowed_actions: Iterable
                 f"stay on the current phase for {chain_name}"
                 + (f" ({phase_title})" if phase_title else "")
                 + (f" toward {target_name}" if target_name else "")
+                + (f"; boss known: {boss_name}" if boss_name else "")
+                + (f"; elite target: {elite_name}" if elite_name else "")
             )
+        elif action == "prepare_supplies":
+            out[action] = (
+                "break off to resupply at a market or blacksmith before resuming the chain"
+            )
+            if boss_name:
+                out[action] += f" against {boss_name}"
         elif action == "retreat_to_heal":
             out[action] = "break off to safety, heal, and resupply before resuming the chain"
         elif action == "accept_chain":

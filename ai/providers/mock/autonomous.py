@@ -91,16 +91,44 @@ def mock_autonomous_decision(provider: "MockProvider", user_prompt: str) -> str:
                 and (sit.get("enemies_nearby") or not sit.get("near_safety"))
             )
         )
+        need_supplies = pots <= 0
+        boss_name = str(qchain.get("known_boss_name", "") or "")
+        elite_name = str(qchain.get("elite_target_name", "") or "")
+        shop_items = list(((ctx.get("current_situation") or {}).get("shop_items") or []))
         if forced_retreat:
             action = pick("retreat_to_heal")
             target = "castle"
             reasoning_tag = "retreat_to_heal"
         elif status == "active":
-            action = pick("continue_phase", "retreat_to_heal")
-            target = str(qchain.get("target_id") or qchain.get("chain_id") or "")
-            reasoning_tag = "continue_phase" if action == "continue_phase" else "retreat_to_heal"
-            if action == "retreat_to_heal":
-                target = "castle"
+            if need_supplies:
+                action = pick("prepare_supplies", "continue_phase", "retreat_to_heal")
+                reasoning_tag = "prepare_supplies"
+                if action == "continue_phase":
+                    reasoning_tag = "continue_phase"
+                elif action == "retreat_to_heal":
+                    reasoning_tag = "retreat_to_heal"
+                if action == "prepare_supplies":
+                    target = "Health Potion"
+                    for item in shop_items:
+                        if str(item.get("type", "")).strip().lower() == "potion" and bool(item.get("can_afford", False)):
+                            target = "Health Potion"
+                            break
+                    if not any(str(item.get("type", "")).strip().lower() == "potion" for item in shop_items):
+                        target = "blacksmith"
+                elif action == "retreat_to_heal":
+                    target = "castle"
+                else:
+                    target = str(qchain.get("target_id") or qchain.get("chain_id") or "")
+            else:
+                action = pick("continue_phase", "prepare_supplies", "retreat_to_heal")
+                target = str(qchain.get("target_id") or qchain.get("chain_id") or "")
+                reasoning_tag = "continue_phase" if action == "continue_phase" else "prepare_supplies" if action == "prepare_supplies" else "retreat_to_heal"
+                if action == "prepare_supplies":
+                    target = "Health Potion"
+                    if not any(str(item.get("type", "")).strip().lower() == "potion" for item in shop_items):
+                        target = "blacksmith"
+                if action == "retreat_to_heal":
+                    target = "castle"
         else:
             if reward >= 50:
                 action = pick("accept_chain", "decline_chain")
@@ -112,7 +140,12 @@ def mock_autonomous_decision(provider: "MockProvider", user_prompt: str) -> str:
         out = {
             "action": action,
             "target": target,
-            "reasoning": f"mock quest_chain ({reasoning_tag}, status={status or 'unknown'})",
+            "reasoning": (
+                f"mock quest_chain ({reasoning_tag}, status={status or 'unknown'}"
+                + (f", boss={boss_name}" if boss_name else "")
+                + (f", elite={elite_name}" if elite_name else "")
+                + ")"
+            ),
             "confidence": 0.8,
             "memory_used": [],
             "personality_influence": "mock",

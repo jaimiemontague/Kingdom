@@ -12,16 +12,25 @@ from dataclasses import dataclass, field
 
 from config import TILE_SIZE
 from game.content.quest_chains import (
+    ASSAULT_GATE,
+    BLACKBANNERS_TOLL,
+    BLACKBANNER_TOLL_TAKER_STORY_NAME,
+    CLAIM_REWARD,
     COLLECT_ITEM,
     DELIVER_ITEM,
     QUEST_CHAIN_DEFS,
     RELIC_OF_THE_OLD_SHRINE,
+    INTERCEPT_TOLL_TAKER,
+    designate_blackbanner_toll_taker,
     SCOUT_LOCATION,
+    SCOUT_FORTRESS,
+    SLAY_BLACKBANNER,
     QuestChainDef,
     QuestPhaseDef,
     get_chain_def,
 )
 from game.events import GameEventType
+from game.entities.enemy import Bandit, BanditLord
 from game.sim.contracts import (
     QuestChainHistorySummary,
     QuestChainPhaseSnapshot,
@@ -72,6 +81,7 @@ class QuestChainSystem(GameSystem):
         self.completed_chains: list[QuestChainInstance] = []
         self.failed_chains: list[QuestChainInstance] = []
         self._next_chain_id = 1
+        self._event_bus: object | None = None
 
     # ------------------------------------------------------------------
     # Creation / acceptance
@@ -86,6 +96,7 @@ class QuestChainSystem(GameSystem):
         origin_target: object | str | None = None,
         delivery_target: object | str | None = None,
         reward_gold: int | None = None,
+        facts: dict[str, object] | None = None,
         event_bus: object | None = None,
         now_ms: int | None = None,
     ) -> QuestChainInstance:
@@ -96,6 +107,7 @@ class QuestChainSystem(GameSystem):
             origin_target=origin_target,
             delivery_target=delivery_target,
             reward_gold=reward_gold,
+            facts=facts,
             event_bus=event_bus,
             now_ms=now_ms,
         )
@@ -109,6 +121,7 @@ class QuestChainSystem(GameSystem):
         origin_target: object | str | None = None,
         delivery_target: object | str | None = None,
         reward_gold: int | None = None,
+        facts: dict[str, object] | None = None,
         event_bus: object | None = None,
         now_ms: int | None = None,
     ) -> QuestChainInstance:
@@ -145,6 +158,8 @@ class QuestChainSystem(GameSystem):
                 "relic_delivered": False,
             },
         )
+        if facts:
+            chain.facts.update(dict(facts))
         self._next_chain_id += 1
         self.chains.append(chain)
         self._record_history(
@@ -159,6 +174,66 @@ class QuestChainSystem(GameSystem):
             GameEventType.QUEST_CHAIN_OFFERED,
             chain=chain,
             now_ms=now,
+        )
+        return chain
+
+    def offer_blackbanners_toll(
+        self,
+        *,
+        ctx: SystemContext | None = None,
+        hero: object | None = None,
+        hero_id: str | None = None,
+        event_bus: object | None = None,
+        now_ms: int | None = None,
+    ) -> QuestChainInstance:
+        fortress_target = self._find_blackbanner_fortress_target(ctx)
+        reward_target = getattr(ctx, "castle", None) if ctx is not None else None
+        now = int(sim_now_ms() if now_ms is None else now_ms)
+        facts = self._blackbanner_base_facts(
+            chain_id=self._next_chain_id,
+            fortress_target=fortress_target,
+            reward_target=reward_target,
+            now_ms=now,
+        )
+        self._ensure_blackbanner_event_hooks(event_bus if event_bus is not None else getattr(ctx, "event_bus", None))
+        return self.create_chain(
+            BLACKBANNERS_TOLL.chain_type,
+            hero=hero,
+            hero_id=hero_id,
+            reward_gold=BLACKBANNERS_TOLL.reward_profile.gold,
+            facts=facts,
+            event_bus=event_bus if event_bus is not None else getattr(ctx, "event_bus", None),
+            now_ms=now,
+        )
+
+    def start_blackbanners_toll(
+        self,
+        *,
+        ctx: SystemContext | None = None,
+        hero: object | None = None,
+        hero_id: str | None = None,
+        event_bus: object | None = None,
+        now_ms: int | None = None,
+    ) -> QuestChainInstance:
+        chain = self.offer_blackbanners_toll(
+            ctx=ctx,
+            hero=hero,
+            hero_id=hero_id,
+            event_bus=event_bus,
+            now_ms=now_ms,
+        )
+        self.accept_chain(
+            chain.chain_id,
+            hero=hero,
+            hero_id=hero_id,
+            event_bus=event_bus,
+            now_ms=now_ms,
+        )
+        self._spawn_blackbanner_toll_taker(
+            chain,
+            ctx=ctx,
+            event_bus=event_bus if event_bus is not None else getattr(ctx, "event_bus", None),
+            now_ms=now_ms,
         )
         return chain
 
@@ -311,6 +386,8 @@ class QuestChainSystem(GameSystem):
             now_ms=now,
             reason=str(reason),
         )
+        if chain.chain_type == BLACKBANNERS_TOLL.chain_type:
+            self._clear_blackbanner_runtime_refs(chain)
         self._archive_chain(chain, failed=True)
         return True
 
@@ -353,6 +430,8 @@ class QuestChainSystem(GameSystem):
             reward_gold=reward,
             now_ms=now,
         )
+        if chain.chain_type == BLACKBANNERS_TOLL.chain_type:
+            self._clear_blackbanner_runtime_refs(chain)
         self._archive_chain(chain, failed=False)
         return True
 
@@ -380,23 +459,40 @@ class QuestChainSystem(GameSystem):
                 continue
 
             phase = definition.phases[chain.current_phase_index]
-            target_info = self._resolve_live_target(chain, phase, ctx)
+            objective_type = str(phase.objective_type)
+            allow_missing = objective_type in (INTERCEPT_TOLL_TAKER, ASSAULT_GATE, SLAY_BLACKBANNER)
+            target_info = self._resolve_live_target(chain, phase, ctx, allow_missing=allow_missing)
             if target_info is None:
                 self.fail_chain(chain, event_bus=getattr(ctx, "event_bus", None), reason="target_missing")
                 continue
 
-            if phase.objective_type == SCOUT_LOCATION:
+            if objective_type == SCOUT_LOCATION:
                 if self._hero_reached_target(hero, target_info.position):
                     self._complete_phase(chain, phase, hero, target_info, ctx)
-            elif phase.objective_type == COLLECT_ITEM:
+            elif objective_type == COLLECT_ITEM:
                 if not chain.facts.get("relic_scouted", False):
                     continue
                 if self._hero_reached_target(hero, target_info.position):
                     self._complete_phase(chain, phase, hero, target_info, ctx)
-            elif phase.objective_type == DELIVER_ITEM:
+            elif objective_type == DELIVER_ITEM:
                 if not chain.facts.get("relic_collected", False):
                     continue
                 if self._hero_reached_target(hero, target_info.position):
+                    self._complete_phase(chain, phase, hero, target_info, ctx)
+            elif objective_type == SCOUT_FORTRESS:
+                if self._hero_reached_target(hero, target_info.position):
+                    self._complete_phase(chain, phase, hero, target_info, ctx)
+            elif objective_type == INTERCEPT_TOLL_TAKER:
+                if self._blackbanner_enemy_defeated(chain, kind="elite", ctx=ctx):
+                    self._complete_phase(chain, phase, hero, target_info, ctx)
+            elif objective_type == ASSAULT_GATE:
+                if chain.facts.get("elite_target_defeated", False) and self._hero_reached_target(hero, target_info.position):
+                    self._complete_phase(chain, phase, hero, target_info, ctx)
+            elif objective_type == SLAY_BLACKBANNER:
+                if self._blackbanner_enemy_defeated(chain, kind="boss", ctx=ctx):
+                    self._complete_phase(chain, phase, hero, target_info, ctx)
+            elif objective_type == CLAIM_REWARD:
+                if chain.facts.get("boss_target_defeated", False) and self._hero_reached_target(hero, target_info.position):
                     self._complete_phase(chain, phase, hero, target_info, ctx)
 
     # ------------------------------------------------------------------
@@ -475,6 +571,13 @@ class QuestChainSystem(GameSystem):
             target_position=target_info.position,
             now_ms=now,
         )
+        if phase.objective_type == SCOUT_FORTRESS:
+            chain.facts["boss_target_revealed"] = True
+            self._reveal_blackbanner_boss(chain, ctx, event_bus=getattr(ctx, "event_bus", None), now_ms=now)
+        elif phase.objective_type == INTERCEPT_TOLL_TAKER:
+            chain.facts["elite_target_defeated"] = True
+        elif phase.objective_type == SLAY_BLACKBANNER:
+            chain.facts["boss_target_defeated"] = True
         self._emit(
             getattr(ctx, "event_bus", None),
             GameEventType.QUEST_CHAIN_PHASE_COMPLETED,
@@ -485,7 +588,7 @@ class QuestChainSystem(GameSystem):
             now_ms=now,
         )
 
-        if phase.objective_type == DELIVER_ITEM:
+        if phase.objective_type in (DELIVER_ITEM, CLAIM_REWARD):
             self.complete_chain(chain, hero, event_bus=getattr(ctx, "event_bus", None), now_ms=now)
             return
 
@@ -620,12 +723,16 @@ class QuestChainSystem(GameSystem):
         chain: QuestChainInstance,
         phase: QuestPhaseDef,
         ctx: SystemContext,
+        *,
+        allow_missing: bool = False,
     ) -> _TargetInfo | None:
         snapshot_target = self._snapshot_target(chain, phase)
-        if snapshot_target.entity_id:
-            found = self._find_target_by_id(ctx, snapshot_target.entity_id)
+        live_entity_id = str(chain.facts.get(f"{phase.target_ref}_entity_id", "") or "")
+        lookup_id = live_entity_id or snapshot_target.entity_id
+        if lookup_id:
+            found = self._find_target_by_id(ctx, lookup_id)
             if found is None:
-                return None
+                return snapshot_target if allow_missing else None
             return self._capture_target(found)
         if snapshot_target.position is not None:
             return snapshot_target
@@ -635,6 +742,7 @@ class QuestChainSystem(GameSystem):
         if not target_id:
             return None
         for source in (
+            getattr(ctx, "enemies", None) or (),
             getattr(ctx, "pois", None) or (),
             getattr(ctx, "buildings", None) or (),
             (getattr(ctx, "castle", None),),
@@ -670,6 +778,237 @@ class QuestChainSystem(GameSystem):
                     if entity_id == preferred:
                         return obj
         return None
+
+    def _ensure_blackbanner_event_hooks(self, event_bus: object | None) -> None:
+        if event_bus is None or event_bus is self._event_bus:
+            return
+        subscribe = getattr(event_bus, "subscribe", None)
+        if not callable(subscribe):
+            self._event_bus = event_bus
+            return
+        try:
+            subscribe(GameEventType.ENEMY_KILLED, self._on_blackbanner_enemy_killed_event)
+            subscribe(GameEventType.BOSS_DEFEATED, self._on_blackbanner_boss_defeated_event)
+        except Exception:
+            pass
+        self._event_bus = event_bus
+
+    def _on_blackbanner_enemy_killed_event(self, event: dict) -> None:
+        self._handle_blackbanner_defeat_event(event, kind="elite")
+
+    def _on_blackbanner_boss_defeated_event(self, event: dict) -> None:
+        self._handle_blackbanner_defeat_event(event, kind="boss")
+
+    def _handle_blackbanner_defeat_event(self, event: dict, *, kind: str) -> None:
+        if kind not in {"elite", "boss"}:
+            return
+        if not isinstance(event, dict):
+            return
+        entity_id_key = "enemy_id" if kind == "elite" else "boss_id"
+        entity_name_key = "enemy_name" if kind == "elite" else "name"
+        entity_id = str(event.get(entity_id_key, "") or "")
+        entity_name = str(event.get(entity_name_key, "") or "")
+        hero_id = str(event.get("hero_id", "") or "")
+        hero_name = str(event.get("hero", "") or "")
+        at_ms = int(event.get("time_ms", 0) or sim_now_ms())
+        fact_prefix = "elite_target" if kind == "elite" else "boss_target"
+        for chain in self.chains:
+            if chain.chain_type != BLACKBANNERS_TOLL.chain_type or chain.status != "active":
+                continue
+            live_entity_id = str(chain.facts.get(f"{fact_prefix}_entity_id", "") or "")
+            story_name = str(chain.facts.get(f"{fact_prefix}_name", "") or "")
+            if entity_id and live_entity_id and entity_id != live_entity_id:
+                continue
+            if not entity_id and entity_name and story_name and entity_name != story_name:
+                continue
+            chain.facts[f"{fact_prefix}_defeated"] = True
+            chain.facts[f"{fact_prefix}_defeated_at_ms"] = at_ms
+            if hero_id:
+                chain.facts[f"{fact_prefix}_defeated_by_hero_id"] = hero_id
+            if hero_name:
+                chain.facts[f"{fact_prefix}_defeated_by_hero_name"] = hero_name
+
+    def _blackbanner_base_facts(
+        self,
+        *,
+        chain_id: int,
+        fortress_target: object | None,
+        reward_target: object | None,
+        now_ms: int,
+    ) -> dict[str, object]:
+        fortress_info = self._capture_target(fortress_target)
+        fortress_position = fortress_info.position
+        reward_info = self._capture_target(reward_target)
+        if fortress_position is None:
+            fortress_position = reward_info.position
+        gate_position = self._offset_position(fortress_position, 2.0, 0.0) if fortress_position is not None else None
+        elite_position = self._offset_position(fortress_position, 1.5, -0.5) if fortress_position is not None else gate_position
+        boss_position = self._offset_position(fortress_position, 4.0, 1.5) if fortress_position is not None else gate_position
+        return {
+            "fortress_target_id": "poi_bandit_fortress",
+            "fortress_target_entity_id": fortress_info.entity_id,
+            "fortress_target_name": fortress_info.name or "Bandit Fortress",
+            "fortress_target_position": fortress_position,
+            "fortress_target_story_name": fortress_info.name or "Bandit Fortress",
+            "fortress_target_revealed_at_ms": now_ms,
+            "elite_target_id": "elite_blackbanner_toll_taker",
+            "elite_target_entity_id": "",
+            "elite_target_name": BLACKBANNER_TOLL_TAKER_STORY_NAME,
+            "elite_target_position": elite_position,
+            "elite_target_story_name": BLACKBANNER_TOLL_TAKER_STORY_NAME,
+            "elite_target_phase_id": INTERCEPT_TOLL_TAKER,
+            "elite_target_spawn_key": f"blackbanner_toll:{int(chain_id)}:toll_taker",
+            "elite_target_defeated": False,
+            "gate_target_id": "gate_blackbanner",
+            "gate_target_name": "Blackbanner Gate",
+            "gate_target_position": gate_position,
+            "gate_target_story_name": "Blackbanner Gate",
+            "boss_target_id": "",
+            "boss_target_entity_id": "",
+            "boss_target_name": "",
+            "boss_target_position": boss_position,
+            "boss_target_story_name": "Rusk Blackbanner",
+            "boss_target_phase_id": SLAY_BLACKBANNER,
+            "boss_target_spawn_key": f"blackbanner_toll:{int(chain_id)}:rusk",
+            "boss_target_revealed": False,
+            "boss_target_defeated": False,
+            "reward_target_id": reward_info.entity_id or "castle",
+            "reward_target_name": reward_info.name or "Castle",
+            "reward_target_position": reward_info.position,
+            "reward_target_story_name": reward_info.name or "Castle",
+        }
+
+    def _find_blackbanner_fortress_target(self, ctx: SystemContext | None) -> object | None:
+        if ctx is None:
+            return None
+        target = self._find_first_target(ctx, preferred_ids=("poi_bandit_fortress", "bandit_camp"))
+        if target is not None:
+            return target
+        for obj in list(getattr(ctx, "buildings", None) or ()) + list(getattr(ctx, "pois", None) or ()) + [getattr(ctx, "castle", None)]:
+            if obj is None:
+                continue
+            if str(getattr(obj, "building_type", "")) == "bandit_camp":
+                return obj
+            if bool(getattr(obj, "is_lair", False)) and str(getattr(obj, "building_type", "")) == "bandit_camp":
+                return obj
+        return None
+
+    def _spawn_blackbanner_toll_taker(
+        self,
+        chain: QuestChainInstance,
+        *,
+        ctx: SystemContext | None,
+        event_bus: object | None,
+        now_ms: int | None,
+    ) -> object | None:
+        if ctx is None:
+            return None
+        existing_id = str(chain.facts.get("elite_target_entity_id", "") or "")
+        if existing_id:
+            existing = self._find_target_by_id(ctx, existing_id)
+            if existing is not None:
+                return existing
+        fortress_position = chain.facts.get("fortress_target_position", None)
+        if fortress_position is None:
+            fortress_target = self._find_blackbanner_fortress_target(ctx)
+            fortress_position = self._entity_position(fortress_target) if fortress_target is not None else None
+        if fortress_position is None:
+            fortress_position = (0.0, 0.0)
+        elite_position = self._offset_position(fortress_position, 1.5, -0.5) or fortress_position
+        elite = Bandit(float(elite_position[0]), float(elite_position[1]))
+        ctx.enemies.append(elite)
+        designate_blackbanner_toll_taker(
+            elite,
+            chain_id=chain.chain_id,
+            now_ms=now_ms,
+            nearby_enemies=tuple(ctx.enemies),
+        )
+        chain.facts["elite_target_entity_id"] = str(elite.entity_id)
+        chain.facts["elite_target_name"] = str(getattr(elite, "elite_story_name", elite.name) or BLACKBANNER_TOLL_TAKER_STORY_NAME)
+        chain.facts["elite_target_position"] = (float(elite.x), float(elite.y))
+        chain.facts["elite_target_spawned_at_ms"] = int(sim_now_ms() if now_ms is None else now_ms)
+        return elite
+
+    def _reveal_blackbanner_boss(
+        self,
+        chain: QuestChainInstance,
+        ctx: SystemContext | None,
+        *,
+        event_bus: object | None,
+        now_ms: int,
+    ) -> object | None:
+        if ctx is None:
+            return None
+        existing_id = str(chain.facts.get("boss_target_entity_id", "") or "")
+        if existing_id:
+            existing = self._find_target_by_id(ctx, existing_id)
+            if existing is not None:
+                return existing
+        boss_position = chain.facts.get("boss_target_position", None)
+        if boss_position is None:
+            fortress_position = chain.facts.get("fortress_target_position", None)
+            if fortress_position is not None:
+                boss_position = self._offset_position(fortress_position, 4.0, 1.5)
+        if boss_position is None:
+            boss_position = (0.0, 0.0)
+        boss = BanditLord(float(boss_position[0]), float(boss_position[1]))
+        ctx.enemies.append(boss)
+        chain.facts["boss_target_id"] = "boss_rusk_blackbanner"
+        chain.facts["boss_target_entity_id"] = str(boss.entity_id)
+        chain.facts["boss_target_name"] = "Rusk Blackbanner"
+        chain.facts["boss_target_position"] = (float(boss.x), float(boss.y))
+        chain.facts["boss_target_revealed"] = True
+        chain.facts["boss_target_revealed_at_ms"] = now_ms
+        return boss
+
+    def _blackbanner_enemy_defeated(self, chain: QuestChainInstance, *, kind: str, ctx: SystemContext) -> bool:
+        if chain.chain_type != BLACKBANNERS_TOLL.chain_type:
+            return False
+        if kind not in {"elite", "boss"}:
+            return False
+        fact_prefix = "elite_target" if kind == "elite" else "boss_target"
+        if bool(chain.facts.get(f"{fact_prefix}_defeated", False)):
+            return True
+        live_entity_id = str(chain.facts.get(f"{fact_prefix}_entity_id", "") or "")
+        if not live_entity_id:
+            return False
+        live = self._find_target_by_id(ctx, live_entity_id)
+        if live is None:
+            return False
+        return not bool(getattr(live, "is_alive", True))
+
+    def _clear_blackbanner_runtime_refs(self, chain: QuestChainInstance) -> None:
+        for key in (
+            "elite_target_entity_id",
+            "elite_target_id",
+            "elite_target_name",
+            "elite_target_position",
+            "elite_target_spawn_key",
+            "boss_target_entity_id",
+            "boss_target_id",
+            "boss_target_name",
+            "boss_target_position",
+            "boss_target_spawn_key",
+        ):
+            if key.endswith("_position"):
+                chain.facts.pop(key, None)
+            else:
+                chain.facts[key] = "" if key.endswith("_id") or key.endswith("_name") or key.endswith("_entity_id") or key.endswith("_spawn_key") else ""
+        chain.facts["elite_target_defeated"] = bool(chain.facts.get("elite_target_defeated", False))
+        chain.facts["boss_target_defeated"] = bool(chain.facts.get("boss_target_defeated", False))
+
+    @staticmethod
+    def _offset_position(
+        base_position: tuple[float, float] | None,
+        dx_tiles: float,
+        dy_tiles: float,
+    ) -> tuple[float, float] | None:
+        if base_position is None:
+            return None
+        return (
+            float(base_position[0]) + float(dx_tiles) * float(TILE_SIZE),
+            float(base_position[1]) + float(dy_tiles) * float(TILE_SIZE),
+        )
 
     def _capture_target(self, target: object | str | None) -> _TargetInfo:
         if target is None:

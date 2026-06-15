@@ -484,6 +484,72 @@
           ]
         }
       }
+    },
+    "wk141_blackbanners_toll_epic_boss_quest": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md",
+        "created_utc": "2026-06-15T00:00:00Z",
+        "notes": "WK141 Blackbanner's Toll Wave 2 UI readability. Deterministic test PNGs were used because the requested quest_chain_foundation capture scenario is not present in tools/screenshot_scenarios.py."
+      },
+      "rounds": {
+        "r2_wave1_gate_wave2_kickoff": {
+          "sprint_id": "wk141_blackbanners_toll_epic_boss_quest",
+          "round_id": "r2_wave1_gate_wave2_kickoff",
+          "status": "done",
+          "task": "Make Blackbanner's Toll readable in Adventure Ledger and boss UI using existing WK138 Adventure Ledger phase timeline and WK139 compact boss UI patterns.",
+          "what_i_changed": [
+            "game/ui/quest_view_panel.py: added _chain_live_facts(...) so the Adventure Ledger reads live quest_chain facts; compact active/offered chain rows now show the chain name, current phase as 'Now: ...', completed phase markers, assigned hero, revealed boss name when available, and reward/completion state without clipping in the small ledger slot.",
+            "tests/test_wk141_blackbanner_ui.py: NEW deterministic pygame coverage for full-size active ledger, compact active ledger, completed ledger, and compact boss strip render. The tests save proof PNGs under docs/screenshots/wk141_blackbanner_ui/.",
+            "tests/test_wk138_quest_chain_ui.py: updated the compact WK138 expectation to match the new compact timeline wording ('Now: ...') so the shared ledger pattern stays consistent."
+          ],
+          "files_touched": [
+            "game/ui/quest_view_panel.py",
+            "tests/test_wk141_blackbanner_ui.py",
+            "tests/test_wk138_quest_chain_ui.py",
+            "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_active_246x300.png",
+            "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_active_320x120.png",
+            "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_completed_320x120.png",
+            "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_boss_ui_1920x1080.png",
+            ".cursor/plans/agent_logs/agent_08_UX_UI_Director.json"
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_wk141_blackbanner_ui.py tests/test_wk138_quest_chain_ui.py tests/test_wk139_boss_ui.py -q",
+              "exit_code": 0,
+              "note": "12 passed, 1 warning"
+            },
+            {
+              "command": "python tools/capture_screenshots.py --scenario quest_chain_foundation --seed 3 --out docs/screenshots/wk141_blackbanner_ui --size 1920x1080 --ticks 900",
+              "exit_code": 1,
+              "note": "ValueError: Unknown scenario: quest_chain_foundation"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "note": "validated after update"
+            }
+          ],
+          "evidence": {
+            "pytest": "python -m pytest tests/test_wk141_blackbanner_ui.py tests/test_wk138_quest_chain_ui.py tests/test_wk139_boss_ui.py -q -> 12 passed, 1 warning",
+            "screenshot_paths_inspected": [
+              "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_active_246x300.png",
+              "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_active_320x120.png",
+              "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_ledger_completed_320x120.png",
+              "docs/screenshots/wk141_blackbanner_ui/wk141_blackbanner_boss_ui_1920x1080.png"
+            ],
+            "screenshot_status": "PASS. Full-size ledger shows Blackbanner's Toll, current objective, target, boss reveal, and phase timeline; compact ledger shows 'Now: Intercept | Boss: Rusk Blackbanner' without clipping; completed ledger shows Outcome: Completed; boss strip shows Rusk Blackbanner, Phase: Toll Banner, HP 62%, telegraph, and elite hint cleanly.",
+            "scenario_gap": "The requested scripted quest_chain_foundation capture scenario is not present in tools/screenshot_scenarios.py, so the deterministic test-generated PNGs were used as the proof path."
+          },
+          "blockers": [
+            "No implementation blocker remains for the UI itself.",
+            "The requested capture_screenshots.py scenario name is missing from tools/screenshot_scenarios.py; the deterministic PNG proof path was used instead."
+          ],
+          "follow_ups": [
+            "PM / Agent 12 can add a quest_chain_foundation scenario if the exact scripted capture command needs to succeed later.",
+            "Agent 11 can use the passing focused tests and inspected PNGs as integrated verification evidence for the UI lane."
+          ]
+        }
+      }
     }
   }
 }

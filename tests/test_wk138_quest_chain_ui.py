@@ -218,7 +218,7 @@ def test_active_chain_board_compacts_cleanly_in_short_rows():
     assert "Adventure Ledger" in lines
     assert any(line.startswith("Relic of the Old Shrine") for line in lines)
     assert any("Status: Active" in line for line in lines)
-    assert any("Current objective: Recover the Relic" in line for line in lines)
+    assert any("Now: Recover the Relic" in line for line in lines)
     assert any(
         "DONE Scout the Ancient Ruins" in line
         and "NOW Recover the Relic" in line

@@ -103,6 +103,18 @@ class _DictGameStateView:
         return self._gs.get("quest_chains", []) or []
 
     @property
+    def boss_encounters(self):
+        return self._gs.get("boss_encounters", []) or []
+
+    @property
+    def elite_enemies(self):
+        return self._gs.get("elite_enemies", []) or []
+
+    @property
+    def elite_encounters(self):
+        return self._gs.get("elite_encounters", self._gs.get("elite_enemies", [])) or []
+
+    @property
     def castle(self):
         return self._gs.get("castle")
 
@@ -138,6 +150,9 @@ def view_to_legacy_context(view: Any) -> dict:
         "bounties": view.bounties,
         "pois": view.pois,
         "quest_chains": getattr(view, "quest_chains", ()) or (),
+        "boss_encounters": getattr(view, "boss_encounters", ()) or (),
+        "elite_enemies": getattr(view, "elite_enemies", ()) or (),
+        "elite_encounters": getattr(view, "elite_encounters", ()) or (),
         "gold": view.player_gold,
         "castle": view.castle,
         "micro_view_building": None,

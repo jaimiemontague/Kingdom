@@ -931,6 +931,108 @@
           ]
         }
       }
+    },
+    "wk141_blackbanners_toll_epic_boss_quest": {
+      "sprint_meta": {
+        "sprint_id": "wk141_blackbanners_toll_epic_boss_quest",
+        "created_utc": "2026-06-15T00:00:00Z",
+        "plan_ref": ".cursor/plans/wk141_blackbanners_toll_epic_boss_quest.plan.md",
+        "role": "Agent 11 QA_TestEngineering_Lead",
+        "title": "WK141 Blackbanner's Toll final QA"
+      },
+      "rounds": {
+        "r3_final_qa": {
+          "sprint_id": "wk141_blackbanners_toll_epic_boss_quest",
+          "round_id": "r3_final_qa",
+          "status": "done",
+          "round_meta": {
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "reports_to": "Agent 01 (PM)",
+            "model": "gpt-5.4-mini",
+            "reasoning_effort": "xhigh",
+            "production_code_edited": false
+          },
+          "prompt_text": "Verify the complete Blackbanner's Toll adventure loop: WK141 focused tests, WK138/WK139/WK140 regressions, WK67, qa_smoke, screenshot proof, and agent logs.",
+          "files_touched": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ],
+          "what_i_changed": [
+            "Ran the requested WK141, WK138/WK139/WK140, WK67, and qa_smoke verification gates.",
+            "Inspected the WK141 boss/UI proof PNGs under docs/screenshots/wk141_blackbanner_boss and docs/screenshots/wk141_blackbanner_ui.",
+            "Validated Agent 03, 05, 06, 08, and 09 logs with python -m json.tool and confirmed each contains a WK141 sprint entry.",
+            "No production code edits; no asset edits."
+          ],
+          "commands_run": [
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "result": "Valid JSON; raw rg confirms wk141_blackbanners_toll_epic_boss_quest is present."
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+              "exit_code": 0,
+              "result": "Valid JSON; raw rg confirms wk141_blackbanners_toll_epic_boss_quest is present."
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "result": "Valid JSON; raw rg confirms wk141_blackbanners_toll_epic_boss_quest is present."
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "result": "Valid JSON; raw rg confirms wk141_blackbanners_toll_epic_boss_quest is present."
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
+              "exit_code": 0,
+              "result": "Valid JSON; raw rg confirms wk141_blackbanners_toll_epic_boss_quest is present."
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk141_blackbanner_contract.py tests/test_wk141_blackbanner_ai_view.py tests/test_wk141_blackbanner_chain.py tests/test_wk141_blackbanner_boss.py tests/test_wk141_blackbanner_elite.py -q",
+              "exit_code": 0,
+              "result": "7 passed, 1 warning"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk141_blackbanner_ai_policy.py tests/test_wk141_blackbanner_prompt_context.py tests/test_wk141_blackbanner_ui.py tests/test_wk141_blackbanner_visuals.py -q",
+              "exit_code": 0,
+              "result": "12 passed, 1 warning"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk138_quest_chain_core.py tests/test_wk139_boss_encounters.py tests/test_wk140_hero_daily_life_ai.py -q",
+              "exit_code": 0,
+              "result": "6 passed, 1 warning"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "result": "10 passed, 1 warning"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "result": "1938 passed, 5 skipped, 1 xfailed, 1 warning"
+            }
+          ],
+          "evidence": {
+            "wk141_focused": "PASS: 19 passed total across the two WK141 pytest groups.",
+            "wk138_wk139_wk140": "PASS: 6 passed, 1 warning.",
+            "wk67": "PASS: 10 passed; digest stayed byte-identical.",
+            "qa_smoke": "PASS: 1938 passed, 5 skipped, 1 xfailed, 1 warning.",
+            "agent_logs": "PASS: Agent 03, 05, 06, 08, and 09 logs validate as JSON; raw rg confirms the WK141 sprint entry is present in each file.",
+            "screenshots": "PASS: boss_encounter_showcase.png, rusk_toll_banner_showcase.png, rusk_smoke_retreat_showcase.png, wk141_blackbanner_ledger_active_246x300.png, wk141_blackbanner_ledger_active_320x120.png, wk141_blackbanner_ledger_completed_320x120.png, and wk141_blackbanner_boss_ui_1920x1080.png are readable and match the expected Blackbanner states.",
+            "visual_notes": "Boss strip reads Rusk Blackbanner, phase, HP, tell, and elite hint cleanly; compact ledger stays inside the small panel; completed ledger shows completion state.",
+            "scenario_gap": "tools/screenshot_scenarios.py has boss_encounter_showcase, but no quest_chain_foundation scenario. Quest UI proof therefore relies on the deterministic test-generated PNGs already in docs/screenshots/wk141_blackbanner_ui."
+          },
+          "blockers": [
+            "The exact orchestrator completion receipt command could not be run because this workspace does not expose the tokenized npx tsx tools\\ai_studio_orchestrator\\src\\cli.ts complete prompt token. The CLI requires --token, --sprint, --round, --agent, and --status."
+          ],
+          "follow_ups": [
+            "If PM wants the orchestrator receipt completed, provide the tokenized completion command or the run ledger/prompt that contains the token.",
+            "No QA code follow-up is needed; the verification gates themselves are green."
+          ]
+        }
+      }
     }
   }
 }

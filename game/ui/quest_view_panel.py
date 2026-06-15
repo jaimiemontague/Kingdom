@@ -289,6 +289,27 @@ class QuestViewPanel:
         return 0
 
     @staticmethod
+    def _chain_live_facts(game_state: dict[str, Any], chain: Any) -> dict[str, Any]:
+        sim = game_state.get("sim") or getattr(game_state.get("engine"), "sim", None)
+        chain_system = getattr(sim, "quest_chain_system", None)
+        if chain_system is None:
+            return {}
+        getter = getattr(chain_system, "get_chain", None)
+        if not callable(getter):
+            return {}
+        try:
+            live_chain = getter(getattr(chain, "chain_id", None))
+        except Exception:
+            return {}
+        facts = getattr(live_chain, "facts", None)
+        if isinstance(facts, dict):
+            return facts
+        try:
+            return dict(facts or {})
+        except Exception:
+            return {}
+
+    @staticmethod
     def _chain_current_phase(chain: Any) -> tuple[Any | None, int]:
         phases = tuple(getattr(chain, "phases", ()) or ())
         if not phases:
@@ -348,6 +369,9 @@ class QuestViewPanel:
             reward_gold = self._chain_reward_gold(game_state, chain)
             current_target = str(getattr(current_phase, "target_name", "") or "").strip() if current_phase is not None else ""
             current_title = str(getattr(current_phase, "title", "") or "").strip() if current_phase is not None else ""
+            live_facts = self._chain_live_facts(game_state, chain)
+            boss_revealed = bool(live_facts.get("boss_target_revealed", False))
+            revealed_boss_name = str(live_facts.get("boss_target_name", "") or "").strip()
 
             compact_title_font = pygame.font.Font(None, 14)
             compact_font = pygame.font.Font(None, 11)
@@ -375,7 +399,15 @@ class QuestViewPanel:
 
             detail_lines: list[str] = []
             if status_key in {"active", "offered"} and current_title:
-                detail_lines.append(f"Current objective: {current_title}")
+                compact_title = current_title
+                if boss_revealed and " the " in current_title:
+                    short_title = current_title.split(" the ", 1)[0].strip()
+                    if short_title:
+                        compact_title = short_title
+                detail_bits = [f"Now: {compact_title}"]
+                if boss_revealed and revealed_boss_name and revealed_boss_name != current_target:
+                    detail_bits.append(f"Boss: {revealed_boss_name}")
+                detail_lines.append(" | ".join(detail_bits))
             elif status_key in {"completed", "failed"}:
                 detail_lines.append(f"Outcome: {status_label}")
 
@@ -438,6 +470,9 @@ class QuestViewPanel:
             reward_gold = self._chain_reward_gold(game_state, chain)
             current_target = str(getattr(current_phase, "target_name", "") or "").strip() if current_phase is not None else ""
             current_title = str(getattr(current_phase, "title", "") or "").strip() if current_phase is not None else ""
+            live_facts = self._chain_live_facts(game_state, chain)
+            boss_revealed = bool(live_facts.get("boss_target_revealed", False))
+            revealed_boss_name = str(live_facts.get("boss_target_name", "") or "").strip()
 
             card_lines: list[str] = []
             card_lines.append(str(getattr(chain, "name", "") or "Quest Chain"))
@@ -452,6 +487,8 @@ class QuestViewPanel:
                 objective_bits = [f"Current objective: {current_title}"]
                 if current_target:
                     objective_bits.append(f"Target: {current_target}")
+                if boss_revealed and revealed_boss_name and revealed_boss_name != current_target:
+                    objective_bits.append(f"Boss: {revealed_boss_name}")
                 card_lines.append(" | ".join(objective_bits))
 
             for phase in phase_rows:

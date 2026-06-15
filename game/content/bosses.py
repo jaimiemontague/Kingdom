@@ -102,8 +102,64 @@ WARCHIEF_BOSS_DEF = BossDef(
 
 THE_GOBLIN_WARCHIEF = WARCHIEF_BOSS_DEF
 
+RUSK_TOLL_BANNER = BossAbilityDef(
+    ability_id="toll_banner",
+    display_name="Toll Banner",
+    trigger="phase_start",
+    cooldown_ms=0,
+    telegraph_ms=0,
+    payload={
+        "attack_bonus": 2,
+        "radius_tiles": 4.5,
+        "courage_bonus": 1,
+        "buff_enemy_type": "bandit",
+        "announce_on_register": True,
+    },
+)
+
+RUSK_SMOKE_RETREAT = BossAbilityDef(
+    ability_id="smoke_retreat",
+    display_name="Smoke Retreat",
+    trigger="hp_below",
+    cooldown_ms=6_000,
+    telegraph_ms=1_200,
+    payload={
+        "defense_bonus": 2,
+        "speed_multiplier": 1.15,
+        "announce_on_phase_change": True,
+    },
+)
+
+RUSK_TOLL_BANNER_PHASE = BossPhaseDef(
+    phase_id="toll_banner",
+    starts_below_hp_pct=1.0,
+    title="Toll Banner",
+    abilities=("toll_banner",),
+)
+
+RUSK_SMOKE_RETREAT_PHASE = BossPhaseDef(
+    phase_id="smoke_retreat",
+    starts_below_hp_pct=0.5,
+    title="Smoke Retreat",
+    abilities=("smoke_retreat",),
+    on_enter_event="boss_phase_changed",
+)
+
+RUSK_BLACKBANNER_BOSS_DEF = BossDef(
+    boss_type="bandit_lord",
+    display_name_template="Rusk Blackbanner",
+    base_enemy_type="bandit_lord",
+    difficulty_tier=2,
+    phases=(RUSK_TOLL_BANNER_PHASE, RUSK_SMOKE_RETREAT_PHASE),
+    abilities=(RUSK_TOLL_BANNER, RUSK_SMOKE_RETREAT),
+    loot_table_id="bandit_lord_boss_loot",
+    weakness_tags=("focus-fire", "burst", "anti-armor"),
+    memory_tags=("defeated_by", "killed_hero"),
+)
+
 BOSS_DEFS: dict[str, BossDef] = {
     WARCHIEF_BOSS_DEF.boss_type: WARCHIEF_BOSS_DEF,
+    RUSK_BLACKBANNER_BOSS_DEF.boss_type: RUSK_BLACKBANNER_BOSS_DEF,
 }
 
 
