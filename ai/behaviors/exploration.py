@@ -337,6 +337,10 @@ def _idle_clear_dangling_bounty(ai: Any, hero: Any, view: Any) -> bool:
 
     # If we were pursuing a bounty but ended up idle, clear it (avoid dangling targets).
     if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "bounty":
+        from ai.behaviors import bounty_pursuit
+
+        if bounty_pursuit.bounty_commitment_active(hero, view):
+            return bounty_pursuit.resume_committed_bounty(ai, hero, view)
         hero.target = None
         hero.target_position = None
     return False
@@ -470,6 +474,13 @@ def _idle_visit_poi(ai: Any, hero: Any, view: Any) -> bool:
     return False
 
 
+def _idle_daily_life(ai: Any, hero: Any, view: Any) -> bool:
+    """WK140: ambient daily-life motives after POI visits, before terminal patrol."""
+    from ai.behaviors import daily_life
+
+    return daily_life.try_daily_life(ai, hero, view)
+
+
 def _idle_patrol_zone(ai: Any, hero: Any, view: Any) -> bool:
     """Terminal fall-through: patrol within / return to the hero's zone.
 
@@ -540,5 +551,7 @@ def handle_idle(ai: Any, hero: Any, view: Any) -> None:
     """
     view = as_ai_view(view)
     for step in _IDLE_STEPS:
+        if step is _idle_patrol_zone and _idle_daily_life(ai, hero, view):
+            return
         if step(ai, hero, view):
             return

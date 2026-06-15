@@ -53,6 +53,60 @@ def _resolve_bounty_from_target(target_dict: dict[str, Any], bounties: list[Any]
     return None
 
 
+def bounty_commitment_active(hero: Any, view: Any, *, now_ms: int | None = None) -> bool:
+    """True while a live accepted bounty commitment should keep outranking ambient choices."""
+    view = as_ai_view(view)
+    if now_ms is None:
+        now_ms = sim_now_ms()
+    hp_pct = float(getattr(hero, "health_percent", 1.0) or 1.0)
+    if hp_pct <= 0.25 or getattr(hero, "state", None) == HeroState.RETREATING:
+        return False
+    if int(now_ms) >= int(getattr(hero, "_bounty_commit_until_ms", 0) or 0):
+        return False
+    target = getattr(hero, "target", None)
+    if not isinstance(target, dict) or target.get("type") != "bounty":
+        return False
+    bounty = _resolve_bounty_from_target(target, list(view.bounties or []))
+    if bounty is None:
+        return False
+    buildings = list(view.buildings or [])
+    if getattr(bounty, "claimed", False):
+        return False
+    if hasattr(bounty, "is_valid") and not bounty.is_valid(buildings):
+        return False
+    return True
+
+
+def resume_committed_bounty(ai: Any, hero: Any, view: Any) -> bool:
+    """Reassert a live bounty target after a transient IDLE/home-rest interruption."""
+    view = as_ai_view(view)
+    now_ms = sim_now_ms()
+    if not bounty_commitment_active(hero, view, now_ms=now_ms):
+        return False
+    target = getattr(hero, "target", None)
+    if not isinstance(target, dict) or target.get("type") != "bounty":
+        return False
+    bounty = _resolve_bounty_from_target(target, list(view.bounties or []))
+    if bounty is None:
+        return False
+    buildings = list(view.buildings or [])
+    world = view.world
+    goal_x, goal_y = (float(getattr(bounty, "x", hero.x)), float(getattr(bounty, "y", hero.y)))
+    if hasattr(bounty, "get_goal_position"):
+        goal_x, goal_y = bounty.get_goal_position(buildings)
+    target_building = None
+    if getattr(bounty, "bounty_type", "") in ("attack_lair", "defend_building"):
+        target_building = getattr(bounty, "target", None)
+    if world and target_building is not None:
+        adj = best_adjacent_tile(world, buildings, target_building, hero.x, hero.y)
+        if adj:
+            goal_x = adj[0] * TILE_SIZE + TILE_SIZE / 2
+            goal_y = adj[1] * TILE_SIZE + TILE_SIZE / 2
+    hero.target_position = (goal_x, goal_y)
+    hero.state = HeroState.MOVING
+    return True
+
+
 def maybe_take_bounty(ai: Any, hero: Any, view: Any) -> bool:
     """Pick and start pursuing a bounty if it makes sense."""
     view = as_ai_view(view)

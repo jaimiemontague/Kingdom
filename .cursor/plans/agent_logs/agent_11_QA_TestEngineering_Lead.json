@@ -725,122 +725,212 @@
             }
           },
           "blockers": [],
-    "follow_ups": [],
-    "recommended_next_actions": [
-      "PM can close/commit WK138."
-    ]
-  },
-  "wk139_boss_encounter_core_elites": {
-    "sprint_meta": {
-      "sprint_id": "wk139_boss_encounter_core_elites",
-      "created_utc": "2026-06-15T04:40:47.4790327Z",
-      "plan_ref": ".cursor/plans/wk139_boss_encounter_core_elites.plan.md",
-      "goal": "Verify WK139 end to end and return a final PASS/FAIL report for PM close."
-    },
-    "rounds": {
-      "r1_final_verification": {
-        "sprint_id": "wk139_boss_encounter_core_elites",
-        "round_id": "r1_final_verification",
-        "status": "complete",
-        "round_meta": {
-          "role": "Agent 11 QA_TestEngineering_Lead",
-          "model": "gpt-5.4-mini",
-          "reasoning_effort": "xhigh",
-          "production_code_edited": false
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "PM can close/commit WK138."
+          ]
         },
-        "files_touched": [
-          ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
-          "docs/screenshots/wk139_boss_encounter_showcase/boss_encounter_showcase.png",
-          "docs/screenshots/wk139_boss_encounter_showcase/manifest.json"
-        ],
-        "what_i_changed": [
-          "Ran the WK139 regression stack end to end from the QA lane only; no production code edits were made.",
-          "Captured the boss encounter showcase and inspected the boss UI telegraph screenshot set for readability, telegraph clarity, and HUD overlap.",
-          "Recorded the final WK139 verification evidence in the Agent 11 log and validated the JSON."
-        ],
-        "commands_run": [
-          {
-            "cmd": "python -m pytest tests/test_wk139_boss_contract.py tests/test_wk139_boss_ai_view.py -q",
-            "exit_code": 0,
-            "result": "6 passed, 1 warning"
+        "wk139_boss_encounter_core_elites": {
+          "sprint_meta": {
+            "sprint_id": "wk139_boss_encounter_core_elites",
+            "created_utc": "2026-06-15T04:40:47.4790327Z",
+            "plan_ref": ".cursor/plans/wk139_boss_encounter_core_elites.plan.md",
+            "goal": "Verify WK139 end to end and return a final PASS/FAIL report for PM close."
           },
-          {
-            "cmd": "python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk139_elite_affixes.py tests/test_wk139_boss_memory.py -q",
-            "exit_code": 0,
-            "result": "7 passed, 1 warning"
-          },
-          {
-            "cmd": "python -m pytest tests/test_wk139_boss_visuals.py tests/test_wk139_elite_visuals.py tests/test_wk139_boss_ui.py tests/test_wk139_boss_showcase_scenario.py -q",
-            "exit_code": 0,
-            "result": "8 passed, 1 warning"
-          },
-          {
-            "cmd": "python -m pytest tests/test_wk137_initial_wave.py tests/test_wk137_boss_scale.py -q",
-            "exit_code": 0,
-            "result": "24 passed, 1 warning"
-          },
-          {
-            "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
-            "exit_code": 0,
-            "result": "10 passed, 1 warning"
-          },
-          {
-            "cmd": "python tools/qa_smoke.py --quick",
-            "exit_code": 0,
-            "result": "PASS (1905 passed, 5 skipped, 1 xfailed)"
-          },
-          {
-            "cmd": "python tools/capture_screenshots.py --scenario boss_encounter_showcase --seed 3 --out docs/screenshots/wk139_boss_encounter_showcase --size 1920x1080 --ticks 900",
-            "exit_code": 0,
-            "result": "Wrote 1 PNG; manifest generated"
-          },
-          {
-            "cmd": "python tools/mythos_tick_bench.py --ticks 900 --warmup 180 --heroes 24 --buildings 24 --enemies 80",
-            "exit_code": 0,
-            "result": "mean 3.475ms p95 8.317ms p99 14.019ms max 24.180ms"
-          },
-          {
-            "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
-            "exit_code": 0,
-            "result": "valid JSON"
+          "rounds": {
+            "r1_final_verification": {
+              "sprint_id": "wk139_boss_encounter_core_elites",
+              "round_id": "r1_final_verification",
+              "status": "complete",
+              "round_meta": {
+                "role": "Agent 11 QA_TestEngineering_Lead",
+                "model": "gpt-5.4-mini",
+                "reasoning_effort": "xhigh",
+                "production_code_edited": false
+              },
+              "files_touched": [
+                ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+                "docs/screenshots/wk139_boss_encounter_showcase/boss_encounter_showcase.png",
+                "docs/screenshots/wk139_boss_encounter_showcase/manifest.json"
+              ],
+              "what_i_changed": [
+                "Ran the WK139 regression stack end to end from the QA lane only; no production code edits were made.",
+                "Captured the boss encounter showcase and inspected the boss UI telegraph screenshot set for readability, telegraph clarity, and HUD overlap.",
+                "Recorded the final WK139 verification evidence in the Agent 11 log and validated the JSON."
+              ],
+              "commands_run": [
+                {
+                  "cmd": "python -m pytest tests/test_wk139_boss_contract.py tests/test_wk139_boss_ai_view.py -q",
+                  "exit_code": 0,
+                  "result": "6 passed, 1 warning"
+                },
+                {
+                  "cmd": "python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk139_elite_affixes.py tests/test_wk139_boss_memory.py -q",
+                  "exit_code": 0,
+                  "result": "7 passed, 1 warning"
+                },
+                {
+                  "cmd": "python -m pytest tests/test_wk139_boss_visuals.py tests/test_wk139_elite_visuals.py tests/test_wk139_boss_ui.py tests/test_wk139_boss_showcase_scenario.py -q",
+                  "exit_code": 0,
+                  "result": "8 passed, 1 warning"
+                },
+                {
+                  "cmd": "python -m pytest tests/test_wk137_initial_wave.py tests/test_wk137_boss_scale.py -q",
+                  "exit_code": 0,
+                  "result": "24 passed, 1 warning"
+                },
+                {
+                  "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+                  "exit_code": 0,
+                  "result": "10 passed, 1 warning"
+                },
+                {
+                  "cmd": "python tools/qa_smoke.py --quick",
+                  "exit_code": 0,
+                  "result": "PASS (1905 passed, 5 skipped, 1 xfailed)"
+                },
+                {
+                  "cmd": "python tools/capture_screenshots.py --scenario boss_encounter_showcase --seed 3 --out docs/screenshots/wk139_boss_encounter_showcase --size 1920x1080 --ticks 900",
+                  "exit_code": 0,
+                  "result": "Wrote 1 PNG; manifest generated"
+                },
+                {
+                  "cmd": "python tools/mythos_tick_bench.py --ticks 900 --warmup 180 --heroes 24 --buildings 24 --enemies 80",
+                  "exit_code": 0,
+                  "result": "mean 3.475ms p95 8.317ms p99 14.019ms max 24.180ms"
+                },
+                {
+                  "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+                  "exit_code": 0,
+                  "result": "valid JSON"
+                }
+              ],
+              "evidence": {
+                "boss_contract": "PASS",
+                "boss_gameplay": "PASS",
+                "elite_affixes": "PASS",
+                "boss_memory": "PASS",
+                "visuals": "PASS",
+                "ui": "PASS",
+                "screenshot_scenario": "PASS",
+                "wk137_regressions": "PASS",
+                "wk67": "PASS",
+                "qa_smoke": "PASS",
+                "perf": "PASS",
+                "qa_smoke_summary": "1905 passed, 5 skipped, 1 xfailed",
+                "perf_summary": "mean 3.475ms p95 8.317ms p99 14.019ms max 24.180ms",
+                "screenshot_paths_inspected": [
+                  "docs/screenshots/wk139_boss_encounter_showcase/boss_encounter_showcase.png",
+                  "docs/screenshots/wk139_boss_encounter_showcase/boss_encounter_showcase_active.png",
+                  "docs/screenshots/wk139_boss_encounter_showcase/boss_encounter_showcase_resolved.png",
+                  "docs/screenshots/wk139_boss_ui/wk139_boss_ui_telegraph_1920x1080.png"
+                ],
+                "visual_verdicts": {
+                  "boss_encounter_showcase.png": "PASS - boss marker, Warchief name, phase/tell readout, and elite marker are visible; no HUD overlap; the fight reads as a boss encounter rather than a generic mob.",
+                  "boss_encounter_showcase_active.png": "PASS - active telegraph state is visible and readable; boss and elite markers remain distinct; no UI clutter or clipping.",
+                  "boss_encounter_showcase_resolved.png": "PASS - resolved state still shows the boss/elite identity cleanly; telegraph cleared as expected; layout remains stable.",
+                  "wk139_boss_ui_telegraph_1920x1080.png": "PASS - compact status strip shows The Goblin Warchief, phase, HP, tell, and elite info without hiding core controls."
+                }
+              },
+              "blockers": [],
+              "follow_ups": [],
+              "recommended_next_actions": [
+                "PM can close/commit WK139."
+              ]
+            }
           }
-        ],
-        "evidence": {
-          "boss_contract": "PASS",
-          "boss_gameplay": "PASS",
-          "elite_affixes": "PASS",
-          "boss_memory": "PASS",
-          "visuals": "PASS",
-          "ui": "PASS",
-          "screenshot_scenario": "PASS",
-          "wk137_regressions": "PASS",
-          "wk67": "PASS",
-          "qa_smoke": "PASS",
-          "perf": "PASS",
-          "qa_smoke_summary": "1905 passed, 5 skipped, 1 xfailed",
-          "perf_summary": "mean 3.475ms p95 8.317ms p99 14.019ms max 24.180ms",
-          "screenshot_paths_inspected": [
-            "docs/screenshots/wk139_boss_encounter_showcase/boss_encounter_showcase.png",
-            "docs/screenshots/wk139_boss_encounter_showcase/boss_encounter_showcase_active.png",
-            "docs/screenshots/wk139_boss_encounter_showcase/boss_encounter_showcase_resolved.png",
-            "docs/screenshots/wk139_boss_ui/wk139_boss_ui_telegraph_1920x1080.png"
-          ],
-          "visual_verdicts": {
-            "boss_encounter_showcase.png": "PASS - boss marker, Warchief name, phase/tell readout, and elite marker are visible; no HUD overlap; the fight reads as a boss encounter rather than a generic mob.",
-            "boss_encounter_showcase_active.png": "PASS - active telegraph state is visible and readable; boss and elite markers remain distinct; no UI clutter or clipping.",
-            "boss_encounter_showcase_resolved.png": "PASS - resolved state still shows the boss/elite identity cleanly; telegraph cleared as expected; layout remains stable.",
-            "wk139_boss_ui_telegraph_1920x1080.png": "PASS - compact status strip shows The Goblin Warchief, phase, HP, tell, and elite info without hiding core controls."
-          }
-        },
-        "blockers": [],
-        "follow_ups": [],
-        "recommended_next_actions": [
-          "PM can close/commit WK139."
-        ]
+        }
       }
-    }
-  }
-}
+    },
+    "wk140_hero_daily_life_ai": {
+      "sprint_meta": {
+        "sprint_id": "wk140_hero_daily_life_ai",
+        "created_utc": "2026-06-15T00:00:00Z",
+        "plan_ref": ".cursor/plans/wk140_hero_daily_life_ai.plan.md",
+        "goal": "Independently verify WK140 Hero Daily Life AI Variety after Agent 06 implementation."
+      },
+      "rounds": {
+        "r4_qa_verification_kickoff": {
+          "sprint_id": "wk140_hero_daily_life_ai",
+          "round_id": "r4_qa_verification_kickoff",
+          "status": "failed",
+          "round_meta": {
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "gpt-5.4-mini",
+            "reasoning_effort": "xhigh",
+            "production_code_edited": false
+          },
+          "files_touched": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ],
+          "what_i_changed": [
+            "Verified Agent 06's log for sprint_id, round_id, status, commands_run, evidence, blockers, follow-ups/recommended_next_actions, and AI archaeology note.",
+            "Ran the requested WK140 focused tests, existing AI regression tests, WK67 boundary test, and qa_smoke --quick.",
+            "No production code edits; no screenshot artifacts created because there is no cheap daily-life observe scenario in tools/observe_sync.py."
+          ],
+          "commands_run": [
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "result": "Valid JSON; Agent 06 log contains sprint_id=wk140_hero_daily_life_ai, round_id=r3_recon_to_worker, status, commands_run, evidence, blockers, recommended_next_actions, and ai_archaeology_note."
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk140_hero_daily_life_ai.py tests/test_wk140_hero_ambient_distribution.py tests/test_wk140_hero_urgent_behavior_preserved.py tests/test_wk140_bounty_commitment_regression.py -q",
+              "exit_code": 0,
+              "result": "14 passed, 1 warning"
+            },
+            {
+              "cmd": "python -m pytest tests/test_ai_bounty.py tests/test_ai_exploration.py tests/test_wk85_handle_idle_split.py -q",
+              "exit_code": 0,
+              "result": "27 passed, 1 warning"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk138_quest_chain_ai_policy.py tests/test_wk139_boss_ai_view.py -q",
+              "exit_code": 0,
+              "result": "9 passed, 1 warning"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "result": "10 passed, 1 warning; digest stayed byte-identical to the pinned WK67 hash"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 1,
+              "result": "1918 passed, 5 skipped, 1 xfailed, 1 warning; fail from unrelated WK126 quest-soak regression"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk126_quest_soak.py::test_soak_declined_giver_not_reapproached_within_15_sim_min -q",
+              "exit_code": 1,
+              "result": "1 failed, 1 warning; repeated the WK126 soak boundary failure (declines=0, sim_minutes=20.4)"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "result": "valid JSON"
+            }
+          ],
+          "evidence": {
+            "agent06_log": "PASS: the round entry is present and includes the required top-level orchestrator fields plus the AI archaeology note.",
+            "wk140_suite": "PASS: 14 passed.",
+            "existing_ai_regressions": "PASS: 27 passed.",
+            "ai_policy_views": "PASS: 9 passed.",
+            "wk67": "PASS: 10 passed; digest unchanged / byte-identical to the pinned hash.",
+            "qa_smoke": "FAIL: 1918 passed, 5 skipped, 1 xfailed; one unrelated WK126 quest-soak regression remains red.",
+            "behavior_note": "PASS: the WK140 tests show early 10-hero behavior splitting across multiple motives, with same-seed replay, class bias, crowding pressure, and anti-loop conviction. No cheap daily-life observe scenario existed, so this is test-based only."
+          },
+          "blockers": [
+            "qa_smoke --quick is red because tests/test_wk126_quest_soak.py::test_soak_declined_giver_not_reapproached_within_15_sim_min fails at the 15-minute cooldown boundary. This appears unrelated to WK140."
+          ],
+          "follow_ups": [
+            "Ask the owning agent for WK126 quest soak to inspect the cooldown boundary regression if PM wants a fully green global smoke.",
+            "No Agent 06 repair is required from this QA pass."
+          ],
+          "recommended_next_actions": [
+            "PM can close WK140 from the WK140-specific evidence, but global smoke still needs the WK126 owner."
+          ]
+        }
+      }
     }
   }
 }

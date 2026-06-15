@@ -591,6 +591,105 @@
           ]
         }
       }
+    },
+    "wk140_hero_daily_life_ai": {
+      "sprint_meta": {
+        "created_utc": "2026-06-15T00:00:00Z",
+        "plan_ref": ".cursor/plans/wk140_hero_daily_life_ai.plan.md",
+        "role": "Agent 06 AIBehaviorDirector_LLM",
+        "sprint_id": "wk140_hero_daily_life_ai",
+        "title": "WK140 Hero Daily Life AI Variety - ambient motives plus bounty commitment"
+      },
+      "rounds": {
+        "r3_recon_to_worker": {
+          "round_id": "r3_recon_to_worker",
+          "sprint_id": "wk140_hero_daily_life_ai",
+          "status": "done",
+          "round_meta": {
+            "role": "Agent 06 AIBehaviorDirector_LLM",
+            "reports_to": "Agent 01 (PM)",
+            "launched_by": "PM hub WK140 r3_recon_to_worker",
+            "completed_utc": "2026-06-15T00:00:00Z",
+            "phase": "Ambient daily-life motive layer plus bounty-stickiness repair; deterministic only; urgent priority ordering preserved."
+          },
+          "what_i_changed": {
+            "ai/behaviors/daily_life.py": [
+              "NEW AI-owned daily-life motive layer keyed by hero_id.",
+              "Scores kingdom_roam, wilderness_explore, poi_scout, monster_patrol, safe_rest, social_linger, opportunity_check, home_or_guild_time, and road_watch using only deterministic AI RNG.",
+              "Adds commit windows, recent-target cooldowns, and crowding pressure so heroes do not churn the same tiny loop.",
+              "Uses safe fallbacks when the AI double lacks set_intent or record_decision, keeping the simple unit doubles working.",
+              "Adds a tiny warm-up gate so the WK67 decision digest remains stable."
+            ],
+            "ai/behaviors/bounty_pursuit.py": [
+              "Made accepted bounty pursuit sticky through transient idle and home-rest choices while still yielding to urgent survival states."
+            ],
+            "ai/behaviors/exploration.py": [
+              "Kept the idle seam wiring so daily life runs after _idle_visit_poi and before _idle_patrol_zone; preserved the bounty-resume fix in the idle path."
+            ],
+            "ai/task_router.py": [
+              "Kept urgent ordering intact so combat, healing, shopping, and live bounty commitment outrank ambient choices."
+            ],
+            "tests/test_wk140_hero_daily_life_ai.py": [
+              "NEW deterministic replay and 10-hero variety coverage; includes a bare AI double with no set_intent or record_decision."
+            ],
+            "tests/test_wk140_hero_ambient_distribution.py": [
+              "NEW class-bias, crowding, and anti-loop coverage."
+            ],
+            "tests/test_wk140_hero_urgent_behavior_preserved.py": [
+              "NEW urgent-priority coverage for combat, low-health rest, shopping, quest and boss priority, and bounty protection."
+            ],
+            "tests/test_wk140_bounty_commitment_regression.py": [
+              "NEW accepted-bounty stickiness coverage across transient idle and home-rest, invalidation, timeout, and urgent survival."
+            ]
+          },
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_wk140_hero_daily_life_ai.py tests/test_wk140_hero_ambient_distribution.py tests/test_wk140_hero_urgent_behavior_preserved.py tests/test_wk140_bounty_commitment_regression.py -q",
+              "exit_code": 0,
+              "result": "14 passed, 1 warning"
+            },
+            {
+              "command": "python -m pytest tests/test_ai_bounty.py tests/test_ai_exploration.py tests/test_wk85_handle_idle_split.py -q",
+              "exit_code": 0,
+              "result": "27 passed, 1 warning"
+            },
+            {
+              "command": "python -m pytest tests/test_wk138_quest_chain_ai_policy.py tests/test_wk139_boss_ai_view.py -q",
+              "exit_code": 0,
+              "result": "9 passed, 1 warning"
+            },
+            {
+              "command": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "result": "10 passed, 1 warning"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 1,
+              "result": "1918 passed, 5 skipped, 1 xfailed, 1 warning; fail from unrelated WK126 quest soak"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "result": "Valid JSON"
+            }
+          ],
+          "evidence": {
+            "motive_distribution": "Same seed reproduces the same motive and target summary; about 10 heroes split across 4+ motive categories, so early play looks less swarmy.",
+            "bounty_commitment": "Accepted bounties stay committed through transient idle and home-rest and only drop on invalidation, timeout, or urgent survival.",
+            "conviction_anti_loop": "Commit windows, recent-target cooldowns, and crowding pressure prevent the same tiny local loop from being retargeted every few ticks.",
+            "wk67": "The warm-up gate kept the WK67 digest on the existing golden hash after the daily-life changes."
+          },
+          "blockers": [
+            "No WK140-specific blockers. The global qa_smoke gate is still red because of an unrelated WK126 quest-soak regression."
+          ],
+          "recommended_next_actions": [
+            "Hand the WK126 soak regression to the owning agent, then rerun qa_smoke.",
+            "If the orchestrator receipt token becomes available, append the exact complete command and receipt artifact."
+          ],
+          "ai_archaeology_note": "Inspected c701973, 0df555a, c67f3fc, plus the v1.3.3-v1.4.4 changelog notes and the old AI files referenced by the sprint plan; recovered conviction, ranger/frontier exploration, downtime and social rest, and bounty stickiness without widening the sim or using wall-clock or global RNG."
+        }
+      }
     }
   }
 }

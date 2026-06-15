@@ -1047,6 +1047,408 @@
           }
         }
       }
+    },
+    "wk140_hero_daily_life_ai": {
+      "rounds": {
+        "r1_kickoff": {
+          "pm_status_summary": "WK140 KICKOFF inserted by Sovereign request after WK139: before Blackbanner's Toll, fix the lame early-game hero AI where spawning about 10 heroes makes them scatter into tight local loops around town like ants. Mission: add a deterministic daily-life ambient motive layer so idle heroes visibly diversify across roaming, exploration, POI scouting, monster patrol, safe rest, social lingering, and opportunity checking. This sprint intentionally changes default autonomous behavior, so old WK67 digest byte-identity may change if the tests prove deterministic intentional behavior change; the sacred invariant is determinism, priority ordering, and AI/sim separation.",
+          "pm_feature_requests": [
+            {
+              "id": "WK140-FEAT-001",
+              "title": "Hero daily-life ambient AI variety",
+              "owner_agents": [
+                "06_AIBehaviorDirector_LLM",
+                "11_QA_TestEngineering_Lead"
+              ],
+              "player_value": "Newly hired heroes should look like independent fantasy adventurers with varied daily motives, not a swarm of local-looping units.",
+              "in_scope": [
+                "Ambient motive layer in base/no-LLM autonomous AI",
+                "Motive categories: kingdom_roam, wilderness_explore, poi_scout, monster_patrol, safe_rest, social_linger, opportunity_check",
+                "Class/personality weighting",
+                "Per-hero anti-loop memory and target cooldowns",
+                "Spacing pressure so heroes do not all pick the same nearby cluster",
+                "Deterministic tests for 10-hero distribution, class bias, low-health safety, urgent behavior preservation"
+              ],
+              "out_of_scope": [
+                "New buildings",
+                "New quest content",
+                "New art/UI",
+                "Party formation",
+                "Full needs/social simulation",
+                "LLM-only behavior that does not work in --no-llm"
+              ],
+              "definition_of_done": [
+                "A deterministic around-10-hero test produces at least 4 ambient motive categories in the first few in-game minutes.",
+                "No more than a small majority of heroes choose the same tiny local target cluster unless an urgent event justifies it.",
+                "Heroes can choose visible farther targets: fog/frontier, POI, enemies/lairs, and safe/social buildings.",
+                "Low-health heroes prefer safe_rest over dangerous motives.",
+                "Warriors bias toward patrol/monster work, rangers toward frontier/explore, rogues toward POI/opportunity work.",
+                "Anti-loop memory prevents immediate repeated retargeting to the same small tile/area.",
+                "Existing urgent behaviors remain intact: combat, healing, active quest continuation, boss/quest handling, shopping, accepted bounties.",
+                "Behavior is deterministic for a fixed seed.",
+                "Any WK67 digest change is explicitly explained as expected behavior change and proven stable.",
+                "python tools/qa_smoke.py --quick passes."
+              ],
+              "source_plan": ".cursor/plans/wk140_hero_daily_life_ai.plan.md"
+            }
+          ],
+          "pm_integration_order": [
+            "Wave 1: Agent 06 implements the ambient motive layer in ai/** and focused tests.",
+            "Wave 1b conditional: Agent 05 only if Agent 06 reports minimal non-AI support is required.",
+            "Wave 2: Agent 11 verifies behavior variety, determinism, urgent priority preservation, WK67, qa_smoke, and evidence that heroes no longer look swarmy."
+          ],
+          "pm_next_actions_by_agent": {
+            "06_AIBehaviorDirector_LLM": "Active Wave 1. Implement deterministic hero daily-life motive layer in ai/**, with anti-loop memory, class/personality weighting, spacing pressure, and tests.",
+            "05_GameplaySystemsDesigner": "Conditional only if Agent 06 reports a non-AI support need.",
+            "11_QA_TestEngineering_Lead": "Pending final verification after Agent 06."
+          },
+          "pm_agent_prompts": {
+            "06": "Task: Replace the lame early-game idle swarm with a deterministic hero daily-life motive layer.\n\nScope:\n- In scope: no-LLM/base autonomous ambient behavior, motive scoring, anti-loop memory, class/personality weighting, spacing pressure, tests.\n- Out of scope: new buildings, new art/UI, quest content, party formation, full social sim.\n\nFiles you MAY edit:\n- ai/**\n- tests/test_wk140_hero_daily_life_ai.py\n- tests/test_wk140_hero_ambient_distribution.py\n- tests/test_wk140_hero_urgent_behavior_preserved.py\n- .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json\n\nFiles you MUST NOT edit:\n- game/entities/**\n- game/systems/**\n- game/sim/**\n- game/ui/**\n- game/graphics/**\n- tools/**\n- config.py\n\nImplementation guidance:\n- First identify the existing idle/default behavior path and add the ambient motive layer there.\n- Preserve urgent priority ordering: combat, fleeing, healing, active quests, boss/quest handling, shopping, accepted bounties.\n- Motives to support: kingdom_roam, wilderness_explore, poi_scout, monster_patrol, safe_rest, social_linger, opportunity_check.\n- Add per-hero recent motive/target cooldowns so heroes do not retarget the same tiny loop.\n- Add spacing pressure so ten heroes do not all pick the same local area.\n- Bias by class/personality without hard-locking: warriors more patrol/monster, rangers more explore/frontier, rogues more POI/opportunity.\n- Use existing move/explore/patrol primitives when possible. Do not invent new sim commands unless unavoidable.\n- Use deterministic AI RNG patterns only; draw only when an ambient decision is actually made.\n- This is behavior-changing. If WK67 digest changes, prove repeated deterministic stability and report old/new evidence rather than hiding the change.\n\nCommands (from repo root, PowerShell):\npython -m pytest tests/test_wk140_hero_daily_life_ai.py tests/test_wk140_hero_ambient_distribution.py tests/test_wk140_hero_urgent_behavior_preserved.py -q\npython -m pytest tests/test_wk138_quest_chain_ai_policy.py tests/test_wk139_boss_ai_view.py -q\npython -m pytest tests/test_wk67_ai_boundary.py -q\npython tools/qa_smoke.py --quick\npython -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json\n\nReport back with:\n- Files touched\n- Commands run + exit codes\n- Motive distribution evidence for about 10 heroes\n- Whether WK67 changed; if yes, old/new deterministic evidence\n- Blockers / whether Agent 05 support is needed",
+            "11": "Task: Verify that heroes visibly behave less like ants.\n\nScope:\n- In scope: deterministic verification of hero ambient motive variety, anti-looping, class bias, urgent behavior preservation, WK67/digest handling, qa_smoke, and optional screenshot/observe evidence.\n- Out of scope: production fixes unless PM sends a separate fix prompt.\n\nFiles you MAY edit:\n- tests/**\n- docs/screenshots/wk140_*\n- .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json\n\nFiles you MUST NOT edit:\n- production game code unless PM explicitly assigns a QA-owned fix\n- assets/**\n\nCommands (from repo root, PowerShell):\npython -m pytest tests/test_wk140_hero_daily_life_ai.py tests/test_wk140_hero_ambient_distribution.py tests/test_wk140_hero_urgent_behavior_preserved.py -q\npython -m pytest tests/test_wk138_quest_chain_ai_policy.py tests/test_wk139_boss_ai_view.py -q\npython -m pytest tests/test_wk67_ai_boundary.py -q\npython tools/qa_smoke.py --quick\n\nReport back with:\n- PASS/FAIL for variety, anti-looping, class bias, urgent behavior preservation, determinism, WK67, qa_smoke\n- Evidence that early 10-hero behavior is less swarmy\n- Any owner-specific follow-ups"
+          },
+          "pm_universal_prompt": "You are being activated for WK140 Hero Daily Life AI Variety. First onboard as your assigned agent number by reading AGENTS.md and the relevant .cursor/rules instructions for your role. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk140_hero_daily_life_ai\"].rounds[\"r1_kickoff\"]. Your specific prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER]. Also read .cursor/plans/wk140_hero_daily_life_ai.plan.md. Use gpt-5.4-mini with xhigh effort. This sprint intentionally changes default hero autonomous behavior to fix the ant-swarm feel; preserve determinism and priority ordering. Update your own agent log and run the commands in your prompt.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "06"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "06": "gpt-5.4-mini",
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "06": "xhigh",
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "06": "high",
+              "11": "high"
+            },
+            "conditional": {
+              "05": "Only if Agent 06 reports minimal non-AI support is required."
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "06 owns AI behavior and should solve the core issue first. 11 verifies with behavior evidence. 05 is held unless 06 needs non-AI support."
+          }
+        },
+        "r2_v14_archaeology_redirect": {
+          "pm_status_summary": "WK140 redirect/update after Jaimie's follow-up: the current early-game hero AI feels weaker than the 1.4-era AI. First Agent 06 attempt was interrupted by model usage/quota before landing files, so there is no code to preserve. New directive: Agent 06 must do v1.4-era AI archaeology before implementing, then recover/modernize the older hero-agency ideas: conviction/hysteresis, ranger far/fog exploration, bounty pursuit commitment, inn/rest/drink downtime, road/kingdom roaming, social/guild time, and urgent defense priority. This sprint also explicitly covers the bounty flags/accepted-bounty bug where heroes seem to reprioritize and head home immediately.",
+          "pm_feature_requests": [
+            {
+              "id": "WK140-FEAT-001-UPDATE",
+              "title": "Recover v1.4-style hero agency and daily-life variety",
+              "owner_agents": [
+                "06_AIBehaviorDirector_LLM",
+                "11_QA_TestEngineering_Lead"
+              ],
+              "player_value": "Heroes should feel like independent adventurers again: roaming the kingdom, exploring, seeking bounties/POIs/monsters, resting or socializing with conviction, instead of orbiting town in tiny loops.",
+              "source_evidence_for_agent_06": [
+                "CHANGELOG v1.3.3: realistic time inside buildings, Inn rest, occasional drink when idle.",
+                "CHANGELOG v1.3.4: heroes prefer fighting nearby monsters over going to the Inn unless critically low HP.",
+                "CHANGELOG v1.4.1: urgent castle defense and warriors defend farms/food stands under attack.",
+                "CHANGELOG v1.4.2: Hero Conviction System hysteresis prevents immediate task churn.",
+                "CHANGELOG v1.4.3: physical hero separation reduces synchronous clumping.",
+                "CHANGELOG v1.4.4: hero agency fixes around physical actions and blacksmith targeting.",
+                "CHANGELOG v1.2.7-v1.2.8: Rangers pursue far/unrevealed bounties and are more prone to black-fog exploration."
+              ],
+              "in_scope": [
+                "Mandatory v1.4-era AI archaeology before writing the final behavior patch.",
+                "Base/no-LLM autonomous daily-life motive scoring.",
+                "Conviction/hysteresis so heroes commit to selected activities long enough to read as intentional.",
+                "Accepted-bounty commitment regression fix: ambient/home behavior must not immediately override accepted bounty pursuit.",
+                "Broader target diversity: kingdom roads, far/frontier fog, known or suspected POIs, monsters/lairs, safe/social/home/guild buildings.",
+                "Class/personality weighting and spacing/crowding pressure.",
+                "Deterministic tests for variety, conviction, accepted-bounty priority, low-health safety, class bias, and same-seed stability."
+              ],
+              "out_of_scope": [
+                "New buildings or art.",
+                "Full needs/social relationship simulation.",
+                "Party formation.",
+                "LLM-only behavior that is not present in base AI.",
+                "Large gameplay/entity schema changes unless Agent 06 files a precise Agent 05 support request."
+              ],
+              "definition_of_done": [
+                "Agent 06 log includes an AI archaeology note listing old commits/files inspected, recovered behaviors, rejected old behaviors, and determinism implications.",
+                "A deterministic around-10-hero test produces at least 4 ambient motive categories in the first few in-game minutes.",
+                "Accepted-bounty heroes continue pursuing the bounty and do not immediately reprioritize home/ambient behavior unless an urgent survival condition interrupts.",
+                "Conviction/hysteresis prevents rapid retarget churn and tiny local loops.",
+                "Heroes can choose far/frontier fog, POIs, enemies/lairs, safe/social buildings, roads, and home/guild downtime.",
+                "Low-health heroes prefer safe_rest/home/inn/guild recovery over monster/explore motives.",
+                "Warriors bias toward patrol/monster/defense, rangers toward frontier/explore/far bounties, rogues toward POI/opportunity.",
+                "Existing urgent behaviors remain intact: combat, healing, active quest continuation, boss/quest handling, shopping, accepted bounties.",
+                "Behavior is deterministic for a fixed seed; any WK67 digest change is explained and proven stable.",
+                "python tools/qa_smoke.py --quick passes."
+              ],
+              "source_plan": ".cursor/plans/wk140_hero_daily_life_ai.plan.md"
+            }
+          ],
+          "pm_bug_tickets": [
+            {
+              "id": "WK140-BUG-001",
+              "title": "Accepted bounty heroes abandon bounty pursuit and head home",
+              "severity": "major",
+              "owner_agent": "06_AIBehaviorDirector_LLM",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Start a game with bounty flags available.",
+                "Have or observe heroes accept bounty opportunities.",
+                "Watch accepted heroes shortly after acceptance."
+              ],
+              "expected": "Once a hero accepts a bounty, bounty pursuit remains a committed high-priority intent until completion, invalidation, or an urgent survival need interrupts.",
+              "actual": "Heroes appear to reprioritize another behavior and head home immediately after bounty acceptance.",
+              "acceptance_test": [
+                "python -m pytest tests/test_wk140_bounty_commitment_regression.py -q",
+                "python -m pytest tests/test_wk140_hero_urgent_behavior_preserved.py -q",
+                "python tools/qa_smoke.py --quick"
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_integration_order": [
+            "Wave 1: Agent 06 performs v1.4-era AI archaeology and implements/fixes the AI behavior in ai/** plus focused tests.",
+            "Wave 1b conditional: Agent 05 only if Agent 06 files a precise non-AI support request.",
+            "Wave 2: Agent 11 verifies behavior evidence, bounty commitment, conviction/hysteresis, determinism/WK67 handling, and qa_smoke."
+          ],
+          "pm_next_actions_by_agent": {
+            "06_AIBehaviorDirector_LLM": "Active Wave 1 restart. Do not continue the old timed-out attempt. Onboard, read r2_v14_archaeology_redirect and the updated WK140 plan, perform v1.4 AI archaeology first, then implement the daily-life/conviction/bounty-commitment behavior in ai/** with focused tests.",
+            "05_GameplaySystemsDesigner": "Conditional only if Agent 06 reports a precise non-AI support need, such as minimal hero memory fields or safe-place classification that cannot live in ai/**.",
+            "11_QA_TestEngineering_Lead": "Pending Wave 2 verification after Agent 06 lands code."
+          },
+          "pm_agent_prompts": {
+            "06": "Task: Restore robust v1.4-style hero agency and fix early-game daily-life AI so heroes roam/explore/seek opportunities/rest/socialize with conviction instead of looping near town.\n\nScope:\n- In scope: v1.4-era AI archaeology, no-LLM/base autonomous ambient behavior, accepted-bounty commitment fix, conviction/hysteresis, motive scoring, anti-loop memory, class/personality weighting, spacing pressure, focused tests.\n- Out of scope: new buildings, new art/UI, quest content, party formation, full social sim, broad gameplay/entity edits unless you file a precise Agent 05 support request.\n\nFiles you MAY edit:\n- ai/**\n- tests/test_wk140_hero_daily_life_ai.py\n- tests/test_wk140_hero_ambient_distribution.py\n- tests/test_wk140_hero_urgent_behavior_preserved.py\n- tests/test_wk140_bounty_commitment_regression.py\n- .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json\n\nFiles you MUST NOT edit:\n- game/entities/**\n- game/systems/**\n- game/sim/**\n- game/ui/**\n- game/graphics/**\n- tools/**\n- config.py\n\nImplementation guidance:\n- First inspect v1.4-era evidence before coding. Use PowerShell-compatible git commands: git log --oneline --decorate --all --grep \"v1.4\"; git ls-tree <commit>:ai; git show <commit>:ai/<path>. Focus on c701973, 0df555a, c67f3fc, and surrounding v1.3.3-v1.4.4 commits/changelog notes.\n- In your log, write an AI archaeology note: old commits/files inspected, old behaviors recovered, old behaviors rejected, and determinism impact.\n- Recover/modernize these ideas: v1.4.2 conviction/hysteresis, v1.2.7-v1.2.8 ranger far/fog/bounty behavior, v1.3.3 inn/rest/drink downtime, v1.3.4 nearby-monster preference unless critically low, v1.4.1 urgent defense priority, v1.4.3 anti-clump/separation spirit where relevant to target selection.\n- Preserve urgent priority ordering: combat, fleeing, healing, active quests, boss/quest handling, shopping, accepted bounties.\n- Fix accepted-bounty commitment so ambient/home motives cannot immediately override a committed bounty pursuit.\n- Motives to support: kingdom_roam, wilderness_explore, poi_scout, monster_patrol, safe_rest, social_linger, opportunity_check, home_or_guild_time, road_watch.\n- Use existing movement/explore/patrol primitives where possible. Prefer a small scored-candidate layer over nested ad hoc if/else.\n- Add per-hero recent motive/target cooldowns and conviction windows so heroes do not retarget the same tiny loop.\n- Add spacing/crowding pressure so ten heroes do not all pick the same local area.\n- Bias by class/personality without hard-locking: warriors more patrol/monster/defense, rangers more explore/frontier/far bounty, rogues more POI/opportunity.\n- Use deterministic AI RNG patterns only; draw only when an ambient decision is actually made.\n- This is behavior-changing. If WK67 digest changes, prove repeated deterministic stability and report old/new evidence.\n\nCommands (from repo root, PowerShell):\npython -m pytest tests/test_wk140_hero_daily_life_ai.py tests/test_wk140_hero_ambient_distribution.py tests/test_wk140_hero_urgent_behavior_preserved.py tests/test_wk140_bounty_commitment_regression.py -q\npython -m pytest tests/test_wk138_quest_chain_ai_policy.py tests/test_wk139_boss_ai_view.py -q\npython -m pytest tests/test_wk67_ai_boundary.py -q\npython tools/qa_smoke.py --quick\npython -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json\n\nReport back with:\n- Files touched\n- Commands run + exit codes\n- AI archaeology note summary\n- Motive distribution evidence for about 10 heroes\n- Bounty-commitment evidence\n- Conviction/anti-loop evidence\n- Whether WK67 changed; if yes, old/new deterministic evidence\n- Blockers / whether Agent 05 support is needed",
+            "11": "Task: Verify that WK140 restored robust hero agency: heroes behave less like tiny local-loop units, accepted bounties stay committed, and v1.4-style conviction is demonstrable.\n\nScope:\n- In scope: deterministic verification of hero ambient motive variety, bounty commitment, conviction/hysteresis, anti-looping, class bias, urgent behavior preservation, WK67/digest handling, qa_smoke, and optional screenshot/observe evidence.\n- Out of scope: production fixes unless PM sends a separate fix prompt.\n\nFiles you MAY edit:\n- tests/**\n- docs/screenshots/wk140_*\n- .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json\n\nFiles you MUST NOT edit:\n- production game code unless PM explicitly assigns a QA-owned fix\n- assets/**\n\nCommands (from repo root, PowerShell):\npython -m pytest tests/test_wk140_hero_daily_life_ai.py tests/test_wk140_hero_ambient_distribution.py tests/test_wk140_hero_urgent_behavior_preserved.py tests/test_wk140_bounty_commitment_regression.py -q\npython -m pytest tests/test_wk138_quest_chain_ai_policy.py tests/test_wk139_boss_ai_view.py -q\npython -m pytest tests/test_wk67_ai_boundary.py -q\npython tools/qa_smoke.py --quick\n\nReport back with:\n- PASS/FAIL for variety, bounty commitment, conviction/hysteresis, anti-looping, class bias, urgent behavior preservation, determinism, WK67, qa_smoke\n- Evidence that early 10-hero behavior is less swarmy and more kingdom-wide\n- Whether Agent 06's log includes a useful v1.4 archaeology note\n- Any owner-specific follow-ups"
+          },
+          "pm_universal_prompt": "You are being activated for WK140 Hero Daily Life AI Variety, updated by r2_v14_archaeology_redirect. First onboard as your assigned agent number by reading AGENTS.md and the relevant .cursor/rules instructions for your role. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk140_hero_daily_life_ai\"].rounds[\"r2_v14_archaeology_redirect\"]. Your specific prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER]. Also read .cursor/plans/wk140_hero_daily_life_ai.plan.md. Use gpt-5.4-mini with xhigh effort. You are not alone in this worktree: never revert files you did not intentionally edit. Stay inside your ownership lane. Update your own agent log and run the commands in your prompt.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "06"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "06": "gpt-5.4-mini",
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "06": "xhigh",
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "06": "high",
+              "11": "high"
+            },
+            "conditional": {
+              "05": "Only if Agent 06 reports minimal non-AI support is required."
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "06 remains high intelligence because this is behavior-policy work requiring v1.4 archaeology, determinism reasoning, and a bounty-commitment regression fix. 11 is high intelligence because verification must distinguish intentional behavior change from nondeterminism and prove the player-facing feel. 05 is conditional only for non-AI support."
+          }
+        },
+        "r3_recon_to_worker": {
+          "pm_status_summary": "WK140 reconnaissance complete after one blocked implementation worker. Explorer found concrete hook points: current AI path is BasicAI.update -> BasicAI.update_hero -> task_router.update_hero; idle execution is BasicAI.handle_idle -> exploration.handle_idle -> _IDLE_STEPS; best ambient insertion seam is in ai/behaviors/exploration.py after _idle_visit_poi and before _idle_patrol_zone. Bounty commit likely works at acceptance but is weak through transient IDLE/home-rest: start_bounty_pursuit sets _bounty_commit_until_ms, but _idle_clear_dangling_bounty and task_router home-rest can displace the hero. No Agent 05 support needed for first slice if Agent 06 stores ambient memory inside ai/** keyed by hero_id.",
+          "pm_recon_findings": {
+            "current_hook_points": [
+              "ai/basic_ai.py: BasicAI.update and update_hero drive AI.",
+              "ai/task_router.py: update_hero owns urgent priority ladder before idle/LLM.",
+              "ai/decision_moments.py: moment_idle_seeking_activity is the idle consult moment.",
+              "ai/prompt_templates.py: get_fallback_decision is the no-LLM fallback decision point.",
+              "ai/behaviors/exploration.py: handle_idle uses _IDLE_STEPS; insert daily-life step after _idle_visit_poi and before _idle_patrol_zone.",
+              "ai/behaviors/movement.py: handle_moving intentionally clears bounty only on invalid/claimed/timeout cases."
+            ],
+            "bounty_bug_hypothesis": [
+              "Acceptance uses ai/behaviors/bounty_pursuit.py maybe_take_bounty and ai/behaviors/llm_bridge.py _commit_accept_bounty/apply_llm_decision.",
+              "start_bounty_pursuit sets target, target_position, _bounty_commit_until_ms, and MOVING.",
+              "Bug likely appears when hero returns to IDLE: _idle_clear_dangling_bounty clears too aggressively and task_router home-rest can redirect before bounty stickiness is honored.",
+              "Small fix point: add/centralize a bounty-specific conviction helper and have task_router plus _idle_clear_dangling_bounty respect live bounty commitment before home-rest or ambient choices."
+            ],
+            "v14_recovery_targets": [
+              "v1.3.3: realistic building dwell, Inn rest, occasional drink.",
+              "v1.3.4: nearby-monster preference unless critically low HP.",
+              "v1.4.1: urgent castle/farm/food-stand defense priority.",
+              "v1.4.2: conviction/hysteresis to prevent task churn.",
+              "v1.4.3: anti-clump/separation spirit applied as AI target spacing pressure.",
+              "v1.2.7-v1.2.8: ranger black-fog/far bounty/frontier exploration."
+            ],
+            "agent05_support_needed": "None for the first slice if ambient memory is stored in ai/** on BasicAI/daily_life keyed by hero_id."
+          },
+          "pm_next_actions_by_agent": {
+            "06_AIBehaviorDirector_LLM": "Active implementation restart. Use the r3 hook points; add ai/behaviors/daily_life.py or equivalent, wire it into exploration.handle_idle at the tail seam, add bounty-commit stickiness in ai-owned code, add the four WK140 tests, update Agent 06 log with archaeology note, and run the required commands.",
+            "11_QA_TestEngineering_Lead": "Pending after Agent 06 implementation lands."
+          },
+          "pm_agent_prompts": {
+            "06": "Task: Implement the first WK140 AI patch using the r3 reconnaissance findings: daily-life ambient motive scoring plus bounty-commit stickiness.\n\nScope:\n- In scope: ai/** implementation, four WK140 tests, Agent 06 log.\n- Out of scope: game/entities/**, game/systems/**, game/sim/**, UI, graphics, tools, config.py, broad refactors.\n\nFiles you MAY edit:\n- ai/**\n- tests/test_wk140_hero_daily_life_ai.py\n- tests/test_wk140_hero_ambient_distribution.py\n- tests/test_wk140_hero_urgent_behavior_preserved.py\n- tests/test_wk140_bounty_commitment_regression.py\n- .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json\n\nFiles you MUST NOT edit:\n- game/entities/**\n- game/systems/**\n- game/sim/**\n- game/ui/**\n- game/graphics/**\n- tools/**\n- config.py\n- main.py\n- requirements.txt\n\nImplementation instructions:\n- Onboard first, then read r3_recon_to_worker in the PM hub and the updated WK140 plan.\n- Add a small AI-owned ambient daily-life module such as ai/behaviors/daily_life.py. Keep memory inside ai/**, keyed by hero.hero_id, unless impossible.\n- Wire daily-life into the idle execution seam in ai/behaviors/exploration.py after _idle_visit_poi and before _idle_patrol_zone. Preserve the urgent ladder in ai/task_router.py.\n- Motives to represent: kingdom_roam, wilderness_explore, poi_scout, monster_patrol, safe_rest, social_linger, opportunity_check, home_or_guild_time, road_watch. It is acceptable for the first slice to map multiple motive names onto existing move/patrol/rest primitives, but tests must see motive labels/counts.\n- Implement conviction/hysteresis: selected ambient motive/target gets a deterministic commit window and recent-target cooldown. Do not retarget the same tiny loop every few ticks.\n- Implement spacing/crowding pressure over candidate targets so many heroes do not select the same local cluster.\n- Implement bounty stickiness: live accepted bounty commitment must outrank home-rest and ambient motives through transient IDLE. Do not change movement.handle_moving invalid/claimed/timeout clearing unless tests prove it is wrong.\n- Use deterministic AI RNG patterns only. No wall-clock/global RNG.\n- Add an AI archaeology note in your Agent 06 log summarizing old files/commits inspected and how the patch recovers v1.4-style conviction/ranger exploration/bounty behavior.\n\nTests to add/shape:\n- tests/test_wk140_hero_daily_life_ai.py: same seed gives same motive/target summary and about 10 heroes split across at least 4 motive categories.\n- tests/test_wk140_hero_ambient_distribution.py: class bias and crowding penalty; rangers favor frontier/explore, warriors patrol/monster, rogues POI/opportunity, crowded candidates score lower.\n- tests/test_wk140_hero_urgent_behavior_preserved.py: combat, low-health safe rest, quest/boss/shopping/bounty priorities outrank ambient motives.\n- tests/test_wk140_bounty_commitment_regression.py: accepted bounty survives transient IDLE/home-rest and is not replaced by going_home/rest_inn/ambient until completion, invalidation, timeout, or urgent survival.\n\nCommands (from repo root, PowerShell):\npython -m pytest tests/test_wk140_hero_daily_life_ai.py tests/test_wk140_hero_ambient_distribution.py tests/test_wk140_hero_urgent_behavior_preserved.py tests/test_wk140_bounty_commitment_regression.py -q\npython -m pytest tests/test_ai_bounty.py tests/test_ai_exploration.py tests/test_wk85_handle_idle_split.py -q\npython -m pytest tests/test_wk138_quest_chain_ai_policy.py tests/test_wk139_boss_ai_view.py -q\npython -m pytest tests/test_wk67_ai_boundary.py -q\npython tools/qa_smoke.py --quick\npython -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json\n\nReport back with files touched, commands/exit codes, motive distribution evidence, bounty-commit evidence, conviction/anti-loop evidence, WK67 old/new if changed, and any blockers."
+          },
+          "pm_universal_prompt": "You are being activated for WK140 Hero Daily Life AI Variety, r3_recon_to_worker. Onboard as your assigned agent number, read AGENTS.md and your role rules, then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk140_hero_daily_life_ai\"].rounds[\"r3_recon_to_worker\"]. Follow pm_agent_prompts[YOUR_AGENT_NUMBER] and .cursor/plans/wk140_hero_daily_life_ai.plan.md. Use gpt-5.4-mini with xhigh effort. Stay in your lane, do not revert unrelated files, update your own log, and run the commands in your prompt.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "06"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "06": "gpt-5.4-mini",
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "06": "xhigh",
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "06": "high",
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "06 has a focused but still high-judgment AI behavior patch. 11 verifies after implementation. Agent 05 is not active because reconnaissance found no non-AI support is needed for the first slice."
+          }
+        },
+        "r4_qa_verification_kickoff": {
+          "pm_status_summary": "WK140 Agent 06 implementation landed and PM spot-gated. Agent 06 added ai/behaviors/daily_life.py plus bounty stickiness in ai/behaviors/bounty_pursuit.py, idle seam wiring in ai/behaviors/exploration.py, task-router priority support, four WK140 tests, and a valid Agent 06 log with AI archaeology note. PM reran the gates after the Agent 06 final state: focused WK140 tests PASS (14 passed), existing AI bounty/exploration/WK85 regression tests PASS (27 passed), WK138/WK139 AI/view tests PASS (9 passed), WK67 PASS (10 passed), and a long qa_smoke rerun PASS (1919 passed, 5 skipped, 1 xfailed). Note: Agent 06's own log records its earlier qa_smoke run as red due an alleged unrelated WK126 soak failure, but PM's authoritative rerun after final files was green.",
+          "pm_evidence": [
+            "python -m pytest tests/test_wk140_hero_daily_life_ai.py tests/test_wk140_hero_ambient_distribution.py tests/test_wk140_hero_urgent_behavior_preserved.py tests/test_wk140_bounty_commitment_regression.py -q -> 14 passed.",
+            "python -m pytest tests/test_ai_bounty.py tests/test_ai_exploration.py tests/test_wk85_handle_idle_split.py -q -> 27 passed.",
+            "python -m pytest tests/test_wk138_quest_chain_ai_policy.py tests/test_wk139_boss_ai_view.py -q -> 9 passed.",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed.",
+            "python tools/qa_smoke.py --quick -> PASS, 1919 passed / 5 skipped / 1 xfailed."
+          ],
+          "pm_next_actions_by_agent": {
+            "11_QA_TestEngineering_Lead": "Active Wave 2. Independently verify WK140 behavior, log evidence, determinism, bounty commitment, conviction/anti-looping, and qa_smoke. Do not edit production code.",
+            "06_AIBehaviorDirector_LLM": "Implementation done unless Agent 11 finds a concrete blocker/regression.",
+            "05_GameplaySystemsDesigner": "Not active; Agent 06 completed first slice without non-AI support."
+          },
+          "pm_agent_prompts": {
+            "11": "Task: Independently verify WK140 Hero Daily Life AI Variety after Agent 06 implementation.\n\nScope:\n- In scope: verification only, tests, observe-style evidence, Agent 11 log.\n- Out of scope: production code fixes unless PM sends a separate follow-up prompt.\n\nFiles you MAY edit:\n- tests/** only if adding QA-only assertions is necessary and low-risk\n- docs/screenshots/wk140_* or docs/qa/wk140_* if you produce evidence artifacts\n- .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json\n\nFiles you MUST NOT edit:\n- ai/**\n- game/**\n- tools/**\n- assets/**\n- config.py\n- main.py\n- requirements.txt\n\nVerification focus:\n- Confirm Agent 06's log has sprint_id=wk140_hero_daily_life_ai, round_id=r3_recon_to_worker, status, commands, evidence, blockers/follow-ups, and AI archaeology note.\n- Confirm focused WK140 tests pass and actually cover: 10-hero motive variety, deterministic same-seed replay, class/crowding bias, urgent priority preservation, bounty commitment, and conviction/anti-looping.\n- Confirm existing AI behavior tests still pass.\n- Confirm WK67 determinism gate passes and whether digest remains unchanged.\n- Confirm qa_smoke --quick passes in the final worktree. PM's post-Agent-06 rerun passed, but QA should rerun or explicitly document if time/environment prevents it.\n- Provide an observe-style behavior note: based on tests and any available observe output, say whether the early 10-hero behavior is now less local-loop/swarmlike. If a screenshot/observe scenario already exists and is cheap, use it; do not create tooling in this QA pass.\n\nCommands (from repo root, PowerShell):\npython -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json\npython -m pytest tests/test_wk140_hero_daily_life_ai.py tests/test_wk140_hero_ambient_distribution.py tests/test_wk140_hero_urgent_behavior_preserved.py tests/test_wk140_bounty_commitment_regression.py -q\npython -m pytest tests/test_ai_bounty.py tests/test_ai_exploration.py tests/test_wk85_handle_idle_split.py -q\npython -m pytest tests/test_wk138_quest_chain_ai_policy.py tests/test_wk139_boss_ai_view.py -q\npython -m pytest tests/test_wk67_ai_boundary.py -q\npython tools/qa_smoke.py --quick\npython -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json\n\nReport back with:\n- Files touched\n- Commands run + exit codes\n- PASS/FAIL for variety, bounty commitment, conviction/hysteresis, anti-looping, class bias, urgent behavior preservation, determinism/WK67, qa_smoke\n- Whether Agent 06's log is adequate despite the earlier smoke discrepancy\n- Any concrete blocker/regression requiring Agent 06 repair"
+          },
+          "pm_universal_prompt": "You are being activated for WK140 Hero Daily Life AI Variety, r4_qa_verification_kickoff. Onboard as Agent 11, read AGENTS.md and your role rules, then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk140_hero_daily_life_ai\"].rounds[\"r4_qa_verification_kickoff\"]. Follow pm_agent_prompts[\"11\"] and .cursor/plans/wk140_hero_daily_life_ai.plan.md. Use gpt-5.4-mini with xhigh effort. Verification only unless PM gives a separate fix prompt. Update your own log and run the commands in your prompt.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "11 is high intelligence because this is behavior verification with a smoke discrepancy to reconcile. No implementation agents are active unless QA finds a concrete regression."
+          }
+        },
+        "r5_closeout_commit_ready": {
+          "pm_status_summary": "WK140 Hero Daily Life AI Variety is COMPLETE and commit-ready. Agent 06 implemented the daily-life ambient motive layer, bounty commitment stickiness, conviction/anti-loop memory, class/crowding bias tests, and v1.4 archaeology log. Agent 11 independently verified WK140-specific behavior and found no Agent 06 repair needed. Agent 11's own log says failed because its qa_smoke run hit a transient/unrelated WK126 quest-soak failure; PM reproduced that exact WK126 test afterward and it passed, then reran the full qa_smoke and it passed. Final authoritative gate state: green.",
+          "pm_final_evidence": [
+            "Agent 06 WK140 focused tests: 14 passed.",
+            "Existing AI bounty/exploration/WK85 regression tests: 27 passed.",
+            "WK138/WK139 AI/view regression tests: 9 passed.",
+            "WK67 AI boundary/determinism: 10 passed; digest remained byte-identical.",
+            "WK126 specific soak repro after Agent 11 failure: 1 passed.",
+            "Final python tools/qa_smoke.py --quick: PASS, 1919 passed / 5 skipped / 1 xfailed.",
+            "Agent 06 log JSON valid with AI archaeology note.",
+            "Agent 11 log JSON valid and records WK140-specific PASS plus the earlier smoke discrepancy."
+          ],
+          "pm_behavior_verdict": [
+            "10-hero same-seed tests now split heroes across at least 4 ambient motives.",
+            "Accepted bounties stay sticky through transient idle/home-rest and only drop for invalidation, timeout, or urgent survival.",
+            "Conviction windows, recent-target cooldowns, and crowding pressure reduce tight local retarget loops.",
+            "Class bias exists without hard locks: rangers favor frontier/explore, warriors patrol/monster, rogues POI/opportunity.",
+            "Urgent priorities remain preserved: combat, low-health safety, shopping, quests/bosses, and bounties outrank ambient life."
+          ],
+          "pm_next_actions_by_agent": {
+            "01_ExecutiveProducer_PM": "Stage only WK140 files, commit, push, then continue roadmap with the next quest/boss sprint.",
+            "06_AIBehaviorDirector_LLM": "Done unless future human playtest finds a visible issue.",
+            "11_QA_TestEngineering_Lead": "Done; no further QA action needed for WK140."
+          },
+          "pm_commit_plan": {
+            "files_to_stage": [
+              ".cursor/plans/wk140_hero_daily_life_ai.plan.md",
+              ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
+              ".cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "ai/behaviors/daily_life.py",
+              "ai/behaviors/bounty_pursuit.py",
+              "ai/behaviors/exploration.py",
+              "ai/task_router.py",
+              "tests/test_wk140_hero_daily_life_ai.py",
+              "tests/test_wk140_hero_ambient_distribution.py",
+              "tests/test_wk140_hero_urgent_behavior_preserved.py",
+              "tests/test_wk140_bounty_commitment_regression.py"
+            ],
+            "leave_untracked_alone": [
+              "old tmp/ and tmpqa_smoke_* scratch files",
+              "old mythos soak scratch scripts",
+              "old screenshot PNGs"
+            ],
+            "suggested_commit": "Prototype v1.6.4 - Hero Daily Life AI"
+          }
+        }
+      }
     }
   }
 }

@@ -122,6 +122,8 @@ def update_hero(ai, hero, dt: float, view) -> None:
     # Check if hero should go home to rest (priority check, only if home is safe).
     if hero.state == HeroState.IDLE and hero.should_go_home_to_rest():
         if hero.can_rest_at_home():
+            if ai.bounty_behavior.resume_committed_bounty(ai, hero, view):
+                return
             # Bugfix v1.3.4: don't route to Inn/home to rest if enemies are nearby
             # and the hero isn't critically low HP. Let the state machine engage instead.
             enemies = view.enemies
