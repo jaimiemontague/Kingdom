@@ -16,7 +16,7 @@ Design Rules" 3 & 5):
   navigation helper ``game.systems.navigation.best_adjacent_tile(world, ...)``
   duck-types ``world.is_walkable``; the AI reads ``world.width``/``height``/
   ``visibility``/``world_to_grid`` directly. That verified set is exactly what
-  this facade exposes — no more, no less.
+  this facade exposes â€” no more, no less.
 
 The actual AI/nav read surface off ``world`` (verified 2026-05-29 by grep across
 ``ai/`` + ``game/entities/hero.py`` + ``game/systems/navigation.py``):
@@ -33,7 +33,7 @@ The actual AI/nav read surface off ``world`` (verified 2026-05-29 by grep across
 
 The AI does NOT call ``grid_to_world``, ``is_buildable``, ``find_path``, or
 ``compute_path_worldpoints`` off ``world`` (verified: zero hits in ``ai/``), so
-those are intentionally NOT on ``WorldView`` — exposing them would over-expose
+those are intentionally NOT on ``WorldView`` â€” exposing them would over-expose
 the boundary. (``hero.py`` imports ``compute_path_worldpoints`` but passes the
 ``world`` object straight through to it; that path is migrated by Agent 06 and
 ``find_path`` only reads ``is_walkable``/``world_to_grid``/grid dims, all present.)
@@ -80,15 +80,17 @@ class WorldView:
 class AiGameView:
     """Immutable, AI-facing view of sim state. Built by ``SimEngine.build_ai_view``.
 
-    Carries NO ``economy``/``sim``/``engine`` — those were the L3 leak. The entity
+    Carries NO ``economy``/``sim``/``engine`` â€” those were the L3 leak. The entity
     lists stay live (AI-side DTOs are deferred, exactly like the render live
     tuples); the AI reads them, never writes. ``world`` is the read-only
     ``WorldView``, not the live ``World``.
 
     WK126: ``quests`` / ``quest_givers`` are plain-data tuples (primitives only,
-    no live object refs) — see the inline field docs below for the exact
+    no live object refs) â€” see the inline field docs below for the exact
     per-entry shape. They default to ``()`` so a no-quest engine yields empty
-    tuples and the AI quest behavior no-ops (digest safety).
+    tuples and the AI quest behavior no-ops (digest safety). ``quest_chains``
+    and the WK139 boss/elite encounter tuples follow the same empty-default
+    contract.
     """
 
     world: WorldView
@@ -102,7 +104,7 @@ class AiGameView:
     wave: int
     # WK126 T4 (quests vertical slice): read-only quest surface for the AI,
     # mirroring ``bounties``/``pois`` above. BOUNDARY CONTRACT: both tuples carry
-    # PLAIN DATA ONLY (tuples/namedtuples of primitives — str/int/float/bool) —
+    # PLAIN DATA ONLY (tuples/namedtuples of primitives â€” str/int/float/bool) â€”
     # NO live Quest/QuestGiver/Building object refs the AI could mutate.
     # ``SimEngine.build_ai_view`` populates them (Agent 05); they default empty so
     # a no-quest engine produces empty tuples and the AI no-ops (digest guard #1).
@@ -113,7 +115,7 @@ class AiGameView:
     #     * quest_type is the locked vocab: "raid_lair" | "slay_enemy_type" |
     #       "find_poi" | "explore_far"
     #     * target is a plain-data target summary (e.g. lair/poi id, enemy type,
-    #       or "gx,gy" tile for explore_far) — an identifier, never an object
+    #       or "gx,gy" tile for explore_far) â€” an identifier, never an object
     #     * accepted_by is the accepting hero_id, or None while unaccepted
     #   quest_givers[i] -> (giver_id: str, x: float, y: float, is_open: bool)
     #     * giver_id == the owning Herald's Post building id (decline-tracking key)
@@ -127,6 +129,12 @@ class AiGameView:
     # phase timeline, and small history summaries). Empty tuples are the no-chain
     # default and must remain a fast no-op for the WK67 digest path.
     quest_chains: tuple = ()
+    # WK139 (boss encounter core + elite affixes): read-only boss/elite snapshots
+    # for the AI. Empty tuples are the no-boss/no-elite default and must remain a
+    # fast no-op for the WK67 digest path.
+    boss_encounters: tuple = ()
+    elite_enemies: tuple = ()
+    elite_encounters: tuple = ()
     # WK67 Move 6 (L3b write side): the AI proposes hero writes (the shopping
     # purchase) through this sim-owned, synchronous CommandSink instead of
     # mutating economy/hero directly. NO economy, NO sim, NO engine on the view.

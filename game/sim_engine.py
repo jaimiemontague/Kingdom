@@ -78,7 +78,7 @@ from game.systems.poi_interaction import POIInteractionSystem
 DEAD_HERO_RETENTION_MS = 30_000
 
 # ---------------------------------------------------------------------------
-# Mythos S5 (sim-tick) env gates — read once at import. Each defaults to the
+# Mythos S5 (sim-tick) env gates Ã¢â‚¬â€ read once at import. Each defaults to the
 # OPTIMIZED path; the hatch restores pre-change behavior for A/B measurement
 # (tools/mythos_tick_bench.py) and debugging. All optimized paths are
 # value-equivalent to the originals (parity-pinned in tests/test_mythos_sim_tick.py;
@@ -105,7 +105,7 @@ class SimEngine:
         # Determinism knobs (future multiplayer enablement).
         # Seed early so world gen + initial lairs are reproducible when enabled.
         set_sim_seed(SIM_SEED)
-        # WK68 Round R0 (Agent 04 — NetworkingDeterminism): a single sim-owned
+        # WK68 Round R0 (Agent 04 Ã¢â‚¬â€ NetworkingDeterminism): a single sim-owned
         # per-build reset of every piece of module/class-global mutable state that
         # the sim reads, so two same-seed in-process GameEngine builds produce
         # byte-identical AI behavior. This folds in the WK67 `Peasant._spawn_counter`
@@ -180,10 +180,15 @@ class SimEngine:
         # no chains are live, so wiring it here keeps the cadence/read-model
         # surface available without changing the empty/default path.
         self.quest_chain_system = QuestChainSystem()
+        # WK139: boss/elite encounter runtime registration. The system itself
+        # early-returns when no bosses/elites are active, so registering it here
+        # keeps the read-model surface available without changing the empty/default path.
+        from game.systems.boss_encounter import BossEncounterSystem
+        self.boss_encounter_system = BossEncounterSystem()
         self.quest_givers: list[QuestGiver] = []
         # WK131: seeded item drops on ENEMY_KILLED (constructing draws no RNG;
         # rolls happen only when a kill event routes through _route_combat_events,
-        # so the WK67 digest scenario — which has no enemies — never draws).
+        # so the WK67 digest scenario Ã¢â‚¬â€ which has no enemies Ã¢â‚¬â€ never draws).
         from game.systems.loot import LootSystem
         self.loot_system = LootSystem()
 
@@ -220,28 +225,28 @@ class SimEngine:
         """WK68 R0: reset every module/class-global piece of sim state per build.
 
         Several sim subsystems keep *module-level* or *class-level* mutable state
-        that — unlike instance state — survives across `SimEngine`/`GameEngine`
+        that Ã¢â‚¬â€ unlike instance state Ã¢â‚¬â€ survives across `SimEngine`/`GameEngine`
         constructions inside one process. With seeded determinism that carry-over
         makes two same-seed in-process builds diverge (the keystone WK67
         AI-decision digest drifts build-to-build; observed in the
         `tests/test_wk67_ai_boundary.py` PM NOTE). A *fresh* process starts clean,
         so this reset is a NO-OP on the first build in a process and only matters
-        on the 2nd+ in-process build — which is why it leaves the WK67 digest
-        (`b73961…`) byte-identical (see the digest guardrail note below).
+        on the 2nd+ in-process build Ã¢â‚¬â€ which is why it leaves the WK67 digest
+        (`b73961Ã¢â‚¬Â¦`) byte-identical (see the digest guardrail note below).
 
         Resets, in order:
-        1. `Peasant._spawn_counter` (class-global) — drives the deterministic idle
+        1. `Peasant._spawn_counter` (class-global) Ã¢â‚¬â€ drives the deterministic idle
            offset slot (peasant.py). Carry-over moves a fog revealer's grid tile
-           and drifts `_fog_revision` ±1 cross-instance (WK67 fog reset).
-        2. The monotonic entity-ID counters (`_next_*_id`) in each entity module —
+           and drifts `_fog_revision` Ã‚Â±1 cross-instance (WK67 fog reset).
+        2. The monotonic entity-ID counters (`_next_*_id`) in each entity module Ã¢â‚¬â€
            IDs are labels, not positions, so these do not move the digest, but
            folding them in here makes ID streams reproducible across in-process
            builds (a guardrail for any future ID-keyed determinism).
-        3. `RESEARCH_UNLOCKS` (module-global dict in buildings/base.py) — mutated
+        3. `RESEARCH_UNLOCKS` (module-global dict in buildings/base.py) Ã¢â‚¬â€ mutated
            in place by `unlock_research()` and never reset; a prior build/test
            that unlocks weapon/armor upgrades changes the blacksmith catalogue and
            shifts hero shopping/decisions.
-        4. The shared AI RNG `ai.basic_ai._AI_RNG` — re-seeded to the per-build
+        4. The shared AI RNG `ai.basic_ai._AI_RNG` Ã¢â‚¬â€ re-seeded to the per-build
            seed so the patrol/wander stream does not keep advancing from where the
            previous in-process build's tick loop left off.
 
@@ -250,11 +255,11 @@ class SimEngine:
         import-frozen state, so this reset is a zero-real-play-behavior change
         there. The reseed only runs under deterministic mode, where it exists
         purely so in-process captures/tests reproduce. The other three resets
-        (steps 1-3) are UNCONDITIONAL — they are per-new-game correctness, not
+        (steps 1-3) are UNCONDITIONAL Ã¢â‚¬â€ they are per-new-game correctness, not
         determinism-only.
 
         DIGEST GUARDRAIL (read before changing the `_AI_RNG` reseed):
-        The WK67 keystone digest `b73961…` was captured from
+        The WK67 keystone digest `b73961Ã¢â‚¬Â¦` was captured from
         `_build_digest_engine`, which re-seeds `_AI_RNG` with `.seed(SIM_SEED)`
         BEFORE building the engine (the "reference recipe"). To keep that digest
         byte-identical, this reset re-applies *exactly that same* reseed under
@@ -293,11 +298,11 @@ class SimEngine:
         for _research_key in _buildings_base.RESEARCH_UNLOCKS:
             _buildings_base.RESEARCH_UNLOCKS[_research_key] = False
 
-        # 4. Shared AI RNG re-seed — ONLY under deterministic mode. In normal play
+        # 4. Shared AI RNG re-seed Ã¢â‚¬â€ ONLY under deterministic mode. In normal play
         #    _AI_RNG stays at its shipped import-frozen state (zero real-play
         #    behavior change); the reseed exists purely so deterministic in-process
         #    captures/tests reproduce (mirrors the WK67 digest reference recipe so
-        #    the keystone digest stays byte-identical — see the guardrail note).
+        #    the keystone digest stays byte-identical Ã¢â‚¬â€ see the guardrail note).
         if config.DETERMINISTIC_SIM:
             _basic_ai._AI_RNG.seed(int(config.SIM_SEED))
 
@@ -311,7 +316,7 @@ class SimEngine:
     # The blocking set mirrors {k for k, g in _tree_growth_by_tile.items() if
     # g >= 0.75} (the world.py walkability threshold). ALL growth-dict writes
     # must go through these helpers (or _rebuild_tree_blocking_set after a bulk
-    # replace) so the two can never desync — pinned by tests/test_mythos_sim_tick.py.
+    # replace) so the two can never desync Ã¢â‚¬â€ pinned by tests/test_mythos_sim_tick.py.
 
     def _set_tree_growth(self, key: tuple[int, int], growth: float) -> None:
         self._tree_growth_by_tile[key] = growth
@@ -350,13 +355,13 @@ class SimEngine:
         )
 
     def _on_boss_spawned(self, event: dict) -> None:
-        """WK58: Handle boss_spawned event — add boss entity to enemies list."""
+        """WK58: Handle boss_spawned event Ã¢â‚¬â€ add boss entity to enemies list."""
         boss = event.get("boss")
         if boss is not None and hasattr(self, "enemies"):
             self.enemies.append(boss)
 
     def _on_poi_combat_triggered(self, event: dict) -> None:
-        """WK56: Handle poi_combat_triggered — spawn enemies at the POI location."""
+        """WK56: Handle poi_combat_triggered Ã¢â‚¬â€ spawn enemies at the POI location."""
         from game.entities.enemy import Goblin, Skeleton, Bandit
 
         _ENEMY_CLASSES = {
@@ -527,13 +532,13 @@ class SimEngine:
         # per-hero per-frame work (it sorts known_places + profile_memory), so
         # skipping long-dead heroes bounds this O(all-time hires) cost to
         # O(alive + recently-dead). The window is enforced here AND by the cull in
-        # ``tick`` — heroes past it are removed from self.heroes entirely. Within the
+        # ``tick`` Ã¢â‚¬â€ heroes past it are removed from self.heroes entirely. Within the
         # window the profile is identical to today's, preserving the watch-card /
         # recall / memorial reads for a freshly-dead pinned hero.
         #
         # Mythos S5 (lazy-hero-profiles): the eligible-id set is resolved HERE
         # (same as the old eager loop), but each snapshot is built only on first
-        # HUD access (LazyHeroProfiles) — repo-wide the mapping is read via
+        # HUD access (LazyHeroProfiles) Ã¢â‚¬â€ repo-wide the mapping is read via
         # .get()/`in` for at most the pinned/selected hero per frame, so the
         # ~26-hero x 20Hz eager build was almost entirely waste.
         # KINGDOM_LAZY_HERO_PROFILES=0 restores the eager build (A/B hatch).
@@ -579,7 +584,7 @@ class SimEngine:
             # WK67 Move 5: sim no longer owns selection. These keys are placeholders
             # the GameEngine wrapper overrides from the presentation SelectionState
             # (engine.py:1475-1486); a direct (unwrapped) get_game_state() call gets
-            # None selection, which is correct — the sim has no selection truth.
+            # None selection, which is correct Ã¢â‚¬â€ the sim has no selection truth.
             "selected_hero": None,
             "hero_profiles_by_id": hero_profiles_by_id,
             "selected_hero_profile": None,
@@ -604,12 +609,12 @@ class SimEngine:
     def build_ai_view(self) -> "AiGameView":
         """Build the read-only AI-facing view of sim state (WK67 Move 5 / L3).
 
-        This is the AI consumer path — separate from :meth:`get_game_state` (the
+        This is the AI consumer path Ã¢â‚¬â€ separate from :meth:`get_game_state` (the
         UI dict). It exposes a read-only :class:`WorldView` and immutable facts
         (``player_gold``, ``wave``, read-only ``castle``); it carries NO
         ``economy``/``sim``/``engine``, so the AI can no longer hold or mutate a
         live sim service through it. Entity lists stay live (AI reads, never
-        writes — AI-side DTOs are deferred).
+        writes Ã¢â‚¬â€ AI-side DTOs are deferred).
         """
         from game.sim.ai_view import AiGameView, WorldView
         from game.sim.hero_commands import SimCommandSink
@@ -618,22 +623,30 @@ class SimEngine:
             (b for b in self.buildings if getattr(b, "building_type", None) == "castle"),
             None,
         )
-        # WK126-T4 (populate): plain-data quest/giver snapshots for the AI (no live
-        # object refs the AI could mutate — namedtuples from game.systems.quest).
-        # Both are EMPTY tuples when no quests/givers exist, which is what the AI's
-        # quest branch early-returns on (digest guard #1). Passed conditionally so
-        # this populate code lands cleanly even if Agent 03's ai_view dataclass
-        # fields (quests / quest_givers, WK126-T4) ship in a parallel wave.
-        _quest_kwargs = {}
+        # WK126-T4 / WK138 / WK139 populate: plain-data quest, quest-giver, chain,
+        # boss, and elite snapshots for the AI (no live object refs the AI could
+        # mutate). Each tuple defaults to () on a no-content engine, which keeps
+        # the digest-safe no-op path intact. Passed conditionally so this populate
+        # code lands cleanly even if one of the read-model fields ships in a
+        # parallel wave.
+        _read_model_kwargs = {}
         _view_fields = getattr(AiGameView, "__dataclass_fields__", {})
         if "quests" in _view_fields:
-            _quest_kwargs["quests"] = tuple(
+            _read_model_kwargs["quests"] = tuple(
                 q.to_ai_info() for q in self.quest_system.get_active_quests()
             )
         if "quest_givers" in _view_fields:
-            _quest_kwargs["quest_givers"] = tuple(g.to_ai_info() for g in self.quest_givers)
+            _read_model_kwargs["quest_givers"] = tuple(g.to_ai_info() for g in self.quest_givers)
         if "quest_chains" in _view_fields:
-            _quest_kwargs["quest_chains"] = self._active_quest_chain_views()
+            _read_model_kwargs["quest_chains"] = self._active_quest_chain_views()
+        _boss_views = self._active_boss_encounter_views()
+        _elite_views = self._active_elite_views()
+        if "boss_encounters" in _view_fields:
+            _read_model_kwargs["boss_encounters"] = _boss_views
+        if "elite_enemies" in _view_fields:
+            _read_model_kwargs["elite_enemies"] = _elite_views
+        if "elite_encounters" in _view_fields:
+            _read_model_kwargs["elite_encounters"] = _elite_views
         return AiGameView(
             world=WorldView(self.world),
             heroes=tuple(self.heroes),
@@ -647,24 +660,47 @@ class SimEngine:
             # WK67 Move 6 (L3b): the AI proposes the shopping purchase through this
             # sim-owned synchronous sink; the sim applies it immediately.
             commands=SimCommandSink(self),
-            **_quest_kwargs,
+            **_read_model_kwargs,
         )
+
+    def _active_read_model_views(self, system_attr: str, *getter_names: str) -> tuple:
+        """Return a read-model tuple from a system, or () when unavailable."""
+        system = getattr(self, system_attr, None)
+        if system is None:
+            return ()
+        for getter_name in getter_names:
+            getter = getattr(system, getter_name, None)
+            if callable(getter):
+                values = getter()
+                return () if values is None else tuple(values)
+        return ()
 
     def _active_quest_chain_views(self) -> tuple:
         """Return read-only quest-chain snapshots, or () when no chains are live."""
-        chain_system = getattr(self, "quest_chain_system", None)
-        if chain_system is None:
-            return ()
-        for getter_name in (
+        return self._active_read_model_views(
+            "quest_chain_system",
             "get_active_chain_snapshots",
             "get_active_chain_views",
             "get_active_chains",
-        ):
-            getter = getattr(chain_system, getter_name, None)
-            if callable(getter):
-                chains = getter()
-                return () if chains is None else tuple(chains)
-        return ()
+        )
+
+    def _active_boss_encounter_views(self) -> tuple:
+        """Return read-only boss snapshots, or () when no bosses are live."""
+        return self._active_read_model_views(
+            "boss_encounter_system",
+            "get_active_boss_snapshots",
+            "get_active_boss_views",
+            "get_active_boss_encounters",
+        )
+
+    def _active_elite_views(self) -> tuple:
+        """Return read-only elite snapshots, or () when no elites are live."""
+        return self._active_read_model_views(
+            "boss_encounter_system",
+            "get_active_elite_snapshots",
+            "get_active_elite_views",
+            "get_active_elites",
+        )
 
     @property
     def lumber_ops(self) -> "LumberOps":
@@ -683,7 +719,7 @@ class SimEngine:
 
         THE engine action the quest-create UI (T9) calls on confirm: debits the
         treasury via ``economy.fund_quest`` (returns ``None`` if the player cannot
-        afford it — no quest is created), creates the ``Quest``, emits
+        afford it Ã¢â‚¬â€ no quest is created), creates the ``Quest``, emits
         ``QUEST_OFFERED``, and flips the giver's ``is_open`` immediately so the
         "!" marker shows without waiting a tick. Never called in the WK67 digest
         scenario (player-UI only).
@@ -730,7 +766,7 @@ class SimEngine:
         *,
         vfx_projectiles: tuple,
     ):
-        # WK67 Move 4 / L6: the sim snapshot is SIM TRUTH only — it no longer
+        # WK67 Move 4 / L6: the sim snapshot is SIM TRUTH only Ã¢â‚¬â€ it no longer
         # accepts any presentation kwargs (camera/zoom/screen/paused/running/
         # pause_menu_visible/selected_*/sim_blend_fraction/sim_tick_id). Those are
         # engine-owned presentation state built into PresentationFrameState by
@@ -746,13 +782,13 @@ class SimEngine:
         castle = next((b for b in self.buildings if getattr(b, "building_type", None) == "castle"), None)
 
         # WK68 R3 (Agent 03): bounty UI metrics are computed HERE, in the
-        # render-prep path, immediately before the bounty DTOs are built — so
+        # render-prep path, immediately before the bounty DTOs are built Ã¢â‚¬â€ so
         # ``bounty_dto_from`` reads freshly-computed ``b.responders`` /
         # ``b.attractiveness_tier``. This call MUST live in build_snapshot (NOT in
         # the core ``SimEngine.update`` tick and NOT in ``build_ai_view``): it
         # mutates the live bounties' responders/attractiveness_tier, which
         # ``game/sim/contracts.py`` feeds into the WK67 AI contract. The WK67
-        # AI-decision digest (b73961…) is computed by a HEADLESS sim that ticks but
+        # AI-decision digest (b73961Ã¢â‚¬Â¦) is computed by a HEADLESS sim that ticks but
         # does NOT build render snapshots, so running this only at render-prep time
         # keeps that digest byte-identical while giving Ursina (the default
         # renderer) correct bounty metrics too. Relocated out of pygame_renderer
@@ -774,6 +810,8 @@ class SimEngine:
         _world_vis = getattr(_world, "is_tile_visible_at", None)
         _bounties = self.bounty_system.get_unclaimed_bounties()
         _tax = getattr(self, "tax_collector", None)
+        _boss_views = self._active_boss_encounter_views()
+        _elite_views = self._active_elite_views()
         return RenderSnapshot(
             world=self.world,
             pois=tuple(getattr(self, 'pois', ())),
@@ -794,7 +832,7 @@ class SimEngine:
             # consumer of these DTO tuples already early-outs on ``not is_alive``
             # (ursina_unit_sync :117/:289/:350, instanced_unit_renderer :466/:517/:537/:580,
             # and the pygame registry render_hero/peasant/guard via hero_renderer:130 /
-            # worker_renderer:148,234 / registry:100) — so a dead unit's DTO is built every
+            # worker_renderer:148,234 / registry:100) Ã¢â‚¬â€ so a dead unit's DTO is built every
             # frame only to be discarded. Skipping it removes the all-time accumulation that
             # made per-frame DTO cost scale with total hires instead of with the living set.
             # Enemies/guards are already culled when dead (cleanup block below), but the
@@ -817,6 +855,9 @@ class SimEngine:
             ),
             bounty_dtos=tuple(bounty_dto_from(b) for b in _bounties),
             quest_chains=self._active_quest_chain_views(),
+            boss_encounters=_boss_views,
+            elite_enemies=_elite_views,
+            elite_encounters=_elite_views,
         )
 
     # ---------------------------------------------------------------------
@@ -850,7 +891,7 @@ class SimEngine:
         # update() is the ONLY set_sim_now_ms caller and is skipped while paused
         # (lifecycle._prepare_sim_and_camera returns False), so this clock freezes on
         # pause and never jumps on resume / with app uptime. DETERMINISTIC_SIM now
-        # governs ONLY RNG/order determinism, not the clock — DET=1 already used this
+        # governs ONLY RNG/order determinism, not the clock Ã¢â‚¬â€ DET=1 already used this
         # exact accumulator, so the WK67 digest stays byte-identical.
         self._sim_now_ms += int(round(float(dt) * 1000.0))
         set_sim_now_ms(self._sim_now_ms)
@@ -864,8 +905,8 @@ class SimEngine:
 
         # WK44 Stage 2: tree growth (affects world blocking + renderer scale).
         # Mythos S5 (tree-growth-incremental): NatureSystem.tick now reports the
-        # trees whose growth actually changed (growth is discrete — 2-minute stage
-        # boundaries — so most ticks change nothing). We update only those keys
+        # trees whose growth actually changed (growth is discrete Ã¢â‚¬â€ 2-minute stage
+        # boundaries Ã¢â‚¬â€ so most ticks change nothing). We update only those keys
         # instead of rebuilding the whole ~2k-entry dict + key-tuple churn every
         # tick. Removal paths (chop / building footprint) already pop their keys
         # in game/sim/lumber.py, so the incremental mapping is value-identical to
@@ -882,7 +923,7 @@ class SimEngine:
         # and keep growth lookup consistent for buildability/blocking rules.
         if _TREE_DICT_FULL_REBUILD or changed_trees is None:
             # Pre-change path (env hatch, or a legacy/stubbed NatureSystem.tick that
-            # returns None — fall back to the full rebuild so the dict can't go stale).
+            # returns None Ã¢â‚¬â€ fall back to the full rebuild so the dict can't go stale).
             if self.trees:
                 # First refresh growth lookup so newly spawned saplings don't default to 1.0.
                 self._tree_growth_by_tile = {
@@ -919,7 +960,7 @@ class SimEngine:
 
         # AI + hero updates
         # WK67 Move 5 (L3): the AI consumes a read-only AiGameView built from sim
-        # state — NOT the live UI dict (which still carries world/economy/sim/engine
+        # state Ã¢â‚¬â€ NOT the live UI dict (which still carries world/economy/sim/engine
         # for the UI/HUD/hero paths). Agent 06 migrates BasicAI.update + behaviors to
         # read the view in the immediately-following task; until then the AI path is
         # transitionally broken (BasicAI still expects the dict). The full-suite + AI
@@ -1018,15 +1059,22 @@ class SimEngine:
             self.event_bus.emit_batch(enemy_ranged_events)
         events = self.combat_system.get_emitted_events()
         self._route_combat_events(events)
+        # WK139: post-combat boss lane hook. When Agent 05 lands the real system
+        # it can react to the freshly routed combat state; the None default keeps
+        # the no-boss path inert.
+        boss_encounter_system = getattr(self, "boss_encounter_system", None)
+        if boss_encounter_system is not None:
+            boss_encounter_system.update(system_ctx, dt)
 
-        # R2-F: Dead-entity cleanup — only rebuild lists when something died
+
+        # R2-F: Dead-entity cleanup Ã¢â‚¬â€ only rebuild lists when something died
         # or every 60 ticks as a fallback safety net.
         if len(events) > 0:
             self._dead_entity_dirty = True
         cleanup_tick = getattr(self, '_cleanup_tick', 0)
         self._cleanup_tick = cleanup_tick + 1
         if getattr(self, '_dead_entity_dirty', False) or cleanup_tick % 60 == 0:
-            # WK125-T1: read death time through timebase.now_ms() — the SAME single
+            # WK125-T1: read death time through timebase.now_ms() Ã¢â‚¬â€ the SAME single
             # clock the get_game_state profile-build retention window reads (hero_profile.py).
             # update() now ALWAYS publishes self._sim_now_ms via set_sim_now_ms in BOTH
             # modes, so now_ms() == self._sim_now_ms here in real play; the pre-WK125
@@ -1034,7 +1082,7 @@ class SimEngine:
             # stayed 0 in the non-deterministic path) is gone. We deliberately keep the
             # timebase read (not self._sim_now_ms) so the death-stamp and the profile
             # build remain a SINGLE clock even if a caller drives time via timebase
-            # directly — the WK123-C2 contract the dead-hero TTL test pins.
+            # directly Ã¢â‚¬â€ the WK123-C2 contract the dead-hero TTL test pins.
             from game.sim.timebase import now_ms as _sim_now_ms
             _now_ms = int(_sim_now_ms())
             # WK60 Feature 3: decrement guild hero count for newly dead heroes
@@ -1052,7 +1100,7 @@ class SimEngine:
             self.enemies = [e for e in self.enemies if getattr(e, "is_alive", False)]
             self.guards = [g for g in self.guards if getattr(g, "is_alive", False)]
             # WK123 C2: cull dead PEASANTS immediately (they have no memorial / pin /
-            # profile UX — nothing reads a dead peasant — so this mirrors the
+            # profile UX Ã¢â‚¬â€ nothing reads a dead peasant Ã¢â‚¬â€ so this mirrors the
             # enemy/guard cull and bounds self.peasants by the living set).
             self.peasants = [p for p in self.peasants if getattr(p, "is_alive", False)]
             # WK123 C2: TTL-cull dead HEROES. A dead hero is kept (and keeps building a
@@ -1072,7 +1120,7 @@ class SimEngine:
             ]
             self._dead_entity_dirty = False
 
-        # WK61-FIX: Destroyed-building cleanup (was missing from SimEngine — only ran
+        # WK61-FIX: Destroyed-building cleanup (was missing from SimEngine Ã¢â‚¬â€ only ran
         # in the old presentation-layer path via CleanupManager).
         self._cleanup_destroyed_buildings()
 
@@ -1096,7 +1144,7 @@ class SimEngine:
         self.bounty_system.cleanup()
 
         # WK126: quests. QuestSystem.update EARLY-RETURNS (no events, no RNG, no
-        # mutation) when there are no quests — digest guard #2. The giver-lifecycle
+        # mutation) when there are no quests Ã¢â‚¬â€ digest guard #2. The giver-lifecycle
         # block below is gated on quest_givers existing at all; the WK67 digest
         # scenario has no Herald's Post, so neither branch ever runs there.
         self.quest_system.update(system_ctx, dt)
@@ -1104,10 +1152,10 @@ class SimEngine:
         # chains are live, so this stays digest-stable in the WK67 scenario.
         self.quest_chain_system.update(system_ctx, dt)
         if self.quest_givers:
-            # Cull NPCs whose post was destroyed (mirrors guard cleanup — the
+            # Cull NPCs whose post was destroyed (mirrors guard cleanup Ã¢â‚¬â€ the
             # destroyed post has already been removed from self.buildings).
             # WK133 QA fix: a destroyed post also FAILS its OPEN (unaccepted)
-            # offer — the NPC is gone, so the offer is unreachable and would
+            # offer Ã¢â‚¬â€ the NPC is gone, so the offer is unreachable and would
             # otherwise leak as a zombie open quest in view.quests. Accepted
             # quests survive (the hook skips them; it also early-returns when
             # there are no quests, preserving digest guard #2).
@@ -1138,10 +1186,10 @@ class SimEngine:
                 if _rub_now - r.created_ms < r.duration_ms
             ]
 
-        # WK55: POI discovery — check if any hero is within discovery range of undiscovered POIs
+        # WK55: POI discovery Ã¢â‚¬â€ check if any hero is within discovery range of undiscovered POIs
         self._check_poi_discovery()
 
-        # WK56: POI interactions — tick cooldowns and resolve proximity interactions
+        # WK56: POI interactions Ã¢â‚¬â€ tick cooldowns and resolve proximity interactions
         self.poi_interaction_system.tick_cooldowns(getattr(self, 'pois', []), dt)
         self.poi_interaction_system.check_interactions(
             self.heroes, getattr(self, 'pois', []), self.world,
@@ -1182,7 +1230,7 @@ class SimEngine:
                         building.guards_spawned += 1
             elif building.building_type == "herald_post":
                 # WK126: spawn exactly ONE Quest-Giver NPC beside a CONSTRUCTED
-                # Herald's Post (guardhouse→guard pattern). Cap 1 per post; the
+                # Herald's Post (guardhouseÃ¢â€ â€™guard pattern). Cap 1 per post; the
                 # NPC is culled in the quest block of update() when the post is
                 # destroyed. The WK67 digest scenario has no herald_post, so this
                 # branch is structurally unreachable there.
@@ -1251,7 +1299,7 @@ class SimEngine:
                 except Exception:
                     pass
                 # WK126-T7 (slay_enemy_type): kill-counter progress for the
-                # ACCEPTING hero. Gated on quests existing — a complete no-op in
+                # ACCEPTING hero. Gated on quests existing Ã¢â‚¬â€ a complete no-op in
                 # the WK67 digest scenario (no quests, and no enemies anyway).
                 # getattr: this method is also driven unbound against duck-typed
                 # stubs without a quest_system (tests/test_wk131_items.py).
@@ -1302,7 +1350,7 @@ class SimEngine:
 
                 # WK126-T7 (raid_lair): complete accepted quests targeting this
                 # lair (mirrors the attack_lair bounty match above). Gated on
-                # quests existing — a complete no-op in the WK67 digest scenario.
+                # quests existing Ã¢â‚¬â€ a complete no-op in the WK67 digest scenario.
                 # getattr mirrors the ENEMY_KILLED hook (unbound stub callers).
                 _quest_system = getattr(self, "quest_system", None)
                 if _quest_system is not None and _quest_system.quests:
@@ -1324,4 +1372,3 @@ class SimEngine:
     def _update_fog_of_war(self) -> None:
         from game.sim import fog
         fog.update_fog_of_war(self)
-

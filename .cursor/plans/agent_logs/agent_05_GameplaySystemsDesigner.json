@@ -662,6 +662,93 @@
           ]
         }
       }
+    },
+    "wk139_boss_encounter_core_elites": {
+      "sprint_meta": {
+        "title": "WK139 Boss Encounter Core + Elite Affixes",
+        "plan_ref": ".cursor/plans/wk139_boss_encounter_core_elites.plan.md",
+        "created_utc": "2026-06-14T00:00:00Z"
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "sprint_id": "wk139_boss_encounter_core_elites",
+          "round_id": "r1_kickoff",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "Wave 1 (boss gameplay/runtime + elite affixes + memory + tests)",
+            "plan_ref": ".cursor/plans/wk139_boss_encounter_core_elites.plan.md",
+            "created_utc": "2026-06-14T00:00:00Z"
+          },
+          "what_i_changed": [
+            "Added game/content/bosses.py with BossDef/BossPhaseDef/BossAbilityDef content for The Goblin Warchief (war_banner above 50% HP, rally at/below 50% HP) and a reusable boss registry.",
+            "Added game/content/elite_affixes.py with deterministic banner_bearer/ironhide/frenzied affixes, spawn-time rolling helpers, spawn-time aura application, and elite fact records.",
+            "Added game/systems/boss_encounter.py with BossEncounterSystem, deterministic war_banner aura upkeep, rally telegraph + capped goblin reinforcement spawn, boss/elite registration, and primitive boss memory snapshots/records.",
+            "Extended game/entities/enemy.py with named attack-bonus sources, defense-aware damage, effective attack power, and elite frenzy threshold handling.",
+            "Exported BossEncounterSystem from game/systems/__init__.py, exported the boss enemy shims from game/entities/__init__.py, and added goblin_warchief to guaranteed boss loot in game/systems/loot.py.",
+            "Added tests/test_wk139_boss_encounters.py, tests/test_wk139_elite_affixes.py, and tests/test_wk139_boss_memory.py to pin the encounter flow, deterministic affix rolls, spawn-time effects, and primitive memory facts."
+          ],
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk139_elite_affixes.py tests/test_wk139_boss_memory.py -q",
+              "exit_code": 0,
+              "result": "7 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk139_boss_contract.py tests/test_wk139_boss_ai_view.py -q",
+              "exit_code": 0,
+              "result": "5 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk137_initial_wave.py tests/test_wk137_boss_scale.py -q",
+              "exit_code": 0,
+              "result": "24 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "result": "10 passed"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "result": "DONE: PASS; 1896 passed, 5 skipped, 1 xfailed; determinism_guard PASS"
+            }
+          ],
+          "evidence": {
+            "wk139_boss_gameplay": {
+              "command": "python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk139_elite_affixes.py tests/test_wk139_boss_memory.py -q",
+              "exit_code": 0,
+              "summary": "7 passed"
+            },
+            "wk139_boss_contract": {
+              "command": "python -m pytest tests/test_wk139_boss_contract.py tests/test_wk139_boss_ai_view.py -q",
+              "exit_code": 0,
+              "summary": "5 passed"
+            },
+            "wk137_regressions": {
+              "command": "python -m pytest tests/test_wk137_initial_wave.py tests/test_wk137_boss_scale.py -q",
+              "exit_code": 0,
+              "summary": "24 passed"
+            },
+            "wk67_ai_boundary": {
+              "command": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "summary": "10 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "summary": "DONE: PASS; 1896 passed, 5 skipped, 1 xfailed; determinism_guard PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "PM can ask Agent 03 for the boss-encounter registration follow-up in sim wiring; the empty-default boss/elite read models already pass and the gameplay layer is ready.",
+            "After that registration hook lands, send Wave 2 to Agent 08 and Agent 09 for compact boss-status UI and visual telegraph/marker work."
+          ]
+        }
+      }
     }
   }
 }

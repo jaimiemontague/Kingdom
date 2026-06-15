@@ -131,7 +131,50 @@ class QuestChainSnapshot:
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
+@dataclass(slots=True, frozen=True)
+class BossMemorySummary:
+    """Small immutable memory record for an active boss encounter."""
+
+    event: str
+    hero_id: str | None = None
+    hero_name: str = ""
+    detail: str = ""
+    at_ms: int = 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
+@dataclass(slots=True, frozen=True)
+class BossEncounterSnapshot:
+    """Primitive read model for one active boss encounter."""
+
+    boss_id: str
+    boss_type: str
+    name: str
+    status: str
+    current_phase: str
+    current_phase_title: str
+    hp_pct: float
+    position: tuple[float, float] | None = None
+    target_hero_id: str | None = None
+    latest_telegraph: str = ""
+    memory_summaries: tuple[BossMemorySummary, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
+@dataclass(slots=True, frozen=True)
+class EliteEncounterSnapshot:
+    """Primitive read model for one active elite enemy."""
+
+    elite_id: str
+    base_type: str
+    name: str
+    status: str
+    affixes: tuple[str, ...] = ()
+    position: tuple[float, float] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)

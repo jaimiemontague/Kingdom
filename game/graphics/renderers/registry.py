@@ -116,8 +116,17 @@ class RendererRegistry:
         surface: pygame.Surface,
         enemy: object,
         camera_offset: tuple[float, float],
+        *,
+        boss_snapshot: object | None = None,
+        elite_snapshot: object | None = None,
     ) -> None:
-        self._enemy_renderer_for(enemy).render(surface, getattr(enemy, "render_state", enemy), camera_offset)
+        self._enemy_renderer_for(enemy).render(
+            surface,
+            getattr(enemy, "render_state", enemy),
+            camera_offset,
+            boss_snapshot=boss_snapshot,
+            elite_snapshot=elite_snapshot,
+        )
 
     def render_hero(
         self,

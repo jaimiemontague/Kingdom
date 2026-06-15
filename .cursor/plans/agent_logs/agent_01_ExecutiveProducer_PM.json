@@ -812,6 +812,241 @@
           }
         }
       }
+    },
+    "wk139_boss_encounter_core_elites": {
+      "rounds": {
+        "r1_kickoff": {
+          "pm_status_summary": "WK139 KICKOFF: Boss Encounter Core + Elite Affixes begins Sprint B from .cursor/plans/future_hero_quest_boss_deepening.plan.md. Mission: turn the committed Goblin Warchief baseline into the first true reusable boss encounter and add deterministic elite affixes. Player outcome: the Warchief has visible identity, phase state, at least one readable special/rally moment, compact boss UI, and elite enemies with readable affix markers. Engineering outcome: reusable BossEncounterSystem/content/contracts/read model that future Bandit Lord, Dragon, Demon, and boss quest sprints can build on. Use gpt-5.4-mini with xhigh effort for all active subagents.",
+          "pm_feature_requests": [
+            {
+              "id": "WK139-FEAT-001",
+              "title": "Goblin Warchief boss encounter core",
+              "owner_agents": [
+                "03_TechnicalDirector_Architecture",
+                "05_GameplaySystemsDesigner",
+                "08_UX_UI_Director",
+                "09_ArtDirector_Pixel_Animation_VFX",
+                "11_QA_TestEngineering_Lead"
+              ],
+              "player_value": "The first boss should feel like a named threat with phases and readable tactics, not merely a bigger stat block.",
+              "definition_of_done": [
+                "A deterministic test activates The Goblin Warchief encounter and verifies phase transitions.",
+                "A Rally ability telegraphs before the reinforcement effect and respects cooldown/caps.",
+                "At least three elite affixes are deterministic at spawn time and readable in snapshots/UI/render facts.",
+                "Boss memory records defeated-by and killed-hero facts when events are simulated.",
+                "No-boss/no-elite startup remains WK67 byte-identical.",
+                "Boss/elite status UI and visual markers/telegraph are screenshot-verified.",
+                "python tools/qa_smoke.py --quick passes.",
+                "python tools/mythos_tick_bench.py --ticks 900 --warmup 180 --heroes 24 --buildings 24 --enemies 80 is run and interpreted."
+              ],
+              "source_plan": ".cursor/plans/wk139_boss_encounter_core_elites.plan.md"
+            }
+          ],
+          "pm_integration_order": [
+            "Wave 1 parallel: Agent 03 defines contracts/read-model/events; Agent 05 implements gameplay/content/runtime in game systems/content lane.",
+            "Wave 1b if needed: Agent 03 follow-up registration after Agent 05 creates BossEncounterSystem.",
+            "Wave 2 parallel: Agent 09 adds visual markers/telegraph; Agent 08 adds compact boss status UI.",
+            "Wave 3: Agent 11 integrated QA, screenshots, WK67, qa_smoke, and perf sanity."
+          ],
+          "pm_next_actions_by_agent": {
+            "03_TechnicalDirector_Architecture": "Active Wave 1. Add boss/elite primitive contracts, event names, read-model fields, and empty-default sim registration hooks. Do not implement gameplay balance.",
+            "05_GameplaySystemsDesigner": "Active Wave 1. Implement BossEncounterSystem/content for The Goblin Warchief and deterministic elite affixes. Stay out of UI/graphics/AI.",
+            "09_ArtDirector_Pixel_Animation_VFX": "Pending Wave 2. Add readable boss/elite visual markers and ability telegraph rendering after contracts/runtime exist.",
+            "08_UX_UI_Director": "Pending Wave 2. Add compact boss status UI after read model exists.",
+            "11_QA_TestEngineering_Lead": "Pending final wave. Verify boss contract/gameplay/elite affixes/memory/visuals/UI/screenshots/WK67/qa_smoke/perf."
+          },
+          "pm_agent_prompts": {
+            "03": "Task: Add boss/elite sim/view contracts and register an empty-default boss encounter lane without implementing gameplay balance.\n\nScope:\n- In scope: primitive/read-only boss and elite snapshot contracts, boss/elite event names, AiGameView/snapshot fields, empty-default sim registration hooks.\n- Out of scope: boss ability balance, elite affix effects, UI, graphics, AI.\n\nFiles you MAY edit:\n- game/sim/**\n- game/sim_engine.py\n- game/events.py\n- tests/test_wk139_boss_contract.py\n- tests/test_wk139_boss_ai_view.py\n- .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json\n\nFiles you MUST NOT edit:\n- game/systems/boss_encounter.py unless Agent 05 already created it and PM sends a follow-up registration prompt\n- game/entities/**\n- game/ui/**\n- game/graphics/**\n- ai/**\n- assets/**\n- config.py unless PM explicitly expands scope\n\nImplementation guidance:\n- Follow WK138 quest-chain contracts: immutable primitive snapshots, empty tuple defaults, no live object refs.\n- Suggested boss facts: id/type/name/status/current_phase/current_phase_title/hp_pct/position/target hero id/latest telegraph/memory summaries.\n- Suggested elite facts: id/base type/name/affixes/status/position.\n- Suggested events: boss_encounter_started, boss_phase_changed, boss_ability_telegraphed, boss_ability_resolved, boss_defeated, elite_spawned.\n- No-boss path must not consume RNG or mutate state.\n\nCommands (from repo root, PowerShell):\npython -m pytest tests/test_wk139_boss_contract.py tests/test_wk139_boss_ai_view.py -q\npython -m pytest tests/test_wk67_ai_boundary.py -q\npython tools/qa_smoke.py --quick\n\nReport back with:\n- Files touched\n- Commands run + exit codes\n- Agent log path + sprint/round entry written\n- Any follow-ups / risks",
+            "05": "Task: Implement boss encounter gameplay and deterministic elite affixes for The Goblin Warchief.\n\nScope:\n- In scope: BossEncounterSystem/content, Warchief phases, Rally telegraph/effect, three elite affixes, boss memory tests.\n- Out of scope: UI, graphics, AI, Dragon, Bandit Lord quest chain.\n\nFiles you MAY edit:\n- game/systems/**\n- game/entities/**\n- game/content/**\n- config.py only for clearly named tuning constants if unavoidable\n- tests/test_wk139_boss_encounters.py\n- tests/test_wk139_elite_affixes.py\n- tests/test_wk139_boss_memory.py\n- .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json\n\nFiles you MUST NOT edit:\n- ai/**\n- game/ui/**\n- game/graphics/**\n- tools/**\n- assets/**\n\nImplementation guidance:\n- Prefer game/content/bosses.py, game/content/elite_affixes.py, and game/systems/boss_encounter.py.\n- BossEncounterSystem.update must early-return when no active boss encounters.\n- Roll elite affixes only at enemy creation/spawn time; never every tick.\n- Use sim time and deterministic named RNG patterns only.\n- Warchief phases: war_banner above 50% HP, rally at/below 50% HP. Rally emits telegraph, then calls a small capped reinforcement only if goblin count is low.\n- Memory facts should be small primitive records for defeated_by and killed_hero.\n\nCommands (from repo root, PowerShell):\npython -m pytest tests/test_wk139_boss_encounters.py tests/test_wk139_elite_affixes.py tests/test_wk139_boss_memory.py -q\npython -m pytest tests/test_wk137_initial_wave.py tests/test_wk137_boss_scale.py -q\npython -m pytest tests/test_wk67_ai_boundary.py -q\npython tools/qa_smoke.py --quick\n\nReport back with:\n- Files touched\n- Commands run + exit codes\n- Agent log path + sprint/round entry written\n- Any follow-ups / risks",
+            "09": "Task: Add readable boss/elite visual markers and ability telegraph rendering without violating Mythos performance guardrails.\n\nScope:\n- In scope: boss marker, elite affix marker, telegraph visual from primitive snapshot/event facts, visual tests/screenshots.\n- Out of scope: gameplay damage/effects, UI panels, AI, assets unless PM explicitly expands scope.\n\nFiles you MAY edit:\n- game/graphics/**\n- tests/test_wk139_boss_visuals.py\n- tests/test_wk139_elite_visuals.py\n- docs/screenshots/wk139_*\n- .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json\n\nFiles you MUST NOT edit:\n- game/systems/**\n- game/entities/**\n- ai/**\n- game/ui/** unless PM coordinates with Agent 08\n- assets/**\n- config.py unless PM explicitly expands scope\n\nCommands (from repo root, PowerShell):\npython -m pytest tests/test_wk139_boss_visuals.py tests/test_wk139_elite_visuals.py -q\npython -m pytest tests/test_wk67_ai_boundary.py -q\npython tools/capture_screenshots.py --scenario boss_encounter_showcase --seed 3 --out docs/screenshots/wk139_boss_encounter_showcase --size 1920x1080 --ticks 900\npython tools/qa_smoke.py --quick\n\nReport back with:\n- Files touched\n- Commands run + exit codes\n- Screenshot paths inspected and visual verdict\n- Any follow-ups / risks",
+            "08": "Task: Add compact boss/elite status UI.\n\nScope:\n- In scope: boss name/current phase/HP status/ability telegraph status, compact elite hint if facts exist, UI tests/screenshots.\n- Out of scope: gameplay state mutation, graphics telegraph rendering, AI.\n\nFiles you MAY edit:\n- game/ui/**\n- tests/test_wk139_boss_ui.py\n- docs/screenshots/wk139_*\n- .cursor/plans/agent_logs/agent_08_UX_UI_Director.json\n\nFiles you MUST NOT edit:\n- game/systems/**\n- game/entities/**\n- ai/**\n- game/graphics/**\n- assets/**\n\nCommands (from repo root, PowerShell):\npython -m pytest tests/test_wk139_boss_ui.py -q\npython tools/capture_screenshots.py --scenario boss_encounter_showcase --seed 3 --out docs/screenshots/wk139_boss_ui --size 1920x1080 --ticks 900\npython tools/qa_smoke.py --quick\n\nReport back with:\n- Files touched\n- Commands run + exit codes\n- Screenshot paths inspected and visual verdict\n- Any follow-ups / risks",
+            "11": "Task: Verify WK139 end to end.\n\nScope:\n- In scope: integrated tests, screenshots, WK67, qa_smoke, perf sanity, owner-specific failure routing.\n- Out of scope: production fixes unless PM sends a follow-up fix prompt.\n\nFiles you MAY edit:\n- tests/**\n- docs/screenshots/wk139_*\n- .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json\n\nFiles you MUST NOT edit:\n- production game code unless PM explicitly assigns a QA-owned fix\n- assets/**\n\nCommands (from repo root, PowerShell):\npython -m pytest tests/test_wk139_boss_contract.py tests/test_wk139_boss_ai_view.py -q\npython -m pytest tests/test_wk139_boss_encounters.py tests/test_wk139_elite_affixes.py tests/test_wk139_boss_memory.py -q\npython -m pytest tests/test_wk139_boss_visuals.py tests/test_wk139_elite_visuals.py tests/test_wk139_boss_ui.py -q\npython -m pytest tests/test_wk137_initial_wave.py tests/test_wk137_boss_scale.py -q\npython -m pytest tests/test_wk67_ai_boundary.py -q\npython tools/qa_smoke.py --quick\npython tools/capture_screenshots.py --scenario boss_encounter_showcase --seed 3 --out docs/screenshots/wk139_boss_encounter_showcase --size 1920x1080 --ticks 900\npython tools/mythos_tick_bench.py --ticks 900 --warmup 180 --heroes 24 --buildings 24 --enemies 80\n\nReport back with:\n- PASS/FAIL for boss contract, boss gameplay, elite affixes, boss memory, visuals, UI, screenshots, WK67, qa_smoke, perf\n- Files touched\n- Commands run + exit codes\n- Screenshot verdicts\n- Owner-specific follow-ups for failures"
+          },
+          "pm_universal_prompt": "You are being activated for WK139 Boss Encounter Core + Elite Affixes. First onboard as your assigned agent number by reading AGENTS.md and the relevant .cursor/rules instructions for your role. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk139_boss_encounter_core_elites\"].rounds[\"r1_kickoff\"]. Your specific prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER]. Also read .cursor/plans/wk139_boss_encounter_core_elites.plan.md and .cursor/plans/future_hero_quest_boss_deepening.plan.md. Use gpt-5.4-mini with xhigh effort. Preserve the clean f77a950 base and do not touch files outside your lane. Update your own agent log when done and run the commands in your prompt.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "03",
+                "05"
+              ],
+              [
+                "09",
+                "08"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "03": "gpt-5.4-mini",
+              "05": "gpt-5.4-mini",
+              "09": "gpt-5.4-mini",
+              "08": "gpt-5.4-mini",
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "03": "xhigh",
+              "05": "xhigh",
+              "09": "xhigh",
+              "08": "xhigh",
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "03": "high",
+              "05": "high",
+              "09": "high",
+              "08": "high",
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "06",
+              "07",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "03 and 05 can start in parallel if they keep contract vs gameplay lanes separate. 09/08 wait until read-model/runtime facts exist. 11 remains final. 10 is held unless perf evidence appears."
+          }
+        },
+        "r2_wave1_results_registration_needed": {
+          "pm_status_summary": "WK139 Wave 1 complete: Agent 03 delivered boss/elite read-only contracts and empty-default boss lane plumbing; Agent 05 delivered BossEncounterSystem/content/runtime for The Goblin Warchief, elite affixes, loot/export wiring, and gameplay tests. Current required follow-up before Wave 2: Agent 03 must instantiate/register Agent 05's BossEncounterSystem into SimEngine/read-model path, preserving no-boss default behavior and WK67 byte-identical digest.",
+          "pm_evidence": {
+            "agent_03_architecture": [
+              "Files touched: game/events.py, game/sim/contracts.py, game/sim/ai_view.py, game/sim/snapshot.py, game/sim_engine.py, tests/test_wk139_boss_contract.py, tests/test_wk139_boss_ai_view.py, Agent 03 log.",
+              "Result: boss/elite primitive snapshots, empty boss/elite tuple read model, and boss event names. No-boss path currently keeps boss_encounter_system = None.",
+              "Commands reported: py_compile exit 0; tests/test_wk139_boss_contract.py + tests/test_wk139_boss_ai_view.py exit 0; tests/test_wk67_ai_boundary.py exit 0; python tools/qa_smoke.py --quick exit 0 with 1889 passed / 5 skipped / 1 xfailed; Agent 03 log JSON validated."
+            ],
+            "agent_05_gameplay": [
+              "Files touched: game/systems/boss_encounter.py, game/content/bosses.py, game/content/elite_affixes.py, game/systems/__init__.py, game/entities/enemy.py, game/entities/__init__.py, game/systems/loot.py, WK139 gameplay tests, Agent 05 log.",
+              "Result: Goblin Warchief has war_banner above 50% HP and rally at/below 50% HP with telegraphed capped reinforcement; elite affixes roll at spawn time; boss memory facts are primitive.",
+              "Commands reported: WK139 gameplay tests, boss contract/AI-view pins, WK137 regression tests, WK67, and qa_smoke all passed; Agent 05 log JSON validated."
+            ]
+          },
+          "pm_next_actions_by_agent": {
+            "03_TechnicalDirector_Architecture": "Immediate follow-up: instantiate/register BossEncounterSystem in SimEngine and ensure active boss/elite snapshots flow through the existing read model. Do not edit Agent 05's gameplay runtime unless a tiny import integration requires it and you report it.",
+            "09_ArtDirector_Pixel_Animation_VFX": "Pending Wave 2 after registration follow-up.",
+            "08_UX_UI_Director": "Pending Wave 2 after registration follow-up.",
+            "11_QA_TestEngineering_Lead": "Pending final wave."
+          },
+          "pm_open_risks": [
+            "Wave 2 should not start until BossEncounterSystem is actually available from SimEngine snapshots.",
+            "Final integrated QA still needs screenshots and perf sanity.",
+            "Untracked local scratch/temp files remain from prior diagnostics and should not be staged unless explicitly relevant."
+          ]
+        },
+        "r3_registration_complete_wave2_dispatched": {
+          "pm_status_summary": "WK139 registration follow-up complete: SimEngine now owns a real BossEncounterSystem and carries active boss/elite snapshots through AiGameView and RenderSnapshot. No-boss startup stays empty and WK67 byte-identical. Wave 2 is cleared for Agent 09 visuals and Agent 08 UI.",
+          "pm_evidence": {
+            "agent_03_registration_followup": [
+              "Key files: game/sim_engine.py, game/sim/ai_view.py, game/sim/snapshot.py, tests/test_wk139_boss_ai_view.py, Agent 03 log.",
+              "Result: boss_encounter_system = BossEncounterSystem(); boss_encounters and elite_encounters/elite_enemies snapshots flow through read model.",
+              "Commands reported: combined WK139 contract/gameplay tests exit 0; tests/test_wk67_ai_boundary.py exit 0; python tools/qa_smoke.py --quick final attempt exit 0 with 1897 passed / 5 skipped / 1 xfailed; Agent 03 log JSON validated."
+            ]
+          },
+          "pm_next_actions_by_agent": {
+            "09_ArtDirector_Pixel_Animation_VFX": "Active Wave 2. Add readable boss/elite visual markers and telegraph rendering from primitive snapshot/event facts. Screenshot-verify.",
+            "08_UX_UI_Director": "Active Wave 2. Add compact boss status UI from boss/elite read-model facts. Screenshot-verify.",
+            "11_QA_TestEngineering_Lead": "Pending final wave after 09/08."
+          },
+          "pm_open_risks": [
+            "Visual screenshot scenario boss_encounter_showcase may not exist yet or may not seed a boss. If so, 09/08 should use in-lane deterministic proof fixtures and ask PM/Agent 11/12 for scenario follow-up.",
+            "Final QA must still run perf sanity because boss/telegraph visuals can affect hot paths."
+          ]
+        },
+        "r4_wave2_results_tools_followup": {
+          "pm_status_summary": "WK139 Wave 2 status: Agent 08 UI lane is done and green; Agent 09 visual lane reported implementation in progress with focused visual tests and WK67 green, but the required capture command fails because `boss_encounter_showcase` is missing from tools/screenshot_scenarios.py. PM dispatched Agent 12 to add the missing deterministic screenshot scenario before final QA.",
+          "pm_evidence": {
+            "agent_08_ui": [
+              "Files touched: game/ui/top_bar.py, tests/test_wk139_boss_ui.py, docs/screenshots/wk139_boss_ui/wk139_boss_ui_telegraph_1920x1080.png, Agent 08 log.",
+              "Commands reported: tests/test_wk139_boss_ui.py exit 0 (4 passed); python tools/qa_smoke.py --quick PASS with 1904 passed / 5 skipped / 1 xfailed; Agent 08 log JSON validates.",
+              "Fallback proof: boss status strip reads The Goblin Warchief, Phase: Rally | HP: 50% | Tell: Rally, Elites: 1 | banner/shield, without covering core HUD controls."
+            ],
+            "agent_09_visuals_checkpoint": [
+              "Files touched so far: game/graphics/renderers/enemy_renderer.py, game/graphics/renderers/registry.py, game/graphics/pygame_renderer.py, game/graphics/vfx.py, tests/test_wk139_boss_visuals.py, tests/test_wk139_elite_visuals.py, fallback PNGs under docs/screenshots/wk139_boss_encounter_showcase/.",
+              "Commands reported: tests/test_wk139_boss_visuals.py + tests/test_wk139_elite_visuals.py exit 0 (3 passed); tests/test_wk67_ai_boundary.py exit 0 (10 passed).",
+              "Blocked command: python tools/capture_screenshots.py --scenario boss_encounter_showcase ... fails with ValueError: Unknown scenario: boss_encounter_showcase.",
+              "qa_smoke timed out twice for Agent 09; final QA/Agent 12 must rerun after scenario exists."
+            ]
+          },
+          "pm_next_actions_by_agent": {
+            "12_ToolsDevEx_Lead": "Active. Add deterministic boss_encounter_showcase scenario to tools/screenshot_scenarios.py so capture_screenshots accepts and renders WK139 boss/elite UI/visual proof.",
+            "09_ArtDirector_Pixel_Animation_VFX": "Keep open until Agent 12 scenario lands; may need to rerun capture/qa_smoke or respond to final QA visual issues.",
+            "11_QA_TestEngineering_Lead": "Pending final wave after Agent 12 scenario and Agent 09 final report."
+          },
+          "pm_open_risks": [
+            "Agent 09 final qa_smoke is not yet green due to timeouts, despite focused tests and WK67 passing.",
+            "Final QA must inspect the new scenario screenshots and decide whether fallback PNGs plus scenario captures are sufficient.",
+            "Agent 12 must avoid touching production game code."
+          ]
+        },
+        "r5_close": {
+          "pm_status_summary": "WK139 CLOSED / READY TO COMMIT: Boss Encounter Core + Elite Affixes is green end to end. Shipped a reusable BossEncounterSystem foundation, Goblin Warchief phase/ability runtime, deterministic elite affixes, primitive boss/elite read model, compact boss status UI, visual markers/telegraphs, and a deterministic boss_encounter_showcase screenshot scenario. This completes Sprint B from .cursor/plans/future_hero_quest_boss_deepening.plan.md and unblocks WK140 First Epic Boss Quest / Blackbanner-style boss quest integration.",
+          "shipped": [
+            "Boss/elite contracts and events: boss_encounter_started, boss_phase_changed, boss_ability_telegraphed, boss_ability_resolved, boss_defeated, elite_spawned.",
+            "SimEngine owns BossEncounterSystem and exposes boss_encounters plus elite_encounters/elite_enemies snapshots through AiGameView and RenderSnapshot.",
+            "The Goblin Warchief has war_banner above 50% HP and rally at/below 50% HP with telegraphed capped reinforcement.",
+            "Elite affixes include banner_bearer, ironhide, and frenzied with deterministic spawn-time rolling and readable facts.",
+            "Boss memory records primitive defeated-by and killed-hero facts.",
+            "Graphics show boss marker, elite marker, active telegraph, and resolved/cleared state.",
+            "UI top bar shows compact boss name, phase, HP, telegraph/status, and elite hint.",
+            "tools/screenshot_scenarios.py now registers boss_encounter_showcase for deterministic capture."
+          ],
+          "evidence": {
+            "agent_11_final_gate": [
+              "Boss contract: PASS",
+              "Boss gameplay: PASS",
+              "Elite affixes: PASS",
+              "Boss memory: PASS",
+              "Visuals: PASS",
+              "UI: PASS",
+              "Screenshot scenario: PASS",
+              "WK137 regressions: PASS",
+              "WK67: PASS",
+              "qa_smoke: PASS",
+              "Perf: PASS"
+            ],
+            "commands": [
+              "python -m pytest tests/test_wk139_boss_contract.py tests/test_wk139_boss_ai_view.py -q -> 0",
+              "python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk139_elite_affixes.py tests/test_wk139_boss_memory.py -q -> 0",
+              "python -m pytest tests/test_wk139_boss_visuals.py tests/test_wk139_elite_visuals.py tests/test_wk139_boss_ui.py tests/test_wk139_boss_showcase_scenario.py -q -> 0",
+              "python -m pytest tests/test_wk137_initial_wave.py tests/test_wk137_boss_scale.py -q -> 0",
+              "python -m pytest tests/test_wk67_ai_boundary.py -q -> 0",
+              "python tools/qa_smoke.py --quick -> 0 (1905 passed, 5 skipped, 1 xfailed)",
+              "python tools/capture_screenshots.py --scenario boss_encounter_showcase --seed 3 --out docs/screenshots/wk139_boss_encounter_showcase --size 1920x1080 --ticks 900 -> 0",
+              "python tools/mythos_tick_bench.py --ticks 900 --warmup 180 --heroes 24 --buildings 24 --enemies 80 -> 0 (mean 3.475ms p95 8.317ms p99 14.019ms max 24.180ms)"
+            ],
+            "screenshots": [
+              "docs/screenshots/wk139_boss_encounter_showcase/boss_encounter_showcase.png -> PASS, boss marker/name/phase/tell/elite marker visible with no HUD overlap",
+              "docs/screenshots/wk139_boss_encounter_showcase/boss_encounter_showcase_active.png -> PASS, active telegraph visible/readable",
+              "docs/screenshots/wk139_boss_encounter_showcase/boss_encounter_showcase_resolved.png -> PASS, telegraph clears cleanly",
+              "docs/screenshots/wk139_boss_ui/wk139_boss_ui_telegraph_1920x1080.png -> PASS, compact boss strip readable"
+            ]
+          },
+          "known_notes": [
+            "Agent 09 and Agent 12 both had qa_smoke timeouts in their own shells, but Agent 11 final integrated qa_smoke passed.",
+            "docs/screenshots/ is ignored by git; screenshot paths remain local verification evidence referenced by logs.",
+            "No owner-specific follow-ups were filed by Agent 11."
+          ],
+          "pm_next_actions_by_agent": {},
+          "recommended_next_sprint": {
+            "sprint_id": "wk140_first_epic_boss_quest",
+            "source": ".cursor/plans/future_hero_quest_boss_deepening.plan.md Sprint C",
+            "goal": "Connect WK138 quest chains and WK139 boss encounters into the first epic boss quest, recommended chain: Blackbanner's Toll.",
+            "recommended_send_list": [
+              "Agent 03 high intelligence / gpt-5.4-mini xhigh: integration contracts between QuestChainSystem and BossEncounterSystem.",
+              "Agent 05 high intelligence / gpt-5.4-mini xhigh: Blackbanner's Toll gameplay phases and boss encounter trigger.",
+              "Agent 06 high intelligence / gpt-5.4-mini xhigh: AI/prompt context for boss quest phase history and failure/retry.",
+              "Agent 08 high intelligence / gpt-5.4-mini xhigh: combined quest/boss UI states.",
+              "Agent 09 high intelligence / gpt-5.4-mini xhigh: boss quest visual capture if new tells are needed.",
+              "Agent 11 high intelligence / gpt-5.4-mini xhigh: final deterministic QA and screenshots."
+            ]
+          }
+        }
+      }
     }
   }
 }

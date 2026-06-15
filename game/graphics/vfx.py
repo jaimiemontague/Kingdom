@@ -8,6 +8,8 @@ from typing import List, Optional, Tuple
 
 import pygame
 
+from game.graphics.font_cache import render_text_shadowed_cached
+
 
 @dataclass
 class VFXParticle:
@@ -57,6 +59,19 @@ class DebrisDecal:
     h: float = 0.0  # Building footprint height (0 = use default radius)
 
 
+@dataclass
+class BossTelegraphVFX:
+    boss_id: str
+    boss_type: str
+    boss_name: str
+    ability_id: str
+    ability_name: str
+    current_phase_title: str
+    telegraph_ms: int
+    resolve_at_ms: int
+    started_at_ms: int
+
+
 class VFXSystem:
     """
     Tiny, non-blocking VFX system meant for quick combat readability.
@@ -71,6 +86,7 @@ class VFXSystem:
         self._particles: List[VFXParticle] = []
         self._projectiles: List[ProjectileVFX] = []
         self._debris: List[DebrisDecal] = []  # WK5 Build B: building debris decals
+        self._boss_telegraphs: dict[str, BossTelegraphVFX] = {}
         self.enabled = True
 
     def get_active_projectiles(self) -> List[ProjectileVFX]:
@@ -93,6 +109,33 @@ class VFXSystem:
 
     def _emit_event(self, event: dict):
         et = event.get("type")
+        if et in ("boss_ability_telegraphed", "boss_ability_resolved", "boss_defeated", "boss_phase_changed"):
+            boss_id = str(event.get("boss_id", "") or "").strip()
+            if boss_id:
+                if et == "boss_ability_telegraphed":
+                    self._boss_telegraphs[boss_id] = BossTelegraphVFX(
+                        boss_id=boss_id,
+                        boss_type=str(event.get("boss_type", "") or ""),
+                        boss_name=str(event.get("name", "") or ""),
+                        ability_id=str(event.get("ability_id", "") or ""),
+                        ability_name=str(
+                            event.get("ability_name", "")
+                            or event.get("detail", "")
+                            or event.get("ability_id", "")
+                            or ""
+                        ),
+                        current_phase_title=str(event.get("current_phase_title", "") or ""),
+                        telegraph_ms=int(event.get("telegraph_ms", 0) or 0),
+                        resolve_at_ms=int(event.get("resolve_at_ms", 0) or 0),
+                        started_at_ms=int(event.get("time_ms", 0) or 0),
+                    )
+                elif et == "boss_phase_changed":
+                    current_phase = str(event.get("current_phase", "") or "")
+                    if current_phase and current_phase != "rally":
+                        self._boss_telegraphs.pop(boss_id, None)
+                else:
+                    self._boss_telegraphs.pop(boss_id, None)
+            return
         if et == "ranged_projectile":
             # WK5: Handle ranged projectile events (these do not use generic x/y fields)
             from_x = event.get("from_x")
@@ -320,6 +363,65 @@ class VFXSystem:
             )
         )
 
+    def _render_boss_telegraphs(
+        self,
+        surface: pygame.Surface,
+        camera_offset: tuple[int, int],
+        *,
+        boss_encounters: tuple | list | None = None,
+        visible_enemy_ids: set[str] | None = None,
+        visible_enemy_dtos: dict[str, object] | None = None,
+    ) -> None:
+        if not self._boss_telegraphs or not boss_encounters:
+            return
+
+        cam_x, cam_y = camera_offset
+        boss_views = {
+            str(getattr(boss, "boss_id", "") or ""): boss
+            for boss in boss_encounters
+            if str(getattr(boss, "boss_id", "") or "")
+        }
+        if not boss_views:
+            return
+
+        visible_dtos = visible_enemy_dtos or {}
+        for boss_id, telegraph in self._boss_telegraphs.items():
+            if visible_enemy_ids is not None and boss_id not in visible_enemy_ids:
+                continue
+            boss_snapshot = boss_views.get(boss_id)
+            if boss_snapshot is None:
+                continue
+            position = getattr(boss_snapshot, "position", None)
+            if not position or len(position) < 2:
+                continue
+
+            dto = visible_dtos.get(boss_id)
+            boss_size = int(getattr(dto, "size", 18) or 18)
+            screen_x = int(float(position[0]) - cam_x)
+            screen_y = int(float(position[1]) - cam_y)
+
+            badge_color = (255, 146, 56)
+            badge_fill = (38, 18, 10)
+            badge_radius = 10
+            badge_center_y = screen_y - (boss_size // 2) - 42
+            center = (screen_x, badge_center_y)
+            pygame.draw.circle(surface, badge_fill, center, badge_radius)
+            pygame.draw.circle(surface, badge_color, center, badge_radius, 2)
+
+            icon = render_text_shadowed_cached(13, "!", (255, 245, 210))
+            icon_rect = icon.get_rect(center=center)
+            surface.blit(icon, icon_rect)
+
+            label_text = (
+                telegraph.ability_name
+                or telegraph.ability_id
+                or telegraph.current_phase_title
+                or "TELEGRAPH"
+            ).upper()
+            label = render_text_shadowed_cached(11, label_text, badge_color)
+            label_rect = label.get_rect(midtop=(screen_x, center[1] + badge_radius + 2))
+            surface.blit(label, label_rect)
+
     def update(self, dt: float):
         if not self.enabled:
             self._particles.clear()
@@ -355,7 +457,15 @@ class VFXSystem:
             active_projectiles.append(proj)
         self._projectiles = active_projectiles
 
-    def render(self, surface: pygame.Surface, camera_offset: tuple[int, int] = (0, 0)):
+    def render(
+        self,
+        surface: pygame.Surface,
+        camera_offset: tuple[int, int] = (0, 0),
+        *,
+        boss_encounters: tuple | list | None = None,
+        visible_enemy_ids: set[str] | None = None,
+        visible_enemy_dtos: dict[str, object] | None = None,
+    ):
         if not self.enabled:
             return
         cam_x, cam_y = camera_offset
@@ -468,6 +578,14 @@ class VFXSystem:
                 # WK5 Hotfix: 2-3px chunks (was 1-2px)
                 size = 2 + rnd.randint(0, 1)  # 2-3px (was 1-2px)
                 pygame.draw.rect(surface, debris_color, pygame.Rect(px, py, size, size))
+
+        self._render_boss_telegraphs(
+            surface,
+            camera_offset,
+            boss_encounters=boss_encounters,
+            visible_enemy_ids=visible_enemy_ids,
+            visible_enemy_dtos=visible_enemy_dtos,
+        )
 
 
 # Cached 32×32 arrow for Ursina 3D billboards (WK5 palette: wood shaft + bright tip).

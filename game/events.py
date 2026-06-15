@@ -41,7 +41,14 @@ class GameEventType(str, Enum):
     QUEST_CHAIN_PHASE_COMPLETED = "quest_chain_phase_completed"
     QUEST_CHAIN_COMPLETED = "quest_chain_completed"
     QUEST_CHAIN_FAILED = "quest_chain_failed"
-    # wk18: AI/LLM monitoring dev tools — capture prompts and responses for Dev Overlay
+    # WK139: boss encounter lifecycle and elite spawn events.
+    BOSS_ENCOUNTER_STARTED = "boss_encounter_started"
+    BOSS_PHASE_CHANGED = "boss_phase_changed"
+    BOSS_ABILITY_TELEGRAPHED = "boss_ability_telegraphed"
+    BOSS_ABILITY_RESOLVED = "boss_ability_resolved"
+    BOSS_DEFEATED = "boss_defeated"
+    ELITE_SPAWNED = "elite_spawned"
+    # wk18: AI/LLM monitoring dev tools â€” capture prompts and responses for Dev Overlay
     LLM_PROMPT_SENT = "llm_prompt_sent"
     LLM_RESPONSE_RECEIVED = "llm_response_received"
     # wk18: AI/LLM monitoring data tap (Agent 12 emits; Agent 08 Dev Tools overlay consumes)

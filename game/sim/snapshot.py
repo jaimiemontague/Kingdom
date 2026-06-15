@@ -1,14 +1,14 @@
 """
 Read-only render snapshot for renderers and external consumers.
 
-WK67 Round A-2 (Move 4 / L6 — presentation split): split into two frozen
+WK67 Round A-2 (Move 4 / L6 â€” presentation split): split into two frozen
 value objects so the **sim snapshot carries only sim truth**:
 
-- :class:`RenderSnapshot` — sim truth (live entity tuples + WK66 frozen DTO
+- :class:`RenderSnapshot` â€” sim truth (live entity tuples + WK66 frozen DTO
   tuples + world/fog/economy/effects). Built by ``SimEngine.build_snapshot``.
-  It carries NO camera/zoom/screen/pause/selection/blend/tick state — those are
+  It carries NO camera/zoom/screen/pause/selection/blend/tick state â€” those are
   *presentation*, not sim, and now live on ``PresentationFrameState``.
-- :class:`PresentationFrameState` — engine-built per-frame presentation state
+- :class:`PresentationFrameState` â€” engine-built per-frame presentation state
   (camera, zoom, screen size, paused/running, pause-menu visibility, selection,
   and the interpolation blend/tick). Built by ``GameEngine.build_presentation_frame``.
 
@@ -31,21 +31,21 @@ from typing import Any
 @dataclass(frozen=True)
 class RenderSnapshot:
     """
-    Sim truth for one rendered frame — NO presentation state.
+    Sim truth for one rendered frame â€” NO presentation state.
 
     WK67 Move 4: presentation fields (camera/zoom/screen/paused/running/
     pause_menu_visible/selected_*/sim_blend_fraction/sim_tick_id) were removed
     from this object and moved to :class:`PresentationFrameState`.
 
-    WK68 R3 (Agent 03) — L1 killer: the seven live entity tuples
+    WK68 R3 (Agent 03) â€” L1 killer: the seven live entity tuples
     (``buildings/heroes/enemies/peasants/guards/bounties`` + the single
     ``tax_collector``) have been DELETED. They were the last render-boundary leak
     of live, mutable sim objects. Every renderer now reads the frozen value-type
     DTO tuples below (``*_dtos`` / ``tax_collector_dto``); the world/effects
     fields that are NOT live entities (``world``/``trees``/``log_stacks``/
     ``castle``/``vfx_projectiles``/``underground_areas``/``rubble_records``)
-    deliberately remain — they are out of scope for the DTO migration. A
-    repo-wide grep for ``snapshot.{heroes,enemies,…}`` now returns zero
+    deliberately remain â€” they are out of scope for the DTO migration. A
+    repo-wide grep for ``snapshot.{heroes,enemies,â€¦}`` now returns zero
     production hits (gate D).
     """
 
@@ -91,12 +91,18 @@ class RenderSnapshot:
     # for render/UI consumers. Empty default keeps no-chain builds as a fast
     # no-op and preserves the WK67 digest path.
     quest_chains: tuple = ()
+    # WK139 (boss encounter core + elite affixes): read-only boss/elite snapshot
+    # tuples for render/UI consumers. Empty default keeps no-boss/no-elite builds
+    # as a fast no-op and preserves the WK67 digest path.
+    boss_encounters: tuple = ()
+    elite_enemies: tuple = ()
+    elite_encounters: tuple = ()
 
 
 @dataclass(frozen=True)
 class PresentationFrameState:
     """
-    Engine-built per-frame presentation state — NOT sim truth.
+    Engine-built per-frame presentation state â€” NOT sim truth.
 
     WK67 Move 4 / L6: these fields used to be stuffed into the sim snapshot via
     ``SimEngine.build_snapshot``'s presentation kwargs. The sim does not know

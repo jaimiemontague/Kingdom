@@ -17,7 +17,10 @@ from typing import Any, Callable
 from config import STARTING_BUILDINGS, TAX_STASH_BUILDING_TYPES, TILE_SIZE, MAP_WIDTH, MAP_HEIGHT
 from game.entities.building import Building
 from game.entities.hero import Hero
-from game.entities.enemy import Enemy
+from game.entities.enemy import Enemy, Goblin, GoblinWarchief
+from game.sim.timebase import set_sim_now_ms
+from game.systems.boss_encounter import BossEncounterSystem
+from game.systems.protocol import SystemContext
 from game.world import TileType
 
 
@@ -2023,6 +2026,133 @@ def scenario_wk135_inventory_ui(engine, *, seed: int) -> list[Shot]:
     ]
 
 
+def scenario_boss_encounter_showcase(engine, *, seed: int) -> list[Shot]:
+    """WK139: Goblin Warchief rally-state capture with boss UI, crown, elite badge, and telegraph."""
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    _reveal_all(engine.world)
+
+    try:
+        engine.heroes = []
+    except Exception:
+        pass
+    try:
+        engine.sim.quest_givers = []
+        engine.sim.pois = []
+    except Exception:
+        pass
+    try:
+        engine.sim.spawner.set_enabled(False)
+    except Exception:
+        pass
+
+    castle_gx = MAP_WIDTH // 2 - 1
+    castle_gy = MAP_HEIGHT // 2 - 1
+    boss_gx, boss_gy = castle_gx + 6, castle_gy + 2
+    elite_gx, elite_gy = castle_gx + 9, castle_gy + 3
+    boss_x, boss_y = _tile_center_px(boss_gx, boss_gy)
+    elite_x, elite_y = _tile_center_px(elite_gx, elite_gy)
+    center_x = (boss_x + elite_x) / 2.0
+    center_y = (boss_y + elite_y) / 2.0
+
+    def _apply_showcase(eng: Any) -> None:
+        # Build a fresh, capture-only scene so the screenshot shows the live boss
+        # read model without any stray world state from the 900-tick warmup.
+        _clear_dynamic_entities(eng)
+        _clear_non_castle_buildings(eng)
+        _reveal_all(eng.world)
+
+        try:
+            eng.heroes = []
+            eng.sim.quest_givers = []
+            eng.sim.pois = []
+        except Exception:
+            pass
+        eng.screenshot_hide_ui = False
+        eng.show_perf = False
+        eng.selected_hero = None
+        eng.selected_peasant = None
+        eng.selected_building = None
+        eng.selected_enemy = None
+        if hasattr(eng, "debug_panel"):
+            eng.debug_panel.visible = False
+        hud = getattr(eng, "hud", None)
+        if hud is not None:
+            hud.show_help = False
+            hud._session_start_ms = -100000
+            hud._poi_toasts = []
+            hud._wave_toast_text = None
+            hud._wave_toast_countdown_end_ms = 0
+
+        vfx = getattr(eng, "vfx_system", None)
+        if vfx is not None:
+            vfx._particles = []
+            vfx._projectiles = []
+            vfx._debris = []
+            vfx._boss_telegraphs = {}
+
+        castle = next((b for b in eng.buildings if getattr(b, "building_type", "") == "castle"), None)
+        if castle is None:
+            castle = _place_building(eng, "castle", castle_gx, castle_gy)
+        else:
+            if hasattr(castle, "is_constructed"):
+                castle.is_constructed = True
+
+        boss = GoblinWarchief(boss_x, boss_y)
+        elite = Goblin(elite_x, elite_y)
+        eng.enemies = [boss, elite]
+
+        set_sim_now_ms(15_000)
+        eng._sim_now_ms = 15_000
+        eng.sim.boss_encounter_system = BossEncounterSystem()
+        boss_system = eng.sim.boss_encounter_system
+
+        boss_system.register_boss(boss, event_bus=eng.sim.event_bus, now_ms=15_000)
+        boss_system.register_elite(
+            elite,
+            affix_ids=("banner_bearer", "ironhide"),
+            event_bus=eng.sim.event_bus,
+            now_ms=15_000,
+        )
+
+        boss.hp = max(1, int(round(float(getattr(boss, "max_hp", 1) or 1) * 0.42)))
+        ctx = SystemContext(
+            heroes=eng.heroes,
+            enemies=eng.enemies,
+            buildings=eng.buildings,
+            world=eng.world,
+            economy=eng.sim.economy,
+            event_bus=eng.sim.event_bus,
+            castle=castle,
+        )
+        boss_system.update(ctx, 0.0)
+        eng.event_bus.flush()
+
+        if hud is not None:
+            hud._poi_toasts = []
+            hud._wave_toast_text = None
+            hud._wave_toast_countdown_end_ms = 0
+
+    return [
+        Shot(
+            filename="boss_encounter_showcase.png",
+            label="WK139: Goblin Warchief rally telegraph with elite marker",
+            center_x=center_x,
+            center_y=center_y,
+            zoom=2.0,
+            ticks=0,
+            apply=_apply_showcase,
+            meta={
+                "scenario": "boss_encounter_showcase",
+                "seed": int(seed),
+                "boss": "goblin_warchief",
+                "elite_affixes": ("banner_bearer", "ironhide"),
+                "state": "rally_telegraph",
+            },
+        ),
+    ]
+
+
 def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
     scenario_name = str(scenario_name).strip()
     if scenario_name == "building_catalog":
@@ -2063,6 +2193,8 @@ def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
         return scenario_wk61_hero_menu_chat(engine, seed=int(seed))
     if scenario_name == "ursina_melee_combat":
         return scenario_ursina_melee_combat(engine, seed=int(seed))
+    if scenario_name == "boss_encounter_showcase":
+        return scenario_boss_encounter_showcase(engine, seed=int(seed))
     if scenario_name == "wk133_quest_ui":
         return scenario_wk133_quest_ui(engine, seed=int(seed))
     if scenario_name == "wk135_inventory_ui":

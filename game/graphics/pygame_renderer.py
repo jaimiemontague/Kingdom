@@ -83,6 +83,22 @@ class PygameRenderer:
         """Shared map + units path (main window or minimap viewport)."""
         ctx = self._ctx
         world = snapshot.world
+        boss_views = tuple(getattr(snapshot, "boss_encounters", ()) or ())
+        elite_views = tuple(
+            getattr(snapshot, "elite_enemies", ()) or getattr(snapshot, "elite_encounters", ()) or ()
+        )
+        boss_by_id = {
+            str(getattr(boss, "boss_id", "") or ""): boss
+            for boss in boss_views
+            if str(getattr(boss, "boss_id", "") or "")
+        }
+        elite_by_id = {
+            str(getattr(elite, "elite_id", "") or ""): elite
+            for elite in elite_views
+            if str(getattr(elite, "elite_id", "") or "")
+        }
+        visible_enemy_ids: set[str] = set()
+        visible_enemy_dtos: dict[str, Any] = {}
 
         self._world_terrain.render(world, target, camera_offset)
 
@@ -96,7 +112,17 @@ class PygameRenderer:
                     continue
             else:
                 continue
-            ctx.renderer_registry.render_enemy(target, enemy, camera_offset)
+            enemy_id = str(getattr(enemy, "entity_id", "") or "")
+            if enemy_id:
+                visible_enemy_ids.add(enemy_id)
+                visible_enemy_dtos[enemy_id] = enemy
+            ctx.renderer_registry.render_enemy(
+                target,
+                enemy,
+                camera_offset,
+                boss_snapshot=boss_by_id.get(enemy_id),
+                elite_snapshot=elite_by_id.get(enemy_id),
+            )
 
         for hero in snapshot.hero_dtos:  # WK66 Move 3: draw from frozen DTOs
             ctx.renderer_registry.render_hero(target, hero, camera_offset)
@@ -144,7 +170,13 @@ class PygameRenderer:
 
         if draw_vfx and ctx.vfx_system is not None and hasattr(ctx.vfx_system, "render"):
             try:
-                ctx.vfx_system.render(target, camera_offset)
+                ctx.vfx_system.render(
+                    target,
+                    camera_offset,
+                    boss_encounters=boss_views,
+                    visible_enemy_ids=visible_enemy_ids,
+                    visible_enemy_dtos=visible_enemy_dtos,
+                )
             except Exception:
                 # WK65 Round 0: behavior unchanged (still swallow) — now observable.
                 _log.exception("VFX render failed")
@@ -269,4 +301,4 @@ class PygameRenderer:
             draw_fog=True,
             bounty_pipeline=False,
         )
-
+

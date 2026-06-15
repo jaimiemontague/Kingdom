@@ -172,14 +172,14 @@
           ],
           "summary": "Added two read-only fields to AiGameView mirroring bounties/pois: quests: tuple = () and quest_givers: tuple = (). Both default empty so the frozen dataclass stays constructible without quest infrastructure (digest guard #1: no-quest engine -> empty tuples -> AI quest behavior no-ops). Documented the boundary contract in the class docstring + inline field docs: PLAIN DATA ONLY (tuples of primitives, no live Quest/QuestGiver/Building refs).",
           "contract": {
-            "quests_entry_shape": "(id: str, quest_type: str, target: str, reward: int, is_open: bool, accepted_by: str|None) Ã¢â‚¬â€ quest_type vocab raid_lair|slay_enemy_type|find_poi|explore_far; target is a plain-data summary (lair/poi id, enemy type, or 'gx,gy' tile), never an object; accepted_by = accepting hero_id or None",
-            "quest_givers_entry_shape": "(giver_id: str, x: float, y: float, is_open: bool) Ã¢â‚¬â€ giver_id == owning Herald's Post building id (decline-tracking key); x,y world coords; is_open mirrors whether the post has an open quest",
-            "boundary_rule": "no live object refs through the AI view; Agent 05 populates from sim_engine.build_ai_view (not landed at test time Ã¢â‚¬â€ tests are forward-compatible and hold before/after)"
+            "quests_entry_shape": "(id: str, quest_type: str, target: str, reward: int, is_open: bool, accepted_by: str|None) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â quest_type vocab raid_lair|slay_enemy_type|find_poi|explore_far; target is a plain-data summary (lair/poi id, enemy type, or 'gx,gy' tile), never an object; accepted_by = accepting hero_id or None",
+            "quest_givers_entry_shape": "(giver_id: str, x: float, y: float, is_open: bool) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â giver_id == owning Herald's Post building id (decline-tracking key); x,y world coords; is_open mirrors whether the post has an open quest",
+            "boundary_rule": "no live object refs through the AI view; Agent 05 populates from sim_engine.build_ai_view (not landed at test time ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â tests are forward-compatible and hold before/after)"
           },
           "gates": {
             "pytest": "tests/test_wk126_ai_view_quests.py + tests/test_wk67_ai_boundary.py -> 14 passed (4 new + 10 WK67 pins incl. keystone digest b73961... byte-identical)"
           },
-          "notes": "Agent 05's build_ai_view populate had NOT landed when gated (sim_engine.py:605-618 passes no quest kwargs); new tests assert dataclass defaults + empty tuples from a no-quest headless engine, which holds both before and after 05 lands. DO NOT COMMIT honored Ã¢â‚¬â€ no git run."
+          "notes": "Agent 05's build_ai_view populate had NOT landed when gated (sim_engine.py:605-618 passes no quest kwargs); new tests assert dataclass defaults + empty tuples from a no-quest headless engine, which holds both before and after 05 lands. DO NOT COMMIT honored ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â no git run."
         }
       }
     },
@@ -187,14 +187,14 @@
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk137_initial_goblin_wave.plan.md",
         "created_utc": "2026-06-10T00:00:00Z",
-        "notes": "WK137 initial goblin wave + Goblin Warchief boss. Agent 03 lane: T2 Ã¢â‚¬â€ make both Ursina unit renderers honor per-enemy `size` so bosses render larger, give boss types real sprite/atlas coverage (fixing a pre-existing wrong-fallback-sprite bug), and prefer the instance `.name` for boss labels. Disjoint from Agent 05's T1 (config/enemy/wave_events/sim-tests lane)."
+        "notes": "WK137 initial goblin wave + Goblin Warchief boss. Agent 03 lane: T2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â make both Ursina unit renderers honor per-enemy `size` so bosses render larger, give boss types real sprite/atlas coverage (fixing a pre-existing wrong-fallback-sprite bug), and prefer the instance `.name` for boss labels. Disjoint from Agent 05's T1 (config/enemy/wave_events/sim-tests lane)."
       },
       "rounds": {
         "r1": {
           "sprint_id": "wk137_initial_goblin_wave",
           "round_id": "r1",
           "status": "done",
-          "ticket": "WK137-T2 (Agent 03 Ã¢â‚¬â€ TechnicalDirector: renderer honors boss size + sprite/atlas coverage + name labels)",
+          "ticket": "WK137-T2 (Agent 03 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â TechnicalDirector: renderer honors boss size + sprite/atlas coverage + name labels)",
           "what_i_changed": {
             "summary": "Both Ursina unit renderers now scale enemy billboards per-instance by the `size` stat (basic enemy 18 -> 1.0x, clamped to 2.0x) instead of a fixed ENEMY_SCALE, so every boss (warchief 24 -> 1.33x, bandit_lord 28 -> 1.56x, demon 32 -> 1.78x, dragon 36 -> 2.0x) renders larger. Added a goblin_warchief->goblin sprite-folder alias and boss procedural colors, extended the atlas to pack the four boss types (fixing a pre-existing wrong-fallback-sprite bug), and made boss name labels prefer the instance `.name` in BOTH label paths. DTO untouched (already carries `size` and `name`).",
             "files_modified": [
@@ -205,11 +205,11 @@
               "game/graphics/instanced_unit_labels.py",
               "tests/test_wk137_boss_scale.py"
             ],
-            "extra_lane_file_note": "instanced_unit_labels.py is the PERMITTED extra lane file flagged in T2.c: the instanced renderer resolves enemy label display text in InstancedUnitLabelPool, not inline in instanced_unit_renderer.py, so the boss-name-preference one-liner had to land there. Per the T2.c instruction ('make the same one-line fix there and ADD that file to your lane Ã¢â‚¬â€ note it in your log') this is in-scope and recorded here.",
+            "extra_lane_file_note": "instanced_unit_labels.py is the PERMITTED extra lane file flagged in T2.c: the instanced renderer resolves enemy label display text in InstancedUnitLabelPool, not inline in instanced_unit_renderer.py, so the boss-name-preference one-liner had to land there. Per the T2.c instruction ('make the same one-line fix there and ADD that file to your lane ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â note it in your log') this is in-scope and recorded here.",
             "per_change": {
               "T2a_per_instance_billboard_scale": "Added the SAME module-level helper to BOTH renderer modules (no cross-import; mirrors each module's existing ENEMY_SCALE duplication convention): _ENEMY_BASE_SIZE=18.0, _ENEMY_SCALE_MAX_MULT=2.0, and enemy_billboard_scale(size) = ENEMY_SCALE * max(1.0, min(2.0, float(size or 18)/18.0)). instanced_unit_renderer.py enemy loop (~line 796-804) computes e_scale = enemy_billboard_scale(e.size) ONCE per enemy and replaces BOTH ENEMY_SCALE uses (wy = terrain_y + e_scale*0.5; pack_outside(vx,vy,vz, e_scale, uv, e_scale)); pack_hp_bar untouched, no allocations/dict-lookups added to the hot loop. ursina_unit_sync.py enemy loop (~line 263) replaces s = ENEMY_SCALE with s = enemy_billboard_scale(int(getattr(e,'size',18) or 18)); sx_e/scale-tuple/terrain_y offset all derive from s and the per-frame (sx_e, s, 1) tuple keeps entities created before the change in sync.",
-              "T2b_sprite_alias_and_atlas_coverage": "enemy_sprites.py: added _ASSET_FOLDER_ALIASES = {'goblin_warchief': 'goblin'} and _try_load_asset_frames now resolves the PNG folder through the alias (folder_type lookup), so the warchief reuses goblin PNG art (no folder of its own). _type_color gained boss entries matching ENEMY_STATS: goblin_warchief (96,48,12), bandit_lord (180,100,30), demon_overlord (200,30,30), dragon (220,60,20) Ã¢â‚¬â€ procedural fallbacks now read 'elite' instead of default brown. unit_atlas.py _build() extends the packed enemy tuple with goblin_warchief, bandit_lord, demon_overlord, dragon. This FIXES a pre-existing bug: boss types were never packed, so lookup_uv('enemy', <boss>, ...) silently returned the fallback UV (warrior idle frame 0) and bosses rendered the wrong sprite. After this change the warchief packs real goblin frames (via the alias) and the three legacy bosses pack their colored procedural frames.",
-              "T2c_boss_name_labels": "ursina_unit_sync.py (~line 291): enemy_label now prefers the instance name Ã¢â‚¬â€ str(getattr(e,'name','') or '') or <title-cased enemy_type fallback> Ã¢â‚¬â€ so 'The Goblin Warchief'/'The Bandit Lord' shows instead of the title-cased type key. instanced_unit_labels.py InstancedUnitLabelPool._label_text (enemy branch, ~line 302): same name-preference one-liner applied (this is the instanced-path label resolver; see extra_lane_file_note)."
+              "T2b_sprite_alias_and_atlas_coverage": "enemy_sprites.py: added _ASSET_FOLDER_ALIASES = {'goblin_warchief': 'goblin'} and _try_load_asset_frames now resolves the PNG folder through the alias (folder_type lookup), so the warchief reuses goblin PNG art (no folder of its own). _type_color gained boss entries matching ENEMY_STATS: goblin_warchief (96,48,12), bandit_lord (180,100,30), demon_overlord (200,30,30), dragon (220,60,20) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â procedural fallbacks now read 'elite' instead of default brown. unit_atlas.py _build() extends the packed enemy tuple with goblin_warchief, bandit_lord, demon_overlord, dragon. This FIXES a pre-existing bug: boss types were never packed, so lookup_uv('enemy', <boss>, ...) silently returned the fallback UV (warrior idle frame 0) and bosses rendered the wrong sprite. After this change the warchief packs real goblin frames (via the alias) and the three legacy bosses pack their colored procedural frames.",
+              "T2c_boss_name_labels": "ursina_unit_sync.py (~line 291): enemy_label now prefers the instance name ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â str(getattr(e,'name','') or '') or <title-cased enemy_type fallback> ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â so 'The Goblin Warchief'/'The Bandit Lord' shows instead of the title-cased type key. instanced_unit_labels.py InstancedUnitLabelPool._label_text (enemy branch, ~line 302): same name-preference one-liner applied (this is the instanced-path label resolver; see extra_lane_file_note)."
             },
             "out_of_lane_files_untouched": "game/sim/render_dto.py, config.py, and game/entities/* were NOT touched (DTO already carries size+name; T1's enemy/config changes are Agent 05's lane)."
           },
@@ -228,20 +228,20 @@
             }
           ],
           "evidence": {
-            "pytest_t2_t1_digest": "31 passed (tests/test_wk137_boss_scale.py + tests/test_wk137_initial_wave.py + tests/test_wk67_ai_boundary.py). WK67 keystone digest b73961... byte-identical / GREEN Ã¢â‚¬â€ the renderer-only T2 changes do not touch sim logic so the 0-300-tick digest is unaffected. Re-run by this Agent 03 log session: confirmed 31 passed.",
-            "import_seam_gate": "OK Ã¢â‚¬â€ `import game.graphics.instanced_unit_renderer, game.graphics.ursina_unit_sync, game.graphics.unit_atlas, game.graphics.enemy_sprites, game.graphics.instanced_unit_labels` succeeds. Re-run by this session: IMPORT_SEAM_OK.",
-            "renderer_parity_suites": "44 passed Ã¢â‚¬â€ `python -m pytest tests/ -q -k \"instanced or atlas or unit_sync or sprite\"` (existing renderer/parity suites stay green under the per-instance scale + atlas coverage changes).",
+            "pytest_t2_t1_digest": "31 passed (tests/test_wk137_boss_scale.py + tests/test_wk137_initial_wave.py + tests/test_wk67_ai_boundary.py). WK67 keystone digest b73961... byte-identical / GREEN ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â the renderer-only T2 changes do not touch sim logic so the 0-300-tick digest is unaffected. Re-run by this Agent 03 log session: confirmed 31 passed.",
+            "import_seam_gate": "OK ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â `import game.graphics.instanced_unit_renderer, game.graphics.ursina_unit_sync, game.graphics.unit_atlas, game.graphics.enemy_sprites, game.graphics.instanced_unit_labels` succeeds. Re-run by this session: IMPORT_SEAM_OK.",
+            "renderer_parity_suites": "44 passed ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â `python -m pytest tests/ -q -k \"instanced or atlas or unit_sync or sprite\"` (existing renderer/parity suites stay green under the per-instance scale + atlas coverage changes).",
             "full_suite_agent05_merged_tree": "Agent 05's full-suite run on the merged tree: 1854 passed, 5 skipped.",
             "qa_smoke_quick": "DONE: PASS (qa_smoke --quick on the merged tree, per PM gate re-run).",
-            "visual_verdict": "DEFERRED Ã¢â‚¬â€ headless agent. Per the WK-standing rule for game/graphics/ursina_* slices, this ships with the import/seam/digest/parity gates above; live Ursina captures are a PM gate on the GPU box (see follow_ups). No visual confirmation possible in this session."
+            "visual_verdict": "DEFERRED ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â headless agent. Per the WK-standing rule for game/graphics/ursina_* slices, this ships with the import/seam/digest/parity gates above; live Ursina captures are a PM gate on the GPU box (see follow_ups). No visual confirmation possible in this session."
           },
           "blockers": [],
           "follow_ups": [
-            "PM live Ursina capture (GPU box, headless agent could NOT visually verify): (a) Goblin Warchief beside a goblin Ã¢â‚¬â€ visibly ~1.33x larger with 'The Goblin Warchief' name label; (b) boss name labels render correctly in BOTH the ursina_unit_sync path and the instanced label path; (c) a Bandit Lord Ã¢â‚¬â€ now the CORRECT sprite (atlas fix) AND larger scale (1.56x), no longer the wrong fallback frame.",
+            "PM live Ursina capture (GPU box, headless agent could NOT visually verify): (a) Goblin Warchief beside a goblin ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â visibly ~1.33x larger with 'The Goblin Warchief' name label; (b) boss name labels render correctly in BOTH the ursina_unit_sync path and the instanced label path; (c) a Bandit Lord ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â now the CORRECT sprite (atlas fix) AND larger scale (1.56x), no longer the wrong fallback frame.",
             "Use KINGDOM_INITIAL_WAVE_SEC=3 (T1 config env knob) to fire the wave early during capture so the warchief is on-screen; crop+upscale tiny billboards per the memory note.",
-            "HP-bar dims stay the fixed per-kind spec (pack_hp_bar untouched) Ã¢â‚¬â€ a 2x dragon gets a standard-size bar; polish later only if Jaimie cares."
+            "HP-bar dims stay the fixed per-kind spec (pack_hp_bar untouched) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â a 2x dragon gets a standard-size bar; polish later only if Jaimie cares."
           ],
-          "notes": "DO NOT COMMIT honored Ã¢â‚¬â€ no git write in this session. T2 diff reconstructed against the plan: the actual uncommitted changes match the T2 spec exactly; the only addition beyond the four named lane files is instanced_unit_labels.py, which T2.c explicitly authorized and instructed to be added to the lane and noted in the log."
+          "notes": "DO NOT COMMIT honored ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â no git write in this session. T2 diff reconstructed against the plan: the actual uncommitted changes match the T2 spec exactly; the only addition beyond the four named lane files is instanced_unit_labels.py, which T2.c explicitly authorized and instructed to be added to the lane and noted in the log."
         }
       }
     },
@@ -323,6 +323,113 @@
           "recommended_next_actions": [
             "PM can send Wave 2 to Agent 05: the quest-chain runtime is registered in SimEngine, active snapshots flow through the read model, and the empty/default path stayed digest-stable.",
             "Agent 05 can drive downstream quest-chain gameplay/UI consumers from the immutable QuestChainSnapshot tuples exposed by SimEngine."
+          ]
+        }
+      }    },
+    "wk139_boss_encounter_core_elites": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk139_boss_encounter_core_elites.plan.md",
+        "created_utc": "2026-06-14T00:00:00Z",
+        "notes": "WK139 Boss Encounter Core + Elite Affixes: Agent 03 locked boss/elite read-only sim/view contracts, boss/elite event names, empty-default boss lane registration, and no-boss/no-elite digest safety."
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "sprint_id": "wk139_boss_encounter_core_elites",
+          "round_id": "r1_kickoff",
+          "status": "complete",
+          "what_i_changed": {
+            "summary": "Added boss/elite primitive contracts (BossMemorySummary, BossEncounterSnapshot, EliteEncounterSnapshot), added boss/elite event names, exposed boss_encounters and elite_enemies as empty-default tuples on AiGameView and RenderSnapshot, registered an empty-default boss_encounter_system lane in SimEngine, and added focused WK139 contract/read-model tests.",
+            "files_touched": [
+              "game/events.py",
+              "game/sim/contracts.py",
+              "game/sim/ai_view.py",
+              "game/sim/snapshot.py",
+              "game/sim_engine.py",
+              "tests/test_wk139_boss_contract.py",
+              "tests/test_wk139_boss_ai_view.py"
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m py_compile game/events.py game/sim/contracts.py game/sim/ai_view.py game/sim/snapshot.py game/sim_engine.py tests/test_wk139_boss_contract.py tests/test_wk139_boss_ai_view.py",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk139_boss_contract.py tests/test_wk139_boss_ai_view.py -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "wk139_pytest": "5 passed, 1 warning in 3.96s.",
+            "wk67_digest": "10 passed, 1 warning in 18.13s; keystone digest remained b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded.",
+            "qa_smoke": "PASS; determinism_guard passed and the quick smoke suite finished 1889 passed, 5 skipped, 1 xfailed.",
+            "py_compile": "PASS; touched Python modules compiled cleanly.",
+            "log_validation": "PASS; agent log JSON validates with python -m json.tool."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "PM can send the registration follow-up once Agent 05 lands BossEncounterSystem/runtime; Wave 2 should wait until gameplay content exists."
+          ]
+        },
+        "r2_registration_followup": {
+          "sprint_id": "wk139_boss_encounter_core_elites",
+          "round_id": "r2_registration_followup",
+          "status": "complete",
+          "what_i_changed": {
+            "summary": "Registered the real BossEncounterSystem in SimEngine.__init__ with a minimal local import, kept the no-boss path digest-stable, added elite_encounters as a compatibility alias alongside elite_enemies on AiGameView/RenderSnapshot, and extended the WK139 boss read-model tests to prove active boss and elite snapshots flow through both AI and render snapshot paths.",
+            "files_touched": [
+              "game/sim/ai_view.py",
+              "game/sim/snapshot.py",
+              "game/sim_engine.py",
+              "tests/test_wk139_boss_ai_view.py",
+              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk139_boss_contract.py tests/test_wk139_boss_ai_view.py tests/test_wk139_boss_encounters.py tests/test_wk139_elite_affixes.py tests/test_wk139_boss_memory.py -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 124
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "boss_registration": "Fresh SimEngine now owns a BossEncounterSystem instance; no-boss builds still returned empty boss_encounters and elite_* tuples, while a seeded live boss plus elite registered through the system and surfaced in both AiGameView and RenderSnapshot. The no-boss path stayed WK67-digest clean.",
+            "wk139_pytest": "13 passed, 1 warning in 7.28s for the boss contract/read-model pins and the gameplay/runtime pins.",
+            "wk67_digest": "10 passed, 1 warning in 25.13s; the keystone digest remained b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded.",
+            "qa_smoke": "PASS on the second run after one 604s shell timeout; final quick smoke finished 1897 passed, 5 skipped, 1 xfailed.",
+            "compat_alias": "elite_encounters now mirrors elite_enemies in both read-model facades so either field name is safe for downstream consumers."
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "PM can send Wave 2 to Agents 09 and 08 now; the boss runtime is registered and the active boss/elite read-model facts are flowing.",
+            "Agent 11 can proceed with final integrated boss/UI/visual verification using the now-live boss encounter snapshot surface."
           ]
         }
       }

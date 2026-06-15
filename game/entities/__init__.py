@@ -12,11 +12,10 @@ from .buildings import (
     Palace
 )
 from .hero import Hero, HeroState
-from .enemy import Enemy, Goblin, Wolf, Skeleton
+from .enemy import Enemy, Goblin, GoblinWarchief, Wolf, Skeleton, BanditLord, DemonOverlord, Dragon
 from .guard import Guard, GuardState
 from .peasant import Peasant, PeasantState
 from .tax_collector import TaxCollector, CollectorState
 from .lair import MonsterLair, GoblinCamp, WolfDen, SkeletonCrypt
 from .poi import PointOfInterest, POIDefinition, POI_DEFINITIONS
 from .neutral_buildings import NeutralBuilding, House, Farm, FoodStand
-

@@ -5,6 +5,7 @@ from typing import Any, Mapping
 import pygame
 
 from config import COLOR_GREEN, COLOR_RED, COLOR_WHITE
+from game.graphics.font_cache import render_text_shadowed_cached
 from game.graphics.enemy_sprites import EnemySpriteLibrary
 
 
@@ -12,6 +13,89 @@ def _state_get(entity_state: Mapping[str, Any] | object, key: str, default: Any 
     if isinstance(entity_state, Mapping):
         return entity_state.get(key, default)
     return getattr(entity_state, key, default)
+
+
+_BOSS_CROWN_EDGE = (28, 24, 16)
+_BOSS_PHASE_COLORS: dict[str, tuple[int, int, int]] = {
+    "war_banner": (232, 188, 60),
+    "rally": (232, 92, 78),
+}
+_ELITE_TITLE_COLORS: dict[str, tuple[int, int, int]] = {
+    "banner_bearer": (248, 220, 96),
+    "ironhide": (185, 194, 205),
+    "frenzied": (244, 114, 114),
+}
+
+
+def _boss_badge_color(phase_title: str) -> tuple[int, int, int]:
+    return _BOSS_PHASE_COLORS.get(str(phase_title or "").strip().lower(), (232, 188, 60))
+
+
+def _elite_title_color(affixes: tuple[str, ...]) -> tuple[int, int, int]:
+    affix_ids = {str(affix_id).strip().lower() for affix_id in affixes if str(affix_id).strip()}
+    for key in ("banner_bearer", "ironhide", "frenzied"):
+        if key in affix_ids:
+            return _ELITE_TITLE_COLORS[key]
+    return (220, 220, 220)
+
+
+def _draw_crown_badge(
+    surface: pygame.Surface,
+    center_x: float,
+    badge_top_y: float,
+    *,
+    fill_color: tuple[int, int, int],
+) -> None:
+    """Draw a small, readable boss crown without touching the HP bar."""
+    left = int(center_x) - 9
+    right = int(center_x) + 9
+    top = int(badge_top_y)
+    base = top + 11
+    crown = [
+        (left, base),
+        (left + 2, top + 3),
+        (left + 5, top + 6),
+        (int(center_x) - 1, top),
+        (int(center_x) + 1, top + 6),
+        (right - 5, top + 3),
+        (right - 2, base),
+        (right, base + 3),
+        (left, base + 3),
+    ]
+    pygame.draw.polygon(surface, fill_color, crown)
+    pygame.draw.polygon(surface, _BOSS_CROWN_EDGE, crown, 1)
+    pygame.draw.line(surface, _BOSS_CROWN_EDGE, (left + 2, base + 1), (right - 2, base + 1), 1)
+    pygame.draw.circle(surface, _BOSS_CROWN_EDGE, (left + 2, top + 3), 1)
+    pygame.draw.circle(surface, _BOSS_CROWN_EDGE, (int(center_x), top), 1)
+    pygame.draw.circle(surface, _BOSS_CROWN_EDGE, (right - 2, top + 3), 1)
+
+
+def _draw_elite_badge(
+    surface: pygame.Surface,
+    center_x: float,
+    badge_y: float,
+    *,
+    title: str,
+    title_color: tuple[int, int, int],
+) -> None:
+    """Draw a restrained elite marker and title below the sprite."""
+    if not title:
+        return
+    badge = render_text_shadowed_cached(12, title, title_color)
+    badge_rect = badge.get_rect(center=(int(center_x), int(badge_y)))
+    surface.blit(badge, badge_rect)
+    # Tiny color chip keeps the marker readable at normal zoom without turning
+    # the world into a label forest.
+    chip_x = badge_rect.left - 8
+    chip_y = badge_rect.centery
+    chip = [
+        (chip_x, chip_y),
+        (chip_x + 4, chip_y - 4),
+        (chip_x + 8, chip_y),
+        (chip_x + 4, chip_y + 4),
+    ]
+    pygame.draw.polygon(surface, title_color, chip)
+    pygame.draw.polygon(surface, _BOSS_CROWN_EDGE, chip, 1)
 
 
 class EnemyRenderer:
@@ -96,6 +180,9 @@ class EnemyRenderer:
         surface: pygame.Surface,
         entity_state: Mapping[str, Any] | object,
         camera_offset: tuple[float, float] = (0.0, 0.0),
+        *,
+        boss_snapshot: object | None = None,
+        elite_snapshot: object | None = None,
     ) -> None:
         if not bool(_state_get(entity_state, "is_alive", True)):
             return
@@ -133,3 +220,27 @@ class EnemyRenderer:
             ]
             pygame.draw.polygon(surface, (200, 0, 0), points)
             pygame.draw.polygon(surface, COLOR_WHITE, points, 1)
+
+        enemy_id = str(_state_get(entity_state, "entity_id", "") or self.enemy_id)
+
+        if boss_snapshot is not None and str(getattr(boss_snapshot, "boss_id", "")) == enemy_id:
+            boss_status = str(getattr(boss_snapshot, "status", "active") or "active")
+            if boss_status != "defeated":
+                phase_title = str(getattr(boss_snapshot, "current_phase_title", "") or "")
+                badge_color = _boss_badge_color(phase_title)
+                crown_y = screen_y - size // 2 - 22
+                _draw_crown_badge(surface, screen_x, crown_y, fill_color=badge_color)
+                boss_name = str(getattr(boss_snapshot, "name", "") or "")
+                if boss_name:
+                    name_surf = render_text_shadowed_cached(12, boss_name, badge_color)
+                    name_rect = name_surf.get_rect(center=(int(screen_x), int(screen_y + size // 2 + 9)))
+                    surface.blit(name_surf, name_rect)
+
+        if elite_snapshot is not None and str(getattr(elite_snapshot, "elite_id", "")) == enemy_id:
+            elite_status = str(getattr(elite_snapshot, "status", "active") or "active")
+            if elite_status != "defeated":
+                title = str(getattr(elite_snapshot, "name", "") or "")
+                affixes = tuple(getattr(elite_snapshot, "affixes", ()) or ())
+                title_color = _elite_title_color(affixes)
+                elite_y = screen_y + size // 2 + 10
+                _draw_elite_badge(surface, screen_x, elite_y, title=title, title_color=title_color)

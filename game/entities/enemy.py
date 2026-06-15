@@ -207,6 +207,11 @@ class Enemy:
         self.attack_cooldown = 0
         self.attack_cooldown_max = 1500  # ms between attacks
         self.attack_range = TILE_SIZE * 1.2
+        # Named additive combat modifiers let boss/elite auras stack cleanly and
+        # be cleared deterministically without mutating the base attack value.
+        self.defense = 0
+        self._attack_bonus_sources: dict[str, int] = {}
+        self.attack_power_bonus = 0
         
         # WK57: Layer tracking (0 = surface, -1 = underground)
         self.layer = 0
@@ -255,13 +260,32 @@ class Enemy:
     
     def take_damage(self, amount: int) -> bool:
         """Take damage, returns True if killed."""
-        self.hp = max(0, self.hp - amount)
+        defense = int(getattr(self, "defense", 0) or 0)
+        actual_damage = max(1, int(amount) - defense)
+        self.hp = max(0, self.hp - actual_damage)
+        self._sync_elite_frenzy_state()
         if self.hp <= 0:
             self.state = EnemyState.DEAD
             self._queue_render_animation("dead")
             return True
         self._queue_render_animation("hurt")
         return False
+
+    def _sync_elite_frenzy_state(self) -> None:
+        """Activate the frenzied bonus once the HP threshold is crossed."""
+        if not getattr(self, "is_elite", False):
+            return
+        affixes = tuple(getattr(self, "elite_affix_ids", ()) or ())
+        if "frenzied" not in affixes:
+            return
+        threshold = float(getattr(self, "elite_frenzy_threshold", 0.4) or 0.4)
+        bonus = int(getattr(self, "elite_frenzy_attack_bonus", 0) or 0)
+        if bonus <= 0 or not self.is_alive:
+            return
+        source = f"elite_frenzy:{getattr(self, 'entity_id', 'unknown')}"
+        if self.health_percent <= threshold and source not in self._attack_bonus_sources:
+            self.set_attack_bonus(source, bonus)
+            self.elite_frenzy_active = True
 
     def _queue_render_animation(self, name: str) -> None:
         self._render_anim_trigger = str(name)
@@ -279,6 +303,40 @@ class Enemy:
         """
         if hasattr(self, "attackers"):
             self.attackers.add(hero.name)
+
+    def set_attack_bonus(self, source: str, bonus: int) -> None:
+        """Set or replace a named attack bonus source."""
+        key = str(source).strip()
+        if not key:
+            return
+        self._attack_bonus_sources[key] = int(bonus)
+        self.attack_power_bonus = self.get_attack_bonus()
+
+    def clear_attack_bonus(self, source: str) -> None:
+        """Remove a named attack bonus source if present."""
+        key = str(source).strip()
+        if not key:
+            return
+        self._attack_bonus_sources.pop(key, None)
+        self.attack_power_bonus = self.get_attack_bonus()
+
+    def clear_attack_bonuses_with_prefix(self, prefix: str) -> None:
+        """Remove all named attack bonuses that share a prefix."""
+        key_prefix = str(prefix).strip()
+        if not key_prefix:
+            return
+        for key in [name for name in self._attack_bonus_sources if name.startswith(key_prefix)]:
+            self._attack_bonus_sources.pop(key, None)
+        self.attack_power_bonus = self.get_attack_bonus()
+
+    def get_attack_bonus(self) -> int:
+        """Total additive attack bonus from named sources."""
+        return sum(int(value) for value in self._attack_bonus_sources.values())
+
+    @property
+    def effective_attack_power(self) -> int:
+        """Current attack power including any aura / elite bonuses."""
+        return int(self.attack_power) + self.get_attack_bonus()
 
     def distance_to(self, x: float, y: float) -> float:
         """Calculate distance to a point."""
@@ -484,7 +542,7 @@ class Enemy:
 
         if self.target and hasattr(self.target, 'take_damage'):
             self._queue_render_animation("attack")
-            self.target.take_damage(self.attack_power)
+            self.target.take_damage(self.effective_attack_power)
             
             # WK5: Emit ranged projectile event for ranged attackers
             if getattr(self, "is_ranged_attacker", False):

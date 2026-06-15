@@ -29,7 +29,7 @@ ENEMY_DROP_CHANCE = 0.07
 # WK132: "dragon" (Dragon Cave boss) added — the guaranteed rare+/legendary
 # drop rides the existing kill-event pipeline, so no extra cave-completion
 # loot hook is needed (single drop path, no double-dipping).
-BOSS_ENEMY_TYPES = ("bandit_lord", "demon_overlord", "dragon")
+BOSS_ENEMY_TYPES = ("bandit_lord", "demon_overlord", "dragon", "goblin_warchief")
 
 # POI loot caches: chance of an item IN ADDITION to the existing gold roll.
 POI_ITEM_DROP_CHANCE = 0.35

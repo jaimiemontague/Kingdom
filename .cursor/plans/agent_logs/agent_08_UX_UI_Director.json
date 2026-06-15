@@ -413,9 +413,78 @@
           "blockers": [],
           "follow_ups": [
             "PM can send final QA; the ui_panels scenario does not seed an active quest chain, so the deterministic test PNGs are the proof path for this round."
+        ]
+      }
+    },
+    "wk139_boss_encounter_core_elites": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk139_boss_encounter_core_elites.plan.md",
+        "created_utc": "2026-06-14T00:00:00Z",
+        "notes": "WK139 compact boss/elite HUD pass. Deterministic proof used because the scripted boss_encounter_showcase scenario is absent from tools/screenshot_scenarios.py."
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "sprint_id": "wk139_boss_encounter_core_elites",
+          "round_id": "r1_kickoff",
+          "status": "done",
+          "task": "Add compact boss/elite status UI.",
+          "what_i_changed": [
+            "game/ui/top_bar.py: added a compact boss status strip beneath the existing top bar. It reads boss/elite snapshots from `game_state[\"sim\"].boss_encounter_system`, truncates long boss names to fit, and renders boss name, current phase, HP status, and telegraph/status text without covering the quit button or core HUD controls.",
+            "game/ui/top_bar.py: when elite snapshots are present, shows only a short hint line (`Elites: N | marker/affix hint`) using elite affix spawn markers where available, so the display stays compact and avoids clutter.",
+            "tests/test_wk139_boss_ui.py: NEW deterministic pygame coverage for boss name/phase/HP/telegraph fallback, elite hint compression, hidden-state behavior when no boss exists, and a full 1920x1080 screenshot proof test that writes `docs/screenshots/wk139_boss_ui/wk139_boss_ui_telegraph_1920x1080.png`.",
+            "docs/screenshots/wk139_boss_ui/wk139_boss_ui_telegraph_1920x1080.png: proof capture inspected and approved; panel is legible at 1920x1080 and does not obscure the command bar, minimap, or quit control."
+          ],
+          "commands_run": [
+            {
+              "cmd": "python -m py_compile game/ui/top_bar.py tests/test_wk139_boss_ui.py",
+              "exit_code": 0,
+              "result": "syntax check passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk139_boss_ui.py -q",
+              "exit_code": 0,
+              "result": "4 passed, 1 warning"
+            },
+            {
+              "cmd": "python tools/capture_screenshots.py --scenario boss_encounter_showcase --seed 3 --out docs/screenshots/wk139_boss_ui --size 1920x1080 --ticks 900",
+              "exit_code": 1,
+              "result": "ValueError: Unknown scenario: boss_encounter_showcase"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "result": "[qa_smoke] DONE: PASS (1904 passed, 5 skipped, 1 xfailed; determinism guard pass)"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "result": "validated after update"
+            }
+          ],
+          "evidence": {
+            "pytest": "python -m pytest tests/test_wk139_boss_ui.py -q -> 4 passed, 1 warning",
+            "qa_smoke_quick": "python tools/qa_smoke.py --quick -> PASS ([qa_smoke] DONE: PASS; 1904 passed, 5 skipped, 1 xfailed)",
+            "screenshot_paths_inspected": [
+              "docs/screenshots/wk139_boss_ui/wk139_boss_ui_telegraph_1920x1080.png"
+            ],
+            "screenshot_verdict": "PASS. The boss strip is readable and compact: The Goblin Warchief, Phase: Rally | HP: 50% | Tell: Rally, Elites: 1 | banner/shield. It stays clear of the top bar controls and does not hide core HUD elements.",
+            "scenario_gap": "The requested scripted `boss_encounter_showcase` capture scenario is not present in `tools/screenshot_scenarios.py`, so the deterministic UI proof path came from the test-driven render PNG instead."
+          },
+          "blockers": [
+            "No implementation blocker remains for the UI itself.",
+            "`boss_encounter_showcase` is missing from the screenshot scenario registry; Agent 12 should add it if PM wants the exact scripted capture command to work."
+          ],
+          "follow_ups": [
+            "Agent 12 / PM: add `boss_encounter_showcase` to `tools/screenshot_scenarios.py` so the requested capture command stops failing with Unknown scenario.",
+            "Agent 11: consume the existing proof PNG and the passing WK139 UI test as the integrated verification evidence."
+          ],
+          "recommended_next_actions": [
+            "PM can use the deterministic proof PNG and passing tests for final QA on the UI lane.",
+            "If the studio requires the exact showcase command to succeed, route a small scenario-creation ticket to Agent 12."
           ]
         }
       }
     }
   }
+}
 }
