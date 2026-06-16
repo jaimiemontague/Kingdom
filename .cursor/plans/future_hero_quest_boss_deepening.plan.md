@@ -2,7 +2,7 @@
 
 **Owner:** Agent 01 (ExecutiveProducer_PM)  
 **Created:** 2026-06-14  
-**Status:** Program active; WK138 Adventure Ledger Foundation kicked off  
+**Status:** Paused for Jaimie playtest after WK144; do not add more quests or quest templates until playtest feedback
 **Source docs reviewed:** `.cursor/plans/future_hero_development_ideas.md`, `.cursor/plans/Dynamic_Quests.md`, `.cursor/plans/pois_proposal.md`, `.cursor/plans/pois_multisprint_roadmap.md`, `.cursor/plans/wk126_quest_giving_npcs.plan.md`, `.cursor/plans/wk130_hero_world_roadmap.plan.md`, `.cursor/plans/wk137_initial_goblin_wave.plan.md`, current PM hub and changelog notes.
 
 This plan expands `future_hero_development_ideas.md` items **#3 Multi-Phase Quests** and **#4 Named Bosses & Elite Enemies** into a practical multi-sprint feature program. It assumes the replacement Agent 01 and the worker agents do **not** share this planning context, so the task breakdowns below are intentionally explicit.
@@ -10,6 +10,18 @@ This plan expands `future_hero_development_ideas.md` items **#3 Multi-Phase Ques
 If Jaimie activates agents from this plan through the AI Studio flow, use **GPT-5.5 with high effort** for every high-risk implementation or design task called out below.
 
 **Execution note, 2026-06-14:** Jaimie directed autonomous execution using **gpt-5.4-mini with xhigh effort** for subagents. Agent 01 kicked off WK138 as the first implementation sprint in `.cursor/plans/wk138_adventure_ledger_foundation.plan.md` and the PM hub sprint key `wk138_adventure_ledger_foundation`.
+
+**Execution note, 2026-06-15:** WK138-WK144 have shipped and pushed through `0b9bd2d wk144: Hero Agency and Content Tuning`. The pushed program mapping is:
+
+- WK138 / Sprint A: Adventure Ledger Foundation.
+- WK139 / Sprint B: Boss Encounter Core.
+- WK140: Hero Daily Life AI recovery and bounty commitment foundation.
+- WK141 / Sprint C: Blackbanner's Toll epic boss quest.
+- WK142 / Sprint D: Dynamic Rescue and Revenge.
+- WK143 / Sprint E: Dragon Hunt Showcase.
+- WK144 / Sprint F subset plus Sovereign add-on: bounty commitment hardening, hero agency tuning, elite affix kit, content validation, and screenshot proof.
+
+**Playtest hold, 2026-06-15:** Jaimie explicitly directed: after WK144, do not add more quests or quest templates until there is a pause for Jaimie to playtest. The next Agent 01 may run verification, playtest-prep, bugfix, or non-quest stabilization work if needed, but must not launch a new quest-chain/content-template sprint until playtest feedback arrives.
 
 ---
 
@@ -289,6 +301,8 @@ Build in this order.
 ## Sprint Program
 
 Do not run this whole program as one sprint. Run it as a sequence of shippable vertical slices.
+
+**Current execution hold:** Sprints A-E are represented by WK138-WK143, and the safe validation/tuning portion of Sprint F shipped in WK144. Do not continue Sprint F by adding the originally proposed 3-5 additional chain definitions or any new quest templates until Jaimie has playtested the WK144 build. The only acceptable next work before that playtest is verification, playtest-prep documentation, or bugfix/stabilization that does not add quest content.
 
 ### Sprint A: Adventure Ledger Foundation
 
