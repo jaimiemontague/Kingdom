@@ -1101,5 +1101,77 @@
                                                                                                                                                  "Proceed to final WK144 QA only if the wider sprint still needs it; this repair itself is complete."
                                                                                                                                              ]
                                                                                                              }
+                                                               ,
+                                                               "r1_significance_hysteresis":  {
+                                                                                                    "round_id":  "r1_significance_hysteresis",
+                                                                                                    "sprint_id":  "wk145_hero_ai_significance_hysteresis",
+                                                                                                    "status":  "done_pending_pm_full_smoke",
+                                                                                                    "round_meta":  {
+                                                                                                                       "role":  "Agent 06 AIBehaviorDirector_LLM",
+                                                                                                                       "reports_to":  "Agent 01 (PM)",
+                                                                                                                       "completed_utc":  "2026-06-16T00:00:00Z",
+                                                                                                                       "phase":  "Hero AI significance and hysteresis layer for ambient daily-life decisions."
+                                                                                                                   },
+                                                                                                    "prompt_text":  "Task: Fix hero behavior flicker by adding deterministic significance/hysteresis so ambient behavior continues unless a new motive meaningfully overwhelms it, while critical low health can interrupt immediately.",
+                                                                                                    "what_i_changed":  {
+                                                                                                                           "ai/behaviors/daily_life.py":  [
+                                                                                                                                                               "Added bounded ambient behavior trace fields: active_significance, last_switch_ms, switch_count, behavior_trace.",
+                                                                                                                                                               "Added score hysteresis around daily-life motive selection with a 6.0 significance threshold and 8000 ms minimum dwell before non-urgent switching.",
+                                                                                                                                                               "Added critical health safety bypass so heroes at or below 25 percent health can switch to safe_rest immediately even during an active ambient commitment.",
+                                                                                                                                                               "Preserved deterministic sim-time behavior and the existing daily-life activation gate."
+                                                                                                                                                           ],
+                                                                                                                           "tests/test_wk145_hero_ai_significance_hysteresis.py":  [
+                                                                                                                                                                                          "Added timestamped behavior-trace tests for no rapid near-tie flicker, significant-overwhelm switching, critical-health safety bypass, and WK144 spread compatibility."
+                                                                                                                                                                                      ]
+                                                                                                                       },
+                                                                                                    "commands_run":  [
+                                                                                                                         {
+                                                                                                                             "command":  "python -m py_compile ai\\behaviors\\daily_life.py tests\\test_wk145_hero_ai_significance_hysteresis.py",
+                                                                                                                             "exit_code":  0,
+                                                                                                                             "result":  "passed"
+                                                                                                                         },
+                                                                                                                         {
+                                                                                                                             "command":  "python -m pytest tests\\test_wk145_hero_ai_significance_hysteresis.py -q",
+                                                                                                                             "exit_code":  0,
+                                                                                                                             "result":  "4 passed"
+                                                                                                                         },
+                                                                                                                         {
+                                                                                                                             "command":  "python -m pytest tests\\test_wk144_hero_agency_daily_life.py tests\\test_wk144_bounty_commitment.py -q",
+                                                                                                                             "exit_code":  0,
+                                                                                                                             "result":  "7 passed"
+                                                                                                                         },
+                                                                                                                         {
+                                                                                                                             "command":  "python -m pytest tests\\test_wk140_hero_daily_life_ai.py tests\\test_wk140_hero_ambient_distribution.py tests\\test_wk140_hero_urgent_behavior_preserved.py -q",
+                                                                                                                             "exit_code":  0,
+                                                                                                                             "result":  "11 passed"
+                                                                                                                         },
+                                                                                                                         {
+                                                                                                                             "command":  "python -m pytest tests\\test_wk67_ai_boundary.py -q",
+                                                                                                                             "exit_code":  0,
+                                                                                                                             "result":  "10 passed"
+                                                                                                                         },
+                                                                                                                         {
+                                                                                                                             "command":  "python tools\\qa_smoke.py --quick",
+                                                                                                                             "exit_code":  null,
+                                                                                                                             "result":  "Agent run was aborted by PM before completion; PM must rerun before commit."
+                                                                                                                         }
+                                                                                                                     ],
+                                                                                                    "evidence":  {
+                                                                                                                   "no_flicker":  "Near-tie pressure test ticks from 20000 to 29500 ms and proves switch_count stays 0 while the bounded trace records deterministic same-motive hysteresis holds.",
+                                                                                                                   "overwhelm":  "Significant-overwhelm test proves a stronger revenge_hero motive switches exactly once after the dwell window and records positive significance_delta.",
+                                                                                                                   "urgent_safety":  "Critical health test proves a 24 percent HP hero switches immediately from wilderness_explore to safe_rest despite current commitment and a negative score delta.",
+                                                                                                                   "wk144_compatibility":  "Compatibility test keeps the 10-hero spread across at least five motives and clusters."
+                                                                                                               },
+                                                                                                    "blockers":  [
+
+                                                                                                                 ],
+                                                                                                    "follow_ups":  [
+                                                                                                                       "PM must rerun json validation and full qa_smoke before commit.",
+                                                                                                                       "If live play still shows flicker outside daily-life ambient behavior, inspect non-daily-life task_router/LLM state labels next rather than adding quest content."
+                                                                                                                   ],
+                                                                                                    "recommended_next_actions":  [
+                                                                                                                                     "PM review, run focused gates, run qa_smoke --quick, then commit/push if green."
+                                                                                                                                 ]
+                                                                                                }
                 }
 }

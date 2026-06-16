@@ -2674,6 +2674,106 @@
           ]
         }
       }
+    },
+    "wk145_hero_ai_significance_hysteresis": {
+      "sprint_meta": {
+        "sprint_id": "wk145_hero_ai_significance_hysteresis",
+        "created_utc": "2026-06-16T00:00:00Z",
+        "plan_ref": ".cursor/plans/wk145_hero_ai_significance_hysteresis.plan.md",
+        "goal": "Fix hero AI behavior flicker by adding a deterministic significance/hysteresis layer so heroes stay committed unless a new behavior meaningfully overwhelms the current one, while critical low-health danger still interrupts instantly."
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "pm_status_summary": "WK145 is a non-quest stabilization sprint during the WK144 playtest pause. Jaimie reports hero behavior testing went well overall, but heroes sometimes flicker between behavior labels/targets when pulled by multiple motives. The fix should make base AI feel more confident and determined through a significance meter/hysteresis layer, with deterministic behavior traces proving fewer rapid switches. Critical low-health survival must still override instantly.",
+          "pm_grounding": [
+            "Do not add new quests, quest templates, boss-chain content, version bumps, or changelog release bumps.",
+            "Primary implementation seam is ai/behaviors/daily_life.py, which already owns ambient motive scoring, per-hero ambient memory, commit windows, candidate application, and target reapply.",
+            "Existing tests test_wk140_hero_daily_life_ai.py and test_wk144_hero_agency_daily_life.py prove deterministic motive spread; WK145 must preserve that while reducing flicker over time.",
+            "The new test must log or inspect behavior changes over timestamps so the fix is observable, not just a one-shot score assertion."
+          ],
+          "pm_next_actions_by_agent": {
+            "06_AIBehaviorDirector_LLM": "Wave 1 active. Implement significance/hysteresis and behavior trace in ai/**, add tests/test_wk145_hero_ai_significance_hysteresis.py, update Agent 06 log, and run required commands.",
+            "11_QA_TestEngineering_Lead": "Pending only if PM needs independent verification after Agent 06. Do not start until requested.",
+            "01_ExecutiveProducer_PM": "Review Agent 06 diff, run final focused gates and qa_smoke, then commit/push if green."
+          },
+          "pm_agent_prompts": {
+            "06": "Task: WK145 Wave 1 AI - fix hero behavior flicker with deterministic significance/hysteresis. Onboard as Agent 06 by reading AGENTS.md and your .cursor/rules role instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk145_hero_ai_significance_hysteresis\"].rounds[\"r1_kickoff\"] and .cursor/plans/wk145_hero_ai_significance_hysteresis.plan.md end-to-end. Outcome: heroes should continue the current ambient behavior unless a new motive is meaningfully more significant, while critical low health/danger can interrupt immediately. MAY edit ai/**, tests/test_wk145_hero_ai_significance_hysteresis.py, existing AI tests if needed, and your Agent 06 log. MUST NOT edit game/**, tools/**, assets/**, version/changelog files, or .cursor/plans/** except your own log. Implement a small deterministic significance/hysteresis layer around daily-life motive selection, store bounded behavior trace data in ambient memory, and add tests proving no rapid A/B/A flicker, significant-overwhelm switching, and instant critical-health safety bypass. Run the commands in the WK145 plan and validate your log."
+          },
+          "pm_universal_prompt": "You are being activated for WK145 Hero AI Significance + Hysteresis. First onboard as Agent 06 by reading AGENTS.md and relevant .cursor/rules instructions. Then follow pm_agent_prompts[\"06\"] under this round and the WK145 plan. Use gpt-5.4-mini with xhigh effort. Preserve existing changes, stay inside Agent 06 ownership, update your own log, validate JSON, and report exact commands/exit codes.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "06"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "06": "gpt-5.4-mini",
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "06": "xhigh",
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "06": "high",
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "06 owns AI behavior and can make the narrow daily-life hysteresis patch. 11 is only for independent QA if PM wants a second pass."
+          }
+        },
+        "r2_pm_closeout": {
+          "sprint_id": "wk145_hero_ai_significance_hysteresis",
+          "round_id": "r2_pm_closeout",
+          "status": "complete",
+          "pm_status_summary": "WK145 completed the non-quest stabilization fix for Jaimie's hero behavior flicker feedback. Agent 06 added deterministic daily-life significance/hysteresis and bounded behavior tracing. PM validated focused AI gates, inspected hero_agency_showcase screenshots, and reran full qa_smoke successfully.",
+          "what_i_changed": [
+            "Planned WK145 as a non-quest stabilization sprint during the WK144 playtest pause.",
+            "Delegated AI implementation to Agent 06 and closed the worker after it produced the patch.",
+            "Added missing Agent 06 log receipt after the worker stopped before writing it.",
+            "Marked the WK145 plan complete and recorded final verification evidence."
+          ],
+          "commands_run": [
+            "python -m json.tool .cursor\\plans\\agent_logs\\agent_06_AIBehaviorDirector_LLM.json",
+            "python -m json.tool .cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+            "python -m pytest tests\\test_wk145_hero_ai_significance_hysteresis.py -q",
+            "python -m pytest tests\\test_wk144_hero_agency_daily_life.py tests\\test_wk144_bounty_commitment.py -q",
+            "python -m pytest tests\\test_wk140_hero_daily_life_ai.py tests\\test_wk140_hero_ambient_distribution.py tests\\test_wk140_hero_urgent_behavior_preserved.py -q",
+            "python -m pytest tests\\test_wk67_ai_boundary.py -q",
+            "python tools\\capture_screenshots.py --scenario hero_agency_showcase --seed 3 --out docs\\screenshots\\wk145_hero_ai_significance --size 1920x1080 --ticks 1800",
+            "python tools\\qa_smoke.py --quick"
+          ],
+          "evidence": [
+            "WK145 focused test -> 4 passed; covers no rapid near-tie flicker, significant-overwhelm switching, critical-health safety bypass, and WK144 spread compatibility.",
+            "WK144 hero agency/bounty regression -> 7 passed.",
+            "WK140 daily-life/ambient/urgent regression -> 11 passed.",
+            "WK67 AI boundary -> 10 passed.",
+            "hero_agency_showcase screenshots under docs/screenshots/wk145_hero_ai_significance were nonblank/readable and still showed heroes spread across roads, services, frontier/threat areas, and town activity.",
+            "qa_smoke --quick -> PASS; unit suite reported 1990 passed, 5 skipped, 1 xfailed, and all smoke scenarios exited 0."
+          ],
+          "blockers": [],
+          "follow_ups": [
+            "If live play still shows flicker, inspect non-daily-life task labels such as combat/rest/shopping/LLM state transitions next.",
+            "Continue respecting the no-new-quest-content pause until Jaimie asks to resume roadmap content."
+          ]
+        }
+      }
     }
   }
 }

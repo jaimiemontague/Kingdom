@@ -25,6 +25,11 @@ from ai.behaviors.view_compat import as_ai_view
 
 _AMBIENT_MEMORY: dict[str, dict[str, Any]] = {}
 
+_AMBIENT_TRACE_LIMIT = 20
+_AMBIENT_SWITCH_THRESHOLD = 6.0
+_AMBIENT_MIN_DWELL_MS = 8_000
+_CRITICAL_HEALTH_BYPASS_PCT = 0.25
+
 _CLUSTER_TILE_SPAN = 4
 _RECENT_TARGET_COOLDOWN_MS = 45_000
 
@@ -265,6 +270,10 @@ def get_ambient_memory(hero: Any) -> dict[str, Any]:
             "active_target_xy": None,
             "active_primitive": "",
             "commit_until_ms": 0,
+            "active_significance": 0.0,
+            "last_switch_ms": 0,
+            "switch_count": 0,
+            "behavior_trace": [],
             "target_cooldowns": {},
             "motive_cooldowns": {},
             "motive_counts": {},
@@ -284,6 +293,10 @@ def get_ambient_snapshot(hero: Any) -> dict[str, Any]:
         "active_target_xy": mem.get("active_target_xy"),
         "active_primitive": str(mem.get("active_primitive", "") or ""),
         "commit_until_ms": int(mem.get("commit_until_ms", 0) or 0),
+        "active_significance": float(mem.get("active_significance", 0.0) or 0.0),
+        "last_switch_ms": int(mem.get("last_switch_ms", 0) or 0),
+        "switch_count": int(mem.get("switch_count", 0) or 0),
+        "behavior_trace": [dict(entry) for entry in list(mem.get("behavior_trace", []) or [])],
         "target_cooldowns": dict(mem.get("target_cooldowns", {}) or {}),
         "motive_cooldowns": dict(mem.get("motive_cooldowns", {}) or {}),
         "motive_counts": dict(mem.get("motive_counts", {}) or {}),
@@ -555,7 +568,15 @@ def build_daily_life_candidates(ai: Any, hero: Any, view: Any, *, now_ms: int | 
     return candidates
 
 
-def score_daily_life_candidate(ai: Any, hero: Any, candidate: AmbientCandidate, view: Any, *, now_ms: int | None = None) -> float:
+def score_daily_life_candidate(
+    ai: Any,
+    hero: Any,
+    candidate: AmbientCandidate,
+    view: Any,
+    *,
+    now_ms: int | None = None,
+    ignore_memory_penalties: bool = False,
+) -> float:
     """Score one ambient candidate. Higher is better."""
     view = as_ai_view(view)
     now_ms = int(sim_now_ms() if now_ms is None else now_ms)
@@ -624,19 +645,169 @@ def score_daily_life_candidate(ai: Any, hero: Any, candidate: AmbientCandidate, 
     elif candidate.motive == "road_watch":
         score += max(0.0, 10.0 - abs(dist_tiles - 6.0))
 
-    recent_targets = dict(mem.get("target_cooldowns", {}) or {})
-    recent_until = int(recent_targets.get(candidate.target_key, 0) or 0)
-    if now_ms < recent_until:
-        score -= 100.0
+    if not ignore_memory_penalties:
+        recent_targets = dict(mem.get("target_cooldowns", {}) or {})
+        recent_until = int(recent_targets.get(candidate.target_key, 0) or 0)
+        if now_ms < recent_until:
+            score -= 100.0
 
-    motive_cooldowns = dict(mem.get("motive_cooldowns", {}) or {})
-    motive_until = int(motive_cooldowns.get(candidate.motive, 0) or 0)
-    if now_ms < motive_until:
-        score -= 8.0
+        motive_cooldowns = dict(mem.get("motive_cooldowns", {}) or {})
+        motive_until = int(motive_cooldowns.get(candidate.motive, 0) or 0)
+        if now_ms < motive_until:
+            score -= 8.0
 
     score -= _crowding_penalty(candidate, hero, view)
     score += _stable_tiebreak(hero, candidate)
     return score
+
+
+def _find_active_ambient_candidate(candidates: list[AmbientCandidate], mem: dict[str, Any]) -> AmbientCandidate | None:
+    active_motive = str(mem.get("active_motive", "") or "")
+    active_target_key = str(mem.get("active_target_key", "") or "")
+    if not active_motive or not active_target_key:
+        return None
+    for candidate in candidates:
+        if candidate.motive == active_motive and candidate.target_key == active_target_key:
+            return candidate
+    return None
+
+
+def _pick_best_ambient_candidate(
+    ai: Any,
+    hero: Any,
+    view: Any,
+    candidates: list[AmbientCandidate],
+    *,
+    now_ms: int,
+    exclude: AmbientCandidate | None = None,
+    motive: str | None = None,
+    ignore_memory_penalties: bool = False,
+) -> tuple[AmbientCandidate | None, float]:
+    best: AmbientCandidate | None = None
+    best_score = -1e9
+    for candidate in candidates:
+        if exclude is not None and candidate.motive == exclude.motive and candidate.target_key == exclude.target_key:
+            continue
+        if motive is not None and candidate.motive != motive:
+            continue
+        score = score_daily_life_candidate(
+            ai,
+            hero,
+            candidate,
+            view,
+            now_ms=now_ms,
+            ignore_memory_penalties=ignore_memory_penalties,
+        )
+        if score > best_score:
+            best = candidate
+            best_score = score
+        elif best is not None and abs(score - best_score) < 1e-9 and candidate.target_key < best.target_key:
+            best = candidate
+            best_score = score
+    return best, best_score
+
+
+def _append_behavior_trace(
+    mem: dict[str, Any],
+    *,
+    now_ms: int,
+    from_motive: str,
+    to_motive: str,
+    reason: str,
+    significance_delta: float,
+    from_target_key: str = "",
+    to_target_key: str = "",
+) -> None:
+    trace = list(mem.get("behavior_trace", []) or [])
+    trace.append(
+        {
+            "t": int(now_ms),
+            "from": str(from_motive or ""),
+            "to": str(to_motive or ""),
+            "reason": str(reason or ""),
+            "significance_delta": round(float(significance_delta), 3),
+            "from_target_key": str(from_target_key or ""),
+            "to_target_key": str(to_target_key or ""),
+        }
+    )
+    if len(trace) > _AMBIENT_TRACE_LIMIT:
+        trace = trace[-_AMBIENT_TRACE_LIMIT:]
+    mem["behavior_trace"] = trace
+
+
+def _finalize_ambient_selection(
+    hero: Any,
+    candidate: AmbientCandidate,
+    *,
+    now_ms: int,
+    significance: float,
+    previous_motive: str,
+    previous_target_key: str,
+    reason: str,
+    significance_delta: float,
+) -> None:
+    mem = get_ambient_memory(hero)
+    _write_ambient_memory(hero, candidate, now_ms=now_ms)
+    if previous_motive or previous_target_key:
+        if previous_motive != candidate.motive or previous_target_key != candidate.target_key:
+            mem["switch_count"] = int(mem.get("switch_count", 0) or 0) + 1
+    mem["last_switch_ms"] = int(now_ms)
+    mem["active_significance"] = round(float(significance), 3)
+    _append_behavior_trace(
+        mem,
+        now_ms=now_ms,
+        from_motive=previous_motive,
+        to_motive=candidate.motive,
+        reason=reason,
+        significance_delta=significance_delta,
+        from_target_key=previous_target_key,
+        to_target_key=candidate.target_key,
+    )
+
+
+def _continue_ambient_behavior(
+    ai: Any,
+    hero: Any,
+    view: Any,
+    candidate: AmbientCandidate,
+    *,
+    now_ms: int,
+    current_significance: float,
+    significance_delta: float,
+    reason: str,
+) -> bool:
+    mem = get_ambient_memory(hero)
+    if not _reapply_ambient_target(ai, hero, view, mem, now_ms=now_ms):
+        return False
+    mem["active_significance"] = round(float(current_significance), 3)
+    _append_behavior_trace(
+        mem,
+        now_ms=now_ms,
+        from_motive=candidate.motive,
+        to_motive=candidate.motive,
+        reason=reason,
+        significance_delta=significance_delta,
+        from_target_key=candidate.target_key,
+        to_target_key=candidate.target_key,
+    )
+    _record_ambient_decision(
+        ai,
+        hero,
+        action=candidate.motive,
+        reason=f"daily life hold: {candidate.motive} -> {candidate.detail or candidate.primitive} ({reason})",
+        intent=getattr(hero, "intent", "idle") or "idle",
+        inputs_summary={
+            "motive": candidate.motive,
+            "target_key": candidate.target_key,
+            "target_xy": tuple(round(float(v), 3) for v in candidate.target_xy),
+            "current_significance": round(float(current_significance), 3),
+            "significance_delta": round(float(significance_delta), 3),
+            "last_switch_ms": int(mem.get("last_switch_ms", 0) or 0),
+            "switch_count": int(mem.get("switch_count", 0) or 0),
+        },
+        now_ms=now_ms,
+    )
+    return True
 
 
 def try_daily_life(ai: Any, hero: Any, view: Any) -> bool:
@@ -660,36 +831,119 @@ def try_daily_life(ai: Any, hero: Any, view: Any) -> bool:
                 return False
 
     mem = get_ambient_memory(hero)
-    if now_ms < int(mem.get("commit_until_ms", 0) or 0):
-        if _reapply_ambient_target(ai, hero, view, mem, now_ms=now_ms):
-            return True
-
     candidates = build_daily_life_candidates(ai, hero, view, now_ms=now_ms)
     if not candidates:
         return False
 
-    best: AmbientCandidate | None = None
-    best_score = -1e9
-    for candidate in candidates:
-        score = score_daily_life_candidate(ai, hero, candidate, view, now_ms=now_ms)
-        if score > best_score:
-            best = candidate
-            best_score = score
-        elif best is not None and abs(score - best_score) < 1e-9:
-            if candidate.target_key < best.target_key:
-                best = candidate
-                best_score = score
+    current = _find_active_ambient_candidate(candidates, mem)
+    if current is None:
+        best, best_score = _pick_best_ambient_candidate(ai, hero, view, candidates, now_ms=now_ms)
+        if best is None or best_score < 5.0:
+            return False
+        _apply_ambient_candidate(
+            ai,
+            hero,
+            view,
+            best,
+            now_ms=now_ms,
+            significance=best_score,
+            previous_motive=str(mem.get("active_motive", "") or ""),
+            previous_target_key=str(mem.get("active_target_key", "") or ""),
+            reason="initial_selection",
+            significance_delta=0.0,
+        )
+        return True
 
-    if best is None or best_score < 5.0:
-        return False
+    current_score = score_daily_life_candidate(
+        ai,
+        hero,
+        current,
+        view,
+        now_ms=now_ms,
+        ignore_memory_penalties=True,
+    )
+    best, best_score = _pick_best_ambient_candidate(ai, hero, view, candidates, now_ms=now_ms, exclude=current)
 
-    _apply_ambient_candidate(ai, hero, view, best, now_ms=now_ms)
-    return True
+    hp_pct = float(getattr(hero, "health_percent", 1.0) or 1.0)
+    if hp_pct <= _CRITICAL_HEALTH_BYPASS_PCT:
+        if current.motive == "safe_rest":
+            return _continue_ambient_behavior(
+                ai,
+                hero,
+                view,
+                current,
+                now_ms=now_ms,
+                current_significance=current_score,
+                significance_delta=0.0,
+                reason="urgent_safety_hold",
+            )
+        urgent_candidate, urgent_score = _pick_best_ambient_candidate(
+            ai,
+            hero,
+            view,
+            candidates,
+            now_ms=now_ms,
+            motive="safe_rest",
+            ignore_memory_penalties=True,
+        )
+        if urgent_candidate is not None and urgent_candidate.target_key != current.target_key:
+            _apply_ambient_candidate(
+                ai,
+                hero,
+                view,
+                urgent_candidate,
+                now_ms=now_ms,
+                significance=urgent_score,
+                previous_motive=current.motive,
+                previous_target_key=current.target_key,
+                reason="urgent_safety_bypass",
+                significance_delta=urgent_score - current_score,
+            )
+            return True
+
+    if best is not None:
+        dwell_ms = int(now_ms) - int(mem.get("last_switch_ms", 0) or 0)
+        significance_delta = float(best_score - current_score)
+        if significance_delta >= _AMBIENT_SWITCH_THRESHOLD and dwell_ms >= _AMBIENT_MIN_DWELL_MS:
+            _apply_ambient_candidate(
+                ai,
+                hero,
+                view,
+                best,
+                now_ms=now_ms,
+                significance=best_score,
+                previous_motive=current.motive,
+                previous_target_key=current.target_key,
+                reason="significance_overwhelm",
+                significance_delta=significance_delta,
+            )
+            return True
+        hold_reason = "commit_hold" if now_ms < int(mem.get("commit_until_ms", 0) or 0) else "hysteresis_hold"
+        return _continue_ambient_behavior(
+            ai,
+            hero,
+            view,
+            current,
+            now_ms=now_ms,
+            current_significance=current_score,
+            significance_delta=significance_delta,
+            reason=hold_reason,
+        )
+
+    return _continue_ambient_behavior(
+        ai,
+        hero,
+        view,
+        current,
+        now_ms=now_ms,
+        current_significance=current_score,
+        significance_delta=0.0,
+        reason="stable_hold",
+    )
 
 
-def _apply_ambient_candidate(ai: Any, hero: Any, view: Any, candidate: AmbientCandidate, *, now_ms: int) -> None:
+def _apply_ambient_target(ai: Any, hero: Any, view: Any, candidate: AmbientCandidate) -> None:
     view = as_ai_view(view)
-    mem = get_ambient_memory(hero)
     buildings = list(getattr(view, "buildings", ()) or ())
     world = getattr(view, "world", None)
     target_ref = candidate.target_ref
@@ -776,18 +1030,46 @@ def _apply_ambient_candidate(ai: Any, hero: Any, view: Any, candidate: AmbientCa
         hero.state = HeroState.MOVING
         _set_ambient_intent(ai, hero, "idle")
 
-    _write_ambient_memory(hero, candidate, now_ms=now_ms)
+def _apply_ambient_candidate(
+    ai: Any,
+    hero: Any,
+    view: Any,
+    candidate: AmbientCandidate,
+    *,
+    now_ms: int,
+    significance: float,
+    previous_motive: str,
+    previous_target_key: str,
+    reason: str,
+    significance_delta: float,
+) -> None:
+    _apply_ambient_target(ai, hero, view, candidate)
+    _finalize_ambient_selection(
+        hero,
+        candidate,
+        now_ms=now_ms,
+        significance=significance,
+        previous_motive=previous_motive,
+        previous_target_key=previous_target_key,
+        reason=reason,
+        significance_delta=significance_delta,
+    )
+    mem = get_ambient_memory(hero)
     _record_ambient_decision(
         ai,
         hero,
         action=candidate.motive,
-        reason=f"daily life: {candidate.motive} -> {candidate.detail or candidate.primitive}",
+        reason=f"daily life: {candidate.motive} -> {candidate.detail or candidate.primitive} ({reason})",
         intent=getattr(hero, "intent", "idle") or "idle",
         inputs_summary={
             "motive": candidate.motive,
             "target_key": candidate.target_key,
             "target_xy": tuple(round(float(v), 3) for v in candidate.target_xy),
             "commit_until_ms": int(now_ms + int(candidate.commit_ms)),
+            "active_significance": round(float(significance), 3),
+            "significance_delta": round(float(significance_delta), 3),
+            "last_switch_ms": int(mem.get("last_switch_ms", 0) or 0),
+            "switch_count": int(mem.get("switch_count", 0) or 0),
         },
         now_ms=now_ms,
     )

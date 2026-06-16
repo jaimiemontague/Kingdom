@@ -1,0 +1,175 @@
+{
+  "schema_version": "1.1",
+  "run": {
+    "scenario": "hero_agency_showcase",
+    "seed": 3,
+    "run_dir": "wk145_hero_ai_significance",
+    "size": {
+      "w": 1920,
+      "h": 1080
+    },
+    "ticks_per_shot": 1800,
+    "dt": 0.016666666666666666
+  },
+  "outputs": [
+    {
+      "index": 0,
+      "filename": "hero_agency_showcase_world.png",
+      "relpath": "hero_agency_showcase_world.png",
+      "label": "WK144: hero agency spread across town and frontier",
+      "scenario": "hero_agency_showcase",
+      "seed": 3,
+      "size": {
+        "w": 1920,
+        "h": 1080
+      },
+      "camera": {
+        "center_x": 4016.0,
+        "center_y": 4016.0,
+        "zoom": 1.0
+      },
+      "sha256": "91adef8a0bae912549e97d92bc9a3809e53237575401662ec5d1e831b74d31d3",
+      "meta": {
+        "scenario": "hero_agency_showcase",
+        "seed": 3,
+        "hero_count": 10,
+        "motive_counts": {
+          "kingdom_roam": 1,
+          "opportunity_check": 2,
+          "poi_scout": 2,
+          "safe_rest": 4,
+          "wilderness_explore": 1
+        },
+        "cluster_keys": [
+          "28:33",
+          "30:30",
+          "30:32",
+          "31:31",
+          "31:32",
+          "31:33",
+          "32:29",
+          "32:31",
+          "34:29",
+          "34:31"
+        ],
+        "assignments": [
+          {
+            "hero_id": "ag-01",
+            "name": "Aldous",
+            "motive": "safe_rest",
+            "target_key": "rest:b00000001",
+            "cluster_key": "31:31"
+          },
+          {
+            "hero_id": "ag-02",
+            "name": "Brina",
+            "motive": "safe_rest",
+            "target_key": "rest:b00000054",
+            "cluster_key": "32:31"
+          },
+          {
+            "hero_id": "ag-03",
+            "name": "Cora",
+            "motive": "opportunity_check",
+            "target_key": "opp:b00000004",
+            "cluster_key": "31:32"
+          },
+          {
+            "hero_id": "ag-04",
+            "name": "Doran",
+            "motive": "safe_rest",
+            "target_key": "rest:b00000060",
+            "cluster_key": "31:33"
+          },
+          {
+            "hero_id": "ag-05",
+            "name": "Elara",
+            "motive": "wilderness_explore",
+            "target_key": "frontier:137:126",
+            "cluster_key": "34:31"
+          },
+          {
+            "hero_id": "ag-06",
+            "name": "Fenn",
+            "motive": "opportunity_check",
+            "target_key": "opp:b00000055",
+            "cluster_key": "30:30"
+          },
+          {
+            "hero_id": "ag-07",
+            "name": "Gwen",
+            "motive": "poi_scout",
+            "target_key": "poi:b00000063",
+            "cluster_key": "28:33"
+          },
+          {
+            "hero_id": "ag-08",
+            "name": "Hale",
+            "motive": "safe_rest",
+            "target_key": "rest:b00000057",
+            "cluster_key": "30:32"
+          },
+          {
+            "hero_id": "ag-09",
+            "name": "Iris",
+            "motive": "kingdom_roam",
+            "target_key": "building:b00000059",
+            "cluster_key": "32:29"
+          },
+          {
+            "hero_id": "ag-10",
+            "name": "Jory",
+            "motive": "poi_scout",
+            "target_key": "poi:b00000062",
+            "cluster_key": "34:29"
+          }
+        ],
+        "focus": "overview"
+      }
+    },
+    {
+      "index": 1,
+      "filename": "hero_agency_showcase_detail.png",
+      "relpath": "hero_agency_showcase_detail.png",
+      "label": "WK144: outer destination cluster",
+      "scenario": "hero_agency_showcase",
+      "seed": 3,
+      "size": {
+        "w": 1920,
+        "h": 1080
+      },
+      "camera": {
+        "center_x": 3600.0,
+        "center_y": 4304.0,
+        "zoom": 1.6
+      },
+      "sha256": "3a49d1116d30a2dfb99557fc8c63a19e07be96da9feb40ef0d9338b2f339e37e",
+      "meta": {
+        "scenario": "hero_agency_showcase",
+        "seed": 3,
+        "hero_count": 10,
+        "motive_counts": {
+          "kingdom_roam": 1,
+          "opportunity_check": 2,
+          "poi_scout": 2,
+          "safe_rest": 4,
+          "wilderness_explore": 1
+        },
+        "cluster_keys": [
+          "28:33",
+          "30:30",
+          "30:32",
+          "31:31",
+          "31:32",
+          "31:33",
+          "32:29",
+          "32:31",
+          "34:29",
+          "34:31"
+        ],
+        "focus": "detail",
+        "detail_target_key": "poi:b00000063"
+      }
+    }
+  ]
+}
