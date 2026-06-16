@@ -2389,6 +2389,227 @@
           ]
         }
       }
+    },
+    "wk144_hero_agency_content_tuning": {
+      "sprint_meta": {
+        "sprint_id": "wk144_hero_agency_content_tuning",
+        "created_utc": "2026-06-15T00:00:00Z",
+        "plan_ref": ".cursor/plans/wk144_hero_agency_content_tuning.plan.md",
+        "goal": "Tune hero agency and bounty commitment so 10 spawned heroes visibly split across varied daily-life activities instead of looping near town, while completing Sprint F content validation and elite-affix kit hardening."
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "pm_status_summary": "WK144 kicked off after WK143 was committed and pushed as 11f5e08 (wk143: Dragon Hunt Showcase). This sprint combines the master plan's Sprint F content/tuning with the Sovereign's explicit hero-AI complaint: heroes spawned in a 10-hero roster should stop acting like identical tight-loop units, and bounty flags should remain compelling instead of heroes immediately reprioritizing home/rest. Wave 1 sends Agent 06 for bounty commitment + daily-life agency and Agent 05 for elite-affix/content validation. Wave 2 sends Agent 12 for a deterministic hero_agency_showcase screenshot scenario after AI contracts stabilize. Wave 3 sends Agent 11 for final QA.",
+          "pm_grounding": [
+            "ai/behaviors/daily_life.py already has ambient motives for kingdom_roam, wilderness_explore, poi_scout, monster_patrol, rescue_hero, revenge_hero, safe_rest, social_linger, opportunity_check, home_or_guild_time, and road_watch.",
+            "ai/behaviors/bounty_pursuit.py already has bounty_commitment_active and resume_committed_bounty, but task_router currently only checks resume_committed_bounty inside one rest-priority branch.",
+            "game/content/quest_chains.py already has five real chain definitions: relic_of_the_old_shrine, blackbanners_toll, blackbanner_rescue, blackbanner_revenge, and ashwings_hoard. New unsupported chain definitions are out of scope for WK144.",
+            "game/content/elite_affixes.py currently has 3 of the planned 8 affixes: banner_bearer, ironhide, frenzied. Agent 05 should expand to the eight-affix kit and add content validation tests.",
+            "Sovereign update after kickoff: after WK144, pause quest additions until Jaimie playtests. WK144 must not add new quest templates; keep it to bounty/hero-agency tuning, elite-affix content, validation, and screenshot proof.",
+            "No version bump, changelog release bump, or Prototype vX.Y.Z naming is allowed."
+          ],
+          "pm_next_actions_by_agent": {
+            "06_AIBehaviorDirector_LLM": "Wave 1 active. Fix healthy live bounty commitment being dropped for home/rest/ambient behavior, tune daily-life spread, and add WK144 AI tests.",
+            "05_GameplaySystemsDesigner": "Wave 1 active. Expand elite affix content kit and add content/chain validation tests without adding unsupported quest-chain templates.",
+            "12_ToolsDevEx_Lead": "Wave 2 pending after Agent 06. Add hero_agency_showcase capture scenario and tests.",
+            "11_QA_TestEngineering_Lead": "Wave 3 pending after Agent 12. Run integrated QA, full smoke, asset validation, and screenshot inspection."
+          },
+          "pm_agent_prompts": {
+            "06": "Task: WK144 Wave 1 AI - bounty commitment and hero agency. Onboard as Agent 06 by reading AGENTS.md and your .cursor/rules role instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk144_hero_agency_content_tuning\"].rounds[\"r1_kickoff\"] and .cursor/plans/wk144_hero_agency_content_tuning.plan.md. Outcome: healthy heroes with live bounty commitments must not immediately route home/rest or get overwritten by ambient motives; 10 idle heroes should deterministically split across richer daily-life motives and destination clusters including home/rest/social, POI/frontier, monster/lair/opportunity, and some away from the town bubble. MAY edit ai/**, AI tests, and your Agent 06 log. MUST NOT edit game/**, tools/**, assets/**, version/changelog files, or .cursor/plans/** except your own log. Run the Agent 06 verification commands in the plan and validate your log.",
+            "05": "Task: WK144 Wave 1 gameplay content - elite affix kit and content validation. Onboard as Agent 05 by reading AGENTS.md and your .cursor/rules role instructions. Then read PM hub wk144 r1 and .cursor/plans/wk144_hero_agency_content_tuning.plan.md. Outcome: expand elite affix content from 3 toward the planned 8-affix kit, with bounded modifiers and readable tells/counterplay; add validation tests for elite affixes and all existing quest-chain definitions. Do not add unsupported new quest-chain templates without runtime handlers. MAY edit game/content/**, content/gameplay tests, and your Agent 05 log. MUST NOT edit ai/**, game/ui/**, game/graphics/**, game/audio/**, tools/**, assets/**, version/changelog files, or .cursor/plans/** except your own log. Run the Agent 05 verification commands in the plan and validate your log.",
+            "12": "Task: WK144 Wave 2 tools - hero agency screenshot scenario. Wait for PM's Wave 2 go-ahead after Agent 06. Then onboard as Agent 12, read PM hub wk144 latest round and the plan. Add hero_agency_showcase capture scenario proving 10 heroes spread across varied destinations, plus scenario tests and inspected screenshots.",
+            "11": "Task: WK144 Wave 3 final QA. Wait for PM's final QA go-ahead after Agents 06/05/12. Verify WK144 focused tests, WK140/AI bounty regressions, WK143/WK126 regressions, WK67, full qa_smoke, validate_assets, logs, and screenshot proof."
+          },
+          "pm_universal_prompt": "You are being activated for WK144 Hero Agency + Content Tuning. First onboard as your assigned agent by reading AGENTS.md and the relevant .cursor/rules instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk144_hero_agency_content_tuning\"].rounds[\"r1_kickoff\"]. Your specific prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER]. Also read .cursor/plans/wk144_hero_agency_content_tuning.plan.md end-to-end. Use gpt-5.4-mini with xhigh effort per the active goal. You are not alone in this worktree: preserve all existing changes, never revert files you did not intentionally edit, and stay inside your ownership lane. Update your own log, validate it with python -m json.tool, and run the commands in your assignment. If your change is visible, capture and inspect screenshots before claiming done. Do not use Prototype vX.Y.Z naming or bump versions.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "06",
+                "05"
+              ],
+              [
+                "12"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "06": "gpt-5.4-mini",
+              "05": "gpt-5.4-mini",
+              "12": "gpt-5.4-mini",
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "06": "xhigh",
+              "05": "xhigh",
+              "12": "xhigh",
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "06": "high",
+              "05": "medium-high",
+              "12": "medium",
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "07",
+              "08",
+              "09",
+              "10",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "06 owns AI behavior and the bounty/daily-life complaint. 05 owns gameplay content and elite affix definitions. 12 owns capture tooling. 11 owns integrated QA."
+          }
+        },
+        "r2_wave1_gate_wave2_kickoff": {
+          "pm_status_summary": "WK144 Wave 1 gate passed. Agent 06 landed bounty commitment + hero-agency AI tests/behavior; Agent 05 landed the eight-affix content kit and content validation tests. PM also rewrote the pushed WK138-WK141 commit messages from Prototype v1.6.x names to WK sprint names, then force-pushed with lease; remote main now points at c399d4e. Sovereign direction recorded: after WK144, no more quest additions until Jaimie playtests. Wave 2 is ready for Agent 12 to add deterministic hero_agency_showcase screenshot proof.",
+          "pm_wave1_evidence": [
+            "Commit-message rewrite complete: f77a950/5901505/80daf2d/fbe78a4 are replaced in rewritten history by 23b4b8b wk138, 015b843 wk139, 1a60d7b wk140, 2871002 wk141; descendants are 1a827d4 wk142 and c399d4e wk143.",
+            "git ls-remote origin refs/heads/main -> c399d4e5c2ea6414976e4ba18321096883f1040b.",
+            "python -m pytest tests/test_wk144_bounty_commitment.py tests/test_wk144_hero_agency_daily_life.py -q -> 7 passed.",
+            "python -m pytest tests/test_wk144_content_validation.py tests/test_wk144_elite_affix_content.py -q -> 5 passed.",
+            "python -m pytest tests/test_wk140_hero_daily_life_ai.py tests/test_ai_bounty.py -q -> 6 passed.",
+            "python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk141_blackbanner_boss.py tests/test_wk143_dragon_hunt.py -q -> 5 passed.",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed.",
+            "python -m json.tool validated Agent 01, 05, and 06 logs."
+          ],
+          "pm_next_actions_by_agent": {
+            "12_ToolsDevEx_Lead": "Wave 2 active. Add hero_agency_showcase capture scenario and scenario test, capture screenshots, and inspect the PNGs.",
+            "11_QA_TestEngineering_Lead": "Wave 3 pending after Agent 12. Run final integrated QA, full smoke, assets, logs, and screenshot inspection.",
+            "01_ExecutiveProducer_PM": "After WK144 push, pause further quest additions until Jaimie playtests."
+          },
+          "pm_agent_prompts": {
+            "12": "Task: WK144 Wave 2 tools - deterministic hero agency screenshot scenario. Onboard as Agent 12 by reading AGENTS.md and your .cursor/rules role instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk144_hero_agency_content_tuning\"].rounds[\"r2_wave1_gate_wave2_kickoff\"] and .cursor/plans/wk144_hero_agency_content_tuning.plan.md. Outcome: add hero_agency_showcase to the capture scenario registry so a 10-hero roster visibly spreads across varied daily-life destinations after the Agent 06 AI changes. MAY edit tools/**, scenario tests, docs/screenshots/wk144_*, and your Agent 12 log. MUST NOT edit ai/**, game/** production code, assets/**, version/changelog files, or .cursor/plans/** except your own log. Required verification: python -m pytest tests/test_wk144_hero_agency_capture_scenario.py -q; python tools/capture_screenshots.py --scenario hero_agency_showcase --seed 3 --out docs/screenshots/wk144_hero_agency_showcase --size 1920x1080 --ticks 1800; python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json. Inspect generated PNGs and report whether heroes are visibly split away from a tight town clump. Do not add quest templates; after WK144 the project pauses quest additions until Jaimie playtests."
+          },
+          "pm_universal_prompt": "You are being activated for WK144 Wave 2. First onboard as Agent 12 by reading AGENTS.md and the relevant .cursor/rules instructions. Then follow pm_agent_prompts[\"12\"] under .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk144_hero_agency_content_tuning\"].rounds[\"r2_wave1_gate_wave2_kickoff\"]. Use gpt-5.4-mini with xhigh effort. Preserve existing WK144 edits and stay in Agent 12 ownership. Update your own log, validate it, run the scenario tests/capture, inspect screenshots, and report PASS/FAIL. Do not use Prototype vX.Y.Z naming or bump versions.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "12"
+              ],
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "12": "gpt-5.4-mini",
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "12": "xhigh",
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "12": "medium",
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "12 owns screenshot/capture tooling and can prove the visible hero spread. 11 waits for final QA."
+          }
+        },
+        "r3_wave2_gate_qa_kickoff": {
+          "pm_status_summary": "WK144 Wave 2 gate passed. Agent 12 added hero_agency_showcase to the screenshot scenario system, added the scenario test, captured proof under docs/screenshots/wk144_hero_agency_showcase, and validated the Agent 12 log. PM inspected both PNGs: the world shot is readable and shows heroes spread across town, roads/buildings, and frontier/threat areas instead of a single tight town clump; the detail shot shows heroes split across guilds, houses, roads, services, and nearby threat/POI space. Final QA is ready.",
+          "pm_wave2_evidence": [
+            "Agent 12 PASS.",
+            "python -m pytest tests/test_wk144_hero_agency_capture_scenario.py -q -> 1 passed.",
+            "python tools/capture_screenshots.py --scenario hero_agency_showcase --seed 3 --out docs/screenshots/wk144_hero_agency_showcase --size 1920x1080 --ticks 1800 -> wrote hero_agency_showcase_world.png, hero_agency_showcase_detail.png, and manifest.json.",
+            "python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json -> valid JSON.",
+            "PM screenshot inspection: world shot shows castle/town center, road/building spread, a hero toward northern frontier/POI area, and threat/lair space to the east; detail shot shows heroes split among guilds/houses/roads/services and not all stacked in one tight loop."
+          ],
+          "pm_next_actions_by_agent": {
+            "11_QA_TestEngineering_Lead": "Wave 3 active. Run final integrated QA, full smoke, validate_assets, log validation, screenshot inspection, and report PASS/FAIL.",
+            "01_ExecutiveProducer_PM": "After Agent 11 PASS, PM reruns or confirms key gates, restores unrelated screenshot dirt if needed, commits as wk144: Hero Agency and Content Tuning, pushes, then pauses further quest additions for Jaimie's playtest."
+          },
+          "pm_agent_prompts": {
+            "11": "Task: WK144 final QA for Hero Agency + Content Tuning. Onboard as Agent 11 by reading AGENTS.md and your .cursor/rules role instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk144_hero_agency_content_tuning\"].rounds[\"r3_wave2_gate_qa_kickoff\"] and .cursor/plans/wk144_hero_agency_content_tuning.plan.md. Verify WK144 focused tests, WK140/AI bounty regressions, WK143/WK126 regressions, WK67, full qa_smoke, validate_assets, Agent 05/06/12 logs, and screenshot proof under docs/screenshots/wk144_hero_agency_showcase. Inspect PNGs, not file existence alone. MAY edit QA tests/docs screenshots only for evidence and your own Agent 11 log. MUST NOT edit production source unless PM sends a repair prompt. Required commands: python -m pytest tests/test_wk144_bounty_commitment.py tests/test_wk144_hero_agency_daily_life.py tests/test_wk144_content_validation.py tests/test_wk144_elite_affix_content.py tests/test_wk144_hero_agency_capture_scenario.py -q; python -m pytest tests/test_wk140_hero_daily_life_ai.py tests/test_ai_bounty.py -q; python -m pytest tests/test_wk143_dragon_hunt.py tests/test_wk143_dragon_fire_telegraph.py tests/test_wk143_dragon_rewards.py tests/test_wk126_quest_soak.py::test_soak_all_four_quest_types_complete_and_pay -q; python -m pytest tests/test_wk67_ai_boundary.py -q; python tools/capture_screenshots.py --scenario hero_agency_showcase --seed 3 --out docs/screenshots/wk144_hero_agency_qa --size 1920x1080 --ticks 1800; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Validate Agent 05/06/12 logs. Record that after WK144 there should be no more quest additions until Jaimie playtests. Do not use Prototype vX.Y.Z naming or bump versions."
+          },
+          "pm_universal_prompt": "You are being activated for WK144 final QA. First onboard as Agent 11 by reading AGENTS.md and the relevant .cursor/rules instructions. Then follow pm_agent_prompts[\"11\"] under .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk144_hero_agency_content_tuning\"].rounds[\"r3_wave2_gate_qa_kickoff\"]. Use gpt-5.4-mini with xhigh effort. Verification only unless PM gives a repair prompt. Update your own log, validate it, run the QA commands, inspect screenshots, and report PASS/FAIL. Do not use Prototype vX.Y.Z naming or bump versions.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "11": "gpt-5.4-mini"
+            },
+            "reasoning_effort_by_agent": {
+              "11": "xhigh"
+            },
+            "intelligence_by_agent": {
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "11 is high intelligence because final QA must reconcile AI behavior, content validation, capture proof, full smoke, asset validation, and the playtest pause instruction."
+          }
+        },
+        "r4_pm_closeout": {
+          "sprint_id": "wk144_hero_agency_content_tuning",
+          "round_id": "r4_pm_closeout",
+          "status": "complete",
+          "pm_status_summary": "WK144 is complete and ready to commit/push as wk144: Hero Agency and Content Tuning. Agent 06 repaired bounty commitment and daily-life agency tests, Agent 05 expanded elite affixes and content validation, Agent 12 added and captured hero_agency_showcase, and PM reran the final full quick smoke after the Agent 06 test-isolation repair. The project must now pause additional quest/quest-template additions until Jaimie playtests.",
+          "what_i_changed": [
+            "Recorded final WK144 closeout after the full quick smoke passed.",
+            "Closed the Agent 06 repair subagent after it fixed shared-module monkeypatch leakage in tests/test_wk144_bounty_commitment.py.",
+            "Restored unrelated WK142 screenshot drift so the WK144 commit stays focused.",
+            "Preserved the no-version-bump rule and WK sprint commit naming."
+          ],
+          "commands_run": [
+            "git status --short",
+            "git log --oneline -n 8",
+            "python -m json.tool .cursor\\plans\\agent_logs\\agent_06_AIBehaviorDirector_LLM.json",
+            "git restore -- docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_revenge_completed_320x120.png",
+            "python tools\\qa_smoke.py --quick",
+            "git restore --staged --worktree -- docs/screenshots/wk142_rescue_revenge_ui/wk142_blackbanner_revenge_completed_320x120.png"
+          ],
+          "evidence": [
+            "python tools\\qa_smoke.py --quick -> PASS; unit suite reported 1986 passed, 5 skipped, 1 xfailed, 1 warning in 916.13s, and all qa_smoke observe/direct-prompt scenarios exited 0.",
+            "Agent 06 repair evidence: WK144 focused AI tests 7 passed; mixed pollution regression command 7 passed; WK67 10 passed; Agent 06 log valid.",
+            "Earlier WK144 PM gates passed: focused WK144 tests 13 passed; WK140/AI bounty regressions 6 passed; WK143/WK126 regressions 4 passed; WK67 10 passed; validate_assets errors=0 warns=46.",
+            "Screenshot proof inspected under docs/screenshots/wk144_hero_agency_showcase and docs/screenshots/wk144_hero_agency_qa: world and detail images are nonblank/readable and show heroes split across town, roads/buildings, services, frontier/POI/threat areas instead of one tight town loop.",
+            "Commit-message rewrite already completed: remote main replaced Prototype v1.6.2-v1.6.5 subjects with wk138-wk141 sprint subjects, with descendants rewritten through c399d4e wk143."
+          ],
+          "blockers": [],
+          "follow_ups": [
+            "After WK144, do not add more quests or quest templates until Jaimie has a playtest pause.",
+            "If playtest still feels swarmy, assign Agent 06 a narrow follow-up focused on stronger long-distance destination selection and personality/class-specific downtime rather than new quest content.",
+            "Keep version/changelog bumps pending for an explicit user-authorized v1.6.2 release pass."
+          ]
+        }
+      }
     }
   }
 }

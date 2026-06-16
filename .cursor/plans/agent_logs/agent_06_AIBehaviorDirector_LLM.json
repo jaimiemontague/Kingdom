@@ -942,6 +942,164 @@
                                                                                                                          ]
                                                                                                       }
                                                                   }
-                                                   }
+                                                   },
+                    "wk144_hero_agency_content_tuning":  {
+                                                               "sprint_meta":  {
+                                                                                   "created_utc":  "2026-06-15T00:00:00Z",
+                                                                                   "plan_ref":  ".cursor/plans/wk144_hero_agency_content_tuning.plan.md",
+                                                                                   "role":  "Agent 06 AIBehaviorDirector_LLM",
+                                                                                   "sprint_id":  "wk144_hero_agency_content_tuning",
+                                                                                   "title":  "WK144 Wave 1 AI - bounty commitment and hero agency"
+                                                                               },
+                                                               "rounds":  {
+                                                                              "r1_kickoff":  {
+                                                                                                  "round_id":  "r1_kickoff",
+                                                                                                  "sprint_id":  "wk144_hero_agency_content_tuning",
+                                                                                                  "status":  "done",
+                                                                                                  "round_meta":  {
+                                                                                                                     "role":  "Agent 06 AIBehaviorDirector_LLM",
+                                                                                                                     "reports_to":  "Agent 01 (PM)",
+                                                                                                                     "completed_utc":  "2026-06-16T00:00:00Z",
+                                                                                                                     "phase":  "Bounty commitment before rest/home/ambient routing; deterministic 10-hero daily-life spread coverage."
+                                                                                                                 },
+                                                                                                  "prompt_text":  "Task: WK144 Wave 1 AI - bounty commitment and hero agency. Healthy heroes with live bounty commitments must not immediately route home/rest or get overwritten by ambient motives; 10 idle heroes should deterministically split across richer daily-life motives and destination clusters. MAY edit ai/**, AI-focused tests, and this Agent 06 log. MUST NOT edit game/**, tools/**, assets/**, version/changelog files, or .cursor/plans/** except this log.",
+                                                                                                  "what_i_changed":  {
+                                                                                                                         "ai/task_router.py":  [
+                                                                                                                                                 "Added a live bounty commitment check before resting-state handling and before idle rest/home routing, so healthy committed heroes resume the bounty instead of staying in rest/home flow."
+                                                                                                                                             ],
+                                                                                                                         "ai/behaviors/bounty_pursuit.py":  [
+                                                                                                                                                                "resume_committed_bounty now reasserts the bounty target dict, target_position, HeroState.MOVING, and pursuing_bounty intent when the commitment is still live."
+                                                                                                                                                            ],
+                                                                                                                         "tests/test_wk144_bounty_commitment.py":  [
+                                                                                                                                                                    "NEW coverage for live healthy bounty commitment preempting rest/home routing, direct resume reasserting route and intent, and stale/claimed/invalid bounties not resuming forever."
+                                                                                                                                                                ],
+                                                                                                                         "tests/test_wk144_hero_agency_daily_life.py":  [
+                                                                                                                                                                      "NEW fixed-clock 10-hero daily-life coverage proving deterministic spread across at least six motive/target pairs, at least five clusters, home/rest/social, POI/frontier, monster/lair/opportunity representatives, and at least one destination more than 15 tiles from castle."
+                                                                                                                                                                  ],
+                                                                                                                         ".cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json":  [
+                                                                                                                                                                                              "Recorded WK144 Agent 06 closeout, PM gate evidence, and Sovereign direction: after WK144, no more quest additions until Jaimie playtests."
+                                                                                                                                                                                          ]
+                                                                                                                     },
+                                                                                                  "commands_run":  [
+                                                                                                                       {
+                                                                                                                           "command":  "python -m pytest tests/test_wk144_bounty_commitment.py tests/test_wk144_hero_agency_daily_life.py -q",
+                                                                                                                           "exit_code":  0,
+                                                                                                                           "result":  "Agent rerun after fix: 7 passed, 1 warning"
+                                                                                                                       },
+                                                                                                                       {
+                                                                                                                           "command":  "python -m pytest tests/test_wk140_bounty_commitment_regression.py tests/test_wk140_hero_daily_life_ai.py -q",
+                                                                                                                           "exit_code":  0,
+                                                                                                                           "result":  "Agent regression rerun: 5 passed, 1 warning"
+                                                                                                                       },
+                                                                                                                       {
+                                                                                                                           "command":  "python -m pytest tests/test_ai_bounty.py -q",
+                                                                                                                           "exit_code":  0,
+                                                                                                                           "result":  "Agent regression rerun: 4 passed, 1 warning"
+                                                                                                                       },
+                                                                                                                       {
+                                                                                                                           "command":  "python -m pytest tests/test_wk67_ai_boundary.py -q",
+                                                                                                                           "exit_code":  0,
+                                                                                                                           "result":  "Agent rerun: 10 passed, 1 warning"
+                                                                                                                       },
+                                                                                                                       {
+                                                                                                                           "command":  "python tools/qa_smoke.py --quick",
+                                                                                                                           "exit_code":  124,
+                                                                                                                           "result":  "Agent first run timed out after roughly 304s; second longer rerun was aborted by PM interrupt to pause for pushed commit-message rewrite. No source edits were made after the interrupt."
+                                                                                                                       },
+                                                                                                                       {
+                                                                                                                           "command":  "python -m pytest tests/test_wk144_bounty_commitment.py tests/test_wk144_hero_agency_daily_life.py -q",
+                                                                                                                           "exit_code":  0,
+                                                                                                                           "result":  "PM rerun evidence after WK144 WIP restore: 7 passed"
+                                                                                                                       },
+                                                                                                                       {
+                                                                                                                           "command":  "python -m pytest tests/test_wk140_hero_daily_life_ai.py tests/test_ai_bounty.py -q",
+                                                                                                                           "exit_code":  0,
+                                                                                                                           "result":  "PM rerun evidence after WK144 WIP restore: 6 passed"
+                                                                                                                       },
+                                                                                                                       {
+                                                                                                                           "command":  "python -m pytest tests/test_wk67_ai_boundary.py -q",
+                                                                                                                           "exit_code":  0,
+                                                                                                                           "result":  "PM rerun evidence after WK144 WIP restore: 10 passed"
+                                                                                                                       }
+                                                                                                                   ],
+                                                                                                  "evidence":  {
+                                                                                                                   "root_cause":  "The router handled HeroState.RESTING before any bounty resume check, so a healthy hero with a live bounty target could remain in rest/home handling and fail to reassert the committed bounty route. The resume helper also restored movement but did not restamp pursuing_bounty intent.",
+                                                                                                                   "bounty_rule":  "A live target={type:bounty,...} with _bounty_commit_until_ms still in the future and hero health above the survival threshold now reasserts the bounty route before rest/home/ambient routing. Critical HP or RETREATING heroes still yield to survival because bounty_commitment_active returns False.",
+                                                                                                                   "daily_life_rule":  "The daily-life activation gate stayed intact. The WK144 spread test pins the existing deterministic scoring/crowding behavior: ten idle heroes split across home/rest/social, POI/frontier, monster/lair/opportunity, at least six motive/target pairs, at least five clusters, and at least one destination outside the town bubble.",
+                                                                                                                   "wk67_digest":  "PM reran tests/test_wk67_ai_boundary.py successfully with 10 passed; the AI boundary guard stayed green.",
+                                                                                                                   "sovereign_update":  "After WK144, no more quest additions until Jaimie playtests. WK144 remains focused on bounty/hero agency and validation, not new quests."
+                                                                                                               },
+                                                                                                  "blockers":  [
+
+                                                                                                               ],
+                                                                                                  "follow_ups":  [
+                                                                                                                     "Agent 12 may add the hero_agency_showcase capture scenario after AI contracts stabilize.",
+                                                                                                                     "Agent 11 final QA should run integrated WK144 gates, including qa_smoke --quick, because Agent 06's local qa_smoke rerun was interrupted by PM pause.",
+                                                                                                                     "Respect Sovereign direction after WK144: no further quest additions until Jaimie playtests."
+                                                                                                                 ],
+                                                                                                 "recommended_next_actions":  [
+                                                                                                                                  "Proceed with WK144 validation/capture/QA lanes only; do not add new quest content.",
+                                                                                                                                  "Use the WK144 tests as the AI contract for bounty commitment and deterministic hero-agency spread."
+                                                                                                                              ]
+                                                                                              }
+                                                                          }
+                                                           }
+                                                               ,
+                                                               "r4_final_smoke_test_isolation_repair":  {
+                                                                                                                 "round_id":  "r4_final_smoke_test_isolation_repair",
+                                                                                                                 "sprint_id":  "wk144_hero_agency_content_tuning",
+                                                                                                                 "status":  "done",
+                                                                                                                 "round_meta":  {
+                                                                                                                                    "role":  "Agent 06 AIBehaviorDirector_LLM",
+                                                                                                                                    "reports_to":  "Agent 01 (PM)",
+                                                                                                                                    "completed_utc":  "2026-06-16T01:54:44.4731141Z",
+                                                                                                                                    "phase":  "Repair WK144 test isolation leak caused by shared behavior-module stubs in tests/test_wk144_bounty_commitment.py."
+                                                                                                                                },
+                                                                                                                 "prompt_text":  "Task: Fix WK144 AI test pollution causing full qa_smoke failures. Replace direct shared-module stubs in tests/test_wk144_bounty_commitment.py with pytest-managed monkeypatching, keep the WK144 behavior assertions intact, and do not weaken older tests.",
+                                                                                                                 "what_i_changed":  {
+                                                                                                                                        "tests/test_wk144_bounty_commitment.py":  [
+                                                                                                                                                                                      "Swapped direct assignments on shared BasicAI behavior modules for monkeypatch.setattr(...) so pytest restores ai.hunger_behavior.tick_meal_hunger and ai.llm_bridge_behavior.should_consult_llm after each test."
+                                                                                                                                                                                  ]
+                                                                                                                                    },
+                                                                                                                 "commands_run":  [
+                                                                                                                                      {
+                                                                                                                                          "command":  "python -m pytest tests/test_wk144_bounty_commitment.py tests/test_wk144_hero_agency_daily_life.py -q",
+                                                                                                                                          "exit_code":  0,
+                                                                                                                                          "result":  "7 passed, 1 warning in 0.42s"
+                                                                                                                                      },
+                                                                                                                                      {
+                                                                                                                                          "command":  "python -m pytest tests/test_wk144_bounty_commitment.py tests/test_wk50_phase2a_decision_contracts.py::test_should_consult_llm_named_moment_respects_cooldown_and_pending tests/test_wk61_r11_hunger_live_path.py::test_update_hero_interrupts_shopping_move_for_hunger -q",
+                                                                                                                                          "exit_code":  0,
+                                                                                                                                          "result":  "7 passed, 1 warning in 0.31s"
+                                                                                                                                      },
+                                                                                                                                      {
+                                                                                                                                          "command":  "python -m pytest tests/test_wk67_ai_boundary.py -q",
+                                                                                                                                          "exit_code":  0,
+                                                                                                                                          "result":  "10 passed, 1 warning in 18.07s"
+                                                                                                                                      },
+                                                                                                                                      {
+                                                                                                                                          "command":  "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+                                                                                                                                          "exit_code":  0,
+                                                                                                                                          "result":  "JSON valid"
+                                                                                                                                      }
+                                                                                                                                  ],
+                                                                                                                 "evidence":  {
+                                                                                                                                "root_cause":  "The WK144 bounty test mutated shared behavior-module attributes directly on BasicAI, so later full-suite tests inherited the stubbed hunger and LLM consult functions and observed wrong behavior only when run after WK144.",
+                                                                                                                                "fix":  "Using monkeypatch.setattr(...) on ai.hunger_behavior and ai.llm_bridge_behavior keeps the WK144 assertions intact while restoring the original module functions automatically after each test.",
+                                                                                                                                "wk144_suite":  "python -m pytest tests/test_wk144_bounty_commitment.py tests/test_wk144_hero_agency_daily_life.py -q -> 7 passed, 1 warning.",
+                                                                                                                                "cross_suite_regressions":  "python -m pytest tests/test_wk144_bounty_commitment.py tests/test_wk50_phase2a_decision_contracts.py::test_should_consult_llm_named_moment_respects_cooldown_and_pending tests/test_wk61_r11_hunger_live_path.py::test_update_hero_interrupts_shopping_move_for_hunger -q -> 7 passed, 1 warning; python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed, 1 warning.",
+                                                                                                                                "json_validation":  "Agent 06 log validated cleanly with python -m json.tool after the new round entry was added."
+                                                                                                                            },
+                                                                                                                 "blockers":  [
+
+                                                                                                                              ],
+                                                                                                                 "follow_ups":  [
+                                                                                                                                     "Keep the WK144 pause-after-playtest instruction in force: no new quest additions until Jaimie playtests.",
+                                                                                                                                     "Agent 11 final QA can now trust the focused WK144 AI tests without the shared-module pollution leak."
+                                                                                                                                 ],
+                                                                                                                 "recommended_next_actions":  [
+                                                                                                                                                 "Proceed to final WK144 QA only if the wider sprint still needs it; this repair itself is complete."
+                                                                                                                                             ]
+                                                                                                             }
                 }
 }

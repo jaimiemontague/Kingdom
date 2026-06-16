@@ -988,6 +988,104 @@
           ]
         }
       }
+    },
+    "wk144_hero_agency_content_tuning": {
+      "sprint_meta": {
+        "sprint_id": "wk144_hero_agency_content_tuning",
+        "plan_ref": ".cursor/plans/wk144_hero_agency_content_tuning.plan.md",
+        "notes": "Wave 1 gameplay content: elite affix kit expansion and content validation only. Sovereign update recorded: after WK144, no more quest additions until Jaimie playtests."
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "sprint_id": "wk144_hero_agency_content_tuning",
+          "round_id": "r1_kickoff",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Expanded the elite affix registry from 3 to the planned 8-affix kit and added WK144 content validation tests for elite affixes and existing quest-chain definitions. This sprint added no new quest templates.",
+            "files_touched": [
+              "game/content/elite_affixes.py",
+              "tests/test_wk144_elite_affix_content.py",
+              "tests/test_wk144_content_validation.py",
+              ".cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json"
+            ],
+            "content_changes": [
+              "Added skirmisher, gravebound, venomous, gold_taker, and oathbound affix definitions alongside banner_bearer, ironhide, and frenzied.",
+              "Kept modifiers bounded and spawn-time deterministic using existing elite-affix fields: attack bonus, defense bonus, speed multiplier, HP multiplier, aura attack bonus, courage bonus, frenzy data, and spawn markers.",
+              "Added tell and counterplay facts to applied elite-affix records so future UI/AI/content surfaces can read the kit safely.",
+              "Added validation coverage for unique/readable affix content, bounded modifiers, deterministic rolls, boss-name preservation, normal-enemy elite naming, quest-chain registry identity, phase IDs, rewards, tags, target refs, and supported objective types.",
+              "Confirmed no new quest-chain templates were added."
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk144_content_validation.py tests/test_wk144_elite_affix_content.py -q",
+              "exit_code": 1,
+              "result": "Initial local run failed after adding the tests because ASSAULT_GATE was not included in the new supported-objective allowlist."
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk144_content_validation.py tests/test_wk144_elite_affix_content.py -q",
+              "exit_code": 0,
+              "result": "Local rerun passed: 5 passed."
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk141_blackbanner_boss.py tests/test_wk143_dragon_hunt.py -q",
+              "exit_code": 0,
+              "result": "Local run passed: 5 passed."
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "result": "Local run passed: 10 passed."
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 124,
+              "result": "Local smoke attempt timed out after about 124 seconds before PM interrupted WK144 for commit-message rewrite."
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": null,
+              "result": "Second local smoke attempt was aborted by PM interrupt; no completion result claimed."
+            },
+            {
+              "cmd": "PM rerun: python -m pytest tests/test_wk144_content_validation.py tests/test_wk144_elite_affix_content.py -q",
+              "exit_code": 0,
+              "result": "PM reported 5 passed after commit-message rewrite and WK144 WIP restore."
+            },
+            {
+              "cmd": "PM rerun: python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk141_blackbanner_boss.py tests/test_wk143_dragon_hunt.py -q",
+              "exit_code": 0,
+              "result": "PM reported 5 passed."
+            },
+            {
+              "cmd": "PM rerun: python -m pytest tests/test_wk67_ai_boundary.py -q",
+              "exit_code": 0,
+              "result": "PM reported 10 passed."
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+              "exit_code": 0,
+              "result": "valid JSON"
+            }
+          ],
+          "evidence": {
+            "wk144_content_validation": "PM rerun PASS: python -m pytest tests/test_wk144_content_validation.py tests/test_wk144_elite_affix_content.py -q -> 5 passed.",
+            "boss_regressions": "PM rerun PASS: python -m pytest tests/test_wk139_boss_encounters.py tests/test_wk141_blackbanner_boss.py tests/test_wk143_dragon_hunt.py -q -> 5 passed.",
+            "wk67_boundary": "PM rerun PASS: python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed.",
+            "quest_scope": "No new quest-chain templates were added; tests validate only the existing WK138/WK141/WK142/WK143 chain definitions.",
+            "sovereign_update": "After WK144, no more quest additions until Jaimie playtests."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Honor the Sovereign update: after WK144, do not add more quest content until Jaimie playtests.",
+            "Some new elite affixes currently use safe spawn-time modifiers and readable tells/counterplay only; richer behavior such as venom status, gold theft, or oath mechanics should wait for a later explicitly scoped gameplay/system pass."
+          ],
+          "recommended_next_actions": [
+            "Let Agent 11 include the WK144 content tests in final integrated QA.",
+            "Keep future quest-chain work limited to validation or fixes until the post-WK144 playtest direction is clear."
+          ]
+        }
+      }
     }
   }
 }

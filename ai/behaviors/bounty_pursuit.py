@@ -102,8 +102,17 @@ def resume_committed_bounty(ai: Any, hero: Any, view: Any) -> bool:
         if adj:
             goal_x = adj[0] * TILE_SIZE + TILE_SIZE / 2
             goal_y = adj[1] * TILE_SIZE + TILE_SIZE / 2
+    hero.target = dict(target)
     hero.target_position = (goal_x, goal_y)
     hero.state = HeroState.MOVING
+    setter = getattr(ai, "set_intent", None)
+    if callable(setter):
+        try:
+            setter(hero, "pursuing_bounty")
+        except Exception:
+            hero.intent = "pursuing_bounty"
+    else:
+        hero.intent = "pursuing_bounty"
     return True
 
 

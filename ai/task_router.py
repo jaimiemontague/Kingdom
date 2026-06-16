@@ -8,7 +8,7 @@ behavior-affecting enhancement (it would shift the WK67 digest) and is intention
 done here — see the WK120 plan §0."""
 from __future__ import annotations
 
-from ai.behaviors import quest_offer
+from ai.behaviors import bounty_pursuit, quest_offer
 from ai.behaviors.view_compat import as_ai_view, view_to_legacy_context
 from ai.context_builder import ContextBuilder
 from ai.prompt_templates import get_fallback_decision
@@ -67,6 +67,9 @@ def update_hero(ai, hero, dt: float, view) -> None:
 
     # Handle resting state first (doesn't need LLM).
     if hero.state == HeroState.RESTING:
+        if bounty_pursuit.bounty_commitment_active(hero, view, now_ms=sim_now_ms()):
+            if ai.bounty_behavior.resume_committed_bounty(ai, hero, view):
+                return
         ai.handle_resting(hero, dt, view)
         return
 
@@ -121,6 +124,13 @@ def update_hero(ai, hero, dt: float, view) -> None:
         if ai.hunger_behavior.tick_meal_hunger(ai, hero, view):
             target = getattr(hero, "target", None)
             if isinstance(target, dict) and target.get("type") == "buy_meal":
+                return
+
+    # Healthy heroes with a live bounty commitment should keep that promise
+    # before any passive rest/home handling can steal the tick.
+    if hero.state == HeroState.IDLE:
+        if bounty_pursuit.bounty_commitment_active(hero, view, now_ms=sim_now_ms()):
+            if ai.bounty_behavior.resume_committed_bounty(ai, hero, view):
                 return
 
     # Check if hero should go home to rest (priority check, only if home is safe).

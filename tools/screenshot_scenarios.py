@@ -10,12 +10,14 @@ These scenarios should:
 from __future__ import annotations
 
 import json
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Callable
 
 from config import STARTING_BUILDINGS, TAX_STASH_BUILDING_TYPES, TILE_SIZE, MAP_WIDTH, MAP_HEIGHT
+from ai.behaviors import daily_life
 from game.content.bosses import BossAbilityDef, BossDef, BossPhaseDef
 from game.entities.building import Building
 from game.entities.hero import Hero
@@ -2516,6 +2518,229 @@ def scenario_dragon_hunt_showcase(engine, *, seed: int) -> list[Shot]:
     ]
 
 
+def scenario_hero_agency_showcase(engine, *, seed: int) -> list[Shot]:
+    """WK144: hero-agency showcase with ten heroes spread across town, POIs, and frontier targets."""
+    _clear_dynamic_entities(engine)
+    _reveal_all(engine.world)
+
+    try:
+        engine.heroes = []
+        engine.enemies = []
+        engine.guards = []
+        engine.peasants = []
+    except Exception:
+        pass
+    try:
+        engine.sim.pois = []
+        engine.sim.quest_givers = []
+    except Exception:
+        pass
+
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        castle = _place_building(engine, "castle", MAP_WIDTH // 2 - 1, MAP_HEIGHT // 2 - 1)
+
+    castle_gx = int(getattr(castle, "grid_x", MAP_WIDTH // 2))
+    castle_gy = int(getattr(castle, "grid_y", MAP_HEIGHT // 2))
+    castle_cx = float(getattr(castle, "center_x", getattr(castle, "x", 0.0)))
+    castle_cy = float(getattr(castle, "center_y", getattr(castle, "y", 0.0)))
+
+    def _ensure_building(building_type: str, gx: int, gy: int) -> Building:
+        existing = next((b for b in engine.buildings if getattr(b, "building_type", "") == building_type), None)
+        if existing is not None:
+            return existing
+        return _place_building(engine, building_type, gx, gy)
+
+    inn = _ensure_building("inn", castle_gx + 4, castle_gy - 1)
+    marketplace = _ensure_building("marketplace", castle_gx + 1, castle_gy + 4)
+    blacksmith = _ensure_building("blacksmith", castle_gx - 5, castle_gy - 2)
+    herald_post = _ensure_building("herald_post", castle_gx + 5, castle_gy + 3)
+    house = _ensure_building("house", castle_gx - 4, castle_gy + 4)
+    warrior_guild = _ensure_building("warrior_guild", castle_gx + 6, castle_gy - 1)
+    ranger_guild = _ensure_building("ranger_guild", castle_gx - 6, castle_gy - 1)
+    rogue_guild = _ensure_building("rogue_guild", castle_gx - 3, castle_gy + 7)
+    wizard_guild = _ensure_building("wizard_guild", castle_gx + 3, castle_gy - 7)
+    temple = _ensure_building("temple", castle_gx + 0, castle_gy + 7)
+
+    lair = _place_building(engine, "goblin_camp", castle_gx + 18, castle_gy + 7)
+    if hasattr(lair, "is_lair"):
+        lair.is_lair = True
+    if hasattr(lair, "max_hp") and hasattr(lair, "hp"):
+        lair.hp = getattr(lair, "max_hp", getattr(lair, "hp", 100))
+
+    shrine_def = POI_DEFINITIONS["poi_shrine"]
+    outpost_def = POI_DEFINITIONS["poi_ruined_outpost"]
+    shrine = PointOfInterest(castle_gx + 12, castle_gy - 8, shrine_def)
+    shrine.is_discovered = True
+    shrine.grants_vision = True
+    outpost = PointOfInterest(castle_gx - 13, castle_gy + 9, outpost_def)
+    outpost.is_discovered = True
+    outpost.grants_vision = True
+    engine.buildings.extend([shrine, outpost])
+    engine.sim.pois = [shrine, outpost]
+
+    enemy_goblin = _place_enemy(engine, "goblin", * _tile_center_px(castle_gx + 20, castle_gy + 8))
+    enemy_wolf = _place_enemy(engine, "wolf", * _tile_center_px(castle_gx + 17, castle_gy + 6))
+
+    hero_specs = [
+        ("ag-01", "Aldous", "warrior", "brave and aggressive", castle_gx + 2, castle_gy + 1, {"hp": 35}),
+        ("ag-02", "Brina", "ranger", "balanced and reliable", castle_gx + 4, castle_gy - 1, {"gold": 12}),
+        ("ag-03", "Cora", "rogue", "greedy but cowardly", castle_gx + 1, castle_gy + 4, {"gold": 80}),
+        ("ag-04", "Doran", "cleric", "cautious and strategic", castle_gx + 0, castle_gy + 7, {"hp": 40}),
+        ("ag-05", "Elara", "wizard", "balanced and reliable", castle_gx + 3, castle_gy - 7, {"gold": 60}),
+        ("ag-06", "Fenn", "warrior", "balanced and reliable", castle_gx - 5, castle_gy - 2, {"gold": 30}),
+        ("ag-07", "Gwen", "ranger", "brave and aggressive", castle_gx - 6, castle_gy - 1, {}),
+        ("ag-08", "Hale", "rogue", "balanced and reliable", castle_gx - 4, castle_gy + 4, {"gold": 15}),
+        ("ag-09", "Iris", "cleric", "greedy but cowardly", castle_gx - 13, castle_gy + 9, {"hp": 80}),
+        ("ag-10", "Jory", "wizard", "cautious and strategic", castle_gx + 18, castle_gy + 7, {}),
+    ]
+
+    heroes: list[Hero] = []
+    for hero_id, name, hero_class, personality, gx, gy, attrs in hero_specs:
+        x, y = _tile_center_px(int(gx), int(gy))
+        hero = _place_hero(engine, hero_class, x, y)
+        hero.hero_id = hero_id
+        hero.name = name
+        hero.personality = personality
+        hero.hp = int(attrs.get("hp", hero.hp))
+        hero.max_hp = int(attrs.get("max_hp", hero.max_hp))
+        hero.gold = int(attrs.get("gold", hero.gold))
+        hero.home_building = attrs.get("home_building", None)
+        hero.damage_since_left_home = int(attrs.get("damage_since_left_home", getattr(hero, "damage_since_left_home", 0)))
+        heroes.append(hero)
+
+    engine.heroes = heroes
+
+    # Seed a frontier-looking wedge for the ambient chooser before the
+    # screenshot pass reveals the entire map for visual clarity.
+    world = engine.world
+    visibility = getattr(world, "visibility", None)
+    if isinstance(visibility, list) and visibility and isinstance(visibility[0], list):
+        from game.world import Visibility
+
+        fog_x0 = max(0, castle_gx + 10)
+        fog_x1 = min(len(visibility[0]), castle_gx + 22)
+        fog_y0 = max(0, castle_gy + 2)
+        fog_y1 = min(len(visibility), castle_gy + 15)
+        for gy in range(fog_y0, fog_y1):
+            row = visibility[gy]
+            for gx in range(fog_x0, fog_x1):
+                row[gx] = Visibility.UNSEEN
+
+    daily_life.reset_ambient_memory()
+    set_sim_now_ms(20_000)
+    ai = SimpleNamespace(_debug_log=lambda *args, **kwargs: None)
+    view = SimpleNamespace(
+        world=world,
+        buildings=list(engine.buildings),
+        heroes=heroes,
+        pois=list(engine.sim.pois),
+        enemies=list(engine.enemies),
+        bounties=[],
+        castle=castle,
+        boss_encounters=[],
+    )
+
+    snapshots: list[dict[str, Any]] = []
+    for hero in heroes:
+        daily_life.try_daily_life(ai, hero, view)
+        snapshot = daily_life.get_ambient_snapshot(hero)
+        snapshots.append(snapshot)
+
+    motive_counts = Counter(str(s.get("active_motive", "") or "") for s in snapshots if str(s.get("active_motive", "") or ""))
+    cluster_keys = sorted({str(s.get("last_cluster_key", "") or "") for s in snapshots if str(s.get("last_cluster_key", "") or "")})
+    assignments = [
+        {
+            "hero_id": str(hero.hero_id),
+            "name": str(hero.name),
+            "motive": str(snapshot.get("active_motive", "") or ""),
+            "target_key": str(snapshot.get("active_target_key", "") or ""),
+            "cluster_key": str(snapshot.get("last_cluster_key", "") or ""),
+        }
+        for hero, snapshot in zip(heroes, snapshots, strict=True)
+    ]
+
+    farthest_assignment = max(
+        (
+            (
+                float(snapshot["active_target_xy"][0]),
+                float(snapshot["active_target_xy"][1]),
+                str(snapshot.get("active_target_key", "") or ""),
+            )
+            for snapshot in snapshots
+            if isinstance(snapshot.get("active_target_xy"), (tuple, list)) and len(snapshot["active_target_xy"]) == 2
+        ),
+        key=lambda row: ((row[0] - castle_cx) ** 2 + (row[1] - castle_cy) ** 2),
+        default=(castle_cx, castle_cy, "castle"),
+    )
+    farthest_x, farthest_y, farthest_key = farthest_assignment
+
+    def _clear_capture_ui(eng: Any) -> None:
+        eng.screenshot_hide_ui = True
+        eng.show_perf = False
+        eng.selected_hero = None
+        eng.selected_building = None
+        eng.selected_enemy = None
+        eng.selected_peasant = None
+        if hasattr(eng, "debug_panel"):
+            eng.debug_panel.visible = False
+
+    overview_meta = {
+        "scenario": "hero_agency_showcase",
+        "seed": int(seed),
+        "hero_count": len(heroes),
+        "motive_counts": dict(sorted(motive_counts.items())),
+        "cluster_keys": cluster_keys,
+        "assignments": assignments,
+        "focus": "overview",
+    }
+    detail_meta = {
+        "scenario": "hero_agency_showcase",
+        "seed": int(seed),
+        "hero_count": len(heroes),
+        "motive_counts": dict(sorted(motive_counts.items())),
+        "cluster_keys": cluster_keys,
+        "focus": "detail",
+        "detail_target_key": farthest_key,
+    }
+
+    # Keep the world fully visible for the capture and provide a tidy, readable
+    # town-plus-frontier layout.
+    _reveal_all(engine.world)
+
+    engine.screenshot_hide_ui = True
+    engine.show_perf = False
+    engine.selected_hero = None
+    engine.selected_building = None
+    engine.selected_enemy = None
+    engine.selected_peasant = None
+    if hasattr(engine, "debug_panel"):
+        engine.debug_panel.visible = False
+
+    return [
+        Shot(
+            filename="hero_agency_showcase_world.png",
+            label="WK144: hero agency spread across town and frontier",
+            center_x=castle_cx,
+            center_y=castle_cy,
+            zoom=1.0,
+            ticks=1800,
+            meta=overview_meta,
+            apply=_clear_capture_ui,
+        ),
+        Shot(
+            filename="hero_agency_showcase_detail.png",
+            label="WK144: outer destination cluster",
+            center_x=float(farthest_x),
+            center_y=float(farthest_y),
+            zoom=1.6,
+            ticks=0,
+            meta=detail_meta,
+            apply=_clear_capture_ui,
+        ),
+    ]
+
+
 def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
     scenario_name = str(scenario_name).strip()
     if scenario_name == "building_catalog":
@@ -2558,6 +2783,8 @@ def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
         return scenario_ursina_melee_combat(engine, seed=int(seed))
     if scenario_name == "boss_encounter_showcase":
         return scenario_boss_encounter_showcase(engine, seed=int(seed))
+    if scenario_name == "hero_agency_showcase":
+        return scenario_hero_agency_showcase(engine, seed=int(seed))
     if scenario_name == "dragon_hunt_showcase":
         return scenario_dragon_hunt_showcase(engine, seed=int(seed))
     if scenario_name == "wk133_quest_ui":

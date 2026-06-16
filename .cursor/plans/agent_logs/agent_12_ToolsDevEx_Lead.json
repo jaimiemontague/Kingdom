@@ -1494,5 +1494,67 @@
         "blockers": []
       }
     }
+  },
+  "wk144_hero_agency_content_tuning": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk144_hero_agency_content_tuning.plan.md",
+      "notes": "WK144 Agent 12 screenshot proof for hero-agency spread."
+    },
+    "rounds": {
+      "r2_wave1_gate_wave2_kickoff": {
+        "sprint_id": "wk144_hero_agency_content_tuning",
+        "round_id": "r2_wave1_gate_wave2_kickoff",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/screenshot_scenarios.py",
+            "tests/test_wk144_hero_agency_capture_scenario.py",
+            ".cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json"
+          ],
+          "summary": "Updated hero_agency_showcase to place 10 mixed-class heroes around the castle, town, and frontier with tile-centered placement and a world shot that carries the 1800-tick settle time plus hero_count metadata. Aligned the WK144 regression test with the scenario contract and verified the generated screenshots."
+        },
+        "commands_run": [
+          {
+            "command": "python -m pytest tests/test_wk144_hero_agency_capture_scenario.py -q",
+            "exit_code": 0
+          },
+          {
+            "command": "python tools/capture_screenshots.py --scenario hero_agency_showcase --seed 3 --out docs/screenshots/wk144_hero_agency_showcase --size 1920x1080 --ticks 1800",
+            "exit_code": 0
+          },
+          {
+            "command": "python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json",
+            "exit_code": 0
+          }
+        ],
+        "evidence": {
+          "pytest": {
+            "command": "python -m pytest tests/test_wk144_hero_agency_capture_scenario.py -q",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "capture_screenshots": {
+            "command": "python tools/capture_screenshots.py --scenario hero_agency_showcase --seed 3 --out docs/screenshots/wk144_hero_agency_showcase --size 1920x1080 --ticks 1800",
+            "exit_code": 0,
+            "status": "PASS",
+            "outputs": [
+              "docs/screenshots/wk144_hero_agency_showcase/hero_agency_showcase_world.png",
+              "docs/screenshots/wk144_hero_agency_showcase/hero_agency_showcase_detail.png",
+              "docs/screenshots/wk144_hero_agency_showcase/manifest.json"
+            ],
+            "visual_note": "World PNG shows the castle/town core with heroes visibly split across town, roads, and frontier; detail PNG remains readable and nonblank."
+          },
+          "json_tool": {
+            "command": "python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": [],
+        "follow_ups": [
+          "Agent 11: use docs/screenshots/wk144_hero_agency_showcase/hero_agency_showcase_world.png for final visual sign-off."
+        ]
+      }
+    }
   }
 }
