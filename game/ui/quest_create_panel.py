@@ -64,6 +64,12 @@ REWARD_TIER_CHOICES: tuple[tuple[str, str, int], ...] = (
 # lair/POI-bound one-offs and not a sane "slay N" target).
 SLAY_ENEMY_TYPES: tuple[str, ...] = ("goblin", "wolf", "skeleton", "spider", "bandit")
 
+STORY_CHAIN_CHOICES: tuple[tuple[str, str], ...] = (
+    ("relic_of_the_old_shrine", "Relic"),
+    ("blackbanners_toll", "Blackbanner"),
+    ("ashwings_hoard", "Ashwing"),
+)
+
 _MAX_TARGET_ROWS = 6
 _MAX_SLAY_COUNT = 25
 
@@ -113,6 +119,7 @@ class QuestCreatePanel:
         self.count_minus_rect: pygame.Rect | None = None
         self.count_plus_rect: pygame.Rect | None = None
         self.reward_rects: dict[str, pygame.Rect] = {}
+        self.story_chain_rects: dict[str, pygame.Rect] = {}
         self.confirm_rect: pygame.Rect | None = None
         self.cancel_rect: pygame.Rect | None = None
 
@@ -299,6 +306,11 @@ class QuestCreatePanel:
                     self.feedback = ""
                 return True
 
+        for key, rect in self.story_chain_rects.items():
+            if rect.collidepoint(pos):
+                self._confirm_story_chain(key)
+                return True
+
         for i, rect in enumerate(self.target_rects):
             if rect.collidepoint(pos):
                 self.target_index = i
@@ -362,6 +374,49 @@ class QuestCreatePanel:
             self.feedback = f"Need ${reward} (have ${gold})"
             return
         self.close()
+
+    def _live_story_chain(self, chain_type: str):
+        system = getattr(self._sim, "quest_chain_system", None)
+        if system is None:
+            return None
+        for chain in list(getattr(system, "chains", []) or []):
+            if (
+                str(getattr(chain, "chain_type", "") or "") == str(chain_type)
+                and str(getattr(chain, "status", "") or "") in {"offered", "active"}
+            ):
+                return chain
+        return None
+
+    def _story_chain_label(self, chain_type: str, label: str) -> str:
+        return f"{label} Active" if self._live_story_chain(chain_type) is not None else label
+
+    def _confirm_story_chain(self, chain_type: str) -> None:
+        if self._live_story_chain(chain_type) is not None:
+            self.feedback = "Already active."
+            return
+        sim = self._sim
+        if sim is None or self.post is None:
+            self.feedback = "Quest system unavailable."
+            return
+        launch = getattr(sim, "start_quest_chain_from_post", None)
+        if not callable(launch):
+            launch = getattr(sim, "create_quest_chain", None)
+        if not callable(launch):
+            self.feedback = "Quest system unavailable."
+            return
+        giver_id = getattr(self.post, "entity_id", None)
+        chain = launch(giver_id, chain_type)
+        if chain is None:
+            self.feedback = "Story chain unavailable."
+            return
+        if str(getattr(chain, "chain_type", "") or "") != str(chain_type):
+            self.feedback = "Story chain unavailable."
+            return
+        if str(getattr(chain, "status", "") or "") not in {"offered", "active"}:
+            self.feedback = "Story chain unavailable."
+            return
+        label = next((name for key, name in STORY_CHAIN_CHOICES if key == chain_type), "Story")
+        self.feedback = f"{label} started."
 
     # ------------------------------------------------------------------
     # Render
@@ -515,6 +570,22 @@ class QuestCreatePanel:
             )
             self.reward_rects[key] = rect
         y += 30 + 6
+
+        # Story Chains: playtest launcher for existing multi-phase quest chains.
+        y = self._render_section_label(surface, x, y, "Story Chains")
+        self.story_chain_rects = {}
+        bw = (inner_w - gap * (len(STORY_CHAIN_CHOICES) - 1)) // len(STORY_CHAIN_CHOICES)
+        for i, (key, label) in enumerate(STORY_CHAIN_CHOICES):
+            rect = pygame.Rect(x + i * (bw + gap), y, bw, 28)
+            active = self._live_story_chain(key) is not None
+            self._render_pill(
+                surface,
+                rect,
+                self._story_chain_label(key, label),
+                selected=active,
+            )
+            self.story_chain_rects[key] = rect
+        y += 28 + 6
 
         # Feedback line (insufficient gold etc).
         if self.feedback:

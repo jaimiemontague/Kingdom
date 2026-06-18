@@ -34,6 +34,7 @@ from config import QUEST_REWARD_LOW, QUEST_REWARD_MED  # noqa: E402
 from game.engine import GameEngine  # noqa: E402
 from game.entities.building import Building  # noqa: E402
 from game.entities.lair import GoblinCamp  # noqa: E402
+from game.entities.quest_giver import QuestGiver  # noqa: E402
 from game.input_manager import InputEvent  # noqa: E402
 from game.ui.quest_view_panel import QuestViewPanel  # noqa: E402
 from game.ui.theme import UITheme  # noqa: E402
@@ -72,6 +73,12 @@ def _place_post(engine: GameEngine) -> Building:
     post.construction_started = True
     engine.buildings.append(post)
     return post
+
+
+def _add_quest_giver(engine: GameEngine, post: Building) -> QuestGiver:
+    giver = QuestGiver(post)
+    engine.sim.quest_givers.append(giver)
+    return giver
 
 
 def _place_lair(engine: GameEngine) -> GoblinCamp:
@@ -181,6 +188,84 @@ def test_full_flow_creates_funded_raid_quest():
         assert q.giver_id == str(post.entity_id)
         assert int(engine.economy.player_gold) == gold_before - int(QUEST_REWARD_MED)
         assert qcp.visible is False  # modal closes on success
+    finally:
+        pygame.quit()
+
+
+def test_story_chain_buttons_visible_on_herald_post_modal():
+    engine = _make_engine()
+    try:
+        post = _place_post(engine)
+        qcp = _open_modal(engine, post)
+
+        assert set(qcp.story_chain_rects) == {
+            "relic_of_the_old_shrine",
+            "blackbanners_toll",
+            "ashwings_hoard",
+        }
+        panel_rect = qcp.modal.get_panel_rect()
+        assert all(panel_rect.contains(rect) for rect in qcp.story_chain_rects.values())
+        assert qcp.cancel_rect is not None and qcp.confirm_rect is not None
+        assert all(not rect.colliderect(qcp.cancel_rect) for rect in qcp.story_chain_rects.values())
+        assert all(not rect.colliderect(qcp.confirm_rect) for rect in qcp.story_chain_rects.values())
+    finally:
+        pygame.quit()
+
+
+def test_story_chain_click_launches_live_chain_and_keeps_modal_open():
+    engine = _make_engine()
+    try:
+        post = _place_post(engine)
+        _add_quest_giver(engine, post)
+
+        qcp = _open_modal(engine, post)
+        _click(engine, qcp, qcp.story_chain_rects["blackbanners_toll"].center)
+
+        chains = [
+            chain
+            for chain in engine.sim.quest_chain_system.chains
+            if chain.chain_type == "blackbanners_toll"
+        ]
+        assert len(chains) == 1
+        assert chains[0].status == "active"
+        assert qcp.visible is True
+        assert qcp.feedback == "Blackbanner started."
+        snapshots = engine.sim.quest_chain_system.get_active_chain_snapshots()
+        assert any(snapshot.chain_type == "blackbanners_toll" for snapshot in snapshots)
+    finally:
+        pygame.quit()
+
+
+def test_story_chain_duplicate_and_unavailable_feedback():
+    engine = _make_engine()
+    try:
+        post = _place_post(engine)
+        _add_quest_giver(engine, post)
+
+        qcp = _open_modal(engine, post)
+        _click(engine, qcp, qcp.story_chain_rects["relic_of_the_old_shrine"].center)
+        _click(engine, qcp, qcp.story_chain_rects["relic_of_the_old_shrine"].center)
+
+        chains = [
+            chain
+            for chain in engine.sim.quest_chain_system.chains
+            if chain.chain_type == "relic_of_the_old_shrine"
+        ]
+        assert len(chains) == 1
+        assert qcp.visible is True
+        assert qcp.feedback == "Already active."
+
+        engine.sim.quest_givers.clear()
+        qcp.close()
+        qcp = _open_modal(engine, post)
+        _click(engine, qcp, qcp.story_chain_rects["ashwings_hoard"].center)
+        assert qcp.visible is True
+        assert qcp.feedback == "Story chain unavailable."
+        assert [
+            chain
+            for chain in engine.sim.quest_chain_system.chains
+            if chain.chain_type == "ashwings_hoard"
+        ] == []
     finally:
         pygame.quit()
 

@@ -2774,6 +2774,238 @@
           ]
         }
       }
+    },
+    "wk146_quest_playtest_launcher_readiness": {
+      "sprint_meta": {
+        "sprint_id": "wk146_quest_playtest_launcher_readiness",
+        "created_utc": "2026-06-18T00:00:00Z",
+        "plan_ref": ".cursor/plans/wk146_quest_playtest_launcher_readiness.plan.md",
+        "goal": "Make existing WK138-WK143 multi-phase quest chains playtestable from live Herald's Post gameplay, with deterministic live scenarios and screenshots, without adding new quest content before Jaimie's playtest pause."
+      },
+      "rounds": {
+        "r1_kickoff": {
+          "sprint_id": "wk146_quest_playtest_launcher_readiness",
+          "round_id": "r1_kickoff",
+          "status": "active",
+          "pm_status_summary": "WK146 is a playtest-readiness sprint, not a new content sprint. Jaimie needs a proper in-game way to launch existing Relic, Blackbanner, and Ashwing quest chains from a Herald's Post, plus deterministic live scenarios that spawn the town/heroes/POIs needed to test quickly. Agent 01 is PM-only under AGENTS.md, so implementation is delegated to owning agents.",
+          "pm_grounding": [
+            "QuestChainSystem already has offer/start methods for relic_of_the_old_shrine, blackbanners_toll, and ashwings_hoard.",
+            "Herald's Post UI already opens QuestCreatePanel and renders an active quest board; it currently creates only WK126 one-shot quests.",
+            "Existing dragon_hunt_showcase provides visual proof but uses a synthetic/simple quest-chain snapshot; WK146 scenarios must use the same real engine action the UI uses.",
+            "Do not add new quest content, version bumps, changelog release headers, git tags, or Prototype vX.Y.Z language."
+          ],
+          "pm_feature_requests": [
+            {
+              "id": "WK146-FEAT-001",
+              "title": "Herald's Post story-chain launcher",
+              "owner_agents": [
+                "03_TechnicalDirector_Architecture",
+                "08_UX_UI"
+              ],
+              "description": "Expose existing root quest chains from live Herald's Post gameplay so Jaimie can trigger Relic, Blackbanner, and Ashwing content without harnesses.",
+              "acceptance": [
+                "Constructed Herald's Post can launch existing Relic, Blackbanner, and Ashwing chains through a real SimEngine action.",
+                "The Herald's Post modal shows compact story-chain controls and immediately renders the launched chain in the active quest board.",
+                "Duplicate clicks return/show the existing live chain instead of creating duplicates.",
+                "Missing or unconstructed post fails gracefully with no exception and no chain."
+              ]
+            },
+            {
+              "id": "WK146-FEAT-002",
+              "title": "Live quest-chain playtest scenarios",
+              "owner_agents": [
+                "12_ToolsDevEx",
+                "11_QA_TestEngineering_Lead"
+              ],
+              "description": "Add deterministic screenshot scenarios that spawn a full-ish town, Herald's Post, heroes, relevant POIs/enemies, launch the real chain path, and capture world plus quest ledger proof.",
+              "acceptance": [
+                "quest_chain_launcher_ui screenshot shows the Herald's Post launcher UI.",
+                "quest_chain_live_blackbanner screenshot uses the engine action and shows Blackbanner's Toll live.",
+                "quest_chain_live_ashwing screenshot uses the engine action and shows Ashwing's Hoard live.",
+                "Scenario metadata records chain type, active phase, hero count, and target POI."
+              ]
+            }
+          ],
+          "pm_bug_tickets": [
+            {
+              "id": "WK146-BUG-001",
+              "title": "Named multi-phase quests are not reachable from normal live play",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest_readiness",
+              "repro_steps": [
+                "Start the game.",
+                "Build/select a Herald's Post.",
+                "Open Create Quest.",
+                "Try to start Blackbanner's Toll or Ashwing's Hoard from the UI."
+              ],
+              "expected": "Existing multi-phase story chains can be launched for playtest from Herald's Post and appear in the active quest board.",
+              "actual": "The modal only exposes one-shot quest creation; story chains are mostly reachable through tests/programmatic harnesses.",
+              "acceptance_test": [
+                "python -m pytest tests/test_wk146_quest_chain_launcher.py -q",
+                "python tools/capture_screenshots.py --scenario quest_chain_launcher_ui --seed 3 --out docs/screenshots/wk146_quest_chain_launcher_ui --size 1920x1080 --ticks 480"
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_integration_order": [
+            "Wave 1 Agent 03: add the SimEngine story-chain launch action and focused tests.",
+            "Wave 2 Agent 08 and Agent 12 after Agent 03: wire Herald's Post UI and add live screenshot scenarios using the real engine action.",
+            "Wave 3 Agent 05/06/11: gameplay/AI review and independent QA/screenshot verification.",
+            "Human gate: Jaimie playtests before any more quest content is added."
+          ],
+          "pm_next_actions_by_agent": {
+            "03_TechnicalDirector_Architecture": "Wave 1 active. Add a real SimEngine action to launch/return existing root quest chains from a constructed Herald's Post, prevent duplicate root chains, support optional hero_id, and add tests/test_wk146_quest_chain_launcher.py.",
+            "08_UX_UI": "Wave 2 pending on Agent 03. Add compact story-chain controls to QuestCreatePanel and screenshot-verify the Herald's Post launcher at 1920x1080 and 1280x720.",
+            "12_ToolsDevEx": "Wave 2 pending on Agent 03. Add deterministic live screenshot scenarios quest_chain_launcher_ui, quest_chain_live_blackbanner, and quest_chain_live_ashwing that use the real engine action.",
+            "05_GameplaySystems": "Wave 3 review. Verify Blackbanner root/rescue/revenge, Ashwing boss-chain, and Relic foundation interactions after implementation; do not add content.",
+            "06_AIBehaviorDirector_LLM": "Wave 3 review. Verify heroes in live quest scenarios do not regress to tight town loops and that WK145 significance/hysteresis still holds.",
+            "11_QA_TestEngineering_Lead": "Wave 3 final QA. Run focused tests, screenshot captures, inspect PNGs, and qa_smoke before PM tells Jaimie to playtest."
+          },
+          "pm_agent_prompts": {
+            "03": "Task: Add the engine action that starts existing quest chains from a constructed Herald's Post. Scope: In scope: game/sim_engine.py, game/sim/** only if a typed contract is truly needed, tests/test_wk146_quest_chain_launcher.py. Out of scope: game/ui/**, ai/**, tools/**, assets/**, config.py, version/changelog/git metadata. Read AGENTS.md, .cursor/rules/agent-03-techdir-onboarding.mdc, .cursor/rules/06-workflow-sop.mdc, and .cursor/plans/wk146_quest_playtest_launcher_readiness.plan.md. Implement a SimEngine action, suggested name start_quest_chain_from_post(giver_id, chain_type, hero_id=None, *, auto_accept=True), that validates a constructed Herald's Post/QuestGiver, normalizes relic_of_the_old_shrine / blackbanners_toll / ashwings_hoard, builds a SystemContext from live sim state, resolves optional hero_id, dispatches to QuestChainSystem offer/start methods, returns an existing live root chain on duplicate clicks, and returns None on invalid post or unavailable launch. Do not add new quest content. Acceptance: tests prove the three chains launch, active snapshots are visible, missing/unconstructed post fails, duplicates do not create duplicate chains, and hero_id assignment works. Commands: python -m pytest tests/test_wk146_quest_chain_launcher.py -q; python -m pytest tests/test_wk138_quest_chain_core.py tests/test_wk141_blackbanner_chain.py tests/test_wk143_dragon_hunt.py -q; python tools/qa_smoke.py --quick. Report files touched, commands/exit codes, agent log path, and follow-ups.",
+            "08": "Task: Add the Herald's Post story-chain launcher UI. Scope: In scope: game/ui/quest_create_panel.py, game/ui/building_panel.py only if routing/hit rects require it, focused UI tests. Out of scope: game/sim_engine.py, game/systems/**, ai/**, tools/**, assets/**, version/changelog/git metadata. Read AGENTS.md, .cursor/rules/agent-08-ux-ui-onboarding.mdc, .cursor/rules/06-workflow-sop.mdc, and .cursor/plans/wk146_quest_playtest_launcher_readiness.plan.md. After Agent 03 lands, extend the existing QuestCreatePanel with a compact Story Chains section for Relic, Blackbanner, and Ashwing. Buttons must call the new SimEngine action, keep the modal open, and let the active quest board show the chain immediately. Duplicate active chains should show concise feedback instead of spawning duplicates. Keep text compact; avoid overlap at 1920x1080 and 1280x720. Acceptance: focused UI tests pass and screenshots show the controls and active board. Commands: python -m pytest tests/test_wk126_quest_create_panel.py tests/test_wk138_quest_chain_ui.py tests/test_wk141_blackbanner_ui.py tests/test_wk143_dragon_ui.py -q; python tools/capture_screenshots.py --scenario quest_chain_launcher_ui --seed 3 --out docs/screenshots/wk146_quest_chain_launcher_ui --size 1920x1080 --ticks 480; python tools/capture_screenshots.py --scenario quest_chain_launcher_ui --seed 3 --out docs/screenshots/wk146_quest_chain_launcher_ui_720p --size 1280x720 --ticks 480; python tools/qa_smoke.py --quick. Inspect PNGs before reporting done.",
+            "12": "Task: Add deterministic live quest-chain screenshot scenarios using the real engine action. Scope: In scope: tools/screenshot_scenarios.py, tools/capture_screenshots.py only if scenario registration requires it, tests/test_wk146_quest_chain_scenarios.py. Out of scope: game/ui/**, game/sim_engine.py, game/systems/**, ai/**, assets/** unless unavoidable and coordinated. Read AGENTS.md, .cursor/rules/agent-12-toolsdevex-onboarding.mdc, .cursor/rules/06-workflow-sop.mdc, and .cursor/plans/wk146_quest_playtest_launcher_readiness.plan.md. After Agent 03 lands, add quest_chain_launcher_ui, quest_chain_live_blackbanner, and quest_chain_live_ashwing scenarios. They must spawn a constructed Herald's Post, enough buildings/heroes/POIs to test quickly, launch the chain through the real SimEngine action, and capture world plus ledger proof. Metadata must include chain type, phase, hero count, and target POI id/name. Commands: python -m pytest tests/test_wk146_quest_chain_launcher.py tests/test_wk146_quest_chain_scenarios.py -q; python tools/capture_screenshots.py --scenario quest_chain_launcher_ui --seed 3 --out docs/screenshots/wk146_quest_chain_launcher_ui --size 1920x1080 --ticks 480; python tools/capture_screenshots.py --scenario quest_chain_live_blackbanner --seed 3 --out docs/screenshots/wk146_quest_chain_live_blackbanner --size 1920x1080 --ticks 900; python tools/capture_screenshots.py --scenario quest_chain_live_ashwing --seed 3 --out docs/screenshots/wk146_quest_chain_live_ashwing --size 1920x1080 --ticks 900; python tools/qa_smoke.py --quick. Inspect PNGs before reporting done.",
+            "05": "Task: Gameplay systems review for WK146 after Agent 03/08/12 land. Scope: Review first; only make focused gameplay fixes if PM explicitly authorizes a blocker follow-up. Read AGENTS.md, your role rules, and .cursor/plans/wk146_quest_playtest_launcher_readiness.plan.md. Verify the launcher does not collide with Blackbanner rescue/revenge, Ashwing boss invariants, or Relic foundation behavior. Do not add new quest content. Commands: python -m pytest tests/test_wk141_blackbanner_chain.py tests/test_wk142_dynamic_rescue_gameplay.py tests/test_wk143_dragon_hunt.py -q; python tools/qa_smoke.py --quick. Report risks and whether Jaimie can playtest.",
+            "06": "Task: AI behavior review for WK146 live quest scenarios after Agent 03/08/12 land. Scope: Review first; only make ai/** fixes if PM explicitly authorizes a blocker follow-up. Read AGENTS.md, your role rules, and .cursor/plans/wk146_quest_playtest_launcher_readiness.plan.md. Verify the live scenarios do not regress into the '10 heroes acting like ants around town' failure, and that WK145 significance/hysteresis still prevents flickery quest/bounty intent. Commands: python -m pytest tests/test_wk145_hero_ai_significance_hysteresis.py tests/test_wk144_hero_agency_daily_life.py tests/test_wk144_bounty_commitment.py -q; python tools/capture_screenshots.py --scenario hero_agency_showcase --seed 3 --out docs/screenshots/wk146_hero_agency_regression --size 1920x1080 --ticks 1800; python tools/qa_smoke.py --quick. Inspect screenshots before reporting done.",
+            "11": "Task: Final independent QA for WK146. Scope: tests/** and own log only unless PM assigns a follow-up fix. Read AGENTS.md, your role rules, and .cursor/plans/wk146_quest_playtest_launcher_readiness.plan.md. Run focused launcher/scenario/UI/regression tests, run screenshot captures, inspect PNGs, and run qa_smoke. Do not claim done if the latest screenshots do not visibly show the launcher and live quest chains. Commands: python -m pytest tests/test_wk146_quest_chain_launcher.py tests/test_wk146_quest_chain_scenarios.py -q; python -m pytest tests/test_wk126_quest_create_panel.py tests/test_wk138_quest_chain_ui.py tests/test_wk141_blackbanner_ui.py tests/test_wk143_dragon_ui.py -q; python -m pytest tests/test_wk141_blackbanner_chain.py tests/test_wk142_dynamic_rescue_gameplay.py tests/test_wk143_dragon_hunt.py tests/test_wk145_hero_ai_significance_hysteresis.py -q; python tools/capture_screenshots.py --scenario quest_chain_launcher_ui --seed 3 --out docs/screenshots/wk146_quest_chain_launcher_ui --size 1920x1080 --ticks 480; python tools/capture_screenshots.py --scenario quest_chain_live_blackbanner --seed 3 --out docs/screenshots/wk146_quest_chain_live_blackbanner --size 1920x1080 --ticks 900; python tools/capture_screenshots.py --scenario quest_chain_live_ashwing --seed 3 --out docs/screenshots/wk146_quest_chain_live_ashwing --size 1920x1080 --ticks 900; python tools/qa_smoke.py --quick. Report files touched, commands/exit codes, screenshot filenames inspected, and pass/fail."
+          },
+          "pm_universal_prompt": "You are being activated for WK146 Quest Playtest Launcher Readiness. First onboard by reading AGENTS.md and your relevant .cursor/rules role instructions. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk146_quest_playtest_launcher_readiness\"].rounds[\"r1_kickoff\"] and .cursor/plans/wk146_quest_playtest_launcher_readiness.plan.md. Your specific task is under pm_agent_prompts[YOUR_AGENT_NUMBER]. Use GPT-5.5 with high effort. Stay inside your ownership lane, preserve existing changes, do not add new quest content, do not bump versions, update your own agent log, validate JSON, run the required PowerShell-compatible commands, inspect screenshots for visible changes where applicable, and report exact files/commands/evidence.",
+          "pm_send_list_minimal": {
+            "waves": [
+              [
+                "03"
+              ],
+              [
+                "08",
+                "12"
+              ],
+              [
+                "05",
+                "06",
+                "11"
+              ]
+            ],
+            "model_by_agent": {
+              "03": "gpt-5.5",
+              "08": "gpt-5.5",
+              "12": "gpt-5.5",
+              "05": "gpt-5.5",
+              "06": "gpt-5.5",
+              "11": "gpt-5.5"
+            },
+            "reasoning_effort_by_agent": {
+              "03": "high",
+              "08": "high",
+              "12": "high",
+              "05": "high",
+              "06": "high",
+              "11": "high"
+            },
+            "intelligence_by_agent": {
+              "03": "high",
+              "08": "high",
+              "12": "high",
+              "05": "medium",
+              "06": "medium",
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "07",
+              "09",
+              "10",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Wave 1 starts with Agent 03 because UI/tools need a real engine action. Wave 2 runs Agent 08 UI and Agent 12 scenarios in parallel after the action exists. Wave 3 reviews gameplay/AI feel and final QA. All are GPT-5.5 high effort per Jaimie's instruction for subagents; intelligence tags reflect task difficulty and review scope."
+          },
+          "commands_run": [
+            "Get-ChildItem -Path .cursor/rules -Force | Select-Object Name,FullName",
+            "git status --short --branch",
+            "rg -n \"start_blackbanners_toll|start_ashwings_hoard|offer_blackbanners_toll|offer_ashwings_hoard|quest_chain|Herald|quest herald|quest board|scenario\" game tools tests .cursor/plans",
+            "Get-Content -Path .cursor/rules/agent-01-agent-identity-guardrails.mdc",
+            "Get-Content -Path .cursor/rules/agent-01-pm-onboarding.mdc",
+            "Get-Content -Path .cursor/rules/08-role-boundaries.mdc",
+            "Get-Content -Path .cursor/rules/06-workflow-sop.mdc"
+          ],
+          "evidence": [
+            "Plan saved to .cursor/plans/wk146_quest_playtest_launcher_readiness.plan.md.",
+            "PM hub records Wave 1-3 assignments, exact prompts, ownership boundaries, and verification commands.",
+            "Agent 03 subagent was spawned on GPT-5.5 high effort for the engine action."
+          ],
+          "blockers": [],
+          "follow_ups": [
+            "Wait for Agent 03 result, review/integrate if needed, then activate Agent 08 and Agent 12.",
+            "Do not resume new quest content until this launcher/readiness sprint reaches Jaimie playtest."
+          ]
+        },
+        "r2_pm_playtest_ready": {
+          "sprint_id": "wk146_quest_playtest_launcher_readiness",
+          "round_id": "r2_pm_playtest_ready",
+          "status": "ready_for_human_playtest",
+          "pm_status_summary": "WK146 is ready for Jaimie playtest. Existing Relic, Blackbanner, and Ashwing root quest chains now have a live Herald's Post launch path. The Herald's Post Create Quest modal shows a Story Chains row, leaves the modal open after launch, marks active chains, and the existing Adventure Ledger/active board updates immediately. Deterministic 2D captures prove launcher UI, Blackbanner, and Ashwing. A WK146 Ursina capture also proves the same modal/launcher path in the 3D renderer.",
+          "what_i_changed": [
+            "Created the WK146 playtest-readiness sprint plan in .cursor/plans/wk146_quest_playtest_launcher_readiness.plan.md.",
+            "Delegated engine, UI, and tooling work to GPT-5.5 high-effort subagents per Jaimie's instruction.",
+            "Verified Agent 03's SimEngine quest-chain launcher action and focused launcher tests.",
+            "Verified Agent 08's Herald's Post Story Chains UI and responsive screenshot evidence.",
+            "Redirected Agent 12 until Blackbanner/Ashwing live scenario screenshots showed readable quest situations, then added a WK146 Ursina capture requirement and verified it.",
+            "Removed the temporary .ursina_capture_runner.py generated by the Ursina capture helper."
+          ],
+          "files_changed_by_sprint": [
+            ".cursor/plans/wk146_quest_playtest_launcher_readiness.plan.md",
+            ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
+            ".cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+            "game/sim_engine.py",
+            "game/ui/quest_create_panel.py",
+            "tools/screenshot_scenarios.py",
+            "tools/wk146_quest_chain_launcher_capture_patch.py",
+            "tests/test_wk126_quest_create_panel.py",
+            "tests/test_wk146_quest_chain_launcher.py",
+            "tests/test_wk146_quest_chain_scenarios.py",
+            "tests/test_wk146_ursina_capture_scenario.py"
+          ],
+          "commands_run": [
+            "python -m pytest tests/test_wk146_quest_chain_launcher.py -q",
+            "python -m pytest tests/test_wk138_quest_chain_core.py tests/test_wk141_blackbanner_chain.py tests/test_wk143_dragon_hunt.py -q",
+            "python -m pytest tests/test_wk146_quest_chain_launcher.py tests/test_wk146_quest_chain_scenarios.py -q",
+            "python -m pytest tests/test_wk126_quest_create_panel.py tests/test_wk138_quest_chain_ui.py tests/test_wk141_blackbanner_ui.py tests/test_wk143_dragon_ui.py -q",
+            "python -m pytest tests/test_wk141_blackbanner_chain.py tests/test_wk142_dynamic_rescue_gameplay.py tests/test_wk143_dragon_hunt.py tests/test_wk145_hero_ai_significance_hysteresis.py -q",
+            "python tools/capture_screenshots.py --scenario quest_chain_launcher_ui --seed 3 --out docs/screenshots/wk146_quest_chain_launcher_ui --size 1920x1080 --ticks 480",
+            "python tools/capture_screenshots.py --scenario quest_chain_launcher_ui --seed 3 --out docs/screenshots/wk146_quest_chain_launcher_ui_720p --size 1280x720 --ticks 480",
+            "python tools/capture_screenshots.py --scenario quest_chain_live_blackbanner --seed 3 --out docs/screenshots/wk146_quest_chain_live_blackbanner --size 1920x1080 --ticks 900",
+            "python tools/capture_screenshots.py --scenario quest_chain_live_ashwing --seed 3 --out docs/screenshots/wk146_quest_chain_live_ashwing --size 1920x1080 --ticks 900",
+            "python -m pytest tests/test_wk146_quest_chain_launcher.py tests/test_wk146_quest_chain_scenarios.py tests/test_wk146_ursina_capture_scenario.py -q",
+            "python tools/run_ursina_capture_once.py --scenario ursina_wk146_quest_chain_launcher --out docs/screenshots/wk146_ursina_quest_chain_launcher --stem wk146_ursina_quest_chain_launcher --ticks 480",
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": [
+            "Focused launcher tests passed: tests/test_wk146_quest_chain_launcher.py -> 8 passed.",
+            "WK146 launcher/scenario/Ursina registration tests passed together: 13 passed.",
+            "UI/quest regression set passed: 20 passed.",
+            "Blackbanner/Rescue/Ashwing/WK145 regression set passed: 8 passed.",
+            "2D 1080p launcher capture shows Story Chains row with Relic, Blackbanner, Ashwing and no overlap.",
+            "2D 720p launcher capture shows Story Chains row still fits and bottom buttons remain usable.",
+            "2D Blackbanner live capture shows Bandit Fortress, Blackbanner Toll-Taker, and three heroes staged near the quest situation.",
+            "2D Ashwing live capture shows Dragon Cave, three heroes, visible named Ashwing/dragon, boss HUD, selected enemy panel, and hero count 10.",
+            "Ursina WK146 capture shows the 3D world behind the Pygame HUD overlay, Herald's Post selected, Create Quest modal open, Story Chains row visible, Blackbanner Active highlighted, and Adventure Ledger populated.",
+            "Final long python tools/qa_smoke.py --quick completed with QA_SMOKE_EXIT=0 and DONE: PASS."
+          ],
+          "known_nonblocking_notes": [
+            "Adventure Ledger lines are compact/tiny in screenshots; readable enough for proof but a future UI readability pass would help.",
+            "Running older UI tests/captures changed tracked WK142 screenshot files under docs/screenshots/wk142_rescue_revenge_ui. Treat them as generated-output drift, not WK146 product edits, unless a later commit intentionally includes refreshed baselines."
+          ],
+          "blockers": [],
+          "recommended_next_actions": [
+            "Jaimie should playtest via python main.py --no-llm before any more quest content is added.",
+            "During playtest, select a constructed Herald's Post, click Create Quest, and use Story Chains to start Relic, Blackbanner, or Ashwing.",
+            "If live play reveals only visual/readability issues, file those as polish tickets; if a chain fails to launch or duplicates, route to Agent 03/08/12 based on whether the bug is engine, UI, or scenario/tooling."
+          ]
+        }
+      }
     }
   }
 }

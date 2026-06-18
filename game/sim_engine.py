@@ -764,6 +764,70 @@ class SimEngine:
             "get_active_revenge_views",
         )
 
+    def _normalize_player_quest_chain_type(self, chain_type) -> str | None:
+        """Return the supported Herald's Post chain id, or None."""
+        from game.content.quest_chains import (
+            ASHWINGS_HOARD,
+            BLACKBANNERS_TOLL,
+            RELIC_OF_THE_OLD_SHRINE,
+        )
+
+        raw = getattr(chain_type, "chain_type", chain_type)
+        value = str(raw or "")
+        supported = {
+            RELIC_OF_THE_OLD_SHRINE.chain_type,
+            BLACKBANNERS_TOLL.chain_type,
+            ASHWINGS_HOARD.chain_type,
+        }
+        return value if value in supported else None
+
+    def _live_quest_giver_for_post(self, giver_id) -> QuestGiver | None:
+        """Resolve a live QuestGiver whose Herald's Post can still offer work."""
+        gid = str(giver_id or "")
+        if not gid:
+            return None
+        for giver in self.quest_givers:
+            if str(getattr(giver, "giver_id", "") or "") != gid:
+                continue
+            post = getattr(giver, "post", None)
+            if post not in self.buildings:
+                return None
+            if str(getattr(post, "building_type", "") or "") != "herald_post":
+                return None
+            if getattr(post, "is_constructed", True) is not True:
+                return None
+            if int(getattr(post, "hp", 1) or 0) <= 0:
+                return None
+            return giver
+        return None
+
+    def _live_player_quest_chain_of_type(self, chain_type: str):
+        system = getattr(self, "quest_chain_system", None)
+        if system is None:
+            return None
+        for chain in list(getattr(system, "chains", []) or []):
+            if (
+                str(getattr(chain, "chain_type", "") or "") == str(chain_type)
+                and str(getattr(chain, "status", "") or "") in {"offered", "active"}
+            ):
+                return chain
+        return None
+
+    def _has_open_quest_chain_for_giver(self, giver_id) -> bool:
+        gid = str(giver_id or "")
+        if not gid:
+            return False
+        system = getattr(self, "quest_chain_system", None)
+        if system is None:
+            return False
+        for chain in list(getattr(system, "chains", []) or []):
+            if str(getattr(chain, "status", "") or "") != "offered":
+                continue
+            facts = getattr(chain, "facts", {}) or {}
+            if str(facts.get("giver_id", "") or "") == gid:
+                return True
+        return False
+
     @property
     def lumber_ops(self) -> "LumberOps":
         """Typed lumber accessor for sim entities (WK67 Move 6 / L3b).
@@ -775,6 +839,99 @@ class SimEngine:
         of the UI ``game_state`` dict.
         """
         return self
+
+    def create_quest_chain(
+        self,
+        giver_id,
+        chain_type,
+        hero_id=None,
+        *,
+        auto_accept: bool = True,
+    ):
+        """Start or offer a real WK138-WK143 quest chain from a Herald's Post.
+
+        This is the player/test launcher seam for the Herald's Post UI. It only
+        works for an existing QuestGiver attached to a live, constructed
+        Herald's Post. Duplicate offered/active player-triggerable chains return
+        the existing live instance instead of creating another.
+        """
+        giver = self._live_quest_giver_for_post(giver_id)
+        if giver is None:
+            return None
+
+        normalized_type = self._normalize_player_quest_chain_type(chain_type)
+        if normalized_type is None:
+            return None
+
+        existing = self._live_player_quest_chain_of_type(normalized_type)
+        if existing is not None:
+            facts = getattr(existing, "facts", None)
+            if isinstance(facts, dict):
+                facts.setdefault("giver_id", str(giver.giver_id))
+            if str(getattr(existing, "status", "") or "") == "offered":
+                giver.is_open = True
+            return existing
+
+        hero = None
+        resolved_hero_id = None
+        if hero_id is not None:
+            resolved_hero_id = str(hero_id)
+            hero = self.find_hero_by_id(resolved_hero_id)
+            if hero is None:
+                return None
+
+        ctx = self._build_system_context()
+        launchers = {
+            "relic_of_the_old_shrine": (
+                "start_relic_of_the_old_shrine",
+                "offer_relic_of_the_old_shrine",
+            ),
+            "blackbanners_toll": (
+                "start_blackbanners_toll",
+                "offer_blackbanners_toll",
+            ),
+            "ashwings_hoard": (
+                "start_ashwings_hoard",
+                "offer_ashwings_hoard",
+            ),
+        }
+        start_name, offer_name = launchers[normalized_type]
+        method_name = start_name if auto_accept else offer_name
+        launcher = getattr(self.quest_chain_system, method_name, None)
+        if not callable(launcher):
+            return None
+
+        chain = launcher(
+            ctx=ctx,
+            hero=hero,
+            hero_id=resolved_hero_id,
+            event_bus=self.event_bus,
+        )
+        if chain is None:
+            return None
+
+        facts = getattr(chain, "facts", None)
+        if isinstance(facts, dict):
+            facts["giver_id"] = str(giver.giver_id)
+        if not auto_accept or str(getattr(chain, "status", "") or "") == "offered":
+            giver.is_open = True
+        return chain
+
+    def start_quest_chain_from_post(
+        self,
+        giver_id,
+        chain_type,
+        hero_id=None,
+        *,
+        auto_accept: bool = True,
+    ):
+        """Compatibility alias for UI/playtest callers."""
+        return self.create_quest_chain(
+            giver_id,
+            chain_type,
+            hero_id=hero_id,
+            auto_accept=auto_accept,
+        )
 
     def create_quest(self, giver_id, quest_type, target, reward, *, count=1):
         """WK126: fund (escrow) + arm a quest on a Herald's Post giver.
@@ -1237,7 +1394,10 @@ class SimEngine:
             # Mirror the open-offer state onto each NPC (drives the "!" marker
             # and the AI candidate list).
             for giver in self.quest_givers:
-                giver.is_open = self.quest_system.has_open_quest_for(giver.giver_id)
+                giver.is_open = (
+                    self.quest_system.has_open_quest_for(giver.giver_id)
+                    or self._has_open_quest_chain_for_giver(giver.giver_id)
+                )
 
         # Neutral systems
         self.neutral_building_system.tick(dt, self.buildings, self.heroes, self.peasants, castle)

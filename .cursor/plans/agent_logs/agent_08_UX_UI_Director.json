@@ -694,5 +694,80 @@
         }
       }
     }
+  },
+  "wk146_quest_playtest_launcher_readiness": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk146_quest_playtest_launcher_readiness.plan.md",
+      "created_utc": "2026-06-18T00:00:00Z",
+      "notes": "Agent 08 UI lane: Herald's Post story-chain launcher inside the existing Create Quest modal."
+    },
+    "rounds": {
+      "agent08_story_chain_launcher_ui": {
+        "sprint_id": "wk146_quest_playtest_launcher_readiness",
+        "round_id": "agent08_story_chain_launcher_ui",
+        "status": "done",
+        "task": "Add compact Story Chains controls to the Herald's Post Create Quest modal for Relic, Blackbanner, and Ashwing.",
+        "what_i_changed": [
+          "game/ui/quest_create_panel.py: added STORY_CHAIN_CHOICES and story_chain_rects, rendered a compact Story Chains row inside the existing modal, and routed clicks through SimEngine.start_quest_chain_from_post/create_quest_chain using the selected Herald's Post entity_id.",
+          "game/ui/quest_create_panel.py: added defensive duplicate detection against offered/active chains, concise Already active / unavailable / quest-system feedback, active button suffixes, and kept the modal open after successful launches so the embedded active quest board updates immediately.",
+          "tests/test_wk126_quest_create_panel.py: added focused UI coverage for visible story-chain buttons, live Blackbanner launch while keeping the modal open, duplicate feedback, unavailable feedback, and preserved the existing one-shot quest flow coverage."
+        ],
+        "commands_run": [
+          {
+            "command": "python -m pytest tests/test_wk126_quest_create_panel.py -q",
+            "exit_code": 0,
+            "note": "10 passed, 1 warning"
+          },
+          {
+            "command": "python -m pytest tests/test_wk126_quest_create_panel.py tests/test_wk138_quest_chain_ui.py tests/test_wk141_blackbanner_ui.py tests/test_wk143_dragon_ui.py tests/test_wk146_quest_chain_launcher.py -q",
+            "exit_code": 0,
+            "note": "28 passed, 1 warning"
+          },
+          {
+            "command": "python tools/capture_screenshots.py --scenario quest_chain_launcher_ui --seed 3 --out docs/screenshots/wk146_quest_chain_launcher_ui --size 1920x1080 --ticks 480",
+            "exit_code": 0,
+            "note": "Wrote quest_chain_launcher_ui.png and manifest.json"
+          },
+          {
+            "command": "python tools/capture_screenshots.py --scenario quest_chain_launcher_ui --seed 3 --out docs/screenshots/wk146_quest_chain_launcher_ui_720p --size 1280x720 --ticks 480",
+            "exit_code": 0,
+            "note": "Wrote quest_chain_launcher_ui.png and manifest.json"
+          },
+          {
+            "command": "python -m pytest tests/test_wk146_quest_chain_scenarios.py tests/test_wk146_quest_chain_launcher.py tests/test_wk126_quest_create_panel.py -q",
+            "exit_code": 0,
+            "note": "22 passed, 1 warning"
+          },
+          {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 124,
+            "note": "Timed out twice at 4 and 10 minutes while full-suite pytest was still running; orphaned child processes from these attempts were stopped."
+          },
+          {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 1,
+            "note": "Long run completed determinism guard PASS and progressed through full pytest while Agent 12 scenario files changed in the working tree; it returned exit 1 around tests/test_wk146_quest_chain_scenarios.py. The isolated scenario/UI tests passed afterward."
+          }
+        ],
+        "evidence": {
+          "focused_pytest": "python -m pytest tests/test_wk126_quest_create_panel.py tests/test_wk138_quest_chain_ui.py tests/test_wk141_blackbanner_ui.py tests/test_wk143_dragon_ui.py tests/test_wk146_quest_chain_launcher.py -> 28 passed, 1 warning",
+          "wk146_scenario_pytest": "python -m pytest tests/test_wk146_quest_chain_scenarios.py tests/test_wk146_quest_chain_launcher.py tests/test_wk126_quest_create_panel.py -q -> 22 passed, 1 warning",
+          "screenshots_inspected": [
+            "docs/screenshots/wk146_quest_chain_launcher_ui/quest_chain_launcher_ui.png",
+            "docs/screenshots/wk146_quest_chain_launcher_ui_720p/quest_chain_launcher_ui.png",
+            "docs/screenshots/wk146_quest_chain_launcher_ui_agent08/story_chain_launcher_1920x1080.png",
+            "docs/screenshots/wk146_quest_chain_launcher_ui_agent08/story_chain_launcher_1280x720.png"
+          ],
+          "screenshot_verdict": "PASS. Official 1920x1080 and 1280x720 captures show the Story Chains row with Relic, Blackbanner, and Ashwing buttons, no overlap, and usable Cancel/Create Quest buttons. Agent08 proof captures after launching Blackbanner also show active status, feedback, and the active ledger in the still-open modal."
+        },
+        "blockers": [
+          "python tools/qa_smoke.py --quick did not produce a clean PASS in this run. Focused UI/WK146 gates pass; the smoke command first timed out during full-suite pytest and later returned exit 1 while Agent 12 scenario files were changing. This is flagged for QA/PM rather than hidden."
+        ],
+        "follow_ups": [
+          "Agent 11 should rerun python tools/qa_smoke.py --quick after concurrent WK146 scenario/tooling edits settle.",
+          "No orchestrator receipt command was included in this delegated context, so no complete receipt command was run."
+        ]
+      }
+    }
   }
 }
